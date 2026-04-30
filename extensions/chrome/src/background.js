@@ -1,15 +1,28 @@
 // CrabLink Extension for Chrome — background service worker.
-// Keeps install/default setup thin.
+// Keeps install/default setup thin and never pre-seeds identity or wallet truth.
 
 const DEFAULTS = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   gatewayUrl: 'http://127.0.0.1:8090',
-  passportSubject: 'passport:main:dev',
-  walletAccount: 'acct_dev',
+  passportSubject: '',
+  walletAccount: '',
   authToken: '',
   requireSpendConfirm: true,
   devMode: true,
-  requestTimeoutMs: 5000
+  requestTimeoutMs: 5000,
+  lastCrabUrl: '',
+  recentReceipts: [],
+  lastIdentityCheckAt: '',
+  lastBootstrapReceiptId: '',
+  lastStarterGrantIssued: false,
+  lastStarterGrantAmountMinorUnits: '',
+  lastStarterGrantReason: '',
+  rocBalanceMinorUnits: '',
+  rocBalanceDisplay: '',
+  rocBalanceUpdatedAt: '',
+  rocLedgerBacked: false,
+  rocBalanceSource: '',
+  rocBalanceReason: ''
 };
 
 chrome.runtime.onInstalled.addListener(async () => {

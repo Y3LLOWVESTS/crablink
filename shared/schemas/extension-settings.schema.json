@@ -16,9 +16,15 @@
     "recentReceipts",
     "lastIdentityCheckAt",
     "lastBootstrapReceiptId",
+    "lastStarterGrantIssued",
+    "lastStarterGrantAmountMinorUnits",
+    "lastStarterGrantReason",
     "rocBalanceMinorUnits",
     "rocBalanceDisplay",
-    "rocBalanceUpdatedAt"
+    "rocBalanceUpdatedAt",
+    "rocLedgerBacked",
+    "rocBalanceSource",
+    "rocBalanceReason"
   ],
   "properties": {
     "schemaVersion": {
@@ -87,14 +93,33 @@
     "lastBootstrapReceiptId": {
       "type": "string"
     },
+    "lastStarterGrantIssued": {
+      "type": "boolean"
+    },
+    "lastStarterGrantAmountMinorUnits": {
+      "type": "string",
+      "pattern": "^[0-9]*$"
+    },
+    "lastStarterGrantReason": {
+      "type": "string"
+    },
     "rocBalanceMinorUnits": {
       "type": "string",
-      "pattern": "^-?[0-9]*$"
+      "pattern": "^[0-9]*$"
     },
     "rocBalanceDisplay": {
       "type": "string"
     },
     "rocBalanceUpdatedAt": {
+      "type": "string"
+    },
+    "rocLedgerBacked": {
+      "type": "boolean"
+    },
+    "rocBalanceSource": {
+      "type": "string"
+    },
+    "rocBalanceReason": {
       "type": "string"
     }
   }

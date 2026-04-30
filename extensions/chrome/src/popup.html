@@ -23,137 +23,147 @@
           <span class="label">Gateway</span>
           <span id="gatewayUrl" class="value mono">loading...</span>
         </div>
-
         <div class="row">
           <span class="label">Passport</span>
           <span id="passportSubject" class="value mono">not loaded</span>
         </div>
-
         <div class="row">
           <span class="label">Wallet</span>
-          <span id="walletAccount" class="value mono">not loaded</span>
+          <span id="walletAccount" class="value mono">not linked</span>
         </div>
-
         <div class="row">
           <span class="label">ROC</span>
           <span id="rocBalance" class="value mono">unknown</span>
         </div>
+        <div class="row">
+          <span class="label">Ledger</span>
+          <span id="ledgerBacked" class="value">not verified</span>
+        </div>
 
         <div class="button-row">
           <button id="checkNodeButton" type="button">Check Node</button>
-          <button id="refreshIdentityButton" type="button" class="secondary">Check Passport</button>
-          <button id="openOptionsButton" type="button" class="secondary">Settings</button>
+          <button id="refreshIdentityButton" type="button">Check Passport</button>
+          <button id="openOptionsButton" type="button">Settings</button>
         </div>
       </section>
 
-      <section id="passportCard" class="card passport-card">
-        <div class="identity-header">
-          <div>
-            <h2>RON Passport</h2>
-            <p id="passportStatusText">Checking passport state...</p>
-          </div>
-          <span id="passportBadge" class="pill">unknown</span>
+      <section class="card">
+        <div class="section-heading">
+          <h2>RON Passport</h2>
+          <span id="passportBadge" class="badge badge-muted">unknown</span>
         </div>
 
-        <div class="compact-facts">
-          <div>
+        <p id="passportSummary">Loading passport state...</p>
+
+        <div class="mini-panel">
+          <div class="row">
             <span class="label">Identity check</span>
-            <span id="lastIdentityCheck" class="mono">never</span>
+            <span id="identityCheckedAt" class="value mono">never</span>
           </div>
-          <div>
+          <div class="row">
             <span class="label">Balance check</span>
-            <span id="balanceUpdatedAt" class="mono">never</span>
+            <span id="balanceCheckedAt" class="value mono">never</span>
+          </div>
+          <div class="row">
+            <span class="label">Starter grant</span>
+            <span id="starterGrantStatus" class="value">pending backend</span>
+          </div>
+          <div class="row">
+            <span class="label">Grant amount</span>
+            <span id="starterGrantAmount" class="value mono">unknown</span>
+          </div>
+          <div class="row">
+            <span class="label">Receipt</span>
+            <span id="bootstrapReceiptId" class="value mono">none</span>
           </div>
         </div>
 
         <div class="button-row">
           <button id="createPassportButton" type="button">Create RON Passport</button>
-          <button id="refreshBalanceButton" type="button" class="secondary">Refresh Balance</button>
+          <button id="refreshBalanceButton" type="button">Refresh Balance</button>
         </div>
 
-        <p class="note">
-          CrabLink stores only safe identity labels. Passport keys, wallet truth, ROC issuance,
-          and receipts must come from RustyOnions services through the gateway.
-        </p>
-      </section>
-
-      <section class="card diagnostics-card">
-        <div class="diagnostics-header">
-          <div>
-            <h2>Route Diagnostics</h2>
-            <p>Read-only gateway route checks for the running local dev stack.</p>
-          </div>
-          <span id="diagnosticsBadge" class="pill">idle</span>
-        </div>
-
-        <div id="diagnosticsList" class="diagnostics-list"></div>
-
-        <div class="button-row">
-          <button id="runDiagnosticsButton" type="button" class="secondary">Run Diagnostics</button>
-        </div>
-
-        <p class="note">
-          Bootstrap is intentionally not auto-tested here because it can become a real mutation route later.
+        <p class="muted">
+          CrabLink stores only safe identity labels. Passport keys, wallet truth,
+          ROC issuance, and receipts must come from RustyOnions services through the gateway.
         </p>
       </section>
 
       <section class="card">
-        <label for="crabInput">crab:// URL, b3 CID, or raw hash</label>
-        <input id="crabInput" type="text" spellcheck="false" placeholder="crab://<hash>.image" />
-
-        <div class="field-help">
-          Raw hashes and b3 CIDs default to asset kind:
-          <select id="defaultAssetKind">
-            <option value="image">image</option>
-            <option value="video">video</option>
-            <option value="music">music</option>
-            <option value="song">song</option>
-            <option value="article">article</option>
-            <option value="post">post</option>
-            <option value="comment">comment</option>
-            <option value="page">page</option>
-            <option value="file">file</option>
-          </select>
+        <div class="section-heading">
+          <h2>Route Diagnostics</h2>
+          <span id="diagnosticsBadge" class="badge badge-muted">idle</span>
         </div>
+
+        <p>Read-only gateway route checks for the running local dev stack.</p>
+        <div id="diagnosticsList" class="diagnostics-list"></div>
+
+        <div class="button-row">
+          <button id="runDiagnosticsButton" type="button">Run Diagnostics</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Resolve CrabLink</h2>
+
+        <label for="crabInput">crab:// URL, b3 CID, or raw hash</label>
+        <!-- Check-token and UX example: crab://<hash>.image -->
+        <input
+          id="crabInput"
+          type="text"
+          spellcheck="false"
+          placeholder="crab://<hash>.image"
+        />
+
+        <label for="defaultAssetKind">Default asset kind for raw hashes</label>
+        <select id="defaultAssetKind">
+          <option value="image">image</option>
+          <option value="video">video</option>
+          <option value="music">music</option>
+          <option value="song">song</option>
+          <option value="article">article</option>
+          <option value="post">post</option>
+          <option value="comment">comment</option>
+          <option value="page">page</option>
+          <option value="site">site</option>
+          <option value="app">app</option>
+          <option value="manifest">manifest</option>
+        </select>
 
         <div class="button-row">
           <button id="resolveButton" type="button">Resolve</button>
-          <button id="clearButton" type="button" class="secondary">Clear</button>
         </div>
       </section>
 
-      <section id="message" class="message hidden" aria-live="polite"></section>
-
-      <section id="result" class="card result hidden">
-        <div class="result-header">
+      <section id="result" class="card hidden">
+        <div class="section-heading">
           <div>
             <h2 id="resultTitle">Result</h2>
-            <p id="resultSubtitle"></p>
+            <p id="resultSubtitle" class="muted mono"></p>
           </div>
-          <span id="resultKind" class="pill">unknown</span>
+          <span id="resultKind" class="badge badge-muted">result</span>
         </div>
 
-        <dl id="resultFacts" class="facts"></dl>
+        <div id="resultFacts" class="facts"></div>
 
-        <div class="button-row result-actions">
-          <button id="copyCrabButton" type="button" class="secondary hidden">Copy crab://</button>
-          <button id="copyB3Button" type="button" class="secondary hidden">Copy b3 CID</button>
-          <button id="copyJsonButton" type="button" class="secondary">Copy JSON</button>
+        <div class="button-row">
+          <button id="copyCrabButton" type="button" class="hidden">Copy crab://</button>
+          <button id="copyB3Button" type="button" class="hidden">Copy b3 CID</button>
+          <button id="copyJsonButton" type="button" class="hidden">Copy JSON</button>
         </div>
 
-        <details>
-          <summary>Raw response</summary>
-          <pre id="resultJson"></pre>
-        </details>
+        <pre id="resultJson" class="json-box">{}</pre>
       </section>
+
+      <section id="messageBox" class="message message-muted" aria-live="polite"></section>
 
       <section class="card safety-card">
         <h2>Safety</h2>
-        <ul>
-          <li>No silent ROC spending.</li>
-          <li>No private keys or seed phrases in this MVP.</li>
-          <li>All backend calls go through the configured gateway.</li>
-        </ul>
+        <p>
+          The extension never stores seed phrases, private keys, wallet signing
+          material, or fake ROC balances. Paid actions must require explicit
+          confirmation before future mutation flows are enabled.
+        </p>
       </section>
     </main>
 

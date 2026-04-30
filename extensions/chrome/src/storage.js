@@ -1,8 +1,8 @@
 /**
- * RO:WHAT — Stores CrabLink Chrome settings and safe identity labels.
+ * RO:WHAT — Stores CrabLink Chrome settings and safe identity/wallet display labels.
  * RO:WHY — App Integration; Concerns: DX/SEC/RES; keep browser state separate from backend truth.
  * RO:INTERACTS — popup.js, options.js, ronClient.js, chrome.storage.local.
- * RO:INVARIANTS — no private keys; no seed phrases; no local ROC truth; gateway-only labels.
+ * RO:INVARIANTS — no private keys; no seed phrases; no fake ROC truth; gateway-only labels.
  * RO:METRICS — none; UI displays last identity/balance check timestamps.
  * RO:CONFIG — gatewayUrl, timeout, dev token, passport/wallet display labels.
  * RO:SECURITY — dev token is local-only MVP; do not persist production signing material.
@@ -24,12 +24,19 @@ export const DEFAULT_SETTINGS = Object.freeze({
   recentReceipts: [],
   lastIdentityCheckAt: '',
   lastBootstrapReceiptId: '',
+  lastStarterGrantIssued: false,
+  lastStarterGrantAmountMinorUnits: '',
+  lastStarterGrantReason: '',
   rocBalanceMinorUnits: '',
   rocBalanceDisplay: '',
-  rocBalanceUpdatedAt: ''
+  rocBalanceUpdatedAt: '',
+  rocLedgerBacked: false,
+  rocBalanceSource: '',
+  rocBalanceReason: ''
 });
 
 const DURABLE_KEYS = Object.keys(DEFAULT_SETTINGS);
+const MAX_RECEIPTS = 20;
 
 export async function getSettings() {
   const stored = await chrome.storage.local.get(DURABLE_KEYS);
@@ -77,9 +84,15 @@ export async function clearIdentityState() {
     walletAccount: '',
     lastIdentityCheckAt: '',
     lastBootstrapReceiptId: '',
+    lastStarterGrantIssued: false,
+    lastStarterGrantAmountMinorUnits: '',
+    lastStarterGrantReason: '',
     rocBalanceMinorUnits: '',
     rocBalanceDisplay: '',
-    rocBalanceUpdatedAt: ''
+    rocBalanceUpdatedAt: '',
+    rocLedgerBacked: false,
+    rocBalanceSource: '',
+    rocBalanceReason: ''
   });
 
   await chrome.storage.local.set(next);
@@ -114,25 +127,71 @@ export async function saveBalanceState(payload) {
   return next;
 }
 
+export async function rememberLastCrabUrl(url) {
+  const current = await getSettings();
+  const next = normalizeSettings({
+    ...current,
+    lastCrabUrl: String(url || '').trim()
+  });
+
+  await chrome.storage.local.set(next);
+  return next;
+}
+
+export async function addRecentReceipt(receipt) {
+  const current = await getSettings();
+  const normalized = normalizeReceipt(receipt);
+
+  if (!normalized) {
+    return current;
+  }
+
+  const receipts = [normalized, ...current.recentReceipts]
+    .filter((item, index, array) => {
+      return array.findIndex((candidate) => candidate.id === item.id) === index;
+    })
+    .slice(0, MAX_RECEIPTS);
+
+  const next = normalizeSettings({
+    ...current,
+    recentReceipts: receipts,
+    lastBootstrapReceiptId:
+      normalized.action === 'passport_bootstrap'
+        ? normalized.id
+        : current.lastBootstrapReceiptId
+  });
+
+  await chrome.storage.local.set(next);
+  return next;
+}
+
 export function normalizeSettings(settings) {
   const gatewayUrl = normalizeGatewayUrl(settings.gatewayUrl || DEFAULT_SETTINGS.gatewayUrl);
 
   return {
     schemaVersion: SETTINGS_SCHEMA_VERSION,
     gatewayUrl,
-    passportSubject: String(settings.passportSubject || '').trim(),
-    walletAccount: String(settings.walletAccount || '').trim(),
-    authToken: String(settings.authToken || '').trim(),
-    requireSpendConfirm: Boolean(settings.requireSpendConfirm),
-    devMode: Boolean(settings.devMode),
+    passportSubject: cleanString(settings.passportSubject),
+    walletAccount: cleanString(settings.walletAccount),
+    authToken: cleanString(settings.authToken),
+    requireSpendConfirm: settings.requireSpendConfirm !== false,
+    devMode: settings.devMode !== false,
     requestTimeoutMs: normalizeTimeout(settings.requestTimeoutMs),
-    lastCrabUrl: String(settings.lastCrabUrl || '').trim(),
-    recentReceipts: normalizeRecentReceipts(settings.recentReceipts),
-    lastIdentityCheckAt: String(settings.lastIdentityCheckAt || '').trim(),
-    lastBootstrapReceiptId: String(settings.lastBootstrapReceiptId || '').trim(),
-    rocBalanceMinorUnits: normalizeMinorUnitString(settings.rocBalanceMinorUnits),
-    rocBalanceDisplay: String(settings.rocBalanceDisplay || '').trim(),
-    rocBalanceUpdatedAt: String(settings.rocBalanceUpdatedAt || '').trim()
+    lastCrabUrl: cleanString(settings.lastCrabUrl),
+    recentReceipts: normalizeReceipts(settings.recentReceipts),
+    lastIdentityCheckAt: cleanString(settings.lastIdentityCheckAt),
+    lastBootstrapReceiptId: cleanString(settings.lastBootstrapReceiptId),
+    lastStarterGrantIssued: settings.lastStarterGrantIssued === true,
+    lastStarterGrantAmountMinorUnits: cleanUnsignedIntegerString(
+      settings.lastStarterGrantAmountMinorUnits
+    ),
+    lastStarterGrantReason: cleanString(settings.lastStarterGrantReason),
+    rocBalanceMinorUnits: cleanUnsignedIntegerString(settings.rocBalanceMinorUnits),
+    rocBalanceDisplay: cleanString(settings.rocBalanceDisplay),
+    rocBalanceUpdatedAt: cleanString(settings.rocBalanceUpdatedAt),
+    rocLedgerBacked: settings.rocLedgerBacked === true,
+    rocBalanceSource: cleanString(settings.rocBalanceSource),
+    rocBalanceReason: cleanString(settings.rocBalanceReason)
   };
 }
 
@@ -140,24 +199,19 @@ export function normalizeGatewayUrl(value) {
   const raw = String(value || '').trim();
 
   if (!raw) {
-    return DEFAULT_SETTINGS.gatewayUrl;
+    throw new Error('Gateway URL is required.');
   }
 
-  let parsed;
-  try {
-    parsed = new URL(raw);
-  } catch {
-    throw new Error('Gateway URL must be a valid URL.');
+  const url = new URL(raw);
+
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error('Gateway URL must use http:// or https://.');
   }
 
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new Error('Gateway URL must start with http:// or https://.');
-  }
+  url.hash = '';
+  url.search = '';
 
-  parsed.hash = '';
-  parsed.search = '';
-
-  return parsed.toString().replace(/\/$/, '');
+  return url.toString().replace(/\/$/, '');
 }
 
 export function normalizeTimeout(value) {
@@ -167,197 +221,159 @@ export function normalizeTimeout(value) {
     return DEFAULT_SETTINGS.requestTimeoutMs;
   }
 
-  const rounded = Math.round(n);
-
-  if (rounded < 1000) {
-    return 1000;
-  }
-
-  if (rounded > 30000) {
-    return 30000;
-  }
-
-  return rounded;
+  return Math.min(Math.max(Math.round(n), 1000), 30000);
 }
 
 export function hasPassport(settings) {
-  return Boolean(String(settings?.passportSubject || '').trim());
+  return Boolean(cleanString(settings?.passportSubject));
 }
 
 export function hasWallet(settings) {
-  return Boolean(String(settings?.walletAccount || '').trim());
+  return Boolean(cleanString(settings?.walletAccount));
 }
 
 export function identitySummary(settings) {
-  if (hasPassport(settings) && hasWallet(settings)) {
-    return 'Passport ready with linked wallet label.';
+  const passport = cleanString(settings?.passportSubject);
+  const wallet = cleanString(settings?.walletAccount);
+
+  if (passport && wallet) {
+    return `${passport} / ${wallet}`;
   }
 
-  if (hasPassport(settings)) {
-    return 'Passport ready. Wallet label is not loaded.';
+  if (passport) {
+    return passport;
   }
 
-  return 'No RON Passport loaded.';
+  if (wallet) {
+    return wallet;
+  }
+
+  return 'No local passport label loaded.';
+}
+
+export function safeSettingsForDisplay(settings) {
+  const normalized = normalizeSettings(settings);
+
+  return {
+    ...normalized,
+    authToken: normalized.authToken ? 'redacted' : ''
+  };
 }
 
 export function extractIdentityState(payload) {
-  const root = unwrapPayload(payload);
+  const data = unwrapData(payload);
+  const passport = data?.passport || {};
+  const wallet = data?.wallet || {};
+  const starterGrant = data?.starter_grant || data?.starterGrant || {};
+  const receipt = data?.receipt || starterGrant?.receipt || {};
 
-  const passportSubject = firstString(
-    root.passportSubject,
-    root.passport_subject,
-    root.subject,
-    root.identity?.passportSubject,
-    root.identity?.passport_subject,
-    root.identity?.subject,
-    root.passport?.passportSubject,
-    root.passport?.passport_subject,
-    root.passport?.subject
-  );
+  const passportSubject =
+    passport?.subject ||
+    passport?.passport_subject ||
+    passport?.passportSubject ||
+    data?.passport_subject ||
+    data?.passportSubject ||
+    '';
 
-  const walletAccount = firstString(
-    root.walletAccount,
-    root.wallet_account,
-    root.account,
-    root.wallet?.walletAccount,
-    root.wallet?.wallet_account,
-    root.wallet?.account,
-    root.identity?.walletAccount,
-    root.identity?.wallet_account,
-    root.passport?.walletAccount,
-    root.passport?.wallet_account
-  );
+  const walletAccount =
+    wallet?.account ||
+    wallet?.wallet_account ||
+    wallet?.walletAccount ||
+    data?.wallet_account ||
+    data?.walletAccount ||
+    '';
 
-  const lastBootstrapReceiptId = firstString(
-    root.receiptId,
-    root.receipt_id,
-    root.bootstrapReceiptId,
-    root.bootstrap_receipt_id,
-    root.receipt?.id,
-    root.receipt?.receipt_id,
-    root.wallet_receipt?.id,
-    root.wallet_receipt?.receipt_id
-  );
+  const receiptId =
+    starterGrant?.receipt_id ||
+    starterGrant?.receiptId ||
+    receipt?.id ||
+    receipt?.receipt_id ||
+    receipt?.receiptId ||
+    data?.receipt_id ||
+    data?.receiptId ||
+    '';
+
+  const starterGrantIssued =
+    starterGrant?.issued === true ||
+    starterGrant?.status === 'issued' ||
+    starterGrant?.ledger_backed === true ||
+    starterGrant?.ledgerBacked === true;
+
+  const starterGrantAmountMinorUnits =
+    starterGrant?.amount_minor_units ||
+    starterGrant?.amountMinorUnits ||
+    starterGrant?.amount ||
+    '';
+
+  const starterGrantReason =
+    starterGrant?.reason ||
+    starterGrant?.status ||
+    data?.starter_grant_reason ||
+    data?.starterGrantReason ||
+    '';
 
   return {
-    passportSubject,
-    walletAccount,
-    lastBootstrapReceiptId
+    passportSubject: cleanString(passportSubject),
+    walletAccount: cleanString(walletAccount),
+    lastBootstrapReceiptId: cleanString(receiptId),
+    lastStarterGrantIssued: starterGrantIssued,
+    lastStarterGrantAmountMinorUnits: cleanUnsignedIntegerString(starterGrantAmountMinorUnits),
+    lastStarterGrantReason: cleanString(starterGrantReason)
   };
 }
 
 export function extractBalanceState(payload) {
-  const root = unwrapPayload(payload);
+  const data = unwrapData(payload);
 
-  const minorUnits = firstDefined(
-    root.rocBalanceMinorUnits,
-    root.roc_balance_minor_units,
-    root.balanceMinorUnits,
-    root.balance_minor_units,
-    root.availableMinorUnits,
-    root.available_minor_units,
-    root.balance?.minorUnits,
-    root.balance?.minor_units,
-    root.balance?.availableMinorUnits,
-    root.balance?.available_minor_units,
-    root.wallet?.balanceMinorUnits,
-    root.wallet?.balance_minor_units
-  );
+  const minorUnits =
+    data?.available_minor_units ||
+    data?.availableMinorUnits ||
+    data?.balance_minor_units ||
+    data?.balanceMinorUnits ||
+    data?.amount_minor_units ||
+    data?.amountMinorUnits ||
+    '';
 
-  const display = firstString(
-    root.rocBalanceDisplay,
-    root.roc_balance_display,
-    root.balanceDisplay,
-    root.balance_display,
-    root.formatted,
-    root.display,
-    root.balance?.display,
-    root.balance?.formatted,
-    root.wallet?.balanceDisplay,
-    root.wallet?.balance_display
-  );
+  const display =
+    data?.display ||
+    data?.balance_display ||
+    data?.balanceDisplay ||
+    formatRocMinorUnits(minorUnits);
 
-  const normalizedMinor = normalizeMinorUnitString(minorUnits);
-  const fallbackDisplay = normalizedMinor ? `${normalizedMinor} minor ROC` : '';
+  const walletAccount =
+    data?.account ||
+    data?.wallet_account ||
+    data?.walletAccount ||
+    '';
+
+  const ledgerBacked =
+    data?.ledger_backed === true ||
+    data?.ledgerBacked === true ||
+    data?.source === 'svc-wallet' ||
+    data?.source === 'svc_wallet';
 
   return {
-    rocBalanceMinorUnits: normalizedMinor,
-    rocBalanceDisplay: display || fallbackDisplay
+    walletAccount: cleanString(walletAccount),
+    rocBalanceMinorUnits: cleanUnsignedIntegerString(minorUnits),
+    rocBalanceDisplay: cleanString(display),
+    rocLedgerBacked: ledgerBacked,
+    rocBalanceSource: cleanString(data?.source || data?.balance_source || data?.balanceSource),
+    rocBalanceReason: cleanString(data?.reason || data?.balance_reason || data?.balanceReason)
   };
 }
 
-export function redactSecret(value) {
-  const text = String(value || '');
+export function formatRocMinorUnits(value) {
+  const cleaned = cleanUnsignedIntegerString(value);
 
-  if (!text) {
+  if (!cleaned) {
     return '';
   }
 
-  if (text.length <= 8) {
-    return '••••••••';
-  }
-
-  return `${text.slice(0, 4)}…${text.slice(-4)}`;
+  return `${cleaned} ROC`;
 }
 
-export function safeSettingsForDisplay(settings) {
-  return {
-    ...settings,
-    authToken: settings.authToken ? redactSecret(settings.authToken) : ''
-  };
-}
-
-export async function rememberLastCrabUrl(url) {
-  const settings = await getSettings();
-  await saveSettings({
-    ...settings,
-    lastCrabUrl: String(url || '').trim()
-  });
-}
-
-export async function addRecentReceipt(receipt) {
-  const settings = await getSettings();
-
-  const safeReceipt = {
-    id: String(receipt?.id || receipt?.receipt_id || receipt?.txid || ''),
-    route: String(receipt?.route || ''),
-    action: String(receipt?.action || ''),
-    createdAt: String(receipt?.createdAt || new Date().toISOString())
-  };
-
-  const recentReceipts = [
-    safeReceipt,
-    ...settings.recentReceipts
-  ]
-    .filter((item) => item.id || item.route || item.action)
-    .slice(0, 20);
-
-  await saveSettings({
-    ...settings,
-    recentReceipts
-  });
-
-  return recentReceipts;
-}
-
-function normalizeRecentReceipts(value) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((item) => ({
-      id: String(item?.id || ''),
-      route: String(item?.route || ''),
-      action: String(item?.action || ''),
-      createdAt: String(item?.createdAt || '')
-    }))
-    .filter((item) => item.id || item.route || item.action)
-    .slice(0, 20);
-}
-
-function unwrapPayload(payload) {
-  if (!payload || typeof payload !== 'object') {
+function unwrapData(payload) {
+  if (!payload) {
     return {};
   }
 
@@ -368,57 +384,50 @@ function unwrapPayload(payload) {
   return payload;
 }
 
-function firstString(...values) {
-  for (const value of values) {
-    if (value === undefined || value === null) {
-      continue;
-    }
-
-    const text = String(value).trim();
-    if (text) {
-      return text;
-    }
-  }
-
-  return '';
+function cleanString(value) {
+  return String(value ?? '').trim();
 }
 
-function firstDefined(...values) {
-  for (const value of values) {
-    if (value !== undefined && value !== null && value !== '') {
-      return value;
-    }
+function cleanUnsignedIntegerString(value) {
+  const raw = cleanString(value);
+
+  if (!raw) {
+    return '';
   }
 
-  return '';
+  if (!/^[0-9]+$/.test(raw)) {
+    return '';
+  }
+
+  return raw;
 }
 
-function normalizeMinorUnitString(value) {
-  if (value === undefined || value === null || value === '') {
-    return '';
+function normalizeReceipts(value) {
+  if (!Array.isArray(value)) {
+    return [];
   }
 
-  if (typeof value === 'bigint') {
-    return value.toString();
+  return value
+    .map(normalizeReceipt)
+    .filter(Boolean)
+    .slice(0, MAX_RECEIPTS);
+}
+
+function normalizeReceipt(value) {
+  if (!value || typeof value !== 'object') {
+    return null;
   }
 
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) {
-      return '';
-    }
+  const id = cleanString(value.id || value.receipt_id || value.receiptId);
 
-    return Math.trunc(value).toString();
+  if (!id) {
+    return null;
   }
 
-  const text = String(value).trim();
-
-  if (!text) {
-    return '';
-  }
-
-  if (!/^-?[0-9]+$/.test(text)) {
-    return '';
-  }
-
-  return text;
+  return {
+    id,
+    route: cleanString(value.route),
+    action: cleanString(value.action || 'unknown'),
+    createdAt: cleanString(value.createdAt || value.created_at || new Date().toISOString())
+  };
 }

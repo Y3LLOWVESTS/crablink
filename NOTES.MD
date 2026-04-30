@@ -1297,3 +1297,1332 @@ The extension should make the system feel real, but the backend must remain the 
 
 
 ### END NOTE - APRIL 29 2026 - 23:00 CST
+
+
+
+### BEGIN NOTE - APRIL 30 2026 - 00:30 CST
+
+Below is a **paste-ready CrabLink carryover note** for the `crablink` repo. I would drop this into:
+
+```text
+NOTES.MD
+```
+
+---
+
+# BEGIN NOTE — APRIL 30 2026 — CrabLink Chrome Extension WEB3_2 Passport/Gateway Milestone
+
+## Scope of this note
+
+This note covers the current state of the separate **CrabLink** browser-extension repo.
+
+CrabLink is the browser client for RustyOnions. It is not part of the RustyOnions monorepo crates. It is a separate repo:
+
+```text
+https://github.com/Y3LLOWVESTS/crablink.git
+```
+
+Current product name:
+
+```text
+CrabLink
+```
+
+Current browser target:
+
+```text
+CrabLink Extension for Chrome
+```
+
+Current integration path:
+
+```text
+CrabLink Chrome Extension
+→ local browser storage
+→ svc-gateway public HTTP routes
+→ omnigate WEB3_2 routes
+→ future svc-passport / svc-wallet / ron-ledger truth
+```
+
+The extension currently talks to the RustyOnions local dev gateway at:
+
+```text
+http://127.0.0.1:8090
+```
+
+---
+
+## Executive summary
+
+This session successfully moved CrabLink from a mostly static browser-extension shell into a live RustyOnions browser client.
+
+The extension can now:
+
+```text
+- connect to a running local RustyOnions dev stack
+- show gateway online/offline state
+- check /healthz and /readyz
+- show the configured gateway URL
+- show current passport subject
+- show current wallet account
+- show ROC balance display from backend response
+- create/load a dev-safe RON Passport label through the gateway
+- refresh identity state through GET /identity/me
+- refresh wallet display through GET /wallet/:account/balance
+- resolve typed crab:// asset URLs
+- resolve b3 asset-page URLs
+- run read-only route diagnostics
+- package into a clean Chrome extension zip
+- run local structural checks
+- run live local gateway smoke against RustyOnions
+```
+
+The extension now successfully displays live backend state:
+
+```text
+Status:   ONLINE
+Gateway:  http://127.0.0.1:8090
+Passport: passport:main:dev
+Wallet:   acct_dev
+ROC:      0 ROC
+```
+
+This proves the first full browser-to-RustyOnions flow:
+
+```text
+Chrome Extension UI
+→ CrabLink storage/settings
+→ CrabLink ronClient.js
+→ svc-gateway
+→ omnigate
+→ identity/wallet façade
+→ back to browser display
+```
+
+---
+
+## Current architectural stance
+
+CrabLink is intentionally a **thin browser client**.
+
+It must not become:
+
+```text
+- a wallet truth engine
+- a ledger
+- a passport private-key authority
+- a storage service
+- an index service
+- a policy engine
+- a gateway replacement
+- a fake backend simulator
+```
+
+CrabLink may store safe local labels and UX state, such as:
+
+```text
+- gatewayUrl
+- passportSubject
+- walletAccount
+- lastIdentityCheckAt
+- lastBootstrapReceiptId
+- last displayed ROC balance metadata
+- recent receipt display metadata
+- local dev bearer token for development only
+```
+
+CrabLink must not store in this MVP:
+
+```text
+- seed phrases
+- raw private keys
+- wallet signing keys
+- long-lived spend authority
+- fake ROC truth
+- fake ledger receipts
+```
+
+All real authority and economic truth must come from RustyOnions services.
+
+---
+
+## Core invariant: gateway-only backend access
+
+CrabLink should call only public gateway routes.
+
+Correct:
+
+```text
+CrabLink
+→ svc-gateway
+→ omnigate
+→ downstream RustyOnions services
+```
+
+Incorrect:
+
+```text
+CrabLink
+→ svc-passport directly
+
+CrabLink
+→ svc-wallet directly
+
+CrabLink
+→ ron-ledger directly
+
+CrabLink
+→ svc-storage directly
+
+CrabLink
+→ svc-index directly
+```
+
+The extension now centralizes backend access through:
+
+```text
+extensions/chrome/src/ronClient.js
+```
+
+This is the correct place for all future route methods.
+
+---
+
+## Major files changed in CrabLink
+
+### Chrome extension UI / logic
+
+```text
+extensions/chrome/src/popup.html
+extensions/chrome/src/popup.js
+extensions/chrome/src/options.html
+extensions/chrome/src/options.js
+extensions/chrome/src/styles.css
+```
+
+### Client and local state
+
+```text
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/storage.js
+```
+
+### Manual QA
+
+```text
+extensions/chrome/test/manual-checklist.md
+```
+
+### Tooling
+
+```text
+scripts/check-chrome.sh
+scripts/smoke-local-gateway.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+### Shared schemas
+
+```text
+shared/schemas/extension-settings.schema.json
+shared/schemas/identity-me.schema.json
+shared/schemas/passport-bootstrap.schema.json
+shared/schemas/wallet-balance.schema.json
+```
+
+### Shared fixtures
+
+```text
+shared/fixtures/identity-me.empty.sample.json
+shared/fixtures/identity-me.ready.sample.json
+shared/fixtures/passport-bootstrap.sample.json
+shared/fixtures/wallet-balance.sample.json
+```
+
+### Generated bundle
+
+```text
+CODEBUNDLE_CHROME_EXTENSION.md
+```
+
+---
+
+## Current popup behavior
+
+The popup now has these main sections:
+
+```text
+- gateway/passport/wallet/ROC status card
+- RON Passport card
+- route diagnostics card
+- crab:// / b3 resolver input
+- result display card
+- safety card
+```
+
+### Status card
+
+Shows:
+
+```text
+Gateway URL
+Passport subject
+Wallet account
+ROC balance display
+```
+
+Buttons:
+
+```text
+Check Node
+Check Passport
+Settings
+```
+
+### Passport card
+
+Shows:
+
+```text
+Passport status
+Identity check timestamp
+Balance check timestamp
+Create RON Passport button if no passport is loaded
+Refresh Balance button if wallet account is loaded
+```
+
+Important behavior:
+
+```text
+If passportSubject exists, Create RON Passport is hidden.
+If passportSubject is empty, Create RON Passport appears.
+```
+
+To manually test first-run creation:
+
+```text
+Open extension options
+→ Clear Identity Labels
+→ reopen popup
+→ Create RON Passport button should appear
+```
+
+### Route diagnostics card
+
+Read-only diagnostics currently checks:
+
+```text
+GET /healthz
+GET /readyz
+GET /identity/me
+GET /wallet/:account/balance
+GET /b3/<sample>.image
+GET /crab/resolve?url=crab://<sample>.image
+```
+
+Diagnostics intentionally skips:
+
+```text
+POST /identity/passport/bootstrap
+```
+
+Reason: bootstrap is currently a dev-safe route, but it may become a real mutation route once `svc-passport` and `svc-wallet` backing are wired. Diagnostics should never silently run mutation routes.
+
+---
+
+## Current settings/options behavior
+
+Options page now supports:
+
+```text
+- gateway URL
+- request timeout
+- passport subject label
+- wallet account label
+- last known ROC balance display
+- dev bearer/cap token
+- require spend confirmation
+- dev mode
+```
+
+Options page buttons:
+
+```text
+Test Gateway
+Refresh Identity
+Create Dev Passport
+Clear Identity Labels
+Clear Token
+Save Settings
+Reset Defaults
+```
+
+Important safety detail:
+
+```text
+The dev token field is for local development only.
+Production signing/key custody must not be stored here in this MVP.
+```
+
+---
+
+## Current local storage schema
+
+Current settings schema version:
+
+```text
+schemaVersion = 2
+```
+
+Current settings fields include:
+
+```text
+gatewayUrl
+passportSubject
+walletAccount
+authToken
+requireSpendConfirm
+devMode
+requestTimeoutMs
+lastCrabUrl
+recentReceipts
+lastIdentityCheckAt
+lastBootstrapReceiptId
+rocBalanceMinorUnits
+rocBalanceDisplay
+rocBalanceUpdatedAt
+```
+
+The shared schema is:
+
+```text
+shared/schemas/extension-settings.schema.json
+```
+
+The storage implementation is:
+
+```text
+extensions/chrome/src/storage.js
+```
+
+Key storage helpers now include:
+
+```text
+getSettings()
+saveSettings()
+resetSettings()
+clearDevToken()
+clearIdentityState()
+saveIdentityState()
+saveBalanceState()
+extractIdentityState()
+extractBalanceState()
+normalizeGatewayUrl()
+normalizeTimeout()
+hasPassport()
+hasWallet()
+identitySummary()
+safeSettingsForDisplay()
+rememberLastCrabUrl()
+addRecentReceipt()
+```
+
+Important invariant:
+
+```text
+storage.js must never persist private keys, seed phrases, or fake ROC truth.
+```
+
+---
+
+## Current gateway client
+
+The gateway client is:
+
+```text
+extensions/chrome/src/ronClient.js
+```
+
+Current methods include:
+
+```text
+getHealth()
+getReady()
+getIdentity()
+bootstrapPassport()
+getWalletBalance(account)
+resolveCrab(url)
+getB3Asset(hash, kind)
+resolveSite(name)
+preparePaidObject(body)
+prepareImageAsset(body)
+createImageAsset(body)
+prepareSite(body)
+createSite(body)
+```
+
+Mutation routes automatically get an:
+
+```text
+Idempotency-Key
+```
+
+Requests also attach:
+
+```text
+Authorization
+x-correlation-id
+x-ron-passport
+x-ron-wallet-account
+```
+
+when available.
+
+Important invariant:
+
+```text
+All new backend routes should be added to ronClient.js first, then consumed by popup/options/background/content.
+```
+
+---
+
+## Current backend routes consumed by CrabLink
+
+CrabLink currently consumes:
+
+```text
+GET  /healthz
+GET  /readyz
+GET  /identity/me
+POST /identity/passport/bootstrap
+GET  /wallet/:account/balance
+GET  /crab/resolve?url=<crab_url>
+GET  /b3/<64hex>.<kind>
+GET  /sites/:name
+POST /paid/o/prepare
+POST /assets/image/prepare
+POST /assets/image
+POST /sites/prepare
+POST /sites
+```
+
+Important note:
+
+```text
+Only read-only routes are used by diagnostics.
+Mutation routes require explicit user action.
+```
+
+---
+
+## Current identity DTO expectations
+
+### `GET /identity/me`
+
+Expected shape:
+
+```json
+{
+  "schema": "crablink.identity.me.v1",
+  "passport": {
+    "subject": "passport:main:dev",
+    "kind": "main",
+    "display_name": "Local Dev Passport",
+    "created_at": null,
+    "source": "request_header"
+  },
+  "wallet": {
+    "account": "acct_dev",
+    "linked": true,
+    "source": "request_header"
+  },
+  "capabilities": {
+    "can_view_balance": true,
+    "can_prepare_paid_actions": true,
+    "can_spend": false
+  },
+  "warnings": [
+    "identity view is header-derived until svc-passport is wired"
+  ]
+}
+```
+
+Schema file:
+
+```text
+shared/schemas/identity-me.schema.json
+```
+
+Fixtures:
+
+```text
+shared/fixtures/identity-me.empty.sample.json
+shared/fixtures/identity-me.ready.sample.json
+```
+
+Critical rule:
+
+```text
+capabilities.can_spend must remain false unless a future short-lived caveated spend token is intentionally introduced.
+```
+
+---
+
+## Current passport bootstrap DTO expectations
+
+### `POST /identity/passport/bootstrap`
+
+Current dev façade response shape:
+
+```json
+{
+  "schema": "crablink.identity.bootstrap.v1",
+  "passport": {
+    "subject": "passport:main:dev",
+    "kind": "main",
+    "display_name": "CrabLink main passport",
+    "created_at": null,
+    "source": "omnigate_dev_bootstrap"
+  },
+  "wallet": {
+    "account": "acct_dev",
+    "linked": true,
+    "source": "omnigate_dev_bootstrap"
+  },
+  "starter_grant": {
+    "issued": false,
+    "amount_minor_units": "0",
+    "receipt_id": null,
+    "reason": "svc_wallet_integration_pending"
+  },
+  "capabilities": {
+    "can_view_balance": true,
+    "can_prepare_paid_actions": true,
+    "can_spend": false
+  },
+  "warnings": [
+    "dev bootstrap returns labels only",
+    "starter ROC is not issued until svc-wallet integration is wired",
+    "wallet spend authority is not granted by this response"
+  ]
+}
+```
+
+Schema file:
+
+```text
+shared/schemas/passport-bootstrap.schema.json
+```
+
+Fixture:
+
+```text
+shared/fixtures/passport-bootstrap.sample.json
+```
+
+Current truth:
+
+```text
+Bootstrap creates/loads safe labels only.
+Bootstrap does not issue ROC yet.
+Bootstrap does not call svc-wallet yet.
+Bootstrap does not commit to ron-ledger yet.
+```
+
+---
+
+## Current wallet balance DTO expectations
+
+### `GET /wallet/:account/balance`
+
+Current dev façade response shape:
+
+```json
+{
+  "schema": "crablink.wallet.balance.v1",
+  "account": "acct_dev",
+  "unit": "ROC",
+  "available_minor_units": "0",
+  "held_minor_units": "0",
+  "display": "0 ROC",
+  "as_of": null,
+  "ledger_backed": false,
+  "source": "omnigate_dev_wallet_view.v1",
+  "reason": "svc_wallet_integration_pending",
+  "warnings": [
+    "display-only dev placeholder",
+    "real balance must come from svc-wallet and ron-ledger",
+    "do not treat this route as spend authority"
+  ]
+}
+```
+
+Schema file:
+
+```text
+shared/schemas/wallet-balance.schema.json
+```
+
+Fixture:
+
+```text
+shared/fixtures/wallet-balance.sample.json
+```
+
+Critical rule:
+
+```text
+If ledger_backed=false, the extension must not treat the balance as authoritative economic truth.
+```
+
+Current display is:
+
+```text
+0 ROC
+```
+
+because the backend is deliberately not issuing fake starter ROC yet.
+
+---
+
+## Current `crab://` URL behavior
+
+Public CrabLink URL format:
+
+```text
+crab://<64 lowercase hex>.<asset_kind>
+```
+
+Example:
+
+```text
+crab://0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.image
+```
+
+The old form should not be used in public UX:
+
+```text
+crab://b3/<hash>.image
+```
+
+Internal RustyOnions content IDs remain:
+
+```text
+b3:<64 lowercase hex>
+```
+
+The extension can accept:
+
+```text
+- crab://<hash>.<kind>
+- b3:<hash>
+- raw 64 lowercase hex hash
+```
+
+Raw hashes and b3 CIDs default to a selected asset kind in the popup.
+
+---
+
+## Current scripts and checks
+
+### `scripts/check-chrome.sh`
+
+Proves:
+
+```text
+- required extension files exist
+- required schemas/fixtures exist
+- manifest_version is 3
+- permissions remain minimal
+- broad/risky permissions are blocked
+- host permissions are limited to localhost/127.0.0.1
+- popup IDs exist
+- popup.js references expected route methods
+- ronClient.js exposes expected methods
+- storage.js exposes expected helpers
+- old crab://b3/ public URL form is rejected
+- all JSON schemas/fixtures parse
+- JavaScript syntax checks pass with node --check
+```
+
+Successful output:
+
+```text
+json/structure checks: ok
+javascript syntax checks: ok
+CrabLink Chrome extension checks passed.
+```
+
+### `scripts/smoke-local-gateway.sh`
+
+Runs while the RustyOnions dev stack is active.
+
+Proves live:
+
+```text
+GET /healthz
+GET /readyz
+GET /identity/me
+GET /wallet/acct_dev/balance
+GET /b3/<sample>.image
+GET /crab/resolve?url=crab://<sample>.image
+```
+
+Skips bootstrap by default:
+
+```text
+skip: /identity/passport/bootstrap; set CRABLINK_SMOKE_RUN_BOOTSTRAP=1 to include mutation route
+```
+
+Successful output:
+
+```text
+CrabLink local gateway smoke passed.
+```
+
+### `scripts/package-chrome.sh`
+
+Creates:
+
+```text
+dist/crablink-extension-chrome.zip
+```
+
+It excludes junk such as:
+
+```text
+.DS_Store
+Thumbs.db
+__MACOSX
+.git
+node_modules
+coverage
+dist
+```
+
+Successful output:
+
+```text
+wrote: /Users/mymac/Desktop/crablink/dist/crablink-extension-chrome.zip
+```
+
+### `scripts/make_codebundle.sh`
+
+Creates:
+
+```text
+CODEBUNDLE_CHROME_EXTENSION.md
+```
+
+Successful output:
+
+```text
+wrote: /Users/mymac/Desktop/crablink/CODEBUNDLE_CHROME_EXTENSION.md
+```
+
+---
+
+## Successful command history from this milestone
+
+From the CrabLink repo root:
+
+```bash
+chmod +x scripts/check-chrome.sh scripts/package-chrome.sh scripts/smoke-local-gateway.sh
+scripts/check-chrome.sh
+scripts/smoke-local-gateway.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+git status
+```
+
+Observed successful output:
+
+```text
+json/structure checks: ok
+javascript syntax checks: ok
+CrabLink Chrome extension checks passed.
+
+CrabLink local gateway smoke passed.
+
+wrote: /Users/mymac/Desktop/crablink/dist/crablink-extension-chrome.zip
+wrote: /Users/mymac/Desktop/crablink/CODEBUNDLE_CHROME_EXTENSION.md
+```
+
+---
+
+## Current git status after the milestone
+
+Expected modified files:
+
+```text
+CODEBUNDLE_CHROME_EXTENSION.md
+extensions/chrome/src/options.html
+extensions/chrome/src/options.js
+extensions/chrome/src/popup.html
+extensions/chrome/src/popup.js
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/storage.js
+extensions/chrome/src/styles.css
+extensions/chrome/test/manual-checklist.md
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/smoke-local-gateway.sh
+shared/schemas/extension-settings.schema.json
+```
+
+Expected new files:
+
+```text
+NOTES.MD
+shared/fixtures/identity-me.empty.sample.json
+shared/fixtures/identity-me.ready.sample.json
+shared/fixtures/passport-bootstrap.sample.json
+shared/fixtures/wallet-balance.sample.json
+shared/schemas/identity-me.schema.json
+shared/schemas/passport-bootstrap.schema.json
+shared/schemas/wallet-balance.schema.json
+```
+
+Recommended commit:
+
+```bash
+git add CODEBUNDLE_CHROME_EXTENSION.md \
+  extensions/chrome/src/options.html \
+  extensions/chrome/src/options.js \
+  extensions/chrome/src/popup.html \
+  extensions/chrome/src/popup.js \
+  extensions/chrome/src/ronClient.js \
+  extensions/chrome/src/storage.js \
+  extensions/chrome/src/styles.css \
+  extensions/chrome/test/manual-checklist.md \
+  scripts/check-chrome.sh \
+  scripts/package-chrome.sh \
+  scripts/smoke-local-gateway.sh \
+  shared/schemas/extension-settings.schema.json \
+  shared/schemas/identity-me.schema.json \
+  shared/schemas/passport-bootstrap.schema.json \
+  shared/schemas/wallet-balance.schema.json \
+  shared/fixtures/identity-me.empty.sample.json \
+  shared/fixtures/identity-me.ready.sample.json \
+  shared/fixtures/passport-bootstrap.sample.json \
+  shared/fixtures/wallet-balance.sample.json \
+  NOTES.MD
+
+git status
+git commit -m "Add CrabLink passport diagnostics and gateway smoke tooling"
+```
+
+If `NOTES.MD` is not intended to be versioned, omit it from `git add`.
+
+---
+
+## Current RustyOnions backend dependency
+
+For CrabLink to show online, the RustyOnions dev stack must be running.
+
+From the RustyOnions repo root:
+
+```bash
+scripts/web3_crablink_dev_stack.sh
+```
+
+Successful backend output should end with:
+
+```text
+WEB3 identity stack smoke passed
+
+CrabLink dev stack is online
+gateway: http://127.0.0.1:8090
+
+Leave this terminal open while using the CrabLink extension.
+Press Ctrl-C in this terminal to stop the stack.
+```
+
+If that terminal is closed or Ctrl-C is pressed, the extension will go offline again.
+
+---
+
+## Current known limitations
+
+CrabLink is live but still in the safe MVP phase.
+
+Known limitations:
+
+```text
+- no real persistent passport vault yet
+- no local encrypted key storage yet
+- no PIN/password unlock flow yet
+- no real alt anonymous passport selection yet
+- no real svc-passport-backed identity persistence yet
+- no real svc-wallet-backed balance yet
+- no 1776 ROC starter grant yet
+- no ledger-backed receipt in bootstrap yet
+- wallet balance currently comes from omnigate dev façade
+- balance currently says ledger_backed=false
+- bootstrap currently says starter_grant.issued=false
+- Create RON Passport is hidden if passportSubject already exists
+```
+
+These are not bugs. They are intentional until the backend is wired.
+
+---
+
+## Important new product requirement
+
+The user requested:
+
+```text
+Every newly created RON Passport should automatically start with 1776 ROC.
+```
+
+This must not be implemented as a fake local extension balance.
+
+Correct future flow:
+
+```text
+CrabLink
+→ POST /identity/passport/bootstrap through svc-gateway
+→ omnigate
+→ svc-passport creates/loads passport
+→ svc-wallet issues 1776 ROC
+→ ron-ledger commits issue event
+→ receipt returned
+→ CrabLink refreshes wallet balance
+→ popup displays 1776 ROC
+```
+
+CrabLink should only display the backend result.
+
+Wrong implementation:
+
+```text
+CrabLink locally sets rocBalanceDisplay = "1776 ROC"
+```
+
+Correct implementation:
+
+```text
+CrabLink receives:
+starter_grant.issued=true
+amount_minor_units="1776"
+receipt_id="<wallet-ledger receipt>"
+then refreshes:
+GET /wallet/:account/balance
+```
+
+No floating-point math. Use integer minor units only.
+
+Current safest interpretation:
+
+```text
+1776 means amount_minor_units="1776" and display "1776 ROC" in the dev model.
+```
+
+If the project later introduces decimal precision, that should be handled explicitly in backend DTOs.
+
+---
+
+## Next best backend work
+
+The next major work likely belongs in the RustyOnions repo, not CrabLink.
+
+Recommended next RustyOnions batch:
+
+```text
+Batch 8 — Real-ish wallet-backed bootstrap with 1776 ROC starter grant
+```
+
+Likely backend tasks:
+
+```text
+1. Add svc-wallet to scripts/web3_crablink_dev_stack.sh.
+2. Configure svc-wallet with a local dev ledger path.
+3. Add omnigate wallet downstream config.
+4. Add omnigate downstream wallet client.
+5. Update GET /v1/wallet/:account/balance to call svc-wallet.
+6. Update POST /v1/identity/passport/bootstrap to call svc-wallet issue for 1776 ROC.
+7. Make bootstrap idempotent so repeated clicks do not double-issue.
+8. Return starter_grant.issued=true with receipt id.
+9. Update identity smoke to require amount_minor_units="1776" after bootstrap.
+10. Keep fallback/dev façade only behind explicit config if needed.
+```
+
+Important backend invariant:
+
+```text
+omnigate must not mutate ron-ledger directly.
+omnigate must go through svc-wallet.
+svc-wallet remains the mutation front-door.
+ron-ledger remains durable economic truth.
+```
+
+---
+
+## Next best CrabLink work after backend 1776 ROC lands
+
+Once RustyOnions returns real starter grant and balance data, CrabLink should be updated to show:
+
+```text
+Starter ROC issued: 1776 ROC
+Receipt: <receipt_id>
+Ledger-backed: true
+```
+
+Likely CrabLink files:
+
+```text
+extensions/chrome/src/popup.html
+extensions/chrome/src/popup.js
+extensions/chrome/src/storage.js
+extensions/chrome/src/ronClient.js
+shared/schemas/passport-bootstrap.schema.json
+shared/schemas/wallet-balance.schema.json
+shared/fixtures/passport-bootstrap.sample.json
+shared/fixtures/wallet-balance.sample.json
+scripts/smoke-local-gateway.sh
+extensions/chrome/test/manual-checklist.md
+```
+
+Potential UI improvements:
+
+```text
+- show ledger_backed badge
+- show receipt id after bootstrap
+- show warnings from backend
+- show "Starter grant pending / issued / unavailable"
+- show "Refresh Balance" after create
+- show clear "Create Passport" first-run card
+```
+
+---
+
+## First-run passport creation testing
+
+To test the current create button:
+
+```text
+1. Open CrabLink Settings.
+2. Click Clear Identity Labels.
+3. Reopen popup.
+4. Create RON Passport button should appear.
+5. Click Create RON Passport.
+6. Extension should call POST /identity/passport/bootstrap.
+7. It should save passportSubject and walletAccount.
+8. It should refresh balance.
+9. Current result should still be 0 ROC until backend starter grant is wired.
+```
+
+Expected current values after create:
+
+```text
+passport:main:dev
+acct_dev
+0 ROC
+```
+
+Expected future values after 1776 ROC backend batch:
+
+```text
+passport:main:dev
+acct_dev
+1776 ROC
+receipt_id present
+ledger_backed=true
+```
+
+---
+
+## Security and permission state
+
+The extension should remain minimal.
+
+Allowed current permissions:
+
+```text
+storage
+activeTab
+```
+
+Allowed current host permissions:
+
+```text
+http://127.0.0.1:*/*
+http://localhost:*/*
+```
+
+Blocked/risky permissions in `check-chrome.sh`:
+
+```text
+<all_urls>
+tabs
+history
+cookies
+downloads
+webRequest
+webRequestBlocking
+nativeMessaging
+unlimitedStorage
+clipboardRead
+```
+
+Do not add broad permissions unless there is a very specific reason and the checklist/tooling is updated deliberately.
+
+---
+
+## Packaging state
+
+The extension now packages successfully:
+
+```text
+dist/crablink-extension-chrome.zip
+```
+
+This zip is created by:
+
+```bash
+scripts/package-chrome.sh
+```
+
+It should be safe for local install/review because it excludes transient and macOS junk files.
+
+---
+
+## Completion estimate for CrabLink current phase
+
+For the current CrabLink Chrome MVP:
+
+```text
+Extension shell / manifest:                 85% complete
+Popup UI:                                   75% complete
+Options UI:                                 75% complete
+Gateway client abstraction:                 80% complete
+Safe local storage:                         80% complete
+Health/readiness integration:               95% complete
+Passport label bootstrap UI:                70% complete
+Real passport creation / key custody:        0% complete
+Wallet display route integration:           70% complete
+Real wallet-backed balance:                  0% complete
+1776 ROC starter grant display:              0% complete
+crab:// / b3 resolver UX:                   70% complete
+Route diagnostics:                          85% complete
+Local smoke/check/package tooling:           90% complete
+Chrome Web Store readiness:                 25% complete
+```
+
+Overall CrabLink MVP completion estimate:
+
+```text
+~60–65% complete
+```
+
+Reason: the extension is now live against the gateway, but real passport custody, real wallet-backed balance, starter grant receipts, production auth, extension install polish, and user onboarding still remain.
+
+---
+
+## What to do at the start of the next session
+
+Recommended starting sequence:
+
+### 1. Start RustyOnions dev stack
+
+From RustyOnions repo root:
+
+```bash
+scripts/web3_crablink_dev_stack.sh
+```
+
+Leave it running.
+
+### 2. Check CrabLink repo
+
+From CrabLink repo root:
+
+```bash
+scripts/check-chrome.sh
+scripts/smoke-local-gateway.sh
+```
+
+### 3. Reload extension
+
+In Chrome:
+
+```text
+chrome://extensions
+→ reload CrabLink
+→ open popup
+→ Check Node
+→ Check Passport
+→ Refresh Balance
+→ Run Diagnostics
+```
+
+### 4. Decide next track
+
+Best next track:
+
+```text
+RustyOnions backend Batch 8:
+1776 ROC starter grant via svc-wallet → ron-ledger
+```
+
+Then return to CrabLink for UI updates.
+
+---
+
+## TL;DR carryover
+
+CrabLink is now a working Chrome extension MVP connected to RustyOnions.
+
+Working live path:
+
+```text
+CrabLink
+→ svc-gateway at http://127.0.0.1:8090
+→ omnigate
+→ identity/wallet dev façade
+```
+
+Currently working:
+
+```text
+ONLINE gateway status
+passport label display
+wallet account display
+0 ROC balance display
+identity refresh
+balance refresh
+passport bootstrap button
+route diagnostics
+crab:// and b3 resolver
+local gateway smoke
+safe package zip
+schema/fixture coverage
+```
+
+Still remaining:
+
+```text
+real svc-passport backing
+real wallet-backed balance
+1776 ROC starter grant
+receipt display
+PIN/password unlock
+local persistent encrypted passport vault
+alt anonymous passports
+production auth/capabilities
+Chrome Web Store polish
+```
+
+Most important rule:
+
+```text
+Do not fake 1776 ROC in CrabLink.
+The 1776 ROC starter grant must come from RustyOnions backend truth:
+svc-wallet → ron-ledger → receipt → CrabLink display.
+```
+
+# END NOTE — APRIL 30 2026 — CrabLink Chrome Extension WEB3_2 Passport/Gateway Milestone
+
+
+### END NOTE - APRIL 30 2026 - 00:30 CST

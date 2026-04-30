@@ -1,17 +1,18 @@
 /**
- * RO:WHAT — Popup controller for gateway status, passport bootstrap, wallet balance, diagnostics, and crab resolves.
- * RO:WHY — App Integration; Concerns: DX/SEC/RES; make RON usable while preserving service boundaries.
- * RO:INTERACTS — storage.js, ronClient.js, crab.js, svc-gateway routes.
- * RO:INVARIANTS — no silent spending; no local key custody; identity labels are not wallet truth.
- * RO:METRICS — sends x-correlation-id through RonClient for backend correlation.
- * RO:CONFIG — reads gatewayUrl, passportSubject, walletAccount, requestTimeoutMs.
- * RO:SECURITY — no seed phrases/PIN storage in this MVP; backend capability checks fail closed.
- * RO:TEST — scripts/check-chrome.sh plus manual identity/bootstrap/diagnostics checklist.
+ * RO:WHAT — Popup controller for CrabLink health, passport, balance, diagnostics, and resolver UX.
+ * RO:WHY — App Integration; Concerns: DX/SEC/RES; expose gateway-backed state without local truth.
+ * RO:INTERACTS — storage.js, ronClient.js, crab.js, svc-gateway public routes.
+ * RO:INVARIANTS — no private keys; no fake ROC; diagnostics stay read-only; mutations require a button.
+ * RO:METRICS — sends correlation IDs through ronClient.js for backend metrics/logs.
+ * RO:CONFIG — uses gateway URL, timeout, passport label, wallet label, dev token from storage.js.
+ * RO:SECURITY — redacts secrets; does not display Authorization values.
+ * RO:TEST — scripts/check-chrome.sh, scripts/smoke-local-gateway.sh, manual checklist.
  */
 
 import { normalizeCrabInput } from './crab.js';
+import { RonClient } from './ronClient.js';
 import {
-  extractBalanceState,
+  addRecentReceipt,
   extractIdentityState,
   getSettings,
   hasPassport,
@@ -19,351 +20,199 @@ import {
   identitySummary,
   rememberLastCrabUrl,
   saveBalanceState,
-  saveIdentityState,
-  saveSettings
+  saveIdentityState
 } from './storage.js';
-import { RonClient, RonClientError } from './ronClient.js';
 
-const DIAG_SAMPLE_HASH = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const SAMPLE_HASH = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
 const els = {
-  nodeBadge: document.getElementById('nodeBadge'),
-  gatewayUrl: document.getElementById('gatewayUrl'),
-  passportSubject: document.getElementById('passportSubject'),
-  walletAccount: document.getElementById('walletAccount'),
-  rocBalance: document.getElementById('rocBalance'),
-  checkNodeButton: document.getElementById('checkNodeButton'),
-  refreshIdentityButton: document.getElementById('refreshIdentityButton'),
-  openOptionsButton: document.getElementById('openOptionsButton'),
-  passportStatusText: document.getElementById('passportStatusText'),
-  passportBadge: document.getElementById('passportBadge'),
-  lastIdentityCheck: document.getElementById('lastIdentityCheck'),
-  balanceUpdatedAt: document.getElementById('balanceUpdatedAt'),
-  createPassportButton: document.getElementById('createPassportButton'),
-  refreshBalanceButton: document.getElementById('refreshBalanceButton'),
-  diagnosticsBadge: document.getElementById('diagnosticsBadge'),
-  diagnosticsList: document.getElementById('diagnosticsList'),
-  runDiagnosticsButton: document.getElementById('runDiagnosticsButton'),
-  crabInput: document.getElementById('crabInput'),
-  defaultAssetKind: document.getElementById('defaultAssetKind'),
-  resolveButton: document.getElementById('resolveButton'),
-  clearButton: document.getElementById('clearButton'),
-  message: document.getElementById('message'),
-  result: document.getElementById('result'),
-  resultTitle: document.getElementById('resultTitle'),
-  resultSubtitle: document.getElementById('resultSubtitle'),
-  resultKind: document.getElementById('resultKind'),
-  resultFacts: document.getElementById('resultFacts'),
-  copyCrabButton: document.getElementById('copyCrabButton'),
-  copyB3Button: document.getElementById('copyB3Button'),
-  copyJsonButton: document.getElementById('copyJsonButton'),
-  resultJson: document.getElementById('resultJson')
+  nodeBadge: byId('nodeBadge'),
+  gatewayUrl: byId('gatewayUrl'),
+  passportSubject: byId('passportSubject'),
+  walletAccount: byId('walletAccount'),
+  rocBalance: byId('rocBalance'),
+  ledgerBacked: byId('ledgerBacked'),
+  checkNodeButton: byId('checkNodeButton'),
+  refreshIdentityButton: byId('refreshIdentityButton'),
+  openOptionsButton: byId('openOptionsButton'),
+
+  passportBadge: byId('passportBadge'),
+  passportSummary: byId('passportSummary'),
+  identityCheckedAt: byId('identityCheckedAt'),
+  balanceCheckedAt: byId('balanceCheckedAt'),
+  starterGrantStatus: byId('starterGrantStatus'),
+  starterGrantAmount: byId('starterGrantAmount'),
+  bootstrapReceiptId: byId('bootstrapReceiptId'),
+  createPassportButton: byId('createPassportButton'),
+  refreshBalanceButton: byId('refreshBalanceButton'),
+
+  diagnosticsBadge: byId('diagnosticsBadge'),
+  diagnosticsList: byId('diagnosticsList'),
+  runDiagnosticsButton: byId('runDiagnosticsButton'),
+
+  crabInput: byId('crabInput'),
+  defaultAssetKind: byId('defaultAssetKind'),
+  resolveButton: byId('resolveButton'),
+
+  result: byId('result'),
+  resultTitle: byId('resultTitle'),
+  resultSubtitle: byId('resultSubtitle'),
+  resultKind: byId('resultKind'),
+  resultFacts: byId('resultFacts'),
+  resultJson: byId('resultJson'),
+  copyCrabButton: byId('copyCrabButton'),
+  copyB3Button: byId('copyB3Button'),
+  copyJsonButton: byId('copyJsonButton'),
+
+  messageBox: byId('messageBox')
 };
 
 let settings = null;
 let client = null;
-let lastResult = null;
 let lastParsed = null;
+let lastResult = null;
+
+const diagnosticDefinitions = [
+  {
+    label: 'Gateway health',
+    method: 'GET',
+    path: '/healthz',
+    run: () => client.getHealth()
+  },
+  {
+    label: 'Gateway readiness',
+    method: 'GET',
+    path: '/readyz',
+    run: () => client.getReady()
+  },
+  {
+    label: 'Passport identity',
+    method: 'GET',
+    path: '/identity/me',
+    run: () => client.getIdentity()
+  },
+  {
+    label: 'Wallet balance',
+    method: 'GET',
+    path: () => `/wallet/${settings.walletAccount || ':account'}/balance`,
+    enabled: () => hasWallet(settings),
+    run: () => client.getWalletBalance(settings.walletAccount)
+  },
+  {
+    label: 'Typed b3 asset page',
+    method: 'GET',
+    path: `/b3/${SAMPLE_HASH}.image`,
+    run: () => client.getB3Asset(SAMPLE_HASH, 'image')
+  },
+  {
+    label: 'crab:// resolver',
+    method: 'GET',
+    path: `/crab/resolve?url=crab://${SAMPLE_HASH}.image`,
+    run: () => client.resolveCrab(`crab://${SAMPLE_HASH}.image`)
+  },
+  {
+    label: 'Passport bootstrap',
+    method: 'POST',
+    path: '/identity/passport/bootstrap',
+    mutation: true,
+    skipReason: 'Skipped by diagnostics because this is a mutation route.'
+  }
+];
+
+function byId(id) {
+  const el = document.getElementById(id);
+
+  if (!el) {
+    throw new Error(`Missing popup element: ${id}`);
+  }
+
+  return el;
+}
 
 async function load() {
   settings = await getSettings();
   client = new RonClient(settings);
-
-  renderSettings();
-  renderDiagnosticsShell();
+  renderSettings(settings);
+  renderDiagnosticsIdle();
 
   if (settings.lastCrabUrl) {
     els.crabInput.value = settings.lastCrabUrl;
   }
 
-  const nodeReady = await checkNode({ quiet: true });
-
-  if (nodeReady) {
-    await refreshIdentity({ quiet: true });
-  }
+  await checkNode({ quiet: true });
 }
 
-function renderSettings() {
+function renderSettings(nextSettings) {
+  settings = nextSettings;
+
   els.gatewayUrl.textContent = settings.gatewayUrl;
   els.passportSubject.textContent = settings.passportSubject || 'not loaded';
-  els.walletAccount.textContent = settings.walletAccount || 'not loaded';
+  els.walletAccount.textContent = settings.walletAccount || 'not linked';
   els.rocBalance.textContent = settings.rocBalanceDisplay || 'unknown';
-  els.lastIdentityCheck.textContent = shortTimestamp(settings.lastIdentityCheckAt) || 'never';
-  els.balanceUpdatedAt.textContent = shortTimestamp(settings.rocBalanceUpdatedAt) || 'never';
+  els.ledgerBacked.textContent = settings.rocLedgerBacked ? 'ledger-backed' : 'display-only';
 
-  if (hasPassport(settings)) {
-    els.passportBadge.textContent = hasWallet(settings) ? 'ready' : 'partial';
-    els.passportBadge.className = hasWallet(settings) ? 'pill pill-ok' : 'pill pill-warn';
-    els.passportStatusText.textContent = identitySummary(settings);
-    els.createPassportButton.classList.add('hidden');
-    els.refreshBalanceButton.classList.toggle('hidden', !hasWallet(settings));
+  els.passportSummary.textContent = hasPassport(settings)
+    ? `Passport ready: ${identitySummary(settings)}`
+    : 'No passport label is loaded yet. Create or load one through the gateway.';
+
+  els.identityCheckedAt.textContent = formatDate(settings.lastIdentityCheckAt);
+  els.balanceCheckedAt.textContent = formatDate(settings.rocBalanceUpdatedAt);
+  els.bootstrapReceiptId.textContent = settings.lastBootstrapReceiptId || 'none';
+
+  if (settings.lastStarterGrantIssued) {
+    els.starterGrantStatus.textContent = 'issued by backend';
+  } else if (settings.lastStarterGrantReason) {
+    els.starterGrantStatus.textContent = settings.lastStarterGrantReason;
+  } else {
+    els.starterGrantStatus.textContent = 'pending backend';
+  }
+
+  els.starterGrantAmount.textContent = settings.lastStarterGrantAmountMinorUnits
+    ? `${settings.lastStarterGrantAmountMinorUnits} ROC`
+    : 'unknown';
+
+  setPassportBadge();
+  syncPassportButtons();
+}
+
+function setPassportBadge() {
+  if (!hasPassport(settings)) {
+    setBadge(els.passportBadge, 'warn', 'create');
     return;
   }
 
-  els.passportBadge.textContent = 'needed';
-  els.passportBadge.className = 'pill pill-warn';
-  els.passportStatusText.textContent = 'Create or load a RON Passport before using wallet-linked RustyOnions flows.';
-  els.createPassportButton.classList.remove('hidden');
-  els.refreshBalanceButton.classList.add('hidden');
-}
-
-function diagnosticDefinitions() {
-  return [
-    {
-      id: 'healthz',
-      label: 'Gateway health',
-      route: 'GET /healthz',
-      run: () => client.getHealth()
-    },
-    {
-      id: 'readyz',
-      label: 'Gateway readiness',
-      route: 'GET /readyz',
-      run: () => client.getReady()
-    },
-    {
-      id: 'identity',
-      label: 'Passport identity',
-      route: 'GET /identity/me',
-      run: () => client.getIdentity()
-    },
-    {
-      id: 'wallet',
-      label: 'Wallet balance',
-      route: settings.walletAccount
-        ? `GET /wallet/${settings.walletAccount}/balance`
-        : 'GET /wallet/:account/balance',
-      skip: () => !settings.walletAccount,
-      skipReason: 'wallet label not loaded',
-      run: () => client.getWalletBalance(settings.walletAccount)
-    },
-    {
-      id: 'b3_asset',
-      label: 'Typed b3 asset page',
-      route: `GET /b3/${DIAG_SAMPLE_HASH}.image`,
-      run: () => client.getB3Asset(DIAG_SAMPLE_HASH, 'image')
-    },
-    {
-      id: 'crab_resolve',
-      label: 'crab:// resolver',
-      route: `GET /crab/resolve?url=crab://${DIAG_SAMPLE_HASH}.image`,
-      run: () => client.resolveCrab(`crab://${DIAG_SAMPLE_HASH}.image`)
-    },
-    {
-      id: 'bootstrap',
-      label: 'Passport bootstrap',
-      route: 'POST /identity/passport/bootstrap',
-      skip: () => true,
-      skipReason: 'skipped: mutation route',
-      run: null
-    }
-  ];
-}
-
-function renderDiagnosticsShell() {
-  els.diagnosticsList.textContent = '';
-
-  for (const item of diagnosticDefinitions()) {
-    const row = document.createElement('div');
-    row.className = 'diagnostic-row';
-    row.dataset.diagId = item.id;
-
-    const main = document.createElement('div');
-    main.className = 'diagnostic-main';
-
-    const label = document.createElement('span');
-    label.className = 'diagnostic-label';
-    label.textContent = item.label;
-
-    const route = document.createElement('span');
-    route.className = 'diagnostic-route mono';
-    route.textContent = item.route;
-
-    main.append(label, route);
-
-    const status = document.createElement('span');
-    status.className = 'diagnostic-status diagnostic-idle';
-    status.textContent = 'idle';
-
-    row.append(main, status);
-    els.diagnosticsList.append(row);
-  }
-
-  setDiagnosticsBadge('idle', 'idle');
-}
-
-function setDiagnosticRow(id, kind, text) {
-  const row = els.diagnosticsList.querySelector(`[data-diag-id="${id}"]`);
-  if (!row) {
+  if (settings.rocLedgerBacked) {
+    setBadge(els.passportBadge, 'ok', 'ledger');
     return;
   }
 
-  const status = row.querySelector('.diagnostic-status');
-  status.className = `diagnostic-status diagnostic-${kind}`;
-  status.textContent = text;
+  setBadge(els.passportBadge, 'ok', 'ready');
 }
 
-function setDiagnosticsBadge(kind, text) {
-  els.diagnosticsBadge.className = `pill ${kind === 'ok' ? 'pill-ok' : kind === 'bad' ? 'pill-bad' : kind === 'warn' ? 'pill-warn' : ''}`;
-  els.diagnosticsBadge.textContent = text;
-}
-
-async function runDiagnostics() {
-  clearMessage();
-  setBusy(true);
-  setDiagnosticsBadge('warn', 'running');
-
-  let okCount = 0;
-  let warnCount = 0;
-  let badCount = 0;
-
-  try {
-    for (const item of diagnosticDefinitions()) {
-      if (item.skip && item.skip()) {
-        warnCount += 1;
-        setDiagnosticRow(item.id, 'warn', item.skipReason || 'skipped');
-        continue;
-      }
-
-      setDiagnosticRow(item.id, 'pending', 'checking');
-
-      try {
-        const response = await item.run();
-        const status = response?.status ? `HTTP ${response.status}` : 'ok';
-
-        okCount += 1;
-        setDiagnosticRow(item.id, 'ok', status);
-      } catch (error) {
-        badCount += 1;
-        setDiagnosticRow(item.id, 'bad', diagnosticErrorLabel(error));
-      }
-    }
-
-    if (badCount > 0) {
-      setDiagnosticsBadge('bad', `${badCount} fail`);
-      showMessage('bad', `Diagnostics found ${badCount} failing route(s).`);
-      return;
-    }
-
-    if (warnCount > 0) {
-      setDiagnosticsBadge('warn', `${okCount} ok`);
-      showMessage('warn', `Diagnostics passed ${okCount} read-only route(s). ${warnCount} route(s) were skipped by design.`);
-      return;
-    }
-
-    setDiagnosticsBadge('ok', 'green');
-    showMessage('ok', 'All read-only diagnostics passed.');
-  } finally {
-    setBusy(false);
-  }
+function syncPassportButtons() {
+  els.createPassportButton.classList.toggle('hidden', hasPassport(settings));
+  els.refreshBalanceButton.classList.toggle('hidden', !hasWallet(settings));
 }
 
 async function checkNode(options = {}) {
-  const quiet = Boolean(options.quiet);
-
-  if (!quiet) {
-    clearMessage();
-  }
-
   try {
     setBusy(true);
-    setBadge('muted', 'checking');
+    setBadge(els.nodeBadge, 'muted', 'checking');
 
-    const [health, ready] = await Promise.allSettled([
-      client.getHealth(),
-      client.getReady()
-    ]);
+    await client.getHealth();
+    await client.getReady();
 
-    const healthOk = health.status === 'fulfilled';
-    const readyOk =
-      ready.status === 'fulfilled' &&
-      (ready.value?.data?.ok === true || ready.value?.data?.ready === true || ready.value?.ok === true);
+    setBadge(els.nodeBadge, 'ok', 'online');
 
-    if (readyOk) {
-      setBadge('ok', 'online');
-      if (!quiet) {
-        showMessage('ok', 'RustyOnions gateway is online and ready.');
-      }
-      return true;
-    }
-
-    if (healthOk) {
-      setBadge('warn', 'degraded');
-      if (!quiet) {
-        showMessage('warn', 'Gateway is alive, but readiness is not green.');
-      }
-      return false;
-    }
-
-    throw health.reason || ready.reason || new Error('Gateway is offline.');
-  } catch (error) {
-    setBadge('bad', 'offline');
-    showMessage('bad', formatError(error));
-    return false;
-  } finally {
-    setBusy(false);
-  }
-}
-
-async function refreshIdentity(options = {}) {
-  const quiet = Boolean(options.quiet);
-
-  if (!quiet) {
-    clearMessage();
-  }
-
-  try {
-    setBusy(true);
-
-    const response = await client.getIdentity();
-    const identity = extractIdentityState(response.data);
-
-    if (!identity.passportSubject) {
-      await saveSettings({
-        ...settings,
-        lastIdentityCheckAt: new Date().toISOString()
-      });
-      settings = await getSettings();
-      renderSettings();
-      renderDiagnosticsShell();
-
-      if (!quiet) {
-        showMessage('warn', 'Gateway responded, but no passport is loaded for this browser client.');
-      }
-
-      return false;
-    }
-
-    settings = await saveIdentityState(response.data);
-    client = new RonClient(settings);
-    renderSettings();
-    renderDiagnosticsShell();
-
-    if (settings.walletAccount) {
-      await refreshBalance({ quiet: true });
-    }
-
-    if (!quiet) {
-      showMessage('ok', 'Passport state refreshed from the RustyOnions gateway.');
+    if (!options.quiet) {
+      showMessage('ok', 'RustyOnions gateway is online and ready.');
     }
 
     return true;
   } catch (error) {
-    renderSettings();
+    setBadge(els.nodeBadge, 'bad', 'offline');
 
-    if (isMissingIdentityRoute(error)) {
-      const text = hasPassport(settings)
-        ? 'Identity route is not available yet; using saved passport labels.'
-        : 'Passport service is not available yet. Create will work after gateway exposes identity bootstrap routes.';
-
-      if (!quiet) {
-        showMessage('warn', text);
-      }
-
-      return false;
-    }
-
-    if (!quiet) {
+    if (!options.quiet) {
       showMessage('bad', formatError(error));
     }
 
@@ -373,44 +222,72 @@ async function refreshIdentity(options = {}) {
   }
 }
 
-async function createPassport() {
-  clearMessage();
-
+async function refreshIdentity() {
   try {
     setBusy(true);
-    setBadge('muted', 'creating');
+    setBadge(els.passportBadge, 'muted', 'checking');
 
-    const response = await client.bootstrapPassport();
-    const identity = extractIdentityState(response.data);
+    const response = await client.getIdentity();
+    const saved = await saveIdentityState(response.data);
 
-    if (!identity.passportSubject) {
-      throw new RonClientError('Passport bootstrap response did not include a passport subject.', {
-        route: response.route,
-        status: response.status,
-        correlationId: response.correlationId,
-        data: response.data
-      });
-    }
-
-    settings = await saveIdentityState(response.data);
+    settings = saved;
     client = new RonClient(settings);
-    renderSettings();
-    renderDiagnosticsShell();
+    renderSettings(saved);
+    renderBackendWarnings(response.data);
 
-    if (settings.walletAccount) {
+    if (hasWallet(saved)) {
       await refreshBalance({ quiet: true });
     }
 
-    setBadge('ok', 'online');
-    showMessage('ok', 'RON Passport created/loaded through the configured gateway.');
+    setBadge(els.passportBadge, 'ok', hasPassport(saved) ? 'ready' : 'empty');
+    showMessage('ok', `Identity refreshed. Correlation: ${response.correlationId}`);
   } catch (error) {
-    if (isMissingIdentityRoute(error)) {
-      setBadge('warn', 'backend todo');
-      showMessage('warn', 'Gateway is reachable, but passport bootstrap routes are not implemented yet.');
-      return;
+    setBadge(els.passportBadge, 'bad', 'error');
+    showMessage('bad', formatError(error));
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function createPassport() {
+  try {
+    setBusy(true);
+    setBadge(els.passportBadge, 'muted', 'creating');
+
+    const response = await client.bootstrapPassport({
+      desired_starting_balance_minor_units: '1776'
+    });
+
+    const identity = extractIdentityState(response.data);
+
+    if (!identity.passportSubject) {
+      throw new Error('Passport bootstrap response did not include a passport subject.');
     }
 
-    setBadge('bad', 'error');
+    let saved = await saveIdentityState(response.data);
+
+    if (identity.lastBootstrapReceiptId) {
+      saved = await addRecentReceipt({
+        id: identity.lastBootstrapReceiptId,
+        route: '/identity/passport/bootstrap',
+        action: 'passport_bootstrap',
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    settings = saved;
+    client = new RonClient(settings);
+    renderSettings(saved);
+    renderBackendWarnings(response.data);
+
+    if (hasWallet(saved)) {
+      await refreshBalance({ quiet: true });
+    }
+
+    setBadge(els.passportBadge, 'ok', 'created');
+    showMessage('ok', `Passport created/loaded through gateway. Correlation: ${response.correlationId}`);
+  } catch (error) {
+    setBadge(els.passportBadge, 'bad', 'error');
     showMessage('bad', formatError(error));
   } finally {
     setBusy(false);
@@ -418,50 +295,142 @@ async function createPassport() {
 }
 
 async function refreshBalance(options = {}) {
-  const quiet = Boolean(options.quiet);
-
-  if (!quiet) {
-    clearMessage();
-  }
-
-  if (!settings.walletAccount) {
-    if (!quiet) {
-      showMessage('warn', 'Wallet account is not loaded yet.');
+  if (!hasWallet(settings)) {
+    if (!options.quiet) {
+      showMessage('warn', 'No wallet account label is loaded yet.');
     }
-    return false;
+
+    return;
   }
 
   try {
     setBusy(true);
 
     const response = await client.getWalletBalance(settings.walletAccount);
-    const balance = extractBalanceState(response.data);
+    const saved = await saveBalanceState(response.data);
 
-    settings = await saveBalanceState(balance);
+    settings = saved;
     client = new RonClient(settings);
-    renderSettings();
+    renderSettings(saved);
+    renderBackendWarnings(response.data);
 
-    if (!quiet) {
-      showMessage('ok', 'Wallet balance refreshed from the RustyOnions gateway.');
+    if (!options.quiet) {
+      showMessage(
+        saved.rocLedgerBacked ? 'ok' : 'warn',
+        saved.rocLedgerBacked
+          ? `Ledger-backed balance refreshed. Correlation: ${response.correlationId}`
+          : `Display-only balance refreshed. Correlation: ${response.correlationId}`
+      );
     }
-
-    return true;
   } catch (error) {
-    if (isMissingWalletRoute(error)) {
-      if (!quiet) {
-        showMessage('warn', 'Wallet balance route is not available yet. Balance will appear after gateway exposes it.');
-      }
-      return false;
-    }
-
-    if (!quiet) {
+    if (!options.quiet) {
       showMessage('bad', formatError(error));
     }
-
-    return false;
   } finally {
     setBusy(false);
   }
+}
+
+function renderDiagnosticsIdle() {
+  els.diagnosticsList.textContent = '';
+
+  for (const item of diagnosticDefinitions) {
+    const row = document.createElement('div');
+    row.className = 'diagnostic-row';
+
+    const left = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = item.label;
+    const path = document.createElement('div');
+    path.className = 'muted mono';
+    path.textContent = `${item.method} ${typeof item.path === 'function' ? item.path() : item.path}`;
+    left.append(title, path);
+
+    const badge = document.createElement('span');
+    badge.className = 'badge badge-muted';
+    badge.textContent = item.mutation ? 'skip' : 'idle';
+
+    row.append(left, badge);
+    els.diagnosticsList.append(row);
+  }
+}
+
+async function runDiagnostics() {
+  setBusy(true);
+  setBadge(els.diagnosticsBadge, 'muted', 'running');
+  els.diagnosticsList.textContent = '';
+
+  let passed = 0;
+  let failed = 0;
+  let skipped = 0;
+
+  for (const item of diagnosticDefinitions) {
+    const row = makeDiagnosticRow(item, 'running');
+    els.diagnosticsList.append(row.el);
+
+    if (item.mutation || item.skipReason) {
+      skipped += 1;
+      updateDiagnosticRow(row, 'warn', 'skip', item.skipReason || 'Skipped.');
+      continue;
+    }
+
+    if (item.enabled && !item.enabled()) {
+      skipped += 1;
+      updateDiagnosticRow(row, 'warn', 'skip', 'Missing required local label.');
+      continue;
+    }
+
+    try {
+      const response = await item.run();
+      passed += 1;
+      updateDiagnosticRow(row, 'ok', String(response.status || 200), response.correlationId || 'ok');
+    } catch (error) {
+      failed += 1;
+      updateDiagnosticRow(row, 'bad', 'fail', formatError(error));
+    }
+  }
+
+  if (failed > 0) {
+    setBadge(els.diagnosticsBadge, 'bad', `${failed} failed`);
+    showMessage('bad', `Diagnostics finished: ${passed} passed, ${failed} failed, ${skipped} skipped.`);
+  } else {
+    setBadge(els.diagnosticsBadge, 'ok', 'passed');
+    showMessage('ok', `Diagnostics finished: ${passed} passed, ${skipped} skipped.`);
+  }
+
+  setBusy(false);
+}
+
+function makeDiagnosticRow(item, status) {
+  const el = document.createElement('div');
+  el.className = 'diagnostic-row';
+
+  const left = document.createElement('div');
+  const title = document.createElement('strong');
+  title.textContent = item.label;
+
+  const path = document.createElement('div');
+  path.className = 'muted mono';
+  path.textContent = `${item.method} ${typeof item.path === 'function' ? item.path() : item.path}`;
+
+  const detail = document.createElement('div');
+  detail.className = 'muted';
+
+  left.append(title, path, detail);
+
+  const badge = document.createElement('span');
+  badge.className = 'badge badge-muted';
+  badge.textContent = status;
+
+  el.append(left, badge);
+
+  return { el, badge, detail };
+}
+
+function updateDiagnosticRow(row, kind, text, detail) {
+  row.badge.className = `badge badge-${kind}`;
+  row.badge.textContent = text;
+  row.detail.textContent = detail || '';
 }
 
 async function resolveInput() {
@@ -469,6 +438,7 @@ async function resolveInput() {
   clearResult();
 
   let parsed;
+
   try {
     parsed = normalizeCrabInput(els.crabInput.value, {
       defaultKind: els.defaultAssetKind.value
@@ -546,13 +516,16 @@ function addBackendFacts(payload) {
   }
 
   const candidates = [
+    ['Backend schema', payload.schema],
     ['Backend type', payload.type],
     ['Content ID', payload.content_id || payload.contentId],
+    ['Asset CID', payload.asset_cid || payload.assetCid],
     ['Manifest CID', payload.manifest_cid || payload.manifestCid],
     ['Site name', payload.name || payload.site_name || payload.siteName],
     ['Owner passport', payload.owner_passport_subject || payload.ownerPassportSubject],
     ['Wallet account', payload.wallet_account || payload.walletAccount],
-    ['Hydrated', payload.hydrated],
+    ['Ledger backed', boolText(payload.ledger_backed ?? payload.ledgerBacked)],
+    ['Starter grant', starterGrantSummary(payload.starter_grant || payload.starterGrant)],
     ['Status', payload.status],
     ['Reason', payload.reason]
   ];
@@ -576,73 +549,62 @@ function resultTitleFor(parsed) {
   return 'Crab resolve';
 }
 
-function configureCopyButton(button, value) {
-  if (!value) {
-    button.classList.add('hidden');
-    button.dataset.copyValue = '';
-    return;
-  }
-
-  button.classList.remove('hidden');
-  button.dataset.copyValue = String(value);
-}
-
-async function copyValue(value, label) {
-  if (!value) {
-    showMessage('warn', `Nothing to copy for ${label}.`);
-    return;
-  }
-
-  try {
-    await navigator.clipboard.writeText(value);
-    showMessage('ok', `Copied ${label}.`);
-  } catch {
-    showMessage('bad', `Could not copy ${label}.`);
-  }
-}
-
-function addFact(label, value) {
-  const dt = document.createElement('dt');
-  const dd = document.createElement('dd');
-
-  dt.textContent = label;
-  dd.textContent = String(value);
-
-  els.resultFacts.append(dt, dd);
-}
-
-function clearFacts() {
-  while (els.resultFacts.firstChild) {
-    els.resultFacts.removeChild(els.resultFacts.firstChild);
-  }
-}
-
-function setBadge(kind, text) {
-  els.nodeBadge.className = `badge badge-${kind}`;
-  els.nodeBadge.textContent = text;
-}
-
-function showMessage(kind, text) {
-  els.message.className = `message message-${kind}`;
-  els.message.textContent = text;
-}
-
-function clearMessage() {
-  els.message.className = 'message hidden';
-  els.message.textContent = '';
-}
-
 function clearResult() {
-  lastResult = null;
   lastParsed = null;
+  lastResult = null;
   els.result.classList.add('hidden');
-  els.resultTitle.textContent = 'Result';
-  els.resultSubtitle.textContent = '';
-  els.resultKind.textContent = 'unknown';
-  els.resultJson.textContent = '';
+  els.resultJson.textContent = '{}';
   clearFacts();
   configureCopyButton(els.copyCrabButton, '');
   configureCopyButton(els.copyB3Button, '');
+  els.copyJsonButton.classList.add('hidden');
+}
+
+function clearFacts() {
+  els.resultFacts.textContent = '';
+}
+
+function addFact(label, value) {
+  const row = document.createElement('div');
+  row.className = 'row';
+
+  const left = document.createElement('span');
+  left.className = 'label';
+  left.textContent = label;
+
+  const right = document.createElement('span');
+  right.className = 'value mono';
+  right.textContent = value;
+
+  row.append(left, right);
+  els.resultFacts.append(row);
+}
+
+function configureCopyButton(button, value) {
+  const clean = String(value || '').trim();
+  button.classList.toggle('hidden', !clean);
+  button.dataset.copyValue = clean;
+}
+
+async function copyFromButton(button) {
+  const value = button.dataset.copyValue || '';
+
+  if (!value) {
+    return;
+  }
+
+  await navigator.clipboard.writeText(value);
+  showMessage('ok', 'Copied to clipboard.');
+}
+
+function renderBackendWarnings(payload) {
+  const warnings = Array.isArray(payload?.warnings) ? payload.warnings : [];
+
+  if (warnings.length === 0) {
+    return;
+  }
+
+  showMessage('warn', warnings.map(String).join(' | '));
 }
 
 function setBusy(isBusy) {
@@ -654,102 +616,102 @@ function setBusy(isBusy) {
   els.resolveButton.disabled = isBusy;
 }
 
+function setBadge(el, kind, text) {
+  el.className = `badge badge-${kind}`;
+  el.textContent = text;
+}
+
+function showMessage(kind, text) {
+  els.messageBox.className = `message message-${kind}`;
+  els.messageBox.textContent = text;
+}
+
+function clearMessage() {
+  els.messageBox.className = 'message message-muted';
+  els.messageBox.textContent = '';
+}
+
 function formatError(error) {
-  if (error instanceof RonClientError) {
-    const parts = [error.message];
+  const parts = [];
 
-    if (error.status) {
-      parts.push(`HTTP ${error.status}`);
-    }
-
-    if (error.route) {
-      parts.push(error.route);
-    }
-
-    if (error.correlationId) {
-      parts.push(`correlation ${error.correlationId}`);
-    }
-
-    return parts.join(' — ');
+  if (error?.message) {
+    parts.push(error.message);
   }
 
-  return error?.message || 'Unexpected CrabLink error.';
-}
-
-function diagnosticErrorLabel(error) {
-  if (error instanceof RonClientError) {
-    if (error.status) {
-      return `HTTP ${error.status}`;
-    }
-
-    if (error.message.includes('timed out')) {
-      return 'timeout';
-    }
-
-    return 'failed';
+  if (error?.status) {
+    parts.push(`HTTP ${error.status}`);
   }
 
-  return 'failed';
+  if (error?.route) {
+    parts.push(error.route);
+  }
+
+  if (error?.correlationId) {
+    parts.push(`correlation ${error.correlationId}`);
+  }
+
+  return parts.join(' — ') || 'Request failed.';
 }
 
-function isMissingIdentityRoute(error) {
-  return error instanceof RonClientError &&
-    (error.status === 404 || error.status === 405 || error.status === 501) &&
-    (error.route.includes('/identity/') || error.route === '/identity/me');
-}
-
-function isMissingWalletRoute(error) {
-  return error instanceof RonClientError &&
-    (error.status === 404 || error.status === 405 || error.status === 501) &&
-    error.route.includes('/wallet/');
-}
-
-function shortTimestamp(value) {
+function formatDate(value) {
   if (!value) {
-    return '';
+    return 'never';
   }
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return String(value);
+    return value;
   }
 
   return date.toLocaleString(undefined, {
     month: 'short',
     day: '2-digit',
-    hour: '2-digit',
+    hour: 'numeric',
     minute: '2-digit'
   });
 }
 
-els.checkNodeButton.addEventListener('click', () => checkNode({ quiet: false }));
-els.refreshIdentityButton.addEventListener('click', () => refreshIdentity({ quiet: false }));
-els.createPassportButton.addEventListener('click', createPassport);
-els.refreshBalanceButton.addEventListener('click', () => refreshBalance({ quiet: false }));
-els.runDiagnosticsButton.addEventListener('click', runDiagnostics);
-els.openOptionsButton.addEventListener('click', () => chrome.runtime.openOptionsPage());
-els.resolveButton.addEventListener('click', resolveInput);
-els.clearButton.addEventListener('click', () => {
-  els.crabInput.value = '';
-  clearMessage();
-  clearResult();
-});
-
-els.copyCrabButton.addEventListener('click', () => copyValue(els.copyCrabButton.dataset.copyValue, 'crab URL'));
-els.copyB3Button.addEventListener('click', () => copyValue(els.copyB3Button.dataset.copyValue, 'b3 CID'));
-els.copyJsonButton.addEventListener('click', () => {
-  const value = lastResult?.data ? JSON.stringify(lastResult.data, null, 2) : els.resultJson.textContent;
-  copyValue(value, 'JSON');
-});
-
-els.crabInput.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') {
-    resolveInput();
+function boolText(value) {
+  if (value === true) {
+    return 'true';
   }
+
+  if (value === false) {
+    return 'false';
+  }
+
+  return '';
+}
+
+function starterGrantSummary(value) {
+  if (!value || typeof value !== 'object') {
+    return '';
+  }
+
+  if (value.issued === true) {
+    return 'issued';
+  }
+
+  return value.reason || value.status || '';
+}
+
+els.checkNodeButton.addEventListener('click', () => checkNode());
+els.refreshIdentityButton.addEventListener('click', refreshIdentity);
+els.openOptionsButton.addEventListener('click', () => chrome.runtime.openOptionsPage());
+els.createPassportButton.addEventListener('click', createPassport);
+els.refreshBalanceButton.addEventListener('click', () => refreshBalance());
+els.runDiagnosticsButton.addEventListener('click', runDiagnostics);
+els.resolveButton.addEventListener('click', resolveInput);
+els.copyCrabButton.addEventListener('click', () => copyFromButton(els.copyCrabButton));
+els.copyB3Button.addEventListener('click', () => copyFromButton(els.copyB3Button));
+els.copyJsonButton.addEventListener('click', async () => {
+  const payload = lastResult?.data || lastResult || {};
+  await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+  showMessage('ok', 'Copied JSON to clipboard.');
 });
 
 load().catch((error) => {
-  setBadge('bad', 'error');
-  showMessage('bad', formatError(error));
+  setBadge(els.nodeBadge, 'bad', 'error');
+  showMessage('bad', error.message || 'Failed to load popup.');
 });

@@ -55,6 +55,7 @@ export class RonClient {
         label: 'CrabLink main passport',
         client: 'crablink-chrome',
         request_starter_grant: true,
+        create_wallet: true,
         ...body
       },
       label: 'Passport bootstrap',
