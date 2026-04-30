@@ -1,9 +1,341 @@
+# =============================================================================
+# CrabLink .gitignore
+# Browser-client repo for RustyOnions / CrabLink Extension / future CrabLink browser
+# =============================================================================
+
+
+# =============================================================================
+# OS junk
+# =============================================================================
+
 .DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+
+# =============================================================================
+# Editor / IDE files
+# =============================================================================
+
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
+!.vscode/tasks.example.json
+!.vscode/launch.example.json
+
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+.history/
+.ionide/
+
+
+# =============================================================================
+# Logs
+# =============================================================================
+
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+crash.log
+debug.log
+
+
+# =============================================================================
+# Environment / secrets / credentials
+# =============================================================================
+
+.env
+.env.*
+!.env.example
+
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.csr
+
+secrets/
+private/
+credentials/
+tokens/
+auth/
+*.token
+*.secret
+
+
+# =============================================================================
+# Node / JavaScript / TypeScript dependencies
+# =============================================================================
+
 node_modules/
+bower_components/
+
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+.npm/
+.pnpm-store/
+.yarn-cache/
+.bun/
+
+
+# =============================================================================
+# Package manager lock notes
+# =============================================================================
+# Keep lockfiles when the repo starts using package managers.
+# Do NOT ignore:
+# package-lock.json
+# pnpm-lock.yaml
+# yarn.lock
+# bun.lockb
+
+
+# =============================================================================
+# Build output
+# =============================================================================
+
 dist/
 build/
+out/
+output/
+release/
+releases/
+artifacts/
 coverage/
-*.log
+.nyc_output/
+.tmp/
+tmp/
+temp/
+.cache/
+.parcel-cache/
+.turbo/
+.rollup.cache/
+
+
+# =============================================================================
+# Vite / React / frontend tooling
+# =============================================================================
+
+.vite/
+vite.config.*.timestamp-*
+vite.config.*.mjs.timestamp-*
+*.tsbuildinfo
+
+
+# =============================================================================
+# Testing output
+# =============================================================================
+
+coverage/
+playwright-report/
+test-results/
+test-results-*/
+.vitest/
+jest-html-reporters-attach/
+junit.xml
+
+
+# =============================================================================
+# Browser extension generated artifacts
+# =============================================================================
+
+*.crx
+*.xpi
+*.zip
+*.tgz
+
+web-ext-artifacts/
+extension-artifacts/
+extension-dist/
+extension-build/
+extension-packages/
+
+extensions/**/dist/
+extensions/**/build/
+extensions/**/web-ext-artifacts/
+extensions/**/extension-artifacts/
+extensions/**/extension-dist/
+extensions/**/extension-build/
+extensions/**/extension-packages/
+
+
+# =============================================================================
+# Chrome extension signing keys
+# =============================================================================
+
+*.pem
+chrome.pem
+chrome-extension.pem
+extensions/**/key.pem
+extensions/**/*.pem
+
+
+# =============================================================================
+# Safari / Xcode future extension artifacts
+# =============================================================================
+
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+
+# =============================================================================
+# Electron future browser shell artifacts
+# =============================================================================
+
+electron-dist/
+electron-builder-out/
+*.snap
+*.AppImage
+*.dmg
+*.exe
+*.msi
+
+
+# =============================================================================
+# Tauri / Rust future browser shell artifacts
+# =============================================================================
+
+target/
+Cargo.lock.bak
+
+src-tauri/target/
+browser/**/target/
+crates/**/target/
+
+*.rlib
+*.rmeta
+*.profraw
+*.profdata
+
+
+# =============================================================================
+# Python helper scripts / generated caches
+# =============================================================================
+
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+
+# =============================================================================
+# Generated local packages / generated code snapshots
+# =============================================================================
+
+dist/
+packages/
+packed/
+*.tar.gz
+
+# Keep codebundles tracked by default because they are useful for AI review.
+# Uncomment these if you decide codebundles should stay local only:
+# CODEBUNDLE*.md
+# *_CODEBUNDLE.md
+
+
+# =============================================================================
+# Local database / state files
+# =============================================================================
+
+*.sqlite
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+*.sled/
+*.redb
+*.rocksdb/
+
+local-state/
+runtime-state/
+session-state/
+
+
+# =============================================================================
+# RustyOnions / CrabLink local dev artifacts
+# =============================================================================
+
+.ron/
+.rustyonions/
+.crablink/
+crablink-local/
+gateway-local/
+local-gateway/
+receipts-local/
+tmp-gateway/
+
+
+# =============================================================================
+# Generated docs / site output
+# =============================================================================
+
+site/
+public/
+storybook-static/
+docs/.vitepress/dist/
+docs/.docusaurus/
+docs/build/
+
+
+# =============================================================================
+# Misc archives and backups
+# =============================================================================
+
+*.bak
+*.backup
+*.orig
+*.rej
 *.tmp
-.env
-.env.local
+*.temp
+*.old
+*.swp
+*.swo
+*.7z
+*.rar
+*.gz
+*.bz2
+*.xz
+
+
+# =============================================================================
+# Keep placeholders
+# =============================================================================
+
+!.gitkeep
+!.keep
