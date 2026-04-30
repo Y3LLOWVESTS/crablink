@@ -38,6 +38,24 @@ body.options {
   background: rgba(15, 23, 42, 0.88);
 }
 
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand-logo {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.35));
+}
+
 .app-header h1 {
   margin: 0;
   font-size: 21px;

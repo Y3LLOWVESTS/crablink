@@ -1,4 +1,7 @@
 # CrabLink
+<p align="center">
+  <img src="assets/logo.png" alt="CrabLink logo" width="140" />
+</p>
 
 CrabLink is the browser-client layer for RustyOnions. It starts with the **CrabLink Extension for Chrome**, which connects to local RustyOnions gateways, resolves `crab://` links, displays b3 asset pages, and prepares the browser-facing UX for future ROC/Web3 workflows.
 
