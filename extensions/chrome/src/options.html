@@ -6,42 +6,86 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body class="options">
-    <header class="header">
+    <header class="app-header">
       <div>
         <h1>CrabLink Settings</h1>
-        <p>Configure the local RustyOnions gateway and beta identity hints.</p>
+        <p>Configure local gateway access and beta identity labels.</p>
       </div>
+      <span id="saveBadge" class="badge badge-muted">settings</span>
     </header>
 
-    <main class="card">
-      <label for="gatewayUrl">Gateway URL</label>
-      <input id="gatewayUrl" type="url" placeholder="http://127.0.0.1:8090" />
+    <main>
+      <section class="card">
+        <h2>Gateway</h2>
 
-      <label for="passportSubject">Passport subject</label>
-      <input id="passportSubject" type="text" placeholder="passport:main:dev" />
+        <label for="gatewayUrl">Gateway URL</label>
+        <input id="gatewayUrl" type="url" spellcheck="false" placeholder="http://127.0.0.1:8090" />
 
-      <label for="walletAccount">Wallet account</label>
-      <input id="walletAccount" type="text" placeholder="acct_dev" />
+        <label for="requestTimeoutMs">Request timeout</label>
+        <input id="requestTimeoutMs" type="number" min="1000" max="30000" step="500" />
 
-      <label for="authToken">Dev bearer/cap token</label>
-      <input id="authToken" type="password" placeholder="optional dev token" />
+        <div class="button-row">
+          <button id="testGatewayButton" type="button">Test Gateway</button>
+        </div>
+      </section>
 
-      <label class="checkbox">
-        <input id="requireSpendConfirm" type="checkbox" />
-        Require confirmation before paid actions
-      </label>
+      <section class="card">
+        <h2>Identity Labels</h2>
 
-      <label class="checkbox">
-        <input id="devMode" type="checkbox" />
-        Dev mode
-      </label>
+        <label for="passportSubject">Passport subject</label>
+        <input id="passportSubject" type="text" spellcheck="false" placeholder="passport:main:dev" />
 
-      <div class="button-row">
-        <button id="saveButton">Save Settings</button>
-        <button id="resetButton" class="secondary">Reset Defaults</button>
-      </div>
+        <label for="walletAccount">Wallet account</label>
+        <input id="walletAccount" type="text" spellcheck="false" placeholder="acct_dev" />
 
-      <section id="message" class="message hidden"></section>
+        <p class="note">
+          These are labels for requests and UI context. The extension does not own wallet or passport truth.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Dev Token</h2>
+
+        <label for="authToken">Dev bearer/cap token</label>
+        <input id="authToken" type="password" spellcheck="false" placeholder="optional dev token" />
+
+        <p class="note">
+          MVP token storage is for local development only. Do not store production secrets here.
+        </p>
+
+        <div class="button-row">
+          <button id="clearTokenButton" type="button" class="secondary">Clear Token</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Safety</h2>
+
+        <label class="checkbox">
+          <input id="requireSpendConfirm" type="checkbox" />
+          Require confirmation before paid actions
+        </label>
+
+        <label class="checkbox">
+          <input id="devMode" type="checkbox" />
+          Dev mode
+        </label>
+
+        <ul class="safety-list">
+          <li>No silent ROC spending.</li>
+          <li>No private keys or seed phrases in this MVP.</li>
+          <li>No direct calls to internal RustyOnions services.</li>
+        </ul>
+      </section>
+
+      <section id="message" class="message hidden" aria-live="polite"></section>
+
+      <section class="card">
+        <div class="button-row">
+          <button id="saveButton" type="button">Save Settings</button>
+          <button id="resetButton" type="button" class="secondary">Reset Defaults</button>
+        </div>
+      </section>
     </main>
 
     <script type="module" src="./options.js"></script>

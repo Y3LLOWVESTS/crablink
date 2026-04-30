@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body class="popup">
-    <header class="header">
+    <header class="app-header">
       <div>
         <h1>CrabLink</h1>
         <p>RustyOnions browser client</p>
@@ -14,37 +14,88 @@
       <span id="nodeBadge" class="badge badge-muted">checking</span>
     </header>
 
-    <section class="card">
-      <div class="row">
-        <span class="label">Gateway</span>
-        <span id="gatewayUrl" class="value">loading...</span>
-      </div>
-      <div class="row">
-        <span class="label">Passport</span>
-        <span id="passportSubject" class="value">not set</span>
-      </div>
-      <div class="row">
-        <span class="label">Wallet</span>
-        <span id="walletAccount" class="value">not set</span>
-      </div>
-      <div class="button-row">
-        <button id="checkNodeButton">Check Node</button>
-        <button id="openOptionsButton">Settings</button>
-      </div>
-    </section>
+    <main>
+      <section class="card status-card">
+        <div class="row">
+          <span class="label">Gateway</span>
+          <span id="gatewayUrl" class="value mono">loading...</span>
+        </div>
 
-    <section class="card">
-      <label for="crabInput">crab:// URL, b3 CID, or raw hash</label>
-      <input id="crabInput" type="text" placeholder="crab://<hash>.image" />
+        <div class="row">
+          <span class="label">Passport</span>
+          <span id="passportSubject" class="value mono">not set</span>
+        </div>
 
-      <div class="button-row">
-        <button id="resolveButton">Resolve</button>
-        <button id="clearButton" class="secondary">Clear</button>
-      </div>
-    </section>
+        <div class="row">
+          <span class="label">Wallet</span>
+          <span id="walletAccount" class="value mono">not set</span>
+        </div>
 
-    <section id="message" class="message hidden"></section>
-    <section id="result" class="card result hidden"></section>
+        <div class="button-row">
+          <button id="checkNodeButton" type="button">Check Node</button>
+          <button id="openOptionsButton" type="button" class="secondary">Settings</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <label for="crabInput">crab:// URL, b3 CID, or raw hash</label>
+        <input id="crabInput" type="text" spellcheck="false" placeholder="crab://<hash>.image" />
+
+        <div class="field-help">
+          Raw hashes and b3 CIDs default to asset kind:
+          <select id="defaultAssetKind">
+            <option value="image">image</option>
+            <option value="video">video</option>
+            <option value="music">music</option>
+            <option value="song">song</option>
+            <option value="article">article</option>
+            <option value="post">post</option>
+            <option value="comment">comment</option>
+            <option value="page">page</option>
+            <option value="file">file</option>
+          </select>
+        </div>
+
+        <div class="button-row">
+          <button id="resolveButton" type="button">Resolve</button>
+          <button id="clearButton" type="button" class="secondary">Clear</button>
+        </div>
+      </section>
+
+      <section id="message" class="message hidden" aria-live="polite"></section>
+
+      <section id="result" class="card result hidden">
+        <div class="result-header">
+          <div>
+            <h2 id="resultTitle">Result</h2>
+            <p id="resultSubtitle"></p>
+          </div>
+          <span id="resultKind" class="pill">unknown</span>
+        </div>
+
+        <dl id="resultFacts" class="facts"></dl>
+
+        <div class="button-row result-actions">
+          <button id="copyCrabButton" type="button" class="secondary hidden">Copy crab://</button>
+          <button id="copyB3Button" type="button" class="secondary hidden">Copy b3 CID</button>
+          <button id="copyJsonButton" type="button" class="secondary">Copy JSON</button>
+        </div>
+
+        <details>
+          <summary>Raw response</summary>
+          <pre id="resultJson"></pre>
+        </details>
+      </section>
+
+      <section class="card safety-card">
+        <h2>Safety</h2>
+        <ul>
+          <li>No silent ROC spending.</li>
+          <li>No private keys or seed phrases in this MVP.</li>
+          <li>All backend calls go through the configured gateway.</li>
+        </ul>
+      </section>
+    </main>
 
     <script type="module" src="./popup.js"></script>
   </body>
