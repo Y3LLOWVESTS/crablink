@@ -1,0 +1,23 @@
+{
+  "schema": "crablink.identity.me.v1",
+  "passport": {
+    "subject": "passport:main:dev",
+    "kind": "main",
+    "display_name": "Local Dev Passport",
+    "created_at": null,
+    "source": "request_header"
+  },
+  "wallet": {
+    "account": "acct_dev",
+    "linked": true,
+    "source": "request_header"
+  },
+  "capabilities": {
+    "can_view_balance": true,
+    "can_prepare_paid_actions": true,
+    "can_spend": false
+  },
+  "warnings": [
+    "identity view is header-derived until svc-passport is wired"
+  ]
+}

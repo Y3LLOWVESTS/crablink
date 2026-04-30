@@ -1,0 +1,17 @@
+{
+  "schema": "crablink.wallet.balance.v1",
+  "account": "acct_dev",
+  "unit": "ROC",
+  "available_minor_units": "0",
+  "held_minor_units": "0",
+  "display": "0 ROC",
+  "as_of": null,
+  "ledger_backed": false,
+  "source": "omnigate_dev_wallet_view.v1",
+  "reason": "svc_wallet_integration_pending",
+  "warnings": [
+    "display-only dev placeholder",
+    "real balance must come from svc-wallet and ron-ledger",
+    "do not treat this route as spend authority"
+  ]
+}

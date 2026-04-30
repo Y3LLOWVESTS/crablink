@@ -1,19 +1,32 @@
-// CrabLink storage layer.
-// Durable extension preferences live here. Backend truth does not.
+/**
+ * RO:WHAT — Stores CrabLink Chrome settings and safe identity labels.
+ * RO:WHY — App Integration; Concerns: DX/SEC/RES; keep browser state separate from backend truth.
+ * RO:INTERACTS — popup.js, options.js, ronClient.js, chrome.storage.local.
+ * RO:INVARIANTS — no private keys; no seed phrases; no local ROC truth; gateway-only labels.
+ * RO:METRICS — none; UI displays last identity/balance check timestamps.
+ * RO:CONFIG — gatewayUrl, timeout, dev token, passport/wallet display labels.
+ * RO:SECURITY — dev token is local-only MVP; do not persist production signing material.
+ * RO:TEST — scripts/check-chrome.sh plus manual checklist identity bootstrap flow.
+ */
 
-export const SETTINGS_SCHEMA_VERSION = 1;
+export const SETTINGS_SCHEMA_VERSION = 2;
 
 export const DEFAULT_SETTINGS = Object.freeze({
   schemaVersion: SETTINGS_SCHEMA_VERSION,
   gatewayUrl: 'http://127.0.0.1:8090',
-  passportSubject: 'passport:main:dev',
-  walletAccount: 'acct_dev',
+  passportSubject: '',
+  walletAccount: '',
   authToken: '',
   requireSpendConfirm: true,
   devMode: true,
   requestTimeoutMs: 5000,
   lastCrabUrl: '',
-  recentReceipts: []
+  recentReceipts: [],
+  lastIdentityCheckAt: '',
+  lastBootstrapReceiptId: '',
+  rocBalanceMinorUnits: '',
+  rocBalanceDisplay: '',
+  rocBalanceUpdatedAt: ''
 });
 
 const DURABLE_KEYS = Object.keys(DEFAULT_SETTINGS);
@@ -47,10 +60,55 @@ export async function resetSettings() {
 
 export async function clearDevToken() {
   const current = await getSettings();
-  const next = {
+  const next = normalizeSettings({
     ...current,
     authToken: ''
-  };
+  });
+
+  await chrome.storage.local.set(next);
+  return next;
+}
+
+export async function clearIdentityState() {
+  const current = await getSettings();
+  const next = normalizeSettings({
+    ...current,
+    passportSubject: '',
+    walletAccount: '',
+    lastIdentityCheckAt: '',
+    lastBootstrapReceiptId: '',
+    rocBalanceMinorUnits: '',
+    rocBalanceDisplay: '',
+    rocBalanceUpdatedAt: ''
+  });
+
+  await chrome.storage.local.set(next);
+  return next;
+}
+
+export async function saveIdentityState(payload) {
+  const current = await getSettings();
+  const identity = extractIdentityState(payload);
+
+  const next = normalizeSettings({
+    ...current,
+    ...identity,
+    lastIdentityCheckAt: new Date().toISOString()
+  });
+
+  await chrome.storage.local.set(next);
+  return next;
+}
+
+export async function saveBalanceState(payload) {
+  const current = await getSettings();
+  const balance = extractBalanceState(payload);
+
+  const next = normalizeSettings({
+    ...current,
+    ...balance,
+    rocBalanceUpdatedAt: new Date().toISOString()
+  });
 
   await chrome.storage.local.set(next);
   return next;
@@ -69,7 +127,12 @@ export function normalizeSettings(settings) {
     devMode: Boolean(settings.devMode),
     requestTimeoutMs: normalizeTimeout(settings.requestTimeoutMs),
     lastCrabUrl: String(settings.lastCrabUrl || '').trim(),
-    recentReceipts: normalizeRecentReceipts(settings.recentReceipts)
+    recentReceipts: normalizeRecentReceipts(settings.recentReceipts),
+    lastIdentityCheckAt: String(settings.lastIdentityCheckAt || '').trim(),
+    lastBootstrapReceiptId: String(settings.lastBootstrapReceiptId || '').trim(),
+    rocBalanceMinorUnits: normalizeMinorUnitString(settings.rocBalanceMinorUnits),
+    rocBalanceDisplay: String(settings.rocBalanceDisplay || '').trim(),
+    rocBalanceUpdatedAt: String(settings.rocBalanceUpdatedAt || '').trim()
   };
 }
 
@@ -115,6 +178,112 @@ export function normalizeTimeout(value) {
   }
 
   return rounded;
+}
+
+export function hasPassport(settings) {
+  return Boolean(String(settings?.passportSubject || '').trim());
+}
+
+export function hasWallet(settings) {
+  return Boolean(String(settings?.walletAccount || '').trim());
+}
+
+export function identitySummary(settings) {
+  if (hasPassport(settings) && hasWallet(settings)) {
+    return 'Passport ready with linked wallet label.';
+  }
+
+  if (hasPassport(settings)) {
+    return 'Passport ready. Wallet label is not loaded.';
+  }
+
+  return 'No RON Passport loaded.';
+}
+
+export function extractIdentityState(payload) {
+  const root = unwrapPayload(payload);
+
+  const passportSubject = firstString(
+    root.passportSubject,
+    root.passport_subject,
+    root.subject,
+    root.identity?.passportSubject,
+    root.identity?.passport_subject,
+    root.identity?.subject,
+    root.passport?.passportSubject,
+    root.passport?.passport_subject,
+    root.passport?.subject
+  );
+
+  const walletAccount = firstString(
+    root.walletAccount,
+    root.wallet_account,
+    root.account,
+    root.wallet?.walletAccount,
+    root.wallet?.wallet_account,
+    root.wallet?.account,
+    root.identity?.walletAccount,
+    root.identity?.wallet_account,
+    root.passport?.walletAccount,
+    root.passport?.wallet_account
+  );
+
+  const lastBootstrapReceiptId = firstString(
+    root.receiptId,
+    root.receipt_id,
+    root.bootstrapReceiptId,
+    root.bootstrap_receipt_id,
+    root.receipt?.id,
+    root.receipt?.receipt_id,
+    root.wallet_receipt?.id,
+    root.wallet_receipt?.receipt_id
+  );
+
+  return {
+    passportSubject,
+    walletAccount,
+    lastBootstrapReceiptId
+  };
+}
+
+export function extractBalanceState(payload) {
+  const root = unwrapPayload(payload);
+
+  const minorUnits = firstDefined(
+    root.rocBalanceMinorUnits,
+    root.roc_balance_minor_units,
+    root.balanceMinorUnits,
+    root.balance_minor_units,
+    root.availableMinorUnits,
+    root.available_minor_units,
+    root.balance?.minorUnits,
+    root.balance?.minor_units,
+    root.balance?.availableMinorUnits,
+    root.balance?.available_minor_units,
+    root.wallet?.balanceMinorUnits,
+    root.wallet?.balance_minor_units
+  );
+
+  const display = firstString(
+    root.rocBalanceDisplay,
+    root.roc_balance_display,
+    root.balanceDisplay,
+    root.balance_display,
+    root.formatted,
+    root.display,
+    root.balance?.display,
+    root.balance?.formatted,
+    root.wallet?.balanceDisplay,
+    root.wallet?.balance_display
+  );
+
+  const normalizedMinor = normalizeMinorUnitString(minorUnits);
+  const fallbackDisplay = normalizedMinor ? `${normalizedMinor} minor ROC` : '';
+
+  return {
+    rocBalanceMinorUnits: normalizedMinor,
+    rocBalanceDisplay: display || fallbackDisplay
+  };
 }
 
 export function redactSecret(value) {
@@ -185,4 +354,71 @@ function normalizeRecentReceipts(value) {
     }))
     .filter((item) => item.id || item.route || item.action)
     .slice(0, 20);
+}
+
+function unwrapPayload(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return {};
+  }
+
+  if (payload.data && typeof payload.data === 'object') {
+    return payload.data;
+  }
+
+  return payload;
+}
+
+function firstString(...values) {
+  for (const value of values) {
+    if (value === undefined || value === null) {
+      continue;
+    }
+
+    const text = String(value).trim();
+    if (text) {
+      return text;
+    }
+  }
+
+  return '';
+}
+
+function firstDefined(...values) {
+  for (const value of values) {
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+
+  return '';
+}
+
+function normalizeMinorUnitString(value) {
+  if (value === undefined || value === null || value === '') {
+    return '';
+  }
+
+  if (typeof value === 'bigint') {
+    return value.toString();
+  }
+
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      return '';
+    }
+
+    return Math.trunc(value).toString();
+  }
+
+  const text = String(value).trim();
+
+  if (!text) {
+    return '';
+  }
+
+  if (!/^-?[0-9]+$/.test(text)) {
+    return '';
+  }
+
+  return text;
 }

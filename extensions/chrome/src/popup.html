@@ -26,18 +26,75 @@
 
         <div class="row">
           <span class="label">Passport</span>
-          <span id="passportSubject" class="value mono">not set</span>
+          <span id="passportSubject" class="value mono">not loaded</span>
         </div>
 
         <div class="row">
           <span class="label">Wallet</span>
-          <span id="walletAccount" class="value mono">not set</span>
+          <span id="walletAccount" class="value mono">not loaded</span>
+        </div>
+
+        <div class="row">
+          <span class="label">ROC</span>
+          <span id="rocBalance" class="value mono">unknown</span>
         </div>
 
         <div class="button-row">
           <button id="checkNodeButton" type="button">Check Node</button>
+          <button id="refreshIdentityButton" type="button" class="secondary">Check Passport</button>
           <button id="openOptionsButton" type="button" class="secondary">Settings</button>
         </div>
+      </section>
+
+      <section id="passportCard" class="card passport-card">
+        <div class="identity-header">
+          <div>
+            <h2>RON Passport</h2>
+            <p id="passportStatusText">Checking passport state...</p>
+          </div>
+          <span id="passportBadge" class="pill">unknown</span>
+        </div>
+
+        <div class="compact-facts">
+          <div>
+            <span class="label">Identity check</span>
+            <span id="lastIdentityCheck" class="mono">never</span>
+          </div>
+          <div>
+            <span class="label">Balance check</span>
+            <span id="balanceUpdatedAt" class="mono">never</span>
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button id="createPassportButton" type="button">Create RON Passport</button>
+          <button id="refreshBalanceButton" type="button" class="secondary">Refresh Balance</button>
+        </div>
+
+        <p class="note">
+          CrabLink stores only safe identity labels. Passport keys, wallet truth, ROC issuance,
+          and receipts must come from RustyOnions services through the gateway.
+        </p>
+      </section>
+
+      <section class="card diagnostics-card">
+        <div class="diagnostics-header">
+          <div>
+            <h2>Route Diagnostics</h2>
+            <p>Read-only gateway route checks for the running local dev stack.</p>
+          </div>
+          <span id="diagnosticsBadge" class="pill">idle</span>
+        </div>
+
+        <div id="diagnosticsList" class="diagnostics-list"></div>
+
+        <div class="button-row">
+          <button id="runDiagnosticsButton" type="button" class="secondary">Run Diagnostics</button>
+        </div>
+
+        <p class="note">
+          Bootstrap is intentionally not auto-tested here because it can become a real mutation route later.
+        </p>
       </section>
 
       <section class="card">

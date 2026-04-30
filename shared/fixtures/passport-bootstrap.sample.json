@@ -1,0 +1,31 @@
+{
+  "schema": "crablink.identity.bootstrap.v1",
+  "passport": {
+    "subject": "passport:main:dev",
+    "kind": "main",
+    "display_name": "CrabLink main passport",
+    "created_at": null,
+    "source": "omnigate_dev_bootstrap"
+  },
+  "wallet": {
+    "account": "acct_dev",
+    "linked": true,
+    "source": "omnigate_dev_bootstrap"
+  },
+  "starter_grant": {
+    "issued": false,
+    "amount_minor_units": "0",
+    "receipt_id": null,
+    "reason": "svc_wallet_integration_pending"
+  },
+  "capabilities": {
+    "can_view_balance": true,
+    "can_prepare_paid_actions": true,
+    "can_spend": false
+  },
+  "warnings": [
+    "dev bootstrap returns labels only",
+    "starter ROC is not issued until svc-wallet integration is wired",
+    "wallet spend authority is not granted by this response"
+  ]
+}

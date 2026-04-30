@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CrabLink Wallet Balance Response",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema",
+    "account",
+    "unit",
+    "available_minor_units",
+    "held_minor_units",
+    "display",
+    "ledger_backed",
+    "source",
+    "warnings"
+  ],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "crablink.wallet.balance.v1"
+    },
+    "account": {
+      "type": "string",
+      "minLength": 1
+    },
+    "unit": {
+      "type": "string",
+      "const": "ROC"
+    },
+    "available_minor_units": {
+      "type": "string",
+      "pattern": "^-?[0-9]+$"
+    },
+    "held_minor_units": {
+      "type": "string",
+      "pattern": "^-?[0-9]+$"
+    },
+    "display": {
+      "type": "string"
+    },
+    "as_of": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ledger_backed": {
+      "type": "boolean"
+    },
+    "source": {
+      "type": "string"
+    },
+    "reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

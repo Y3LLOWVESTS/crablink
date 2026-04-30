@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CrabLink Identity Me Response",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema",
+    "capabilities",
+    "warnings"
+  ],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "crablink.identity.me.v1"
+    },
+    "passport": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/passport"
+        }
+      ]
+    },
+    "wallet": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/wallet"
+        }
+      ]
+    },
+    "capabilities": {
+      "$ref": "#/$defs/capabilities"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "passport": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "subject",
+        "kind",
+        "display_name",
+        "source"
+      ],
+      "properties": {
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": "string"
+        }
+      }
+    },
+    "wallet": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "account",
+        "linked",
+        "source"
+      ],
+      "properties": {
+        "account": {
+          "type": "string",
+          "minLength": 1
+        },
+        "linked": {
+          "type": "boolean"
+        },
+        "source": {
+          "type": "string"
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "can_view_balance",
+        "can_prepare_paid_actions",
+        "can_spend"
+      ],
+      "properties": {
+        "can_view_balance": {
+          "type": "boolean"
+        },
+        "can_prepare_paid_actions": {
+          "type": "boolean"
+        },
+        "can_spend": {
+          "type": "boolean",
+          "const": false
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schema": "crablink.identity.me.v1",
+  "passport": null,
+  "wallet": null,
+  "capabilities": {
+    "can_view_balance": false,
+    "can_prepare_paid_actions": false,
+    "can_spend": false
+  },
+  "warnings": [
+    "no passport label supplied",
+    "no wallet account label supplied",
+    "identity view is header-derived until svc-passport is wired"
+  ]
+}

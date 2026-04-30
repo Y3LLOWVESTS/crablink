@@ -11,7 +11,7 @@
         <img class="brand-logo" src="../assets/icons/logo.png" alt="CrabLink logo" />
         <div>
           <h1>CrabLink Settings</h1>
-          <p>Configure local gateway access and beta identity labels.</p>
+          <p>Configure local gateway access and safe identity labels.</p>
         </div>
       </div>
       <span id="saveBadge" class="badge badge-muted">settings</span>
@@ -41,9 +41,19 @@
         <label for="walletAccount">Wallet account</label>
         <input id="walletAccount" type="text" spellcheck="false" placeholder="acct_dev" />
 
+        <label for="rocBalanceDisplay">Last known ROC balance</label>
+        <input id="rocBalanceDisplay" type="text" spellcheck="false" placeholder="loaded from gateway" readonly />
+
         <p class="note">
-          These are labels for requests and UI context. The extension does not own wallet or passport truth.
+          These are safe labels for requests and UI context. The extension does not own passport keys,
+          wallet truth, issuance truth, or ledger truth.
         </p>
+
+        <div class="button-row">
+          <button id="refreshIdentityButton" type="button" class="secondary">Refresh Identity</button>
+          <button id="createPassportButton" type="button">Create Dev Passport</button>
+          <button id="clearIdentityButton" type="button" class="secondary">Clear Identity Labels</button>
+        </div>
       </section>
 
       <section class="card">
@@ -78,6 +88,7 @@
           <li>No silent ROC spending.</li>
           <li>No private keys or seed phrases in this MVP.</li>
           <li>No direct calls to internal RustyOnions services.</li>
+          <li>Passport bootstrap must go through the configured gateway.</li>
         </ul>
       </section>
 

@@ -1,5 +1,101 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "CrabLink Extension Settings",
-  "type": "object"
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "gatewayUrl",
+    "passportSubject",
+    "walletAccount",
+    "authToken",
+    "requireSpendConfirm",
+    "devMode",
+    "requestTimeoutMs",
+    "lastCrabUrl",
+    "recentReceipts",
+    "lastIdentityCheckAt",
+    "lastBootstrapReceiptId",
+    "rocBalanceMinorUnits",
+    "rocBalanceDisplay",
+    "rocBalanceUpdatedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 2
+    },
+    "gatewayUrl": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^https?://"
+    },
+    "passportSubject": {
+      "type": "string"
+    },
+    "walletAccount": {
+      "type": "string"
+    },
+    "authToken": {
+      "type": "string"
+    },
+    "requireSpendConfirm": {
+      "type": "boolean"
+    },
+    "devMode": {
+      "type": "boolean"
+    },
+    "requestTimeoutMs": {
+      "type": "integer",
+      "minimum": 1000,
+      "maximum": 30000
+    },
+    "lastCrabUrl": {
+      "type": "string"
+    },
+    "recentReceipts": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "route",
+          "action",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "route": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "lastIdentityCheckAt": {
+      "type": "string"
+    },
+    "lastBootstrapReceiptId": {
+      "type": "string"
+    },
+    "rocBalanceMinorUnits": {
+      "type": "string",
+      "pattern": "^-?[0-9]*$"
+    },
+    "rocBalanceDisplay": {
+      "type": "string"
+    },
+    "rocBalanceUpdatedAt": {
+      "type": "string"
+    }
+  }
 }

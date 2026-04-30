@@ -19,7 +19,7 @@ body {
 
 body.popup {
   width: 410px;
-  min-height: 520px;
+  min-height: 580px;
 }
 
 body.options {
@@ -92,6 +92,51 @@ main {
   background: linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
 }
 
+.passport-card {
+  background:
+    linear-gradient(145deg, rgba(14, 116, 144, 0.16), transparent 42%),
+    rgba(15, 23, 42, 0.92);
+}
+
+.diagnostics-card {
+  background:
+    linear-gradient(145deg, rgba(37, 99, 235, 0.12), transparent 46%),
+    rgba(15, 23, 42, 0.92);
+}
+
+.identity-header,
+.result-header,
+.diagnostics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.identity-header p,
+.diagnostics-header p {
+  margin: 5px 0 0;
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.compact-facts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  margin: 12px 0 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.35);
+}
+
+.compact-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .row {
   display: flex;
   justify-content: space-between;
@@ -154,6 +199,25 @@ main {
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pill-ok {
+  background: rgba(6, 78, 59, 0.62);
+  color: #a7f3d0;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.pill-warn {
+  background: rgba(120, 53, 15, 0.62);
+  color: #fde68a;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.pill-bad {
+  background: rgba(127, 29, 29, 0.62);
+  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.35);
 }
 
 label {
@@ -173,6 +237,11 @@ select {
   background: rgba(2, 6, 23, 0.82);
   color: #f9fafb;
   outline: none;
+}
+
+input:read-only {
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.82);
 }
 
 input:focus,
@@ -267,11 +336,74 @@ button.secondary {
   display: none !important;
 }
 
-.result-header {
+.diagnostics-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.diagnostic-row {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.38);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.diagnostic-main {
+  min-width: 0;
+}
+
+.diagnostic-label {
+  display: block;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.diagnostic-route {
+  display: block;
+  margin-top: 3px;
+  color: #94a3b8;
+  overflow-wrap: anywhere;
+}
+
+.diagnostic-status {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.diagnostic-idle {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.diagnostic-pending {
+  background: rgba(30, 64, 175, 0.75);
+  color: #bfdbfe;
+}
+
+.diagnostic-ok {
+  background: rgba(6, 78, 59, 0.72);
+  color: #a7f3d0;
+}
+
+.diagnostic-warn {
+  background: rgba(120, 53, 15, 0.72);
+  color: #fde68a;
+}
+
+.diagnostic-bad {
+  background: rgba(127, 29, 29, 0.72);
+  color: #fecaca;
 }
 
 .result h2 {

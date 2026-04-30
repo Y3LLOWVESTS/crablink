@@ -1,5 +1,13 @@
-// CrabLink gateway client.
-// All backend HTTP calls must flow through this file and target svc-gateway only.
+/**
+ * RO:WHAT — Gateway-only HTTP client for CrabLink browser calls.
+ * RO:WHY — App Integration; Concerns: DX/SEC/RES; centralize headers, errors, timeouts, idempotency.
+ * RO:INTERACTS — svc-gateway public routes, popup.js, options.js.
+ * RO:INVARIANTS — gateway routes start with /; mutation calls get idempotency keys; no direct internal services.
+ * RO:METRICS — emits x-correlation-id for backend logs/metrics correlation.
+ * RO:CONFIG — gatewayUrl, requestTimeoutMs, authToken, passportSubject, walletAccount.
+ * RO:SECURITY — no private keys; bearer token is local-dev only; wallet spend remains backend-gated.
+ * RO:TEST — scripts/check-chrome.sh plus manual gateway/identity route checks.
+ */
 
 export class RonClientError extends Error {
   constructor(message, details = {}) {
@@ -30,6 +38,41 @@ export class RonClient {
   async getReady() {
     return this.request('/readyz', {
       label: 'Readiness check'
+    });
+  }
+
+  async getIdentity() {
+    return this.request('/identity/me', {
+      label: 'Identity check'
+    });
+  }
+
+  async bootstrapPassport(body = {}) {
+    return this.request('/identity/passport/bootstrap', {
+      method: 'POST',
+      body: {
+        kind: 'main',
+        label: 'CrabLink main passport',
+        client: 'crablink-chrome',
+        request_starter_grant: true,
+        ...body
+      },
+      label: 'Passport bootstrap',
+      mutation: true
+    });
+  }
+
+  async getWalletBalance(account) {
+    const walletAccount = String(account || this.settings.walletAccount || '').trim();
+
+    if (!walletAccount) {
+      throw new RonClientError('Wallet account is not loaded.', {
+        route: '/wallet/:account/balance'
+      });
+    }
+
+    return this.request(`/wallet/${encodeURIComponent(walletAccount)}/balance`, {
+      label: 'Wallet balance'
     });
   }
 
