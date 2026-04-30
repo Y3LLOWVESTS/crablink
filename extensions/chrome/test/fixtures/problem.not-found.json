@@ -1,0 +1,7 @@
+{
+  "type": "about:blank",
+  "title": "Not Found",
+  "status": 404,
+  "reason": "not_found",
+  "detail": "The requested CrabLink object was not found."
+}

@@ -1,0 +1,5 @@
+{
+  "type": "omnigate.site-page.v1",
+  "name": "example-site",
+  "crab_url": "crab://example-site"
+}

@@ -1,0 +1,7 @@
+{
+  "type": "omnigate.site-page.v1",
+  "name": "example-site",
+  "crab_url": "crab://example-site",
+  "manifest_cid": "b3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "hydrated": true
+}

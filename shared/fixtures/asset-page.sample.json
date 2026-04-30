@@ -1,0 +1,6 @@
+{
+  "type": "omnigate.asset-page.v1",
+  "asset_kind": "image",
+  "content_id": "b3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "crab_url": "crab://0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.image"
+}

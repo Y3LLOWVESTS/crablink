@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CrabLink Settings</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="options">
+    <header class="header">
+      <div>
+        <h1>CrabLink Settings</h1>
+        <p>Configure the local RustyOnions gateway and beta identity hints.</p>
+      </div>
+    </header>
+
+    <main class="card">
+      <label for="gatewayUrl">Gateway URL</label>
+      <input id="gatewayUrl" type="url" placeholder="http://127.0.0.1:8090" />
+
+      <label for="passportSubject">Passport subject</label>
+      <input id="passportSubject" type="text" placeholder="passport:main:dev" />
+
+      <label for="walletAccount">Wallet account</label>
+      <input id="walletAccount" type="text" placeholder="acct_dev" />
+
+      <label for="authToken">Dev bearer/cap token</label>
+      <input id="authToken" type="password" placeholder="optional dev token" />
+
+      <label class="checkbox">
+        <input id="requireSpendConfirm" type="checkbox" />
+        Require confirmation before paid actions
+      </label>
+
+      <label class="checkbox">
+        <input id="devMode" type="checkbox" />
+        Dev mode
+      </label>
+
+      <div class="button-row">
+        <button id="saveButton">Save Settings</button>
+        <button id="resetButton" class="secondary">Reset Defaults</button>
+      </div>
+
+      <section id="message" class="message hidden"></section>
+    </main>
+
+    <script type="module" src="./options.js"></script>
+  </body>
+</html>

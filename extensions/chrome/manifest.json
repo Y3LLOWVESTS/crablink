@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "CrabLink Extension for Chrome",
+  "description": "Resolve crab:// links, view b3 asset pages, and connect to local RustyOnions gateways.",
+  "version": "0.1.0",
+  "action": {
+    "default_title": "CrabLink",
+    "default_popup": "src/popup.html"
+  },
+  "options_page": "src/options.html",
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:*/*",
+    "http://localhost:*/*"
+  ],
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "32": "assets/icons/icon32.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  }
+}

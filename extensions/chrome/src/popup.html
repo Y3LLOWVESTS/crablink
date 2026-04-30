@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CrabLink</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="popup">
+    <header class="header">
+      <div>
+        <h1>CrabLink</h1>
+        <p>RustyOnions browser client</p>
+      </div>
+      <span id="nodeBadge" class="badge badge-muted">checking</span>
+    </header>
+
+    <section class="card">
+      <div class="row">
+        <span class="label">Gateway</span>
+        <span id="gatewayUrl" class="value">loading...</span>
+      </div>
+      <div class="row">
+        <span class="label">Passport</span>
+        <span id="passportSubject" class="value">not set</span>
+      </div>
+      <div class="row">
+        <span class="label">Wallet</span>
+        <span id="walletAccount" class="value">not set</span>
+      </div>
+      <div class="button-row">
+        <button id="checkNodeButton">Check Node</button>
+        <button id="openOptionsButton">Settings</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <label for="crabInput">crab:// URL, b3 CID, or raw hash</label>
+      <input id="crabInput" type="text" placeholder="crab://<hash>.image" />
+
+      <div class="button-row">
+        <button id="resolveButton">Resolve</button>
+        <button id="clearButton" class="secondary">Clear</button>
+      </div>
+    </section>
+
+    <section id="message" class="message hidden"></section>
+    <section id="result" class="card result hidden"></section>
+
+    <script type="module" src="./popup.js"></script>
+  </body>
+</html>
