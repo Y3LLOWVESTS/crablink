@@ -13,10 +13,12 @@
     "source": "omnigate_dev_bootstrap"
   },
   "starter_grant": {
-    "issued": false,
-    "amount_minor_units": "0",
-    "receipt_id": null,
-    "reason": "svc_wallet_integration_pending"
+    "issued": true,
+    "amount_minor_units": "1776",
+    "receipt_id": "tx_1776_demo_receipt",
+    "reason": "issued_by_svc_wallet",
+    "ledger_backed": true,
+    "source": "svc_wallet.v1"
   },
   "capabilities": {
     "can_view_balance": true,
@@ -24,8 +26,7 @@
     "can_spend": false
   },
   "warnings": [
-    "dev bootstrap returns labels only",
-    "starter ROC is not issued until svc-wallet integration is wired",
+    "dev bootstrap returns passport labels until svc-passport custody is wired",
     "wallet spend authority is not granted by this response"
   ]
 }

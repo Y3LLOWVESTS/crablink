@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CrabLink Browser</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="./page.css" />
+  </head>
+
+  <body>
+    <div class="app-shell">
+      <header class="browser-topbar">
+        <div class="brand">
+          <img class="brand-logo" src="../assets/icons/logo.png" alt="CrabLink logo" />
+          <div>
+            <h1>CrabLink</h1>
+            <p>RustyOnions browser tab</p>
+          </div>
+        </div>
+
+        <nav class="navigation-actions" aria-label="CrabLink page navigation">
+          <button id="backButton" type="button" class="secondary icon-button nav-icon-button" title="Back" aria-label="Back">←</button>
+          <button id="forwardButton" type="button" class="secondary icon-button nav-icon-button" title="Forward" aria-label="Forward">→</button>
+          <button id="homeButton" type="button" class="secondary icon-button nav-icon-button" title="Home" aria-label="Home">⌂</button>
+        </nav>
+
+        <form id="addressForm" class="address-form">
+          <input id="addressInput" type="text" spellcheck="false" autocomplete="off" placeholder="crab://site" />
+          <button id="goButton" type="submit">Go</button>
+        </form>
+
+        <div class="top-actions">
+          <button id="refreshButton" type="button" class="secondary icon-button topbar-icon-button refresh-icon-button" title="Refresh" aria-label="Refresh">↻</button>
+          <div id="topRocBalance" class="balance-chip" title="Current ROC balance" aria-live="polite">0 ROC</div>
+          <button id="passportButton" type="button" class="secondary">Passport</button>
+          <button id="settingsButton" type="button" class="secondary icon-button topbar-icon-button settings-icon-button" title="Settings" aria-label="Settings">⚙</button>
+        </div>
+      </header>
+
+      <main class="browser-main">
+        <aside id="passportDrawer" class="passport-drawer hidden">
+          <div class="drawer-head">
+            <div>
+              <h2>RON Passport</h2>
+              <p>Gateway-backed identity and wallet labels.</p>
+            </div>
+            <button id="closePassportButton" type="button" class="icon-button">×</button>
+          </div>
+
+          <div class="drawer-grid">
+            <div><span>Gateway</span><strong id="drawerGateway">—</strong></div>
+            <div><span>Passport</span><strong id="drawerPassport">—</strong></div>
+            <div><span>Wallet</span><strong id="drawerWallet">—</strong></div>
+            <div><span>ROC</span><strong id="drawerRoc">—</strong></div>
+            <div><span>Ledger</span><strong id="drawerLedger">—</strong></div>
+          </div>
+
+          <div class="drawer-actions">
+            <button id="drawerCheckNodeButton" type="button">Check Node</button>
+            <button id="drawerRefreshIdentityButton" type="button" class="secondary">Check Passport</button>
+            <button id="drawerRefreshBalanceButton" type="button" class="secondary">Refresh Balance</button>
+          </div>
+
+          <div id="drawerMessage" class="drawer-message"></div>
+        </aside>
+
+        <section class="quick-nav">
+          <button type="button" data-open-crab="crab://site">crab://site</button>
+          <button type="button" data-open-crab="crab://image">crab://image</button>
+          <button type="button" data-open-crab="crab://music">crab://music</button>
+          <button type="button" data-open-crab="crab://article">crab://article</button>
+        </section>
+
+        <section id="loadingPanel" class="state-panel hidden">
+          <div class="spinner"></div>
+          <h2>Loading CrabLink page…</h2>
+          <p id="loadingText">Resolving through your local RustyOnions gateway.</p>
+        </section>
+
+        <section id="errorPanel" class="state-panel error-panel hidden">
+          <h2>Unable to load page</h2>
+          <p id="errorText">Unknown error.</p>
+          <button id="retryButton" type="button">Retry</button>
+        </section>
+
+        <section id="pagePanel" class="page-panel hidden">
+          <div class="page-hero">
+            <div>
+              <span id="pageBadge" class="badge badge-muted">page</span>
+              <h2 id="pageTitle">CrabLink Page</h2>
+              <p id="pageDescription"></p>
+            </div>
+
+            <div class="hero-actions">
+              <button id="copyUrlButton" type="button" class="secondary">Copy URL</button>
+              <button id="copyJsonButton" type="button" class="secondary">Copy JSON</button>
+            </div>
+          </div>
+
+          <div id="pageFacts" class="fact-grid"></div>
+
+          <section id="sitePageSection" class="content-section site-page-section hidden">
+            <div class="section-head">
+              <div>
+                <h3 id="productPageSectionTitle">Site Page</h3>
+                <p id="productPageSectionDescription">Manifest-backed site metadata, ownership, payout routing, and reference graph.</p>
+              </div>
+              <span id="productPageSectionBadge" class="draft-safe-badge">read-only</span>
+            </div>
+
+            <div id="sitePageCards" class="site-card-grid"></div>
+          </section>
+
+          <section id="workflowSection" class="content-section workflow-section hidden">
+            <div class="section-head">
+              <div>
+                <h3 id="workflowTitle">Request Draft</h3>
+                <p id="workflowDescription">Build a local request preview from this backend route contract.</p>
+              </div>
+              <span class="draft-safe-badge">explicit confirmation</span>
+            </div>
+
+            <form id="workflowForm" class="workflow-form">
+              <div id="workflowFields" class="workflow-fields"></div>
+
+              <div class="workflow-actions">
+                <button id="buildDraftButton" type="submit">Build Request Preview</button>
+                <button id="sendPrepareButton" type="button" class="prepare-button" disabled>
+                  Send Prepare Request
+                </button>
+                <button id="clearDraftButton" type="button" class="secondary">Clear Draft</button>
+                <button id="copyDraftButton" type="button" class="secondary" disabled>Copy Draft JSON</button>
+                <button id="copyPrepareButton" type="button" class="secondary" disabled>Copy Prepare JSON</button>
+              </div>
+            </form>
+
+            <div id="draftNotice" class="draft-notice">
+              Prepare requests are non-mutating preflight calls. CrabLink only enables paid actions after
+              explicit user confirmation. Wallet truth remains in RustyOnions, not in the extension.
+            </div>
+
+            <section id="prepareSummary" class="prepare-summary hidden">
+              <div class="summary-head">
+                <div>
+                  <span id="prepareStatusBadge" class="badge badge-muted">prepare</span>
+                  <h4 id="prepareSummaryTitle">Prepare Summary</h4>
+                </div>
+                <p id="prepareSummaryDescription">Human-readable summary of the prepare response.</p>
+              </div>
+
+              <div id="prepareSummaryCards" class="summary-grid"></div>
+
+              <div id="prepareNextSteps" class="next-steps hidden">
+                <h5>Next gated steps</h5>
+                <ol id="prepareNextStepsList"></ol>
+              </div>
+            </section>
+
+            <section id="holdSection" class="hold-summary hidden">
+              <div class="summary-head">
+                <div>
+                  <span id="holdStatusBadge" class="badge badge-muted">hold</span>
+                  <h4 id="holdSummaryTitle">Wallet Hold</h4>
+                </div>
+                <p id="holdSummaryDescription">Create an explicit ROC hold before upload/create.</p>
+              </div>
+
+              <div class="workflow-fields">
+                <div class="workflow-field">
+                  <label for="holdEscrowAccount">Escrow account</label>
+                  <input id="holdEscrowAccount" type="text" value="escrow_paid_write" autocomplete="off" />
+                  <p class="workflow-help">Destination account for the temporary ROC hold.</p>
+                </div>
+
+                <div class="workflow-field">
+                  <label for="holdNonce">Wallet nonce</label>
+                  <input id="holdNonce" type="text" value="1" inputmode="numeric" autocomplete="off" />
+                  <p class="workflow-help">Nonce/idempotency safety for svc-wallet mutation.</p>
+                </div>
+              </div>
+
+              <div id="holdSummaryCards" class="summary-grid"></div>
+
+              <div class="workflow-actions">
+                <button id="confirmHoldButton" type="button" class="danger-button" disabled>Confirm ROC Hold</button>
+                <button id="copyHoldButton" type="button" class="secondary" disabled>Copy Hold JSON</button>
+              </div>
+
+              <pre id="holdPreview" class="workflow-preview">No wallet hold requested yet.</pre>
+            </section>
+
+            <section id="submitSection" class="submit-summary hidden">
+              <div class="summary-head">
+                <div>
+                  <span id="submitStatusBadge" class="badge badge-muted">submit</span>
+                  <h4 id="submitSummaryTitle">Image Upload</h4>
+                </div>
+                <p id="submitSummaryDescription">
+                  Upload selected image bytes after the explicit wallet hold succeeds.
+                </p>
+              </div>
+
+              <div id="submitSummaryCards" class="summary-grid"></div>
+
+              <div class="workflow-actions">
+                <button id="submitProductButton" type="button" class="prepare-button" disabled>Submit Image Upload</button>
+                <button id="copySubmitButton" type="button" class="secondary" disabled>Copy Upload JSON</button>
+                <button id="openReturnedPageButton" type="button" class="secondary" disabled>Open Asset Page</button>
+                <button id="copyReturnedUrlButton" type="button" class="secondary" disabled>Copy crab:// URL</button>
+              </div>
+
+              <pre id="submitPreview" class="workflow-preview">No submit response yet.</pre>
+            </section>
+
+            <div class="preview-grid">
+              <div>
+                <h4>Request Preview</h4>
+                <pre id="workflowPreview" class="workflow-preview">No request draft built yet.</pre>
+              </div>
+              <div>
+                <h4>Prepare Response</h4>
+                <pre id="preparePreview" class="workflow-preview">No prepare response yet.</pre>
+              </div>
+            </div>
+          </section>
+
+          <section id="actionsSection" class="content-section hidden">
+            <div class="section-head">
+              <h3>Available Actions</h3>
+              <p>Displayed from backend route contracts. Mutating actions require explicit confirmation in CrabLink.</p>
+            </div>
+            <div id="actionsList" class="card-grid"></div>
+          </section>
+
+          <section id="fieldsSection" class="content-section hidden">
+            <div class="section-head">
+              <h3>Fields</h3>
+              <p>These are the fields RustyOnions says this built-in page will collect.</p>
+            </div>
+            <div id="fieldsList" class="card-grid"></div>
+          </section>
+
+          <section id="warningsSection" class="content-section hidden">
+            <div class="section-head">
+              <h3>Warnings</h3>
+              <p>Non-fatal backend warnings for this page.</p>
+            </div>
+            <div id="warningsList" class="warning-list"></div>
+          </section>
+
+          <details id="developerDetails" class="developer-details">
+            <summary>Developer JSON</summary>
+            <pre id="developerJson">{}</pre>
+          </details>
+        </section>
+      </main>
+
+      <footer class="browser-footer">
+        <span id="footerStatus">Ready.</span>
+      </footer>
+    </div>
+
+    <script type="module" src="./page.js"></script>
+    <script type="module" src="./page-site-root-upload.js"></script>
+    <script type="module" src="./page-product-preview.js"></script>
+    <script type="module" src="./page-site-render-mode.js"></script>
+    <script type="module" src="./page-site-creator-proof.js"></script>
+  </body>
+</html>

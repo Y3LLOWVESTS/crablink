@@ -11,6 +11,7 @@
 
 import {
   DEFAULT_SETTINGS,
+  addRecentReceipt,
   clearDevToken,
   clearIdentityState,
   extractIdentityState,
@@ -30,6 +31,7 @@ const els = {
   passportSubject: document.getElementById('passportSubject'),
   walletAccount: document.getElementById('walletAccount'),
   rocBalanceDisplay: document.getElementById('rocBalanceDisplay'),
+  lastBootstrapReceiptId: document.getElementById('lastBootstrapReceiptId'),
   authToken: document.getElementById('authToken'),
   requireSpendConfirm: document.getElementById('requireSpendConfirm'),
   devMode: document.getElementById('devMode'),
@@ -55,6 +57,7 @@ function fillForm(settings) {
   els.passportSubject.value = settings.passportSubject || '';
   els.walletAccount.value = settings.walletAccount || '';
   els.rocBalanceDisplay.value = settings.rocBalanceDisplay || '';
+  els.lastBootstrapReceiptId.value = settings.lastBootstrapReceiptId || '';
   els.authToken.value = settings.authToken || '';
   els.requireSpendConfirm.checked = Boolean(settings.requireSpendConfirm);
   els.devMode.checked = Boolean(settings.devMode);
@@ -189,14 +192,29 @@ async function createPassport() {
     setBusy(true);
     setBadge('muted', 'creating');
 
-    const response = await client.bootstrapPassport();
+    const response = await client.bootstrapPassport({
+      desired_starting_balance_minor_units: '1776'
+    });
     const identity = extractIdentityState(response.data);
 
     if (!identity.passportSubject) {
       throw new Error('Passport bootstrap response did not include a passport subject.');
     }
 
-    const saved = await saveIdentityState(response.data);
+    let saved = await saveIdentityState(response.data);
+
+    if (identity.lastBootstrapReceiptId) {
+      saved = await addRecentReceipt({
+        id: identity.lastBootstrapReceiptId,
+        route: '/identity/passport/bootstrap',
+        action: 'passport_bootstrap',
+        amountMinorUnits: identity.lastStarterGrantAmountMinorUnits,
+        ledgerBacked: identity.lastStarterGrantLedgerBacked,
+        source: identity.lastStarterGrantLedgerBacked ? 'svc_wallet.v1' : '',
+        createdAt: new Date().toISOString()
+      });
+    }
+
     fillForm(saved);
     setBadge('ok', 'created');
     showMessage('ok', `Passport created/loaded through gateway. Correlation: ${response.correlationId}`);

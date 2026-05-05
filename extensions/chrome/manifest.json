@@ -20,6 +20,9 @@
     "http://127.0.0.1:*/*",
     "http://localhost:*/*"
   ],
+  "omnibox": {
+    "keyword": "crab"
+  },
   "icons": {
     "16": "assets/icons/icon16.png",
     "32": "assets/icons/icon32.png",

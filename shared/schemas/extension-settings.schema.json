@@ -19,17 +19,24 @@
     "lastStarterGrantIssued",
     "lastStarterGrantAmountMinorUnits",
     "lastStarterGrantReason",
+    "lastStarterGrantLedgerBacked",
     "rocBalanceMinorUnits",
     "rocBalanceDisplay",
     "rocBalanceUpdatedAt",
     "rocLedgerBacked",
     "rocBalanceSource",
-    "rocBalanceReason"
+    "rocBalanceReason",
+    "lastProductActionAt",
+    "lastProductSchema",
+    "lastProductCrabUrl",
+    "lastProductB3Cid",
+    "lastProductSiteName",
+    "lastProductSummary"
   ],
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 2
+      "const": 3
     },
     "gatewayUrl": {
       "type": "string",
@@ -69,6 +76,9 @@
           "id",
           "route",
           "action",
+          "amountMinorUnits",
+          "ledgerBacked",
+          "source",
           "createdAt"
         ],
         "properties": {
@@ -79,6 +89,16 @@
             "type": "string"
           },
           "action": {
+            "type": "string"
+          },
+          "amountMinorUnits": {
+            "type": "string",
+            "pattern": "^[0-9]*$"
+          },
+          "ledgerBacked": {
+            "type": "boolean"
+          },
+          "source": {
             "type": "string"
           },
           "createdAt": {
@@ -103,6 +123,9 @@
     "lastStarterGrantReason": {
       "type": "string"
     },
+    "lastStarterGrantLedgerBacked": {
+      "type": "boolean"
+    },
     "rocBalanceMinorUnits": {
       "type": "string",
       "pattern": "^[0-9]*$"
@@ -120,6 +143,24 @@
       "type": "string"
     },
     "rocBalanceReason": {
+      "type": "string"
+    },
+    "lastProductActionAt": {
+      "type": "string"
+    },
+    "lastProductSchema": {
+      "type": "string"
+    },
+    "lastProductCrabUrl": {
+      "type": "string"
+    },
+    "lastProductB3Cid": {
+      "type": "string"
+    },
+    "lastProductSiteName": {
+      "type": "string"
+    },
+    "lastProductSummary": {
       "type": "string"
     }
   }

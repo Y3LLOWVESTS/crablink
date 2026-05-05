@@ -3,18 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <title>CrabLink</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- check-token: crab://<hash>.image -->
     <link rel="stylesheet" href="./styles.css" />
   </head>
+
   <body class="popup">
     <header class="app-header">
       <div class="brand-row">
         <img class="brand-logo" src="../assets/icons/logo.png" alt="CrabLink logo" />
-        <div>
+        <div class="brand-copy">
           <h1>CrabLink</h1>
           <p>RustyOnions browser client</p>
         </div>
       </div>
-      <span id="nodeBadge" class="badge badge-muted">checking</span>
+
+      <span id="nodeBadge" class="badge badge-muted">loading</span>
     </header>
 
     <main>
@@ -23,18 +27,22 @@
           <span class="label">Gateway</span>
           <span id="gatewayUrl" class="value mono">loading...</span>
         </div>
+
         <div class="row">
           <span class="label">Passport</span>
           <span id="passportSubject" class="value mono">not loaded</span>
         </div>
+
         <div class="row">
           <span class="label">Wallet</span>
           <span id="walletAccount" class="value mono">not linked</span>
         </div>
+
         <div class="row">
           <span class="label">ROC</span>
           <span id="rocBalance" class="value mono">unknown</span>
         </div>
+
         <div class="row">
           <span class="label">Ledger</span>
           <span id="ledgerBacked" class="value">not verified</span>
@@ -43,84 +51,112 @@
         <div class="button-row">
           <button id="checkNodeButton" type="button">Check Node</button>
           <button id="refreshIdentityButton" type="button">Check Passport</button>
-          <button id="openOptionsButton" type="button">Settings</button>
+          <button id="refreshBalanceButton" type="button">Refresh Balance</button>
+          <button id="openOptionsButton" type="button" class="secondary">Settings</button>
         </div>
       </section>
 
       <section class="card">
-        <div class="section-heading">
-          <h2>RON Passport</h2>
+        <div class="section-head">
+          <div>
+            <h2>RON Passport</h2>
+            <p>Identity and wallet labels come from the gateway. No private keys are stored here.</p>
+          </div>
           <span id="passportBadge" class="badge badge-muted">unknown</span>
         </div>
 
-        <p id="passportSummary">Loading passport state...</p>
+        <p id="passportSummary" class="muted">
+          No passport label is loaded yet. Create or load one through the gateway.
+        </p>
 
-        <div class="mini-panel">
-          <div class="row">
-            <span class="label">Identity check</span>
-            <span id="identityCheckedAt" class="value mono">never</span>
+        <div class="mini-grid">
+          <div>
+            <span class="label">Identity checked</span>
+            <strong id="identityCheckedAt">never</strong>
           </div>
-          <div class="row">
-            <span class="label">Balance check</span>
-            <span id="balanceCheckedAt" class="value mono">never</span>
+
+          <div>
+            <span class="label">Balance checked</span>
+            <strong id="balanceCheckedAt">never</strong>
           </div>
-          <div class="row">
+
+          <div>
             <span class="label">Starter grant</span>
-            <span id="starterGrantStatus" class="value">pending backend</span>
+            <strong id="starterGrantStatus">pending backend</strong>
           </div>
-          <div class="row">
+
+          <div>
             <span class="label">Grant amount</span>
-            <span id="starterGrantAmount" class="value mono">unknown</span>
+            <strong id="starterGrantAmount">unknown</strong>
           </div>
-          <div class="row">
-            <span class="label">Receipt</span>
-            <span id="bootstrapReceiptId" class="value mono">none</span>
+
+          <div class="wide">
+            <span class="label">Bootstrap receipt</span>
+            <strong id="bootstrapReceiptId" class="mono">none</strong>
           </div>
         </div>
 
         <div class="button-row">
-          <button id="createPassportButton" type="button">Create RON Passport</button>
-          <button id="refreshBalanceButton" type="button">Refresh Balance</button>
+          <button id="createPassportButton" type="button">Create Dev Passport + Starter ROC</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <div>
+            <h2>Built-in RON Pages</h2>
+            <p>Open RustyOnions product pages through the gateway resolver.</p>
+          </div>
+          <span id="ronPagesBadge" class="badge badge-muted">ready</span>
         </div>
 
-        <p class="muted">
-          CrabLink stores only safe identity labels. Passport keys, wallet truth,
-          ROC issuance, and receipts must come from RustyOnions services through the gateway.
+        <div class="ron-page-grid">
+          <button type="button" class="ron-page-button" data-crab-page="site">
+            <strong>crab://site</strong>
+            <span>Register or launch RON sites</span>
+          </button>
+
+          <button type="button" class="ron-page-button" data-crab-page="image">
+            <strong>crab://image</strong>
+            <span>Upload images and create asset manifests</span>
+          </button>
+
+          <button type="button" class="ron-page-button" data-crab-page="music">
+            <strong>crab://music</strong>
+            <span>Reserved music workflow — coming soon</span>
+          </button>
+
+          <button type="button" class="ron-page-button" data-crab-page="article">
+            <strong>crab://article</strong>
+            <span>Reserved article workflow — coming soon</span>
+          </button>
+        </div>
+
+        <p class="hint">
+          Chrome shortcut: type <strong>crab</strong>, press <strong>Tab</strong>, then type
+          <strong>site</strong>, <strong>image</strong>, <strong>music</strong>, or
+          <strong>article</strong>.
         </p>
       </section>
 
       <section class="card">
-        <div class="section-heading">
-          <h2>Route Diagnostics</h2>
-          <span id="diagnosticsBadge" class="badge badge-muted">idle</span>
-        </div>
+        <h2>Resolver</h2>
+        <p class="muted">Resolve a crab:// URL, b3 CID, or raw 64-character BLAKE3 hash.</p>
 
-        <p>Read-only gateway route checks for the running local dev stack.</p>
-        <div id="diagnosticsList" class="diagnostics-list"></div>
-
-        <div class="button-row">
-          <button id="runDiagnosticsButton" type="button">Run Diagnostics</button>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Resolve CrabLink</h2>
-
-        <label for="crabInput">crab:// URL, b3 CID, or raw hash</label>
-        <!-- Check-token and UX example: crab://<hash>.image -->
+        <label for="crabInput">Crab URL / b3 CID / raw hash</label>
         <input
           id="crabInput"
           type="text"
           spellcheck="false"
+          autocomplete="off"
           placeholder="crab://<hash>.image"
         />
 
-        <label for="defaultAssetKind">Default asset kind for raw hashes</label>
+        <label for="defaultAssetKind">Default asset kind</label>
         <select id="defaultAssetKind">
           <option value="image">image</option>
           <option value="video">video</option>
           <option value="music">music</option>
-          <option value="song">song</option>
           <option value="article">article</option>
           <option value="post">post</option>
           <option value="comment">comment</option>
@@ -133,39 +169,68 @@
         <div class="button-row">
           <button id="resolveButton" type="button">Resolve</button>
         </div>
+
+        <article id="result" class="result hidden">
+          <div class="section-head">
+            <div>
+              <h2 id="resultTitle">Result</h2>
+              <p id="resultSubtitle" class="muted"></p>
+            </div>
+            <span id="resultKind" class="badge badge-muted">result</span>
+          </div>
+
+          <div id="resultFacts" class="facts"></div>
+
+          <div class="button-row">
+            <button id="copyCrabButton" type="button" class="secondary hidden">Copy Crab URL</button>
+            <button id="copyB3Button" type="button" class="secondary hidden">Copy b3 CID</button>
+            <button id="copyJsonButton" type="button" class="secondary hidden">Copy JSON</button>
+          </div>
+
+          <pre id="resultJson">{}</pre>
+        </article>
       </section>
 
-      <section id="result" class="card hidden">
-        <div class="section-heading">
+      <section class="card">
+        <div class="section-head">
           <div>
-            <h2 id="resultTitle">Result</h2>
-            <p id="resultSubtitle" class="muted mono"></p>
+            <h2>Route Diagnostics</h2>
+            <p>Read-only gateway probes. Diagnostics never create passports, assets, or sites.</p>
           </div>
-          <span id="resultKind" class="badge badge-muted">result</span>
+          <span id="diagnosticsBadge" class="badge badge-muted">idle</span>
         </div>
-
-        <div id="resultFacts" class="facts"></div>
 
         <div class="button-row">
-          <button id="copyCrabButton" type="button" class="hidden">Copy crab://</button>
-          <button id="copyB3Button" type="button" class="hidden">Copy b3 CID</button>
-          <button id="copyJsonButton" type="button" class="hidden">Copy JSON</button>
+          <button id="runDiagnosticsButton" type="button" class="secondary">Run Diagnostics</button>
         </div>
 
-        <pre id="resultJson" class="json-box">{}</pre>
+        <div id="diagnosticsList" class="diagnostics-list"></div>
       </section>
 
-      <section id="messageBox" class="message message-muted" aria-live="polite"></section>
+      <section class="card">
+        <div class="section-head">
+          <div>
+            <h2>Recent Receipts</h2>
+            <p>Display-only receipt references returned by the backend.</p>
+          </div>
+          <span id="receiptBadge" class="badge badge-muted">empty</span>
+        </div>
+
+        <div id="receiptList" class="receipt-list"></div>
+      </section>
 
       <section class="card safety-card">
-        <h2>Safety</h2>
-        <p>
-          The extension never stores seed phrases, private keys, wallet signing
-          material, or fake ROC balances. Paid actions must require explicit
-          confirmation before future mutation flows are enabled.
-        </p>
+        <h2>Safety rules</h2>
+        <ul>
+          <li>CrabLink calls the public gateway only.</li>
+          <li>No private keys, seed phrases, or ledger truth are stored in the extension.</li>
+          <li>Creation/upload workflows belong in RustyOnions built-in pages, not the popup.</li>
+          <li>Coming-soon pages are metadata only and do not mutate backend state.</li>
+        </ul>
       </section>
     </main>
+
+    <div id="messageBox" class="message message-muted"></div>
 
     <script type="module" src="./popup.js"></script>
   </body>

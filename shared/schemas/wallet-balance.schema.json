@@ -29,11 +29,11 @@
     },
     "available_minor_units": {
       "type": "string",
-      "pattern": "^-?[0-9]+$"
+      "pattern": "^[0-9]+$"
     },
     "held_minor_units": {
       "type": "string",
-      "pattern": "^-?[0-9]+$"
+      "pattern": "^[0-9]+$"
     },
     "display": {
       "type": "string"

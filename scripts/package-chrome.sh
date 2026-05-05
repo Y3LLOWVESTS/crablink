@@ -11,47 +11,26 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CHROME_DIR="$ROOT/extensions/chrome"
 OUT="$ROOT/dist"
 PACKAGE="$OUT/crablink-extension-chrome.zip"
 
 mkdir -p "$OUT"
 
-python3 - "$ROOT" "$PACKAGE" <<'PY'
-import sys
-import zipfile
-from pathlib import Path
+if ! command -v zip >/dev/null 2>&1; then
+  echo "error: zip is required to package the Chrome extension"
+  exit 1
+fi
 
-root = Path(sys.argv[1])
-package = Path(sys.argv[2])
-chrome = root / "extensions" / "chrome"
+(
+  cd "$CHROME_DIR"
+  zip -qr "$PACKAGE" . \
+    -x '*.DS_Store' \
+    -x '__MACOSX/*' \
+    -x '.git/*' \
+    -x 'node_modules/*' \
+    -x 'coverage/*' \
+    -x 'dist/*'
+)
 
-skip_names = {
-    ".DS_Store",
-    "Thumbs.db",
-}
-skip_dirs = {
-    "__MACOSX",
-    ".git",
-    "node_modules",
-    "coverage",
-    "dist",
-}
-
-with zipfile.ZipFile(package, "w", compression=zipfile.ZIP_DEFLATED) as z:
-    for path in sorted(chrome.rglob("*")):
-        if not path.is_file():
-            continue
-
-        rel = path.relative_to(chrome)
-        parts = set(rel.parts)
-
-        if path.name in skip_names:
-            continue
-
-        if parts & skip_dirs:
-            continue
-
-        z.write(path, rel)
-
-print(f"wrote: {package}")
-PY
+echo "wrote: $PACKAGE"

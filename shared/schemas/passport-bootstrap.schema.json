@@ -18,17 +18,24 @@
       "$ref": "#/$defs/passport"
     },
     "wallet": {
-      "oneOf": [
-        {
-          "type": "null"
-        },
+      "anyOf": [
         {
           "$ref": "#/$defs/wallet"
+        },
+        {
+          "type": "null"
         }
       ]
     },
     "starter_grant": {
-      "$ref": "#/$defs/starter_grant"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/starter_grant"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "capabilities": {
       "$ref": "#/$defs/capabilities"
@@ -120,6 +127,12 @@
             "string",
             "null"
           ]
+        },
+        "ledger_backed": {
+          "type": "boolean"
+        },
+        "source": {
+          "type": "string"
         }
       }
     },

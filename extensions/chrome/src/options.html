@@ -44,6 +44,9 @@
         <label for="rocBalanceDisplay">Last known ROC balance</label>
         <input id="rocBalanceDisplay" type="text" spellcheck="false" placeholder="loaded from gateway" readonly />
 
+        <label for="lastBootstrapReceiptId">Last bootstrap receipt</label>
+        <input id="lastBootstrapReceiptId" type="text" spellcheck="false" placeholder="tx_..." readonly />
+
         <p class="note">
           These are safe labels for requests and UI context. The extension does not own passport keys,
           wallet truth, issuance truth, or ledger truth.
@@ -76,7 +79,7 @@
 
         <label class="checkbox">
           <input id="requireSpendConfirm" type="checkbox" />
-          Require confirmation before paid actions
+          Require confirmation before paid/write actions
         </label>
 
         <label class="checkbox">
@@ -89,6 +92,8 @@
           <li>No private keys or seed phrases in this MVP.</li>
           <li>No direct calls to internal RustyOnions services.</li>
           <li>Passport bootstrap must go through the configured gateway.</li>
+          <li>1776 ROC must come from backend wallet/ledger truth, never local display state.</li>
+          <li>Site/image creation belongs in RustyOnions built-in pages, not hidden extension actions.</li>
         </ul>
       </section>
 

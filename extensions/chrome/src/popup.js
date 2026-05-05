@@ -1,11 +1,11 @@
 /**
- * RO:WHAT — Popup controller for CrabLink health, passport, balance, diagnostics, and resolver UX.
+ * RO:WHAT — Popup controller for CrabLink health, passport, balance, receipts, built-in pages, diagnostics, and resolver UX.
  * RO:WHY — App Integration; Concerns: DX/SEC/RES; expose gateway-backed state without local truth.
- * RO:INTERACTS — storage.js, ronClient.js, crab.js, svc-gateway public routes.
- * RO:INVARIANTS — no private keys; no fake ROC; diagnostics stay read-only; mutations require a button.
+ * RO:INTERACTS — storage.js, ronClient.js, crab.js, svc-gateway public routes, page.html full-tab browser.
+ * RO:INVARIANTS — no private keys; no fake ROC; diagnostics stay read-only; product pages open full tab.
  * RO:METRICS — sends correlation IDs through ronClient.js for backend metrics/logs.
  * RO:CONFIG — uses gateway URL, timeout, passport label, wallet label, dev token from storage.js.
- * RO:SECURITY — redacts secrets; does not display Authorization values.
+ * RO:SECURITY — redacts secrets; does not display Authorization values; no silent product mutation.
  * RO:TEST — scripts/check-chrome.sh, scripts/smoke-local-gateway.sh, manual checklist.
  */
 
@@ -13,6 +13,7 @@ import { normalizeCrabInput } from './crab.js';
 import { RonClient } from './ronClient.js';
 import {
   addRecentReceipt,
+  balanceSummary,
   extractIdentityState,
   getSettings,
   hasPassport,
@@ -24,6 +25,8 @@ import {
 } from './storage.js';
 
 const SAMPLE_HASH = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const BUILT_IN_RON_PAGES = new Set(['site', 'image', 'music', 'article']);
+const BUILTIN_PAGE_SCHEMA = 'omnigate.builtin-page.v1';
 
 const els = {
   nodeBadge: byId('nodeBadge'),
@@ -45,6 +48,12 @@ const els = {
   bootstrapReceiptId: byId('bootstrapReceiptId'),
   createPassportButton: byId('createPassportButton'),
   refreshBalanceButton: byId('refreshBalanceButton'),
+
+  receiptBadge: byId('receiptBadge'),
+  receiptList: byId('receiptList'),
+
+  ronPagesBadge: byId('ronPagesBadge'),
+  ronPageButtons: Array.from(document.querySelectorAll('[data-crab-page]')),
 
   diagnosticsBadge: byId('diagnosticsBadge'),
   diagnosticsList: byId('diagnosticsList'),
@@ -111,6 +120,30 @@ const diagnosticDefinitions = [
     run: () => client.resolveCrab(`crab://${SAMPLE_HASH}.image`)
   },
   {
+    label: 'Built-in page: site',
+    method: 'GET',
+    path: '/crab/resolve?url=crab://site',
+    run: () => client.resolveCrab('crab://site')
+  },
+  {
+    label: 'Built-in page: image',
+    method: 'GET',
+    path: '/crab/resolve?url=crab://image',
+    run: () => client.resolveCrab('crab://image')
+  },
+  {
+    label: 'Built-in page: music',
+    method: 'GET',
+    path: '/crab/resolve?url=crab://music',
+    run: () => client.resolveCrab('crab://music')
+  },
+  {
+    label: 'Built-in page: article',
+    method: 'GET',
+    path: '/crab/resolve?url=crab://article',
+    run: () => client.resolveCrab('crab://article')
+  },
+  {
     label: 'Passport bootstrap',
     method: 'POST',
     path: '/identity/passport/bootstrap',
@@ -152,7 +185,7 @@ function renderSettings(nextSettings) {
   els.ledgerBacked.textContent = settings.rocLedgerBacked ? 'ledger-backed' : 'display-only';
 
   els.passportSummary.textContent = hasPassport(settings)
-    ? `Passport ready: ${identitySummary(settings)}`
+    ? `Passport ready: ${identitySummary(settings)} — ${balanceSummary(settings)}`
     : 'No passport label is loaded yet. Create or load one through the gateway.';
 
   els.identityCheckedAt.textContent = formatDate(settings.lastIdentityCheckAt);
@@ -160,7 +193,9 @@ function renderSettings(nextSettings) {
   els.bootstrapReceiptId.textContent = settings.lastBootstrapReceiptId || 'none';
 
   if (settings.lastStarterGrantIssued) {
-    els.starterGrantStatus.textContent = 'issued by backend';
+    els.starterGrantStatus.textContent = settings.lastStarterGrantLedgerBacked
+      ? 'issued by backend'
+      : 'issued, ledger not verified';
   } else if (settings.lastStarterGrantReason) {
     els.starterGrantStatus.textContent = settings.lastStarterGrantReason;
   } else {
@@ -172,6 +207,7 @@ function renderSettings(nextSettings) {
     : 'unknown';
 
   setPassportBadge();
+  renderReceipts(settings.recentReceipts);
   syncPassportButtons();
 }
 
@@ -271,6 +307,9 @@ async function createPassport() {
         id: identity.lastBootstrapReceiptId,
         route: '/identity/passport/bootstrap',
         action: 'passport_bootstrap',
+        amountMinorUnits: identity.lastStarterGrantAmountMinorUnits,
+        ledgerBacked: identity.lastStarterGrantLedgerBacked,
+        source: identity.lastStarterGrantLedgerBacked ? 'svc_wallet.v1' : '',
         createdAt: new Date().toISOString()
       });
     }
@@ -331,6 +370,48 @@ async function refreshBalance(options = {}) {
   }
 }
 
+function renderReceipts(receipts) {
+  els.receiptList.textContent = '';
+
+  if (!Array.isArray(receipts) || receipts.length === 0) {
+    setBadge(els.receiptBadge, 'muted', 'empty');
+    const empty = document.createElement('p');
+    empty.className = 'muted';
+    empty.textContent = 'No receipts stored yet. Create/load a passport after the wallet-backed starter grant is live.';
+    els.receiptList.append(empty);
+    return;
+  }
+
+  setBadge(els.receiptBadge, 'ok', String(receipts.length));
+
+  for (const receipt of receipts.slice(0, 5)) {
+    const row = document.createElement('div');
+    row.className = 'receipt-row';
+
+    const main = document.createElement('div');
+    const id = document.createElement('strong');
+    id.className = 'mono';
+    id.textContent = receipt.id;
+
+    const meta = document.createElement('div');
+    meta.className = 'muted';
+    meta.textContent = [
+      receipt.action || 'receipt',
+      receipt.amountMinorUnits ? `${receipt.amountMinorUnits} ROC` : '',
+      receipt.ledgerBacked ? 'ledger-backed' : ''
+    ].filter(Boolean).join(' · ');
+
+    main.append(id, meta);
+
+    const badge = document.createElement('span');
+    badge.className = `badge ${receipt.ledgerBacked ? 'badge-ok' : 'badge-muted'}`;
+    badge.textContent = receipt.ledgerBacked ? 'ledger' : 'saved';
+
+    row.append(main, badge);
+    els.receiptList.append(row);
+  }
+}
+
 function renderDiagnosticsIdle() {
   els.diagnosticsList.textContent = '';
 
@@ -341,9 +422,11 @@ function renderDiagnosticsIdle() {
     const left = document.createElement('div');
     const title = document.createElement('strong');
     title.textContent = item.label;
+
     const path = document.createElement('div');
     path.className = 'muted mono';
     path.textContent = `${item.method} ${typeof item.path === 'function' ? item.path() : item.path}`;
+
     left.append(title, path);
 
     const badge = document.createElement('span');
@@ -433,6 +516,36 @@ function updateDiagnosticRow(row, kind, text, detail) {
   row.detail.textContent = detail || '';
 }
 
+async function openBuiltInRonPage(pageName) {
+  const page = String(pageName || '').trim().toLowerCase();
+
+  if (!BUILT_IN_RON_PAGES.has(page)) {
+    showMessage('bad', 'Invalid built-in page name.');
+    return;
+  }
+
+  const url = `crab://${page}`;
+  await openFullCrabTab(url);
+}
+
+async function openFullCrabTab(crabUrl) {
+  const clean = String(crabUrl || '').trim();
+
+  if (!clean) {
+    showMessage('bad', 'Missing crab URL.');
+    return;
+  }
+
+  try {
+    await rememberLastCrabUrl(clean);
+    const pageUrl = chrome.runtime.getURL(`src/page.html?url=${encodeURIComponent(clean)}`);
+    await chrome.tabs.create({ url: pageUrl, active: true });
+    window.close();
+  } catch (error) {
+    showMessage('bad', `Could not open CrabLink tab: ${formatError(error)}`);
+  }
+}
+
 async function resolveInput() {
   clearMessage();
   clearResult();
@@ -445,6 +558,11 @@ async function resolveInput() {
     });
   } catch (error) {
     showMessage('bad', error.message);
+    return;
+  }
+
+  if (parsed.url && shouldOpenFullPage(parsed)) {
+    await openFullCrabTab(parsed.url);
     return;
   }
 
@@ -474,17 +592,109 @@ async function resolveInput() {
   }
 }
 
+function shouldOpenFullPage(parsed) {
+  if (!parsed || !parsed.url) {
+    return false;
+  }
+
+  if (parsed.type === 'asset') {
+    return true;
+  }
+
+  if (parsed.type === 'site') {
+    return BUILT_IN_RON_PAGES.has(String(parsed.name || '').toLowerCase());
+  }
+
+  return String(parsed.url).startsWith('crab://');
+}
+
 function renderResult(parsed, response) {
   const data = response?.data;
   const payload = data && typeof data === 'object' ? data : response;
+  const isBuiltinPage = payload && payload.schema === BUILTIN_PAGE_SCHEMA;
 
   els.result.classList.remove('hidden');
-  els.resultTitle.textContent = resultTitleFor(parsed);
-  els.resultSubtitle.textContent = response?.route || parsed.display || parsed.url || '';
-  els.resultKind.textContent = parsed.type;
+  els.resultTitle.textContent = resultTitleFor(parsed, payload);
+  els.resultSubtitle.textContent = resultSubtitleFor(parsed, payload, response);
+  els.resultKind.textContent = isBuiltinPage ? String(payload.status || 'page') : parsed.type;
 
   clearFacts();
 
+  if (isBuiltinPage) {
+    renderBuiltinPageFacts(payload);
+  } else {
+    renderGenericParsedFacts(parsed);
+    addBackendFacts(payload);
+  }
+
+  els.resultJson.textContent = JSON.stringify(payload, null, 2);
+  els.resultJson.classList.toggle('hidden', isBuiltinPage);
+
+  configureCopyButton(els.copyCrabButton, parsed.url || payload?.crab_url || payload?.crabUrl || payload?.links?.crab);
+  configureCopyButton(
+    els.copyB3Button,
+    parsed.contentId ||
+      payload?.content_id ||
+      payload?.contentId ||
+      payload?.manifest_cid ||
+      payload?.manifestCid ||
+      payload?.manifest?.manifest_cid ||
+      payload?.manifest?.manifestCid
+  );
+
+  els.copyJsonButton.classList.remove('hidden');
+}
+
+function renderBuiltinPageFacts(payload) {
+  addFact('Crab URL', payload.url || '');
+  addFact('Page kind', payload.page_kind || payload.pageKind || '');
+  addFact('Page status', payload.status || '');
+  addFact('Requires passport', boolText(payload.requires_passport ?? payload.requiresPassport));
+  addFact('Requires wallet', boolText(payload.requires_wallet ?? payload.requiresWallet));
+
+  if (payload.description) {
+    addFact('Description', payload.description);
+  }
+
+  const actions = Array.isArray(payload.actions) ? payload.actions : [];
+  if (actions.length > 0) {
+    addFact(
+      'Actions',
+      actions
+        .map((action) => {
+          const label = action.label || action.id || 'action';
+          const method = action.method || 'GET';
+          const route = action.route || '';
+          const confirm = action.requires_confirmation ? 'confirm' : 'no-confirm';
+          return `${label} — ${method} ${route} (${confirm})`;
+        })
+        .join('\n')
+    );
+  } else {
+    addFact('Actions', 'None enabled yet');
+  }
+
+  const fields = Array.isArray(payload.fields) ? payload.fields : [];
+  if (fields.length > 0) {
+    addFact(
+      'Fields',
+      fields
+        .map((field) => {
+          const required = field.required ? 'required' : 'optional';
+          const accept = field.accept ? `, ${field.accept}` : '';
+          return `${field.label || field.name} — ${field.type || 'text'} (${required}${accept})`;
+        })
+        .join('\n')
+    );
+  }
+
+  const warnings = Array.isArray(payload.warnings) ? payload.warnings : [];
+  if (warnings.length > 0) {
+    addFact('Warnings', warnings.join('\n'));
+  }
+}
+
+function renderGenericParsedFacts(parsed) {
   if (parsed.type === 'asset') {
     addFact('crab URL', parsed.url);
     addFact('b3 CID', parsed.contentId);
@@ -492,22 +702,10 @@ function renderResult(parsed, response) {
     addFact('Hash', parsed.hash);
   }
 
-  if (parsed.type === 'site') {
+  if (parsed.type === 'site' || parsed.type === 'builtin') {
     addFact('crab URL', parsed.url);
-    addFact('Site name', parsed.name);
+    addFact('Name', parsed.name);
   }
-
-  addBackendFacts(payload);
-
-  els.resultJson.textContent = JSON.stringify(payload, null, 2);
-
-  configureCopyButton(els.copyCrabButton, parsed.url || payload?.crab_url || payload?.crabUrl);
-  configureCopyButton(
-    els.copyB3Button,
-    parsed.contentId || payload?.content_id || payload?.contentId || payload?.manifest_cid || payload?.manifestCid
-  );
-
-  els.copyJsonButton.classList.remove('hidden');
 }
 
 function addBackendFacts(payload) {
@@ -518,15 +716,21 @@ function addBackendFacts(payload) {
   const candidates = [
     ['Backend schema', payload.schema],
     ['Backend type', payload.type],
+    ['Page kind', payload.page_kind || payload.pageKind],
+    ['Page status', payload.status],
     ['Content ID', payload.content_id || payload.contentId],
     ['Asset CID', payload.asset_cid || payload.assetCid],
-    ['Manifest CID', payload.manifest_cid || payload.manifestCid],
+    ['Asset kind', payload.asset_kind || payload.assetKind],
+    ['Manifest CID', payload.manifest_cid || payload.manifestCid || payload.manifest?.manifest_cid],
     ['Site name', payload.name || payload.site_name || payload.siteName],
-    ['Owner passport', payload.owner_passport_subject || payload.ownerPassportSubject],
-    ['Wallet account', payload.wallet_account || payload.walletAccount],
+    ['Owner passport', payload.owner_passport_subject || payload.ownerPassportSubject || payload.owner?.passport_subject],
+    ['Wallet account', payload.wallet_account || payload.walletAccount || payload.owner?.wallet_account],
+    ['Requires passport', boolText(payload.requires_passport ?? payload.requiresPassport)],
+    ['Requires wallet', boolText(payload.requires_wallet ?? payload.requiresWallet)],
+    ['Action count', Array.isArray(payload.actions) ? String(payload.actions.length) : ''],
+    ['Warnings', Array.isArray(payload.warnings) ? payload.warnings.map(String).join(' | ') : ''],
     ['Ledger backed', boolText(payload.ledger_backed ?? payload.ledgerBacked)],
     ['Starter grant', starterGrantSummary(payload.starter_grant || payload.starterGrant)],
-    ['Status', payload.status],
     ['Reason', payload.reason]
   ];
 
@@ -537,7 +741,11 @@ function addBackendFacts(payload) {
   }
 }
 
-function resultTitleFor(parsed) {
+function resultTitleFor(parsed, payload = null) {
+  if (payload && typeof payload === 'object' && payload.title) {
+    return String(payload.title);
+  }
+
   if (parsed.type === 'asset') {
     return `Asset page: ${parsed.kind}`;
   }
@@ -546,7 +754,21 @@ function resultTitleFor(parsed) {
     return `Site: ${parsed.name}`;
   }
 
+  if (parsed.type === 'builtin') {
+    return `Built-in page: ${parsed.url}`;
+  }
+
   return 'Crab resolve';
+}
+
+function resultSubtitleFor(parsed, payload = null, response = null) {
+  if (payload && payload.schema === BUILTIN_PAGE_SCHEMA) {
+    const status = payload.status ? `Status: ${payload.status}` : 'Resolved built-in page';
+    const route = response?.route ? ` · ${response.route}` : '';
+    return `${status}${route}`;
+  }
+
+  return response?.route || parsed.display || parsed.url || '';
 }
 
 function clearResult() {
@@ -554,6 +776,7 @@ function clearResult() {
   lastResult = null;
   els.result.classList.add('hidden');
   els.resultJson.textContent = '{}';
+  els.resultJson.classList.remove('hidden');
   clearFacts();
   configureCopyButton(els.copyCrabButton, '');
   configureCopyButton(els.copyB3Button, '');
@@ -565,6 +788,12 @@ function clearFacts() {
 }
 
 function addFact(label, value) {
+  const clean = value === undefined || value === null ? '' : String(value);
+
+  if (!clean) {
+    return;
+  }
+
   const row = document.createElement('div');
   row.className = 'row';
 
@@ -574,7 +803,7 @@ function addFact(label, value) {
 
   const right = document.createElement('span');
   right.className = 'value mono';
-  right.textContent = value;
+  right.textContent = clean;
 
   row.append(left, right);
   els.resultFacts.append(row);
@@ -614,6 +843,10 @@ function setBusy(isBusy) {
   els.refreshBalanceButton.disabled = isBusy;
   els.runDiagnosticsButton.disabled = isBusy;
   els.resolveButton.disabled = isBusy;
+
+  for (const button of els.ronPageButtons) {
+    button.disabled = isBusy;
+  }
 }
 
 function setBadge(el, kind, text) {
@@ -690,7 +923,8 @@ function starterGrantSummary(value) {
   }
 
   if (value.issued === true) {
-    return 'issued';
+    const amount = value.amount_minor_units || value.amountMinorUnits || '';
+    return amount ? `issued ${amount} ROC` : 'issued';
   }
 
   return value.reason || value.status || '';
@@ -710,6 +944,10 @@ els.copyJsonButton.addEventListener('click', async () => {
   await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
   showMessage('ok', 'Copied JSON to clipboard.');
 });
+
+for (const button of els.ronPageButtons) {
+  button.addEventListener('click', () => openBuiltInRonPage(button.dataset.crabPage));
+}
 
 load().catch((error) => {
   setBadge(els.nodeBadge, 'bad', 'error');
