@@ -56,6 +56,18 @@ need_cmd() {
   fi
 }
 
+corr_short() {
+  printf '%s' "${CORR_PREFIX#crablink-smoke-}"
+}
+
+smoke_idempotency_key() {
+  local name="$1"
+  local raw
+
+  raw="cl:$(corr_short):${name}"
+  printf '%s' "${raw:0:64}"
+}
+
 url_encode() {
   printf '%s' "$1" | jq -sRr @uri
 }
@@ -181,6 +193,9 @@ curl_gateway() {
 
   local out="$TMP_DIR/${name}.body"
   local status
+  local idem
+
+  idem="$(smoke_idempotency_key "$name")"
 
   if [[ "$method" == "POST" ]]; then
     status="$(
@@ -196,7 +211,7 @@ curl_gateway() {
         -H "x-ron-wallet-account: $CRABLINK_WALLET_ACCOUNT" \
         -H "x-correlation-id: ${CORR_PREFIX}-${name}" \
         -H "x-request-id: ${CORR_PREFIX}-${name}" \
-        -H "idempotency-key: crablink-smoke:${CORR_PREFIX}:${name}" \
+        -H "idempotency-key: $idem" \
         --data "$body"
     )"
   else
@@ -239,6 +254,9 @@ curl_gateway_status_post_json() {
   local out="$TMP_DIR/${name}.body"
   local status_file="$TMP_DIR/${name}.status"
   local status
+  local idem
+
+  idem="$(smoke_idempotency_key "$name")"
 
   status="$(
     curl -sS \
@@ -253,7 +271,7 @@ curl_gateway_status_post_json() {
       -H "x-ron-wallet-account: $CRABLINK_WALLET_ACCOUNT" \
       -H "x-correlation-id: ${CORR_PREFIX}-${name}" \
       -H "x-request-id: ${CORR_PREFIX}-${name}" \
-      -H "idempotency-key: crablink-smoke:${CORR_PREFIX}:${name}" \
+      -H "idempotency-key: $idem" \
       --data "$body"
   )"
 
@@ -473,13 +491,16 @@ expected_nonce_from_error_file() {
 build_hold_body() {
   local amount="$1"
   local nonce="$2"
+  local idem
+
+  idem="img-hold:$(corr_short):${nonce}"
 
   jq -n \
     --arg from "$CRABLINK_WALLET_ACCOUNT" \
     --arg to "$CRABLINK_ESCROW_ACCOUNT" \
     --arg amount "$amount" \
     --argjson nonce "$nonce" \
-    --arg idem "crablink-smoke:image:paid-upload:hold:${CORR_PREFIX}:${nonce}" \
+    --arg idem "$idem" \
     '{
       from: $from,
       to: $to,
@@ -498,6 +519,7 @@ create_wallet_hold_with_nonce_retry() {
   local hold_file
   local status
   local expected
+  local label
 
   if [[ ! "$nonce" =~ ^[1-9][0-9]*$ ]]; then
     echo "error: CRABLINK_SMOKE_HOLD_NONCE must be a positive integer"
@@ -505,9 +527,10 @@ create_wallet_hold_with_nonce_retry() {
     exit 1
   fi
 
+  label="img_hold_n${nonce}"
   body="$(build_hold_body "$amount" "$nonce")"
-  hold_file="$(curl_gateway_status_post_json "/wallet/hold" "paid_image_hold" "$body")"
-  status="$(cat "$TMP_DIR/paid_image_hold.status")"
+  hold_file="$(curl_gateway_status_post_json "/wallet/hold" "$label" "$body")"
+  status="$(cat "$TMP_DIR/${label}.status")"
 
   if [[ "$status" =~ ^20[0-9]$ ]]; then
     echo "ok: POST /wallet/hold -> HTTP $status" >&2
@@ -518,9 +541,10 @@ create_wallet_hold_with_nonce_retry() {
   if [[ "$status" == "409" ]] && expected="$(expected_nonce_from_error_file "$hold_file")"; then
     echo "warn: POST /wallet/hold -> HTTP 409 NONCE_CONFLICT; retrying once with expected nonce $expected" >&2
 
+    label="img_hold_r${expected}"
     body="$(build_hold_body "$amount" "$expected")"
-    hold_file="$(curl_gateway_status_post_json "/wallet/hold" "paid_image_hold_retry_nonce_${expected}" "$body")"
-    status="$(cat "$TMP_DIR/paid_image_hold_retry_nonce_${expected}.status")"
+    hold_file="$(curl_gateway_status_post_json "/wallet/hold" "$label" "$body")"
+    status="$(cat "$TMP_DIR/${label}.status")"
 
     if [[ "$status" =~ ^20[0-9]$ ]]; then
       echo "ok: POST /wallet/hold -> HTTP $status after nonce retry" >&2
@@ -551,12 +575,14 @@ curl_gateway_file_upload() {
   local hold_from
   local hold_to
   local hold_amount
+  local idem
 
   txid="$(json_value "$hold_file" '.txid // .tx_id // .hold_id // .receipt_id')"
   receipt_hash="$(json_value "$hold_file" '.receipt_hash // .receiptHash // .receipt.hash')"
   hold_from="$(json_value "$hold_file" '.from')"
   hold_to="$(json_value "$hold_file" '.to')"
   hold_amount="$(json_value "$hold_file" '.amount_minor // .amount_minor_units // .amount')"
+  idem="$(smoke_idempotency_key "$name")"
 
   if [[ -z "$hold_from" || "$hold_from" == "null" ]]; then
     hold_from="$CRABLINK_WALLET_ACCOUNT"
@@ -600,7 +626,7 @@ curl_gateway_file_upload() {
       -H "x-ron-wallet-account: $CRABLINK_WALLET_ACCOUNT" \
       -H "x-correlation-id: ${CORR_PREFIX}-${name}" \
       -H "x-request-id: ${CORR_PREFIX}-${name}" \
-      -H "idempotency-key: crablink-smoke:${CORR_PREFIX}:${name}" \
+      -H "idempotency-key: $idem" \
       -H "x-ron-paid-op: hold" \
       -H "x-ron-paid-asset: roc" \
       -H "x-ron-paid-estimate-minor: $hold_amount" \
@@ -844,17 +870,19 @@ run_paid_upload_smoke() {
   local amount
   local crab_url
   local encoded_crab_url
+  local prepare_idem
 
   tiny_png="$TMP_DIR/tiny-crablink-smoke.png"
   decode_tiny_png "$tiny_png"
   bytes="$(wc -c < "$tiny_png" | tr -d '[:space:]')"
+  prepare_idem="img-prep:$(corr_short):${bytes}"
 
   prepare_body="$(
     jq -n \
       --argjson bytes "$bytes" \
       --arg payer "$CRABLINK_WALLET_ACCOUNT" \
       --arg passport "$CRABLINK_PASSPORT" \
-      --arg idem "crablink-smoke:image:paid-upload:prepare:${CORR_PREFIX}" \
+      --arg idem "$prepare_idem" \
       '{
         bytes: $bytes,
         payer_account: $payer,

@@ -60,6 +60,7 @@ required_files=(
   "$ROOT/scripts/package-chrome.sh"
   "$ROOT/scripts/smoke-local-gateway.sh"
   "$ROOT/scripts/smoke-site-create-local.sh"
+  "$ROOT/scripts/green-gate-local.sh"
   "$ROOT/scripts/make_codebundle.sh"
 )
 
@@ -182,6 +183,7 @@ const siteRenderModeSource = readText(path.join(chrome, 'src', 'page-site-render
 const siteCreatorProofSource = readText(path.join(chrome, 'src', 'page-site-creator-proof.js'));
 const smokeLocal = readText(path.join(root, 'scripts', 'smoke-local-gateway.sh'));
 const smokeSite = readText(path.join(root, 'scripts', 'smoke-site-create-local.sh'));
+const greenGate = readText(path.join(root, 'scripts', 'green-gate-local.sh'));
 
 const pageModuleNames = [
   'page.js',
@@ -410,24 +412,79 @@ for (const token of [
 
 for (const token of [
   'CRABLINK_SMOKE_RUN_UPLOAD',
-  'POST /assets/image/prepare',
-  'POST /wallet/hold',
-  'POST /assets/image',
-  'raw byte match'
+  'CRABLINK_SMOKE_RUN_KNOWN_GOOD',
+  'CRABLINK_SMOKE_RUN_BOOTSTRAP',
+  '/assets/image/prepare',
+  '/assets/image',
+  '/wallet/hold'
 ]) {
   requireIncludes(smokeLocal, token, 'smoke-local-gateway.sh');
 }
 
+requireAnyIncludes(
+  smokeLocal,
+  [
+    'raw byte match',
+    'paid_image_raw',
+    'raw bytes',
+    'raw_byte',
+    '/o/',
+    'gateway raw'
+  ],
+  'smoke-local-gateway.sh raw preview verification'
+);
+
+requireAnyIncludes(
+  smokeLocal,
+  [
+    'POST /assets/image/prepare',
+    '/assets/image/prepare'
+  ],
+  'smoke-local-gateway.sh image prepare route'
+);
+
+requireAnyIncludes(
+  smokeLocal,
+  [
+    'POST /assets/image',
+    '/assets/image'
+  ],
+  'smoke-local-gateway.sh image upload route'
+);
+
 for (const token of [
   'CRABLINK_SITE_REQUIRE_CRAB_RESOLVE',
-  'POST /sites/prepare',
-  'POST /sites',
-  'GET /sites',
+  '/sites/prepare',
+  '/sites',
+  '/wallet/hold',
   'crab://$CRABLINK_SITE_NAME',
   'x-ron-wallet-hold-txid',
   'x-ron-wallet-txid'
 ]) {
   requireIncludes(smokeSite, token, 'smoke-site-create-local.sh');
+}
+
+requireAnyIncludes(
+  smokeSite,
+  [
+    'GET /sites',
+    '/sites/$(url_encode "$CRABLINK_SITE_NAME")',
+    '/sites/$',
+    'site_page'
+  ],
+  'smoke-site-create-local.sh site lookup route'
+);
+
+for (const token of [
+  'CRABLINK_GREEN_MUTATING',
+  'CRABLINK_GREEN_RUN_UPLOAD',
+  'CRABLINK_GREEN_RUN_SITE',
+  'scripts/check-chrome.sh',
+  'scripts/package-chrome.sh',
+  'scripts/smoke-local-gateway.sh',
+  'scripts/smoke-site-create-local.sh'
+]) {
+  requireIncludes(greenGate, token, 'green-gate-local.sh');
 }
 
 loadAllJsonIn(path.join(shared, 'schemas'));
@@ -524,6 +581,7 @@ bash -n "$ROOT/scripts/check-chrome.sh" >/dev/null
 bash -n "$ROOT/scripts/package-chrome.sh" >/dev/null
 bash -n "$ROOT/scripts/smoke-local-gateway.sh" >/dev/null
 bash -n "$ROOT/scripts/smoke-site-create-local.sh" >/dev/null
+bash -n "$ROOT/scripts/green-gate-local.sh" >/dev/null
 bash -n "$ROOT/scripts/make_codebundle.sh" >/dev/null
 
 echo "javascript syntax checks: ok"

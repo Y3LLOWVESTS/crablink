@@ -1,15 +1,28 @@
 
+
+## `extensions/chrome/README.md`
+
+````markdown
 # CrabLink Extension for Chrome
 
 CrabLink Extension for Chrome is the first browser-client proof for RustyOnions.
 
-It resolves `crab://` links, opens typed b3 asset pages, opens named RON sites, and talks to the local RustyOnions gateway. It is a thin client. RustyOnions remains the source of truth for identity, wallet balance, ROC receipts, site manifests, storage, and index state.
+It resolves `crab://` links, opens typed b3 asset pages, opens named RON sites, renders sandboxed site HTML, resolves `<crab-image>` references, and talks to the local RustyOnions gateway.
+
+CrabLink is a thin browser client. RustyOnions remains the source of truth for identity, wallet balance, ROC receipts, site manifests, storage, index state, and raw b3 bytes.
+
+---
 
 ## Load unpacked
 
 1. Open Chrome.
-2. Go to `chrome://extensions`.
-3. Enable Developer Mode.
+2. Go to:
+
+```text
+chrome://extensions
+````
+
+3. Enable **Developer Mode**.
 4. Click **Load unpacked**.
 5. Select:
 
@@ -17,13 +30,17 @@ It resolves `crab://` links, opens typed b3 asset pages, opens named RON sites, 
 extensions/chrome
 ```
 
+---
+
 ## Default local gateway
 
 ```text
 http://127.0.0.1:8090
 ```
 
-## MVP behavior
+---
+
+## Current MVP behavior
 
 CrabLink currently supports:
 
@@ -33,7 +50,7 @@ CrabLink currently supports:
 - Check gateway-backed identity state.
 - Display backend-derived ROC balance.
 - Resolve crab:// links through svc-gateway.
-- Open b3 image asset pages.
+- Open typed b3 image asset pages.
 - Open built-in product pages:
   - crab://site
   - crab://image
@@ -41,9 +58,13 @@ CrabLink currently supports:
   - crab://article
 - Upload paid image assets with explicit wallet hold.
 - Create paid named sites with explicit wallet hold.
+- Open named crab:// sites.
 - Render named sites as sandboxed full-tab pages.
 - Render <crab-image src="crab://<hash>.image"> inside site HTML.
+- Fetch rendered image bytes through gateway /o only.
 ```
+
+---
 
 ## Public URL forms
 
@@ -74,7 +95,7 @@ crab://<site_name>
 Example:
 
 ```text
-crab://crablink-site-smoke-20260504-194050
+crab://thedustyonion6
 ```
 
 Do not use the old public URL form:
@@ -83,137 +104,203 @@ Do not use the old public URL form:
 crab://b3/<hash>.<asset_kind>
 ```
 
-## Green-gate checks
+---
+
+## Canonical proof assets
+
+Known-good image asset:
+
+```text
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+Known-good reference-graph image embed asset:
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+Current named site reference-graph proof:
+
+```text
+crab://thedustyonion6
+```
+
+`crab://thedustyonion6` proves:
+
+```text
+site root HTML
+→ stored as its own b3 object
+→ named site manifest points at the HTML root
+→ HTML contains <crab-image src="crab://...image">
+→ CrabLink detects the referenced image asset
+→ CrabLink fetches bytes through svc-gateway /o
+→ image renders inside the sandboxed site page
+```
+
+---
+
+## Safe green gate
 
 From the CrabLink repo:
+
+```bash
+scripts/green-gate-local.sh
+```
+
+The safe default gate proves:
+
+```text
+- static extension checks
+- Chrome package build
+- non-mutating gateway read/prepare route smoke
+- codebundle regeneration
+```
+
+Expected ending:
+
+```text
+CrabLink local green gate passed.
+
+Non-mutating gates proved:
+- static extension checks
+- Chrome package build
+- gateway read/prepare route smoke
+
+Optional mutating gates run:
+- bootstrap:         0
+- known-good raw:    0
+- paid image upload: 0
+- site create/open:  0
+```
+
+---
+
+## Full dev green gate
+
+This spends dev ROC and creates dev test objects/sites.
+
+Run only when you intentionally want the full proof:
+
+```bash
+CRABLINK_GREEN_RUN_BOOTSTRAP=1 \
+CRABLINK_GREEN_RUN_KNOWN_GOOD=1 \
+CRABLINK_GREEN_MUTATING=1 \
+scripts/green-gate-local.sh
+```
+
+The full gate proves:
+
+```text
+- static extension checks
+- Chrome package build
+- non-mutating gateway route smoke
+- passport/bootstrap smoke
+- known-good raw preview smoke
+- paid image upload smoke
+- paid site create/open smoke
+- named crab:// site resolver
+- codebundle regeneration
+```
+
+Expected ending:
+
+```text
+CrabLink local green gate passed.
+
+Optional mutating gates run:
+- bootstrap:         1
+- known-good raw:    1
+- paid image upload: 1
+- site create/open:  1
+```
+
+---
+
+## Individual smoke commands
+
+Static check and package:
 
 ```bash
 scripts/check-chrome.sh && scripts/package-chrome.sh
 ```
 
-Expected:
-
-```text
-json/structure checks: ok
-javascript syntax checks: ok
-bash syntax checks: ok
-CrabLink Chrome extension checks passed.
-wrote: /Users/mymac/Desktop/crablink/dist/crablink-extension-chrome.zip
-```
-
-Regenerate the codebundle after changes:
-
-```bash
-scripts/make_codebundle.sh
-```
-
-Expected:
-
-```text
-wrote: /Users/mymac/Desktop/crablink/CODEBUNDLE_CHROME_EXTENSION.md
-```
-
-## Gateway smoke
-
-Run the non-mutating route/DTO smoke:
+Non-mutating route smoke:
 
 ```bash
 scripts/smoke-local-gateway.sh
 ```
 
-Expected:
-
-```text
-CrabLink local gateway smoke passed.
-```
-
-## Optional passport/bootstrap smoke
-
-This tests gateway-backed passport/bootstrap behavior and starter ROC display.
+Passport/bootstrap smoke:
 
 ```bash
 CRABLINK_SMOKE_RUN_BOOTSTRAP=1 scripts/smoke-local-gateway.sh
 ```
 
-Expected:
+Known-good raw preview smoke:
 
-```text
-bootstrap JSON: ok
-wallet JSON: ok
-CrabLink local gateway smoke passed.
+```bash
+CRABLINK_SMOKE_RUN_KNOWN_GOOD=1 scripts/smoke-local-gateway.sh
 ```
 
-## Optional paid image upload smoke
-
-This performs a real paid hold and image upload. It spends dev ROC.
+Paid image upload smoke:
 
 ```bash
 CRABLINK_SMOKE_EXPECT_IMAGE_PRICE=25 CRABLINK_SMOKE_RUN_UPLOAD=1 scripts/smoke-local-gateway.sh
 ```
 
-Expected:
+Site create/open smoke:
+
+```bash
+CRABLINK_SITE_REQUIRE_CRAB_RESOLVE=1 scripts/smoke-site-create-local.sh
+```
+
+Regenerate codebundle:
+
+```bash
+scripts/make_codebundle.sh
+```
+
+---
+
+## Paid image proof path
+
+The paid image smoke proves:
 
 ```text
-running opt-in paid image upload smoke
-ok: POST /assets/image/prepare -> HTTP 200
-image prepare JSON: ok
-ok: POST /wallet/hold -> HTTP 200
-wallet hold JSON: ok
-ok: POST /assets/image -> HTTP 200
-image upload JSON: ok
-ok: GET /crab/resolve?url=crab://<hash>.image -> HTTP 200
-asset page JSON: ok
-ok: GET /o/b3:<hash> -> HTTP 200 raw bytes
-raw byte match: paid_image_raw
-ok: GET /wallet/acct_dev/balance -> HTTP 200
-paid image upload JSON/raw bytes: ok
-paid image crab URL: crab://<64 lowercase hex>.image
-CrabLink local gateway smoke passed.
+/assets/image/prepare
+→ /wallet/hold
+→ /assets/image
+→ /crab/resolve?url=crab://<hash>.image
+→ /o/b3:<hash>
+→ raw byte match
+→ wallet balance refresh
 ```
 
 Rules:
 
 ```text
 - Upload body must be raw image bytes.
-- Do not JSON-stringify image bytes.
+- Do not JSON-stringify image files.
+- Use explicit wallet hold proof.
 - Use x-ron-wallet-txid for paid image upload.
 - Raw preview must come back through svc-gateway /o.
 - No direct svc-storage call from the extension.
 ```
 
-## Optional site create/open smoke
+---
 
-This performs a real paid hold and named site creation. It spends dev ROC.
+## Site create/open proof path
 
-```bash
-scripts/smoke-site-create-local.sh
-```
-
-Expected:
+The site smoke proves:
 
 ```text
-CrabLink site create/open smoke
-ok: GET /healthz -> HTTP 200
-ok: GET /readyz -> HTTP 200
-ok: POST /sites/prepare -> HTTP 200
-site prepare JSON: ok
-ok: POST /wallet/hold -> HTTP 200
-wallet hold JSON: ok
-ok: POST /sites -> HTTP 200
-site create JSON: ok
-ok: GET /sites/<site_name> -> HTTP 200
-site page JSON: ok
-ok: GET /crab/resolve?url=crab://<site_name> -> HTTP 200
-named crab resolver JSON: ok
-ok: GET /wallet/acct_dev/balance -> HTTP 200
-wallet balance JSON: ok
-CrabLink site create/open smoke passed.
-```
-
-To force named crab resolver support as a hard gate:
-
-```bash
-CRABLINK_SITE_REQUIRE_CRAB_RESOLVE=1 scripts/smoke-site-create-local.sh
+/sites/prepare
+→ /wallet/hold
+→ /sites
+→ /sites/<site_name>
+→ /crab/resolve?url=crab://<site_name>
+→ wallet balance refresh
 ```
 
 Rules:
@@ -226,39 +313,55 @@ Rules:
 - No direct svc-index or svc-storage call from CrabLink.
 ```
 
-## Manual UI proofs
+---
 
-Known-good paid image asset:
+## Manual UI proof: named site renderer
 
-```text
-crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
-```
-
-Known-good reference-graph site proof:
+Open:
 
 ```text
 crab://thedustyonion6
 ```
 
-Expected for `crab://thedustyonion6`:
+Expected:
 
 ```text
-- Named site renders as a sandboxed page.
-- Site content spans the browser viewport.
+- CrabLink URL bar remains visible.
 - Quick-nav buttons are hidden while viewing the named site.
-- Top CrabLink browser bar remains visible.
-- Site toolbar shows site creator / @username placeholder.
-- Site Manifest remains available.
-- <crab-image> resolves through gateway raw /o bytes.
+- Site renders as a first-class sandboxed website.
+- Site content spans the browser viewport.
+- Top site toolbar includes:
+  - site creator:
+  - @username or backend-provided handle
+  - reputation chip
+  - moderator chip
+  - Site Manifest button
+- Embedded <crab-image> loads automatically.
 - No binary PNG/IHDR/IDAT text appears.
+- No direct wallet/storage/index/ledger call is added.
 ```
+
+Navigation regression check:
+
+```text
+crab://thedustyonion6
+→ crab://site
+```
+
+Expected:
+
+```text
+The old rendered site iframe disappears completely before crab://site appears.
+```
+
+---
 
 ## Security rules
 
 Before merging extension changes, check:
 
 ```text
-- Did this add a permission?
+- Did this add a Chrome permission?
 - Did this add a backend route dependency?
 - Did this call anything other than svc-gateway?
 - Did this store anything sensitive?
@@ -270,6 +373,19 @@ Before merging extension changes, check:
 - Does the code preserve crab://<hash>.<kind> public URL format?
 - Does scripts/check-chrome.sh still pass?
 - Should CODEBUNDLE_CHROME_EXTENSION.md be regenerated?
+```
+
+CrabLink must not become:
+
+```text
+- a wallet truth engine
+- a ledger
+- a passport private-key authority
+- a storage service
+- an index service
+- a policy engine
+- a gateway replacement
+- a fake backend simulator
 ```
 
 The browser client should stay:
@@ -286,62 +402,81 @@ permission-minimal
 future-browser-ready
 ```
 
+---
+
+## Current next product direction
+
+The current foundation is green enough to start the next NEXT_LEVEL layer:
+
+```text
+1. First-run @username selection UX.
+2. Passport/profile manifest read-only display.
+3. Site creator @username resolved from backend/public profile truth.
+4. Reputation/moderator score display from backend truth only.
+5. Later: .post, .comment, .article primitives.
 ```
 
-## `extensions/chrome/test/manual-checklist.md`
+Do not implement fake profile or reputation truth locally. Until backend contracts exist, CrabLink may show placeholders, but must label them honestly.
+
+````
+
+## `extensions/chrome/docs/GREEN_GATE_LOCAL.md`
 
 ```markdown
-# CrabLink Chrome Extension Manual Checklist
+# CrabLink Local Green Gate
 
-RO:WHAT — Manual verification checklist for CrabLink Chrome beta flows.
-RO:WHY — DX/GOV/SEC gate before moving from image/site proof into NEXT_LEVEL asset primitives.
-RO:INTERACTS — Chrome extension UI, svc-gateway, omnigate, svc-wallet, svc-storage, svc-index.
-RO:INVARIANTS — no silent ROC spend; gateway-only calls; b3 hashes canonical; crab://<hash>.kind public URLs.
-RO:METRICS — backend services expose /metrics; this checklist records user-visible behavior only.
-RO:CONFIG — local gateway defaults to http://127.0.0.1:8090; dev passport passport:main:dev; wallet acct_dev.
-RO:SECURITY — never paste dev bearer tokens into screenshots/issues; paid actions require explicit confirmation.
-RO:TEST — run with scripts/check-chrome.sh, scripts/package-chrome.sh, scripts/smoke-local-gateway.sh, scripts/smoke-site-create-local.sh.
-
----
-
-## 0. Purpose
-
-This checklist verifies the current CrabLink beta surface:
-
-```text
-CrabLink extension
-→ svc-gateway
-→ omnigate
-→ svc-wallet / svc-storage / svc-index
-→ hydrated crab:// pages
-→ safe raw preview bytes through gateway /o only
-```
-
-Current NEXT_LEVEL order:
-
-```text
-1. Keep image upload green.
-2. Keep site create/open green.
-3. Keep asset-page rendering and raw preview green.
-4. Keep named-site sandbox rendering green.
-5. Only then start .post/.comment/.article primitives.
-```
-
-Do not skip directly into new asset kinds until image and site are repeatably green after a full stack restart.
+RO:WHAT — Documents the current local green-gate workflow for CrabLink Chrome Extension.
+RO:WHY — Freezes the proven NEXT_LEVEL image/site/passport smoke foundation before expanding into profile, post, comment, article, and reputation primitives.
+RO:INTERACTS — scripts/check-chrome.sh, scripts/package-chrome.sh, scripts/smoke-local-gateway.sh, scripts/smoke-site-create-local.sh, scripts/green-gate-local.sh, CODEBUNDLE_CHROME_EXTENSION.md.
+RO:INVARIANTS — safe default is non-mutating; mutating proofs are explicit; CrabLink remains gateway-only; no fake ROC, fake receipts, or direct internal service calls.
+RO:METRICS — backend service metrics remain in RustyOnions; this document records client-side proof commands.
+RO:CONFIG — local gateway defaults to http://127.0.0.1:8090; dev passport passport:main:dev; dev wallet acct_dev.
+RO:SECURITY — dev ROC spends are opt-in; no private key or seed phrase handling; no broad Chrome permissions.
+RO:TEST — run scripts/green-gate-local.sh and the full mutating proof command below.
 
 ---
 
-## 1. Backend startup prerequisite
+## 0. Current milestone
 
-RustyOnions should be running with the CrabLink dev stack.
+CrabLink has a complete local green gate for the current NEXT_LEVEL product-proof foundation.
 
-Terminal A, from RustyOnions repo:
+The full green gate proves:
+
+```text
+Chrome extension static checks
+→ Chrome package build
+→ gateway read/prepare route smoke
+→ passport/bootstrap smoke
+→ known-good raw preview smoke
+→ paid image upload smoke
+→ paid site create/open smoke
+→ named crab:// site resolver
+→ codebundle regeneration
+````
+
+This is the current checkpoint before moving deeper into:
+
+```text
+@username passport UX
+public profile manifests
+site creator identity hydration
+reputation/moderator score display
+.post / .comment / .article primitives
+```
+
+---
+
+## 1. Required local RustyOnions stack
+
+Run `svc-wallet` first.
+
+From RustyOnions repo:
 
 ```bash
 RUST_LOG=info SVC_WALLET_ADDR=127.0.0.1:8088 cargo run -p svc-wallet
 ```
 
-Terminal B, from RustyOnions repo:
+In a second terminal, start the CrabLink WEB3 stack:
 
 ```bash
 ECON_PATH="$(pwd)/configs/roc-economics.dev.toml"
@@ -355,216 +490,256 @@ env \
   scripts/web3_crablink_dev_stack.sh
 ```
 
-Expected public gateway:
+Expected gateway:
 
 ```text
 http://127.0.0.1:8090
 ```
 
-Expected service chain:
-
-```text
-CrabLink
-→ svc-gateway
-→ omnigate
-→ svc-wallet / svc-storage / svc-index
-```
-
-If `configs/roc-economics.dev.toml` is not present, recreate it or use the current checked-in dev economics path. Local dev image/site prepare should return a small fixed price such as:
-
-```text
-25 ROC
-```
-
-not legacy byte-size pricing.
+Wallet startup order matters. If the stack starts before `svc-wallet`, CrabLink can show fallback identity/wallet display with stale or non-ledger-backed state. That fallback is not spend authority.
 
 ---
 
-## 2. Static checks and package
+## 2. Safe default green gate
 
 From CrabLink repo:
 
 ```bash
-scripts/check-chrome.sh && scripts/package-chrome.sh
+scripts/green-gate-local.sh
 ```
 
-Expected:
+This does not intentionally spend ROC.
+
+It runs:
 
 ```text
-json/structure checks: ok
-javascript syntax checks: ok
-bash syntax checks: ok
-CrabLink Chrome extension checks passed.
-wrote: /Users/mymac/Desktop/crablink/dist/crablink-extension-chrome.zip
-```
-
-Then regenerate the codebundle after changes:
-
-```bash
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/smoke-local-gateway.sh
 scripts/make_codebundle.sh
 ```
 
-Expected:
+Expected ending:
 
 ```text
-wrote: /Users/mymac/Desktop/crablink/CODEBUNDLE_CHROME_EXTENSION.md
+CrabLink local green gate passed.
+
+Non-mutating gates proved:
+- static extension checks
+- Chrome package build
+- gateway read/prepare route smoke
+
+Optional mutating gates run:
+- bootstrap:         0
+- known-good raw:    0
+- paid image upload: 0
+- site create/open:  0
 ```
 
 ---
 
-## 3. Non-mutating gateway smoke
+## 3. Full mutating green gate
 
-Run:
+Run this only when intentionally spending dev ROC:
+
+```bash
+CRABLINK_GREEN_RUN_BOOTSTRAP=1 \
+CRABLINK_GREEN_RUN_KNOWN_GOOD=1 \
+CRABLINK_GREEN_MUTATING=1 \
+scripts/green-gate-local.sh
+```
+
+This runs:
+
+```text
+static checks
+package build
+non-mutating gateway smoke
+passport/bootstrap smoke
+known-good raw preview smoke
+paid image upload smoke
+site create/open smoke
+codebundle regeneration
+```
+
+Expected ending:
+
+```text
+CrabLink local green gate passed.
+
+Optional mutating gates run:
+- bootstrap:         1
+- known-good raw:    1
+- paid image upload: 1
+- site create/open:  1
+```
+
+---
+
+## 4. What the non-mutating smoke proves
+
+Command:
 
 ```bash
 scripts/smoke-local-gateway.sh
 ```
 
-Expected:
+Proves:
 
 ```text
-GET /healthz                                      ok
-GET /readyz                                       ok
-GET /identity/me                                  ok
-GET /wallet/acct_dev/balance                      ok
-GET /b3/<sample>.image                            ok
-GET /crab/resolve?url=crab://<sample>.image       ok
-GET /crab/resolve?url=crab://site                 ok
-GET /crab/resolve?url=crab://image                ok
-GET /crab/resolve?url=crab://music                ok / coming_soon
-GET /crab/resolve?url=crab://article              ok / coming_soon
-POST /sites/prepare                               ok
-POST /assets/image/prepare                        ok
-
-CrabLink local gateway smoke passed.
+GET /healthz
+GET /readyz
+GET /identity/me
+GET /wallet/acct_dev/balance
+GET /b3/<sample>.image
+GET /crab/resolve?url=crab://<sample>.image
+GET /crab/resolve?url=crab://site
+GET /crab/resolve?url=crab://image
+GET /crab/resolve?url=crab://music
+GET /crab/resolve?url=crab://article
+POST /sites/prepare
+POST /assets/image/prepare
 ```
 
-Rules:
+Expected built-in page statuses:
 
 ```text
-- Default smoke does not spend ROC.
-- Default smoke does not upload image bytes.
-- Default smoke does not create a site.
-- Default smoke proves routes and DTO contracts only.
+crab://site     active
+crab://image    active
+crab://music    coming_soon
+crab://article  coming_soon
 ```
 
 ---
 
-## 4. Passport/bootstrap smoke
+## 5. What passport/bootstrap smoke proves
 
-Run only when testing dev starter passport/grant behavior:
+Command:
 
 ```bash
 CRABLINK_SMOKE_RUN_BOOTSTRAP=1 scripts/smoke-local-gateway.sh
 ```
 
+Proves:
+
+```text
+POST /identity/passport/bootstrap
+GET /wallet/acct_dev/balance
+```
+
 Expected:
 
 ```text
-ok: POST /identity/passport/bootstrap -> HTTP 200
 bootstrap JSON: ok
-ok: GET /wallet/acct_dev/balance after bootstrap -> HTTP 200
 wallet JSON: ok
-CrabLink local gateway smoke passed.
 ```
 
 Rules:
 
 ```text
-- Do not fake ROC in the extension.
-- Display only backend wallet truth.
-- If ledger_backed=true, prefer /wallet/:account/balance over bootstrap metadata.
-- Passport is identity/capability context, not wallet truth.
+- Bootstrap is explicit.
+- Starter ROC is backend-issued.
+- CrabLink displays backend-derived state.
+- CrabLink does not fake receipt IDs.
+- CrabLink stores labels and display metadata only.
 ```
 
 ---
 
-## 5. Paid image upload smoke
+## 6. What known-good raw preview proves
 
-This performs a real paid hold and image upload. It spends dev ROC.
+Command:
 
-Run:
+```bash
+CRABLINK_SMOKE_RUN_KNOWN_GOOD=1 scripts/smoke-local-gateway.sh
+```
+
+Default known-good URL:
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+Proves:
+
+```text
+GET /crab/resolve?url=crab://<hash>.image
+GET /o/b3:<hash>
+raw byte response is non-empty
+```
+
+Expected:
+
+```text
+known-good raw preview JSON/bytes: ok
+```
+
+This is the image used by the current `<crab-image>` named-site embed proof.
+
+---
+
+## 7. What paid image upload smoke proves
+
+Command:
 
 ```bash
 CRABLINK_SMOKE_EXPECT_IMAGE_PRICE=25 CRABLINK_SMOKE_RUN_UPLOAD=1 scripts/smoke-local-gateway.sh
 ```
 
-If the wallet returns a nonce conflict, rerun with the expected nonce it reports:
+Proves:
 
-```bash
-CRABLINK_SMOKE_HOLD_NONCE=<expected_nonce> CRABLINK_SMOKE_EXPECT_IMAGE_PRICE=25 CRABLINK_SMOKE_RUN_UPLOAD=1 scripts/smoke-local-gateway.sh
+```text
+/assets/image/prepare
+→ /wallet/hold
+→ /assets/image
+→ /crab/resolve?url=crab://<hash>.image
+→ /o/b3:<hash>
+→ raw byte match
+→ wallet balance refresh
 ```
 
 Expected:
 
 ```text
-running opt-in paid image upload smoke
-ok: POST /assets/image/prepare -> HTTP 200
-image prepare JSON: ok
-ok: POST /wallet/hold -> HTTP 200
-wallet hold JSON: ok
-ok: POST /assets/image -> HTTP 200
-image upload JSON: ok
-ok: GET /crab/resolve?url=crab://<hash>.image -> HTTP 200
-asset page JSON: ok
-ok: GET /o/b3:<hash> -> HTTP 200 raw bytes
-raw byte match: paid_image_raw
-ok: GET /wallet/acct_dev/balance -> HTTP 200
 paid image upload JSON/raw bytes: ok
 paid image crab URL: crab://<64 lowercase hex>.image
-CrabLink local gateway smoke passed.
 ```
 
 Rules:
 
 ```text
-- Upload body must be raw image bytes.
-- Do not JSON-stringify image files.
-- Use x-ron-wallet-txid.
-- Do not use direct svc-storage.
-- Raw preview must come back through svc-gateway /o.
+- Upload body is raw image bytes.
+- Paid hold is explicit.
+- Raw bytes are verified through gateway /o.
+- Upload result must include canonical crab://<hash>.image.
+- Wallet balance refreshes after mutation.
 ```
 
 ---
 
-## 6. Site create/open smoke
+## 8. What site create/open smoke proves
 
-This performs a real paid hold and named site creation. It spends dev ROC.
-
-Run:
+Command:
 
 ```bash
-scripts/smoke-site-create-local.sh
+CRABLINK_SITE_REQUIRE_CRAB_RESOLVE=1 scripts/smoke-site-create-local.sh
+```
+
+Proves:
+
+```text
+/sites/prepare
+→ /wallet/hold
+→ /sites
+→ /sites/<site_name>
+→ /crab/resolve?url=crab://<site_name>
+→ wallet balance refresh
 ```
 
 Expected:
 
 ```text
-CrabLink site create/open smoke
-ok: GET /healthz -> HTTP 200
-ok: GET /readyz -> HTTP 200
-ok: POST /sites/prepare -> HTTP 200
-site prepare JSON: ok
-site prepare amount: 25 ROC minor units
-ok: POST /wallet/hold -> HTTP 200
-wallet hold JSON: ok
-ok: POST /sites -> HTTP 200
-site create JSON: ok
-ok: GET /sites/<site_name> -> HTTP 200
-site page JSON: ok
-ok: GET /crab/resolve?url=crab://<site_name> -> HTTP 200
-named crab resolver JSON: ok
-ok: GET /wallet/acct_dev/balance -> HTTP 200
-wallet balance JSON: ok
-
-created site: crab://<site_name>
 CrabLink site create/open smoke passed.
-```
-
-To require named-site crab resolution as a hard gate:
-
-```bash
-CRABLINK_SITE_REQUIRE_CRAB_RESOLVE=1 scripts/smoke-site-create-local.sh
 ```
 
 Rules:
@@ -572,453 +747,641 @@ Rules:
 ```text
 - Site prepare is non-mutating.
 - Wallet hold is explicit.
-- Site create sends paid proof headers.
-- Site open goes through public gateway routes.
-- No direct svc-index or svc-storage call from CrabLink.
+- Site creation uses paid proof headers.
+- Site lookup goes through public gateway routes.
+- Named crab:// site resolver is a hard gate.
 ```
 
 ---
 
-## 7. Chrome reload
+## 9. Current proof addresses
 
-Open:
-
-```text
-chrome://extensions
-```
-
-Then:
-
-```text
-CrabLink
-→ Reload
-```
-
-Confirm there are no extension errors.
-
----
-
-## 8. Full-tab browser shell checks
-
-Verify top bar:
-
-```text
-CrabLink logo visible
-Back button visible
-Forward button visible
-Home button visible
-Address bar visible
-Go button visible
-Refresh button visible
-ROC chip visible
-Passport button visible
-Settings gear visible
-```
-
-Verify navigation:
-
-```text
-Home opens crab://site
-Refresh reloads current page
-Back/Forward work after navigating between pages
-Settings opens extension options
-Passport button opens drawer
-```
-
----
-
-## 9. Built-in crab:// pages
-
-Open:
-
-```text
-crab://site
-```
-
-Expected:
-
-```text
-page badge: active
-site workflow visible
-Build Request Preview button enabled
-Send Prepare Request disabled until preview exists
-Available Actions section visible
-Developer JSON available behind details
-```
-
-Open:
-
-```text
-crab://image
-```
-
-Expected:
-
-```text
-page badge: active
-image workflow visible
-file selector visible
-title/description/tags fields visible
-Build Request Preview button enabled
-Developer JSON available behind details
-```
-
-Open:
-
-```text
-crab://music
-```
-
-Expected:
-
-```text
-page badge: coming soon
-no mutating flow starts automatically
-```
-
-Open:
-
-```text
-crab://article
-```
-
-Expected:
-
-```text
-page badge: coming soon
-no mutating flow starts automatically
-```
-
----
-
-## 10. Known-good image asset page
-
-Open:
+Known-good paid image asset:
 
 ```text
 crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
 ```
 
-Expected:
-
-```text
-Asset page resolves.
-Schema is omnigate.asset-page.v1.
-Asset kind is image.
-Storage is available.
-Owner/passport/payout fields display when backend provides them.
-Image preview loads automatically if raw bytes are available.
-Developer JSON remains available.
-No direct storage/index/ledger call is added.
-```
-
-Backend proof:
-
-```bash
-curl -sG "http://127.0.0.1:8090/crab/resolve" \
-  --data-urlencode "url=crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image" \
-  -H 'Authorization: Bearer dev' \
-  -H 'x-ron-passport: passport:main:dev' \
-  -H 'x-ron-wallet-account: acct_dev' | jq .
-```
-
-Raw byte proof:
-
-```bash
-curl -i "http://127.0.0.1:8090/o/b3:984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4" | head -n 20
-```
-
-Expected:
-
-```text
-HTTP 200
-image bytes returned
-```
-
----
-
-## 11. Named site render proof
-
-Open:
-
-```text
-crab://thedustyonion6
-```
-
-Expected:
-
-```text
-CrabLink URL bar remains visible.
-Quick-nav buttons are hidden while viewing the named site.
-Site renders as a first-class sandboxed website.
-Site content spans the browser viewport.
-Top site toolbar includes:
-  site creator:
-  @username or backend-provided handle
-  reputation chip
-  moderator chip
-  Site Manifest button
-Embedded <crab-image> loads automatically.
-No binary PNG/IHDR/IDAT text appears.
-No direct wallet/storage/index/ledger call is added.
-```
-
-Current canonical embedded image proof:
+Known-good reference image used by `<crab-image>` proof:
 
 ```text
 crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
 ```
 
-Expected after navigating away:
+Named site reference-graph proof:
+
+```text
+crab://thedustyonion6
+```
+
+---
+
+## 10. Current no-regression requirements
+
+Do not move into `.post`, `.comment`, or `.article` primitives unless these still pass after a fresh stack restart:
+
+```bash
+scripts/check-chrome.sh && scripts/package-chrome.sh
+scripts/smoke-local-gateway.sh
+CRABLINK_SMOKE_RUN_KNOWN_GOOD=1 scripts/smoke-local-gateway.sh
+CRABLINK_SMOKE_EXPECT_IMAGE_PRICE=25 CRABLINK_SMOKE_RUN_UPLOAD=1 scripts/smoke-local-gateway.sh
+CRABLINK_SITE_REQUIRE_CRAB_RESOLVE=1 scripts/smoke-site-create-local.sh
+```
+
+Or run the one-command full proof:
+
+```bash
+CRABLINK_GREEN_RUN_BOOTSTRAP=1 \
+CRABLINK_GREEN_RUN_KNOWN_GOOD=1 \
+CRABLINK_GREEN_MUTATING=1 \
+scripts/green-gate-local.sh
+```
+
+---
+
+## 11. Debugging common failures
+
+### Wallet nonce conflict
+
+Expected sometimes:
+
+```text
+HTTP 409 NONCE_CONFLICT
+```
+
+The smoke scripts retry once with the backend-provided expected nonce.
+
+If retry fails, run with an explicit nonce:
+
+```bash
+CRABLINK_SMOKE_HOLD_NONCE=<expected_nonce> CRABLINK_SMOKE_RUN_UPLOAD=1 scripts/smoke-local-gateway.sh
+```
+
+For site create:
+
+```bash
+CRABLINK_SITE_HOLD_NONCE=<expected_nonce> CRABLINK_SITE_REQUIRE_CRAB_RESOLVE=1 scripts/smoke-site-create-local.sh
+```
+
+### Idempotency key too long
+
+This should be fixed in the current scripts.
+
+If it returns:
+
+```text
+Idempotency-Key must be 1..=64 bytes
+```
+
+check that the smoke scripts are using compact idempotency keys rather than long descriptive strings.
+
+### Gateway offline
+
+Check:
+
+```bash
+curl -i http://127.0.0.1:8090/healthz
+curl -i http://127.0.0.1:8090/readyz
+```
+
+### Raw bytes mismatch
+
+Run the known-good raw preview smoke first:
+
+```bash
+CRABLINK_SMOKE_RUN_KNOWN_GOOD=1 scripts/smoke-local-gateway.sh
+```
+
+Then rerun paid upload.
+
+---
+
+## 12. Why this gate matters
+
+This gate proves the current RustyOnions product loop:
+
+```text
+Passport context
+→ wallet balance
+→ prepare
+→ hold
+→ publish bytes/site
+→ resolve crab URL
+→ hydrate manifest
+→ render content
+→ verify raw b3 bytes
+→ refresh wallet state
+```
+
+That is the foundation for:
+
+```text
+creator economy routing
+reference-graph sites
+public profile manifests
+site creator @username display
+reputation/moderation summaries
+post/comment/article primitives
+future browser UX
+```
+
+CrabLink should not add those next layers by faking local truth. It should expose backend truth as the backend contracts become available.
+
+````
+
+## `extensions/chrome/docs/NEXT_LEVEL_NEXT_BATCHES.md`
+
+```markdown
+# CrabLink NEXT_LEVEL Next Batches
+
+RO:WHAT — Implementation ordering for CrabLink after the local green gate.
+RO:WHY — Prevents feature spaghetti by sequencing passport/profile/reputation/content primitives after the proven image/site foundation.
+RO:INTERACTS — NEXT_LEVEL.MD, WEB3_2.MD, CrabLink extension UI, svc-gateway route contracts, future passport/profile routes.
+RO:INVARIANTS — gateway-only; no fake identity/reputation/wallet truth; no silent ROC spend; no public main↔alt linkage by default.
+RO:METRICS — future profile/view/moderation events belong in backend metrics/accounting, not local fake counters.
+RO:CONFIG — feature gates should remain explicit; risky or incomplete backend contracts should be hidden or labeled experimental.
+RO:SECURITY — no private key custody, no seed phrases, no hidden spend authority, no fake privacy claims.
+RO:TEST — each batch must keep scripts/green-gate-local.sh passing.
+
+---
+
+## 0. Current foundation
+
+The following foundation is now green:
+
+```text
+CrabLink local green gate
+safe default gate
+full mutating gate
+passport/bootstrap smoke
+known-good raw preview
+paid image upload
+paid site create/open
+named crab:// site resolver
+sandboxed site rendering
+<crab-image> embed rendering
+codebundle regeneration
+````
+
+This gives CrabLink a stable base for NEXT_LEVEL product work.
+
+---
+
+## 1. Batch A — Checkpoint docs and runbook
+
+Status:
+
+```text
+in progress / current batch
+```
+
+Purpose:
+
+```text
+Freeze the proven green gate before new feature work.
+```
+
+Files:
+
+```text
+extensions/chrome/README.md
+extensions/chrome/docs/GREEN_GATE_LOCAL.md
+extensions/chrome/docs/NEXT_LEVEL_NEXT_BATCHES.md
+```
+
+Acceptance:
+
+```text
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/green-gate-local.sh
+```
+
+---
+
+## 2. Batch B — First-run @username UX scaffold
+
+Purpose:
+
+```text
+Let first-run users choose an @username while clearly treating the value as pending backend reservation until RustyOnions confirms it.
+```
+
+Rules:
+
+```text
+- Do not fake ownership of @username.
+- Do not claim global uniqueness unless backend confirms it.
+- Store only local draft/pending labels.
+- Do not link alt passports to main identities publicly.
+- Do not add private key custody.
+```
+
+Likely UI states:
+
+```text
+No passport:
+  Create your RON Passport
+  Choose @username
+  Create Passport
+
+Pending backend:
+  @username requested
+  waiting for RustyOnions confirmation
+
+Backend confirmed:
+  @username active
+  profile route available when backend publishes it
+```
+
+Likely files:
+
+```text
+extensions/chrome/src/storage.js
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/popup.html
+extensions/chrome/src/popup.js
+extensions/chrome/src/options.html
+extensions/chrome/src/options.js
+extensions/chrome/src/styles.css
+shared/schemas/extension-settings.schema.json
+shared/fixtures/passport-bootstrap.sample.json
+shared/schemas/passport-bootstrap.schema.json
+```
+
+Backend dependency:
+
+```text
+POST /identity/passport/bootstrap may need optional username/requested_handle fields.
+GET /identity/me may need username/handle/public_profile fields.
+```
+
+If backend does not support username yet:
+
+```text
+CrabLink may show local draft @username.
+CrabLink must label it as pending/local.
+CrabLink must not show it as confirmed creator identity.
+```
+
+Acceptance:
+
+```text
+First-run card appears when no passport is configured.
+User can enter a syntactically valid @username.
+Invalid @username fails locally before request.
+Bootstrap sends requested username only if field is enabled.
+Confirmed username only displays when backend returns it.
+scripts/green-gate-local.sh still passes.
+```
+
+---
+
+## 3. Batch C — Read-only profile/passport page placeholder
+
+Purpose:
+
+```text
+Prepare CrabLink to open read-only profile/passport pages without inventing profile truth.
+```
+
+Target UX:
+
+```text
+Click site creator @username
+→ open read-only profile page if backend provides profile crab URL
+→ otherwise show honest placeholder
+```
+
+Rules:
+
+```text
+- Profile pages are read-only.
+- No spend authority appears on public profile.
+- No private alt/main linkage.
+- No fake reputation.
+- No fake moderation score.
+```
+
+Possible public routes:
+
+```text
+crab://@username
+crab://profile/@username
+crab://<profile-manifest-hash>.profile
+```
+
+Use whichever route the backend contract settles on.
+
+Likely files:
+
+```text
+extensions/chrome/src/page-site-creator-proof.js
+extensions/chrome/src/page.js
+extensions/chrome/src/page-product-preview.js
+extensions/chrome/src/ronClient.js
+shared/schemas/profile-page.schema.json
+shared/fixtures/profile-page.sample.json
+```
+
+Acceptance:
+
+```text
+Clicking @username never breaks current site view.
+If profile route exists, it resolves through gateway.
+If profile route does not exist, user sees clear read-only pending message.
+No direct svc-passport call.
+scripts/green-gate-local.sh still passes.
+```
+
+---
+
+## 4. Batch D — Site creator identity hydration
+
+Purpose:
+
+```text
+Replace @username placeholder with backend-provided site creator identity when available.
+```
+
+Input truth sources:
+
+```text
+site page payload
+site manifest
+public profile manifest
+identity route output
+```
+
+Rules:
+
+```text
+- Backend-provided username may display as confirmed.
+- Placeholder remains @username when not provided.
+- Reputation/moderator chips remain dash/unknown until backend provides scores.
+- CrabLink never invents score values.
+```
+
+Likely files:
+
+```text
+extensions/chrome/src/page-site-creator-proof.js
+extensions/chrome/src/page-site-render-mode.js
+shared/fixtures/site-page.sample.json
+shared/schemas/site-page.schema.json
+```
+
+Acceptance:
+
+```text
+crab://thedustyonion6 still renders.
+Site toolbar still spans full viewport.
+Site Manifest still works.
+Creator handle uses backend field if present.
+Unknown values remain honest placeholders.
+scripts/green-gate-local.sh still passes.
+```
+
+---
+
+## 5. Batch E — Reputation/moderator display from backend truth
+
+Purpose:
+
+```text
+Expose reputation and moderator score summaries near creator identity without creating local fake scores.
+```
+
+Rules:
+
+```text
+- No local score computation in CrabLink MVP.
+- No fake score defaults like 100 or 5 stars.
+- Unknown is shown as unknown/dash.
+- Site-scoped moderator role must be labeled site-scoped.
+- Global/passport reputation must be labeled separately from site moderator privileges.
+```
+
+Possible display:
+
+```text
+site creator: @alice
+rep 42
+mod 7
+site moderator: yes
+```
+
+Unknown display:
+
+```text
+site creator: @username
+rep —
+mod —
+```
+
+Backend dependency:
+
+```text
+public profile manifest or site payload must publish score fields.
+```
+
+Acceptance:
+
+```text
+No backend score → dash.
+Backend score → display exact integer/string returned.
+Malformed score → ignored or shown as unknown.
+scripts/green-gate-local.sh still passes.
+```
+
+---
+
+## 6. Batch F — Article/post/comment primitive planning
+
+Purpose:
+
+```text
+Extend the image/site reference-graph model to text content assets without breaking the existing image/site proof.
+```
+
+Order:
+
+```text
+.article
+.post
+.comment
+```
+
+Do not start with video/music streaming yet.
+
+Rules:
+
+```text
+- Every content object gets canonical b3:<hash>.
+- Public URL format stays crab://<hash>.<kind>.
+- Site stores references to assets.
+- Asset manifests store ownership/payout/provenance.
+- Site owns route maps/layout/moderation policy/reference graph.
+- No arbitrary executable linked code.
+```
+
+Potential built-ins:
+
+```text
+crab://article
+crab://post
+crab://comment
+```
+
+Acceptance before code:
+
+```text
+Image and site full green gate still passes.
+Backend route contract for at least one primitive exists or is clearly mocked as coming_soon.
+```
+
+---
+
+## 7. Batch G — Receipt history and paid-flow polish
+
+Purpose:
+
+```text
+Make paid actions easier for users to understand and audit.
+```
+
+Scope:
+
+```text
+recent receipts display
+hold txid display
+receipt hash display
+copy receipt JSON
+explain hold/capture/release semantics
+```
+
+Rules:
+
+```text
+- Receipts are backend returned.
+- No fake receipt.
+- No local ledger.
+- No hidden retry spend.
+```
+
+Likely files:
+
+```text
+extensions/chrome/src/storage.js
+extensions/chrome/src/page-workflow.js
+extensions/chrome/src/page-product-preview.js
+extensions/chrome/src/styles.css
+```
+
+Acceptance:
+
+```text
+Paid image upload displays receipt summary.
+Paid site create displays receipt summary.
+Copy receipt JSON works.
+No token in copied/user-visible errors.
+scripts/green-gate-local.sh still passes.
+```
+
+---
+
+## 8. Always-run gates before advancing
+
+Safe gate:
+
+```bash
+scripts/green-gate-local.sh
+```
+
+Full gate:
+
+```bash
+CRABLINK_GREEN_RUN_BOOTSTRAP=1 \
+CRABLINK_GREEN_RUN_KNOWN_GOOD=1 \
+CRABLINK_GREEN_MUTATING=1 \
+scripts/green-gate-local.sh
+```
+
+Manual named-site check:
 
 ```text
 crab://thedustyonion6
 → crab://site
 ```
 
-The old rendered site iframe disappears completely before `crab://site` appears.
-
----
-
-## 12. Site Manifest proof
-
-On a named site, click:
-
-```text
-Site Manifest
-```
-
 Expected:
 
 ```text
-Manifest/proof details appear.
-Root document CID is visible.
-Manifest CID is visible if backend provides it.
-Owner passport/wallet fields are visible if backend provides them.
-Payout fields are visible if backend provides them.
-Source/proof view remains read-only.
-```
-
-Close/toggle manifest details.
-
-Expected:
-
-```text
-Site view returns without losing page.
-Embedded image remains loaded or reloads safely.
+No stale iframe.
+Full-width site render.
+Quick-nav hidden on named site.
+Site creator toolbar visible.
+Site Manifest works.
+Embedded image loads.
 ```
 
 ---
 
-## 13. Site creation UI flow
+## 9. Do not do yet
 
-Open:
+Avoid these until backend contracts and privacy/security design are ready:
 
 ```text
-crab://site
+- Main↔alt wallet cash-out promises.
+- Public alt→main linkage.
+- Local private key custody.
+- Seed phrase UX.
+- Browser-stored long-lived spend authority.
+- Reputation scores computed locally.
+- Clearnet attribution claims.
+- External settlement / ROX / Solana bridge.
+- Staking/liquidity/exchange-facing logic.
+- Video/music streaming before image/site/article primitives are stable.
 ```
+
+---
+
+## 10. Product goal
+
+The near-term product goal is:
+
+```text
+Install CrabLink
+→ create/load RON Passport
+→ see backend-derived ROC balance
+→ choose/request @username
+→ open crab:// image/site pages
+→ publish paid image/site content
+→ inspect receipts/proofs
+→ navigate creator identity and profile manifests
+```
+
+The long-term product goal is:
+
+```text
+A better creator web:
+content-addressed
+reference-graph based
+transparent payout routing
+manifest-backed attribution
+privacy-honest passports/alts
+moderation/reputation surfaced from backend truth
+```
+
+````
 
 Run:
-
-```text
-Fill site name/title/description.
-Build Request Preview.
-Send Prepare Request.
-Confirm ROC Hold.
-Paste/write root HTML.
-Store Root HTML.
-Confirm returned b3 root document CID auto-fills Root Document CID.
-Create Site.
-Open returned crab://<site_name>.
-```
-
-Expected:
-
-```text
-Prepare is non-mutating.
-Hold requires explicit confirmation.
-Store Root HTML requires wallet hold/proof.
-Root Document CID is a b3:<64 lowercase hex> returned by backend.
-Root Document CID is not an embedded image CID.
-Create Site calls public gateway route only.
-Returned site opens immediately.
-Wallet balance refreshes from backend.
-```
-
----
-
-## 14. Image upload UI flow
-
-Open:
-
-```text
-crab://image
-```
-
-Run:
-
-```text
-Select image file.
-Fill title/description/tags.
-Build Request Preview.
-Send Prepare Request.
-Review Prepare Summary.
-Confirm ROC Hold.
-Submit Image Upload.
-Open Asset Page.
-```
-
-Expected:
-
-```text
-Prepare Summary shows backend-derived amount/bytes/action.
-No paid action happens before explicit hold.
-Upload includes x-ron-wallet-txid.
-Backend returns b3 asset CID and crab://<hash>.image.
-Asset page opens and image preview loads.
-Wallet balance refreshes from backend.
-```
-
----
-
-## 15. Omnibox flow
-
-Chrome raw custom scheme entry is not solved yet.
-
-Supported beta flow:
-
-```text
-Type: crab
-Press: Tab
-Type: site
-Press: Enter
-```
-
-Also test:
-
-```text
-crab [Tab] image
-crab [Tab] thedustyonion6
-crab [Tab] 984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
-```
-
-Expected:
-
-```text
-A CrabLink full-tab page opens.
-Address bar contains normalized crab:// URL.
-Resolution goes through local gateway.
-```
-
----
-
-## 16. Failure behavior
-
-Stop the RustyOnions gateway and refresh a CrabLink page.
-
-Expected:
-
-```text
-Clear error panel.
-No blank screen.
-No unhandled exception.
-No fake status.
-Popup shows offline/failed state.
-```
-
-Restart gateway and click Refresh.
-
-Expected:
-
-```text
-Page resolves again.
-```
-
----
-
-## 17. Security regressions to watch
-
-Fail the manual check if any of these appear:
-
-```text
-Silent ROC spend.
-Fake receipt.
-Fake balance.
-Direct ron-ledger call.
-Direct svc-storage call from extension.
-Direct svc-index call from extension.
-Direct svc-wallet call that bypasses public gateway route.
-Old crab://b3/<hash> UX.
-Broad Chrome permissions.
-Untrusted site HTML running extension-privileged code.
-Private key, seed phrase, or long-lived uncapped spend authority stored in chrome.storage.local.
-```
-
----
-
-## 18. Current product proof freeze
-
-Do not expand into `.post`, `.comment`, or `.article` until these remain green after a fresh stack restart:
-
-```text
-scripts/check-chrome.sh
-scripts/package-chrome.sh
-scripts/smoke-local-gateway.sh
-CRABLINK_SMOKE_EXPECT_IMAGE_PRICE=25 CRABLINK_SMOKE_RUN_UPLOAD=1 scripts/smoke-local-gateway.sh
-CRABLINK_SITE_REQUIRE_CRAB_RESOLVE=1 scripts/smoke-site-create-local.sh
-
-crab://image
-→ prepare
-→ hold
-→ upload
-→ open asset page
-→ safe preview loads
-
-crab://site
-→ prepare
-→ hold
-→ store root HTML
-→ create site
-→ open named crab site
-→ rendered site appears
-→ Site Manifest opens proof/details
-
-crab://thedustyonion6
-→ root HTML renders
-→ <crab-image> loads
-→ site creator toolbar remains
-→ no binary text regression
-```
-
----
-
-## 19. Completion note
-
-Current NEXT_LEVEL product-proof slice is green only when:
-
-```text
-scripts/check-chrome.sh passes
-scripts/package-chrome.sh passes
-scripts/smoke-local-gateway.sh passes
-CRABLINK_SMOKE_RUN_UPLOAD=1 passes when intentionally spending dev ROC
-scripts/smoke-site-create-local.sh passes
-CRABLINK_SITE_REQUIRE_CRAB_RESOLVE=1 scripts/smoke-site-create-local.sh passes
-known-good image assets resolve
-named sites resolve and render
-site creator proof toolbar appears
-Site Manifest remains available
-no silent spend/direct internal service calls are introduced
-```
-
-```
-
-Run this after pasting:
 
 ```bash
 cd /Users/mymac/Desktop/crablink
-chmod +x scripts/check-chrome.sh scripts/package-chrome.sh scripts/smoke-local-gateway.sh scripts/smoke-site-create-local.sh scripts/make_codebundle.sh
 scripts/check-chrome.sh && scripts/package-chrome.sh
-scripts/smoke-local-gateway.sh
-CRABLINK_SITE_REQUIRE_CRAB_RESOLVE=1 scripts/smoke-site-create-local.sh
+scripts/green-gate-local.sh
 scripts/make_codebundle.sh
-```
+````
+
+Because these are docs-only additions/replacements, the safe green gate should continue to pass.
