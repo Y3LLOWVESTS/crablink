@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # RO:WHAT — Local structural checker for the CrabLink Chrome extension.
-# RO:WHY — Catch missing files, bad JSON, broad permissions, unsafe extension patterns, and profile/avatar ownership drift.
+# RO:WHY — Catch missing files, bad JSON, broad permissions, unsafe extension patterns, and creator-route regression drift.
 # RO:INTERACTS — extensions/chrome, shared/schemas, shared/fixtures, smoke scripts.
-# RO:INVARIANTS — minimal permissions; gateway-only; no broad host access; no old crab://b3/<hash> UX; no fake profile/wallet/alt truth.
+# RO:INVARIANTS — minimal permissions; gateway-only; no broad host access; no old crab://b3/<hash> UX; no fake profile/wallet/alt/media truth.
 # RO:METRICS — none.
 # RO:CONFIG — none.
-# RO:SECURITY — blocks risky manifest permissions and fake wallet/profile/alt truth patterns.
+# RO:SECURITY — blocks risky manifest permissions, fake wallet/profile/alt truth patterns, and route-controller regressions.
 # RO:TEST — run from crablink repo root with scripts/check-chrome.sh.
 
 set -euo pipefail
@@ -40,6 +40,10 @@ required_files=(
   "$CHROME_DIR/src/page-local-catalog.js"
   "$CHROME_DIR/src/page-profile-polish.js"
   "$CHROME_DIR/src/page-alt-vault.js"
+  "$CHROME_DIR/src/page-article-draft.js"
+  "$CHROME_DIR/src/page-video-draft.js"
+  "$CHROME_DIR/src/page-stream-draft.js"
+  "$CHROME_DIR/src/page-podcast-draft.js"
   "$CHROME_DIR/src/ronClient.js"
   "$CHROME_DIR/src/storage.js"
   "$CHROME_DIR/src/crab.js"
@@ -79,6 +83,11 @@ for file in "${required_files[@]}"; do
     exit 1
   fi
 done
+
+if [[ -f "$CHROME_DIR/src/page-local-route-mode.js" ]]; then
+  echo "error: page-local-route-mode.js must not exist; it regressed creator-route navigation"
+  exit 1
+fi
 
 if ! command -v node >/dev/null 2>&1; then
   echo "error: node is required for CrabLink checks"
@@ -188,15 +197,24 @@ for (const token of [
   './page-profile-avatar.js',
   './page-local-catalog.js',
   './page-profile-polish.js',
+  './page-article-draft.js',
+  './page-video-draft.js',
+  './page-stream-draft.js',
+  './page-podcast-draft.js',
   './page-alt-vault.js',
   'id="drawerRoc"',
   'hidden aria-hidden="true"',
-  'data-open-crab="crab://profile"'
+  'data-open-crab="crab://profile"',
+  'data-open-crab="crab://article"',
+  'data-open-crab="crab://video"',
+  'data-open-crab="crab://stream"',
+  'data-open-crab="crab://podcast"'
 ]) {
   requireIncludes(pageHtml, token, 'page.html');
 }
 
 for (const forbidden of [
+  './page-local-route-mode.js',
   './page-passport-home.js',
   'passportNextLevelCard',
   'passport-permission-grid',
@@ -234,17 +252,90 @@ for (const id of [
 }
 
 const background = readText(path.join(chrome, 'src', 'background.js'));
-requireIncludes(background, 'chrome.action.onClicked', 'background.js');
-requireIncludes(background, 'src/page.html?url=', 'background.js');
+for (const token of [
+  'chrome.action.onClicked',
+  'src/page.html?url=',
+  "'article'",
+  "'video'",
+  "'stream'",
+  "'podcast'"
+]) {
+  requireIncludes(background, token, 'background.js');
+}
 
 const popupJs = readText(path.join(chrome, 'src', 'popup.js'));
 requireIncludes(popupJs, 'chrome.tabs.create', 'popup.js');
 requireIncludes(popupJs, 'src/page.html?url=', 'popup.js');
 
 const pageConstants = readText(path.join(chrome, 'src', 'page-constants.js'));
-requireIncludes(pageConstants, 'HOME_PAGE_URL', 'page-constants.js');
-requireIncludes(pageConstants, 'crab://site', 'page-constants.js');
-requireIncludes(pageConstants, 'BUILT_IN_RON_PAGES', 'page-constants.js');
+for (const token of [
+  'HOME_PAGE_URL',
+  'crab://site',
+  'BUILT_IN_RON_PAGES',
+  'LOCAL_CREATOR_PAGES',
+  "'article'",
+  "'video'",
+  "'stream'",
+  "'podcast'"
+]) {
+  requireIncludes(pageConstants, token, 'page-constants.js');
+}
+
+const crab = readText(path.join(chrome, 'src', 'crab.js'));
+for (const token of [
+  'crab://',
+  'b3:',
+  "'video'",
+  "'stream'",
+  "'podcast'",
+  "'article'",
+  "'post'",
+  "'comment'"
+]) {
+  requireIncludes(crab, token, 'crab.js');
+}
+
+const localCreatorFiles = [
+  ['page-article-draft.js', 'article', '/assets/article/prepare', 'articleDraftSection'],
+  ['page-video-draft.js', 'video', '/assets/video/prepare', 'videoDraftSection'],
+  ['page-stream-draft.js', 'stream', '/streams/prepare', 'streamDraftSection'],
+  ['page-podcast-draft.js', 'podcast', '/podcasts/prepare', 'podcastDraftSection']
+];
+
+for (const [fileName, route, prepareRoute, sectionId] of localCreatorFiles) {
+  const source = readText(path.join(chrome, 'src', fileName));
+
+  for (const token of [
+    `crab://${route}`,
+    prepareRoute,
+    sectionId,
+    'readCurrentCrabUrl',
+    'No b3 CID',
+    'No ROC',
+    'No wallet mutation',
+    'textContent',
+    'createElement'
+  ]) {
+    requireIncludes(source, token, fileName);
+  }
+
+  for (const forbidden of [
+    'page-local-route-mode',
+    'walletPrivateKey',
+    'mainPrivateKey',
+    'seedPhrase',
+    'privateAltKey',
+    'innerHTML',
+    'crab://b3/',
+    'client.publish',
+    'ron-ledger',
+    'svc-storage',
+    'svc-index',
+    'svc-wallet'
+  ]) {
+    forbidIncludes(source, forbidden, fileName);
+  }
+}
 
 const profileHomeSource = readText(path.join(chrome, 'src', 'page-profile-home.js'));
 for (const token of [
@@ -491,10 +582,6 @@ for (const token of [
   requireIncludes(storage, token, 'storage.js');
 }
 
-const crab = readText(path.join(chrome, 'src', 'crab.js'));
-requireIncludes(crab, 'crab://', 'crab.js');
-requireIncludes(crab, 'b3:', 'crab.js');
-
 const allSourceFiles = [
   'src/background.js',
   'src/content.js',
@@ -512,6 +599,10 @@ const allSourceFiles = [
   'src/page-local-catalog.js',
   'src/page-profile-polish.js',
   'src/page-alt-vault.js',
+  'src/page-article-draft.js',
+  'src/page-video-draft.js',
+  'src/page-stream-draft.js',
+  'src/page-podcast-draft.js',
   'src/page-site-creator-proof.js',
   'src/page-site-render-mode.js',
   'src/page-site-root-upload.js',
@@ -529,6 +620,7 @@ const allSourceFiles = [
 const allSources = allSourceFiles.map((relative) => readText(path.join(chrome, relative))).join('\n');
 
 for (const forbidden of [
+  'page-local-route-mode',
   'crab://b3/',
   '<all_urls>',
   'chrome.history',
@@ -586,6 +678,10 @@ node --check "$CHROME_DIR/src/page-profile-avatar.js" >/dev/null
 node --check "$CHROME_DIR/src/page-local-catalog.js" >/dev/null
 node --check "$CHROME_DIR/src/page-profile-polish.js" >/dev/null
 node --check "$CHROME_DIR/src/page-alt-vault.js" >/dev/null
+node --check "$CHROME_DIR/src/page-article-draft.js" >/dev/null
+node --check "$CHROME_DIR/src/page-video-draft.js" >/dev/null
+node --check "$CHROME_DIR/src/page-stream-draft.js" >/dev/null
+node --check "$CHROME_DIR/src/page-podcast-draft.js" >/dev/null
 node --check "$CHROME_DIR/src/page-site-root-upload.js" >/dev/null
 node --check "$CHROME_DIR/src/page-site-render-mode.js" >/dev/null
 node --check "$CHROME_DIR/src/page-site-creator-proof.js" >/dev/null
