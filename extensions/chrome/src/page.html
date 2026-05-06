@@ -19,9 +19,33 @@
         </div>
 
         <nav class="navigation-actions" aria-label="CrabLink page navigation">
-          <button id="backButton" type="button" class="secondary icon-button nav-icon-button" title="Back" aria-label="Back">←</button>
-          <button id="forwardButton" type="button" class="secondary icon-button nav-icon-button" title="Forward" aria-label="Forward">→</button>
-          <button id="homeButton" type="button" class="secondary icon-button nav-icon-button" title="Home" aria-label="Home">⌂</button>
+          <button
+            id="backButton"
+            type="button"
+            class="secondary icon-button nav-icon-button"
+            title="Back"
+            aria-label="Back"
+          >
+            ←
+          </button>
+          <button
+            id="forwardButton"
+            type="button"
+            class="secondary icon-button nav-icon-button"
+            title="Forward"
+            aria-label="Forward"
+          >
+            →
+          </button>
+          <button
+            id="homeButton"
+            type="button"
+            class="secondary icon-button nav-icon-button"
+            title="Home"
+            aria-label="Home"
+          >
+            ⌂
+          </button>
         </nav>
 
         <form id="addressForm" class="address-form">
@@ -30,10 +54,26 @@
         </form>
 
         <div class="top-actions">
-          <button id="refreshButton" type="button" class="secondary icon-button topbar-icon-button refresh-icon-button" title="Refresh" aria-label="Refresh">↻</button>
+          <button
+            id="refreshButton"
+            type="button"
+            class="secondary icon-button topbar-icon-button refresh-icon-button"
+            title="Refresh"
+            aria-label="Refresh"
+          >
+            ↻
+          </button>
           <div id="topRocBalance" class="balance-chip" title="Current ROC balance" aria-live="polite">0 ROC</div>
           <button id="passportButton" type="button" class="secondary">Passport</button>
-          <button id="settingsButton" type="button" class="secondary icon-button topbar-icon-button settings-icon-button" title="Settings" aria-label="Settings">⚙</button>
+          <button
+            id="settingsButton"
+            type="button"
+            class="secondary icon-button topbar-icon-button settings-icon-button"
+            title="Settings"
+            aria-label="Settings"
+          >
+            ⚙
+          </button>
         </div>
       </header>
 
@@ -48,12 +88,62 @@
           </div>
 
           <div class="drawer-grid">
-            <div><span>Gateway</span><strong id="drawerGateway">—</strong></div>
             <div><span>Passport</span><strong id="drawerPassport">—</strong></div>
+            <div><span>Gateway</span><strong id="drawerGateway">—</strong></div>
             <div><span>Wallet</span><strong id="drawerWallet">—</strong></div>
-            <div><span>ROC</span><strong id="drawerRoc">—</strong></div>
+            <div hidden aria-hidden="true"><span>ROC</span><strong id="drawerRoc">—</strong></div>
             <div><span>Ledger</span><strong id="drawerLedger">—</strong></div>
           </div>
+
+          <section id="passportUserCatalogPanel" class="passport-user-catalog-panel" aria-label="Passport user controls">
+            <div class="passport-catalog-stat-row">
+              <article class="passport-catalog-stat-box" title="Current ROC balance from local wallet/balance state.">
+                <span>ROC:</span>
+                <strong id="passportCatalogRoc">—</strong>
+              </article>
+              <article
+                class="passport-catalog-stat-box"
+                title="Reputation score is not backend-published yet unless settings or DTO data provides it."
+              >
+                <span>REP:</span>
+                <strong id="passportCatalogRep">—</strong>
+              </article>
+              <article
+                class="passport-catalog-stat-box"
+                title="Moderator score is not backend-published yet unless settings or DTO data provides it."
+              >
+                <span>MOD:</span>
+                <strong id="passportCatalogMod">—</strong>
+              </article>
+            </div>
+
+            <div class="passport-catalog-action-row">
+              <button
+                id="passportCatalogProfileButton"
+                type="button"
+                class="secondary passport-catalog-action-button"
+                data-crablink-open-profile="1"
+              >
+                Profile
+              </button>
+              <button
+                id="passportCatalogSitesButton"
+                type="button"
+                class="secondary passport-catalog-action-button"
+                data-crablink-open-catalog="sites"
+              >
+                My Sites
+              </button>
+              <button
+                id="passportCatalogAssetsButton"
+                type="button"
+                class="secondary passport-catalog-action-button"
+                data-crablink-open-catalog="assets"
+              >
+                My Assets
+              </button>
+            </div>
+          </section>
 
           <div class="drawer-actions">
             <button id="drawerCheckNodeButton" type="button">Check Node</button>
@@ -67,8 +157,12 @@
         <section class="quick-nav">
           <button type="button" data-open-crab="crab://site">crab://site</button>
           <button type="button" data-open-crab="crab://image">crab://image</button>
+          <button type="button" data-open-crab="crab://profile">crab://profile</button>
           <button type="button" data-open-crab="crab://music">crab://music</button>
           <button type="button" data-open-crab="crab://article">crab://article</button>
+          <button type="button" data-open-crab="crab://video">crab://video</button>
+          <button type="button" data-open-crab="crab://stream">crab://stream</button>
+          <button type="button" data-open-crab="crab://podcast">crab://podcast</button>
         </section>
 
         <section id="loadingPanel" class="state-panel hidden">
@@ -103,7 +197,9 @@
             <div class="section-head">
               <div>
                 <h3 id="productPageSectionTitle">Site Page</h3>
-                <p id="productPageSectionDescription">Manifest-backed site metadata, ownership, payout routing, and reference graph.</p>
+                <p id="productPageSectionDescription">
+                  Manifest-backed site metadata, ownership, payout routing, and reference graph.
+                </p>
               </div>
               <span id="productPageSectionBadge" class="draft-safe-badge">read-only</span>
             </div>
@@ -193,19 +289,19 @@
               <div class="summary-head">
                 <div>
                   <span id="submitStatusBadge" class="badge badge-muted">submit</span>
-                  <h4 id="submitSummaryTitle">Image Upload</h4>
+                  <h4 id="submitSummaryTitle">Submit</h4>
                 </div>
                 <p id="submitSummaryDescription">
-                  Upload selected image bytes after the explicit wallet hold succeeds.
+                  Submit the paid product action after the explicit wallet hold succeeds.
                 </p>
               </div>
 
               <div id="submitSummaryCards" class="summary-grid"></div>
 
               <div class="workflow-actions">
-                <button id="submitProductButton" type="button" class="prepare-button" disabled>Submit Image Upload</button>
-                <button id="copySubmitButton" type="button" class="secondary" disabled>Copy Upload JSON</button>
-                <button id="openReturnedPageButton" type="button" class="secondary" disabled>Open Asset Page</button>
+                <button id="submitProductButton" type="button" class="prepare-button" disabled>Submit Product</button>
+                <button id="copySubmitButton" type="button" class="secondary" disabled>Copy Submit JSON</button>
+                <button id="openReturnedPageButton" type="button" class="secondary" disabled>Open Returned Page</button>
                 <button id="copyReturnedUrlButton" type="button" class="secondary" disabled>Copy crab:// URL</button>
               </div>
 
@@ -226,26 +322,32 @@
 
           <section id="actionsSection" class="content-section hidden">
             <div class="section-head">
-              <h3>Available Actions</h3>
-              <p>Displayed from backend route contracts. Mutating actions require explicit confirmation in CrabLink.</p>
+              <div>
+                <h3>Available Actions</h3>
+                <p>Displayed from backend route contracts. Mutating actions require explicit confirmation in CrabLink.</p>
+              </div>
             </div>
             <div id="actionsList" class="card-grid"></div>
           </section>
 
           <section id="fieldsSection" class="content-section hidden">
             <div class="section-head">
-              <h3>Fields</h3>
-              <p>These are the fields RustyOnions says this built-in page will collect.</p>
+              <div>
+                <h3>Details</h3>
+                <p>Structured fields from the gateway response.</p>
+              </div>
             </div>
-            <div id="fieldsList" class="card-grid"></div>
+            <div id="fieldsList" class="field-grid"></div>
           </section>
 
           <section id="warningsSection" class="content-section hidden">
             <div class="section-head">
-              <h3>Warnings</h3>
-              <p>Non-fatal backend warnings for this page.</p>
+              <div>
+                <h3>Warnings</h3>
+                <p>Safety and route-contract notes.</p>
+              </div>
             </div>
-            <div id="warningsList" class="warning-list"></div>
+            <ul id="warningsList" class="warning-list"></ul>
           </section>
 
           <details id="developerDetails" class="developer-details">
@@ -257,6 +359,7 @@
 
       <footer class="browser-footer">
         <span id="footerStatus">Ready.</span>
+        <span id="footerGateway">Gateway: —</span>
       </footer>
     </div>
 
@@ -265,5 +368,17 @@
     <script type="module" src="./page-product-preview.js"></script>
     <script type="module" src="./page-site-render-mode.js"></script>
     <script type="module" src="./page-site-creator-proof.js"></script>
+    <script type="module" src="./page-profile-home.js"></script>
+    <script type="module" src="./page-profile-editor.js"></script>
+    <script type="module" src="./page-profile-avatar.js"></script>
+    <script type="module" src="./page-local-catalog.js"></script>
+    <script type="module" src="./page-profile-polish.js"></script>
+    <script type="module" src="./page-local-route-mode.js"></script>
+    <script type="module" src="./page-article-draft.js"></script>
+    <script type="module" src="./page-video-draft.js"></script>
+    <script type="module" src="./page-stream-draft.js"></script>
+    <script type="module" src="./page-podcast-draft.js"></script>
+    <script type="module" src="./page-local-route-mode.js"></script>
+    <script type="module" src="./page-alt-vault.js"></script>
   </body>
 </html>

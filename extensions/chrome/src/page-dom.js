@@ -1,8 +1,8 @@
 /**
  * RO:WHAT — DOM lookup table for the CrabLink full-tab browser shell.
- * RO:WHY — App Integration; Concerns: DX/RES; keep element ownership explicit and fail fast on drift.
+ * RO:WHY — App Integration; Concerns: DX/RES; keep element ownership explicit and fail fast on real shell drift.
  * RO:INTERACTS — page.html, page.js, page-workflow.js.
- * RO:INVARIANTS — no innerHTML; missing required elements fail at startup; rendering uses textContent.
+ * RO:INVARIANTS — no innerHTML; core shell elements fail at startup if missing; rendering uses textContent.
  * RO:METRICS — none.
  * RO:CONFIG — none.
  * RO:SECURITY — prevents accidental backend HTML/script injection by centralizing text-only rendering helpers.
@@ -102,19 +102,60 @@ export const els = {
   developerDetails: byId('developerDetails'),
   developerJson: byId('developerJson'),
 
-  footerStatus: byId('footerStatus')
+  footerStatus: byId('footerStatus'),
+  footerGateway: optionalById('footerGateway')
 };
 
 export function byId(id) {
   const el = document.getElementById(id);
 
   if (!el) {
-    throw new Error(`Missing page element: ${id}`);
+    throw new Error(
+      `Missing page element: ${id}. page.html and page-dom.js are out of sync; restore the full CrabLink page.html DOM contract.`
+    );
   }
 
   return el;
 }
 
+export function optionalById(id) {
+  return document.getElementById(id);
+}
+
 export function clearChildren(el) {
+  if (!el) return;
   el.textContent = '';
+}
+
+export function setHidden(el, hidden) {
+  if (!el) return;
+
+  if (hidden) {
+    el.classList.add('hidden');
+  } else {
+    el.classList.remove('hidden');
+  }
+}
+
+export function setText(el, value) {
+  if (!el) return;
+  el.textContent = String(value ?? '');
+}
+
+export function appendTextCard(parent, title, body) {
+  if (!parent) return null;
+
+  const card = document.createElement('article');
+  card.className = 'card';
+
+  const h = document.createElement('h4');
+  h.textContent = String(title ?? '');
+
+  const p = document.createElement('p');
+  p.textContent = String(body ?? '');
+
+  card.append(h, p);
+  parent.append(card);
+
+  return card;
 }

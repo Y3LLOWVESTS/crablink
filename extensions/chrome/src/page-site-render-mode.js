@@ -2,7 +2,7 @@
  * RO:WHAT — Makes named crab:// site pages render as full-page sandboxed websites with RON image references.
  * RO:WHY — NEXT_LEVEL product polish; Concerns: DX/SEC; sites should render b3-backed referenced assets without owning bytes.
  * RO:INTERACTS — page-product-preview.js source loader, storage.js, page.html, svc-gateway /o raw object reads.
- * RO:INVARIANTS — gateway-only; no backend mutation; no direct storage/index/ledger calls; site HTML only renders in sandboxed iframe.
+ * RO:INVARIANTS — gateway-only; no backend mutation; no direct storage/index/ledger calls; no synthesized profile routes; site HTML only renders in sandboxed iframe.
  * RO:METRICS — none; embedded image bytes are fetched through svc-gateway and backend service metrics.
  * RO:CONFIG — reads gateway URL/dev auth/passport/wallet labels from storage.js for gateway reads only.
  * RO:SECURITY — iframe sandbox disables scripts/forms/plugins; injected CSP blocks external fetch/connect/form actions; crab-image only supports crab://<hash>.image.
@@ -158,8 +158,8 @@ function ensureViewport(payload) {
   creatorButton.type = 'button';
   creatorButton.className = 'site-creator-link';
   creatorButton.textContent = creatorHandle(payload);
-  creatorButton.title = "Open this creator's future read-only passport/profile manifest.";
-  creatorButton.addEventListener('click', () => openCreatorProfile(readPayload() || payload));
+  creatorButton.title = "Open this creator's backend-published read-only passport/profile manifest when available.";
+  creatorButton.addEventListener('click', () => openCreatorProfileFromRendererFallback(readPayload() || payload));
 
   creator.append(creatorLabel, creatorButton);
 
@@ -389,11 +389,17 @@ function toggleSource(viewport) {
   if (toggle) toggle.textContent = hidden ? 'Show root source' : 'Hide root source';
 }
 
-function openCreatorProfile(payload) {
+function openCreatorProfileFromRendererFallback(payload) {
+  const button = document.getElementById(CREATOR_HANDLE_ID);
+
+  if (button?.dataset?.creatorProofBound === '1') {
+    return;
+  }
+
   const target = creatorProfileCrabUrl(payload);
 
   if (!target) {
-    setStatus('Read-only passport/profile pages are planned for the next identity batch.');
+    setStatus('No backend-published creator profile route is available yet. CrabLink will not synthesize crab://@username as truth.');
     return;
   }
 
@@ -402,7 +408,7 @@ function openCreatorProfile(payload) {
 
   if (input && form) {
     input.value = target;
-    setStatus(`Opening creator profile ${target}…`);
+    setStatus(`Opening backend-published creator profile ${target}…`);
 
     if (typeof form.requestSubmit === 'function') {
       form.requestSubmit();
@@ -410,7 +416,10 @@ function openCreatorProfile(payload) {
     }
 
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    return;
   }
+
+  setStatus(`Creator profile route: ${target}`);
 }
 
 function resetFrame(viewport) {
@@ -788,6 +797,7 @@ function creatorProfileCrabUrl(payload) {
       payload.public_profile?.crab_url ||
       payload.public_profile?.crabUrl ||
       payload.publicProfile?.crabUrl ||
+      payload.publicProfile?.profileCrabUrl ||
       payload.creator_crab_url ||
       payload.creator_profile_crab_url ||
       payload.owner_crab_url ||
@@ -795,12 +805,7 @@ function creatorProfileCrabUrl(payload) {
       ''
   );
 
-  if (explicit) return explicit;
-
-  const handle = creatorHandle(payload);
-  if (!handle || handle === '@username') return '';
-
-  return `crab://${handle}`;
+  return explicit.startsWith('crab://') ? explicit : '';
 }
 
 function normalizeHandle(value) {

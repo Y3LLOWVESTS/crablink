@@ -8,6 +8,14 @@
     "gatewayUrl",
     "passportSubject",
     "walletAccount",
+    "requestedUsername",
+    "requestedHandle",
+    "username",
+    "handle",
+    "usernameStatus",
+    "profileCrabUrl",
+    "publicProfileCid",
+    "usernameUpdatedAt",
     "authToken",
     "requireSpendConfirm",
     "devMode",
@@ -161,6 +169,44 @@
       "type": "string"
     },
     "lastProductSummary": {
+      "type": "string"
+    },
+    "requestedUsername": {
+      "type": "string",
+      "pattern": "^$|^[a-z0-9][a-z0-9_.-]{2,31}$"
+    },
+    "requestedHandle": {
+      "type": "string",
+      "pattern": "^$|^@[a-z0-9][a-z0-9_.-]{2,31}$"
+    },
+    "username": {
+      "type": "string",
+      "pattern": "^$|^[a-z0-9][a-z0-9_.-]{2,31}$"
+    },
+    "handle": {
+      "type": "string",
+      "pattern": "^$|^@[a-z0-9][a-z0-9_.-]{2,31}$"
+    },
+    "usernameStatus": {
+      "type": "string",
+      "enum": [
+        "",
+        "local_draft",
+        "requested",
+        "confirmed",
+        "rejected",
+        "unavailable",
+        "backend_unknown"
+      ]
+    },
+    "profileCrabUrl": {
+      "type": "string"
+    },
+    "publicProfileCid": {
+      "type": "string",
+      "pattern": "^$|^b3:[0-9a-f]{64}$"
+    },
+    "usernameUpdatedAt": {
       "type": "string"
     }
   }

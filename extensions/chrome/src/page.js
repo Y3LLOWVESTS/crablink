@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — Full-tab CrabLink browser shell for rendering crab:// pages through svc-gateway.
- * RO:WHY — App Integration; Concerns: DX/SEC/RES; popup is a control panel, this page is the browser surface.
+ * RO:WHY — App Integration; Concerns: DX/SEC/RES; popup is a launcher, this page is the browser surface.
  * RO:INTERACTS — ronClient.js, storage.js, crab.js, page-workflow.js, svc-gateway /crab/resolve, /sites/:name, /b3/:hash.:kind.
  * RO:INVARIANTS — gateway-only; no private keys; wallet hold requires explicit user confirmation; no direct ledger/storage/index calls.
  * RO:METRICS — sends correlation IDs via ronClient.js.
- * RO:CONFIG — reads gateway URL, timeout, passport, wallet, dev token from storage.js.
+ * RO:CONFIG — reads gateway URL, timeout, passport, wallet, username draft, and dev token from storage.js.
  * RO:SECURITY — does not execute backend-provided scripts or HTML; renders DTOs as text only; no silent ROC spend.
- * RO:TEST — scripts/check-chrome.sh; manual full-tab navigation, prepare-route checks, explicit hold, and image upload confirmation.
+ * RO:TEST — scripts/check-chrome.sh; manual full-tab navigation, Passport drawer, prepare-route checks, explicit hold, and image upload confirmation.
  */
 
 import { normalizeCrabInput } from './crab.js';
@@ -41,6 +41,76 @@ let navigationStack = [];
 let navigationIndex = -1;
 let pageBusy = false;
 
+const LOCAL_CREATOR_PAGES = new Set(['article', 'video', 'stream', 'podcast']);
+
+const LOCAL_CREATOR_ROUTE_META = Object.freeze({
+  article: {
+    title: 'CrabLink Article Draft',
+    localSchema: 'crablink.article.local_page.v1',
+    description:
+      'Local article draft and prepare scaffold. Publishing is intentionally disabled until RustyOnions exposes real .article routes.',
+    warning: 'Backend article publishing routes may not be wired yet.',
+    prepareRoute: '/assets/article/prepare',
+    sectionId: 'articleDraftSection',
+    bodyClass: 'crablink-article-draft-view-mode'
+  },
+  video: {
+    title: 'CrabLink Video Draft',
+    localSchema: 'crablink.video.local_page.v1',
+    description:
+      'Local video draft and prepare scaffold. Publishing is intentionally disabled until RustyOnions exposes real .video routes.',
+    warning: 'Backend video publishing routes may not be wired yet.',
+    prepareRoute: '/assets/video/prepare',
+    sectionId: 'videoDraftSection',
+    bodyClass: 'crablink-video-draft-view-mode'
+  },
+  stream: {
+    title: 'CrabLink Stream Studio',
+    localSchema: 'crablink.stream.local_page.v1',
+    description:
+      'Local stream studio scaffold. Starting a live stream is intentionally disabled until backend stream sessions are wired.',
+    warning: 'Backend stream routes and ingest/session keys are not wired yet.',
+    prepareRoute: '/streams/prepare',
+    sectionId: 'streamDraftSection',
+    bodyClass: 'crablink-stream-draft-view-mode'
+  },
+  podcast: {
+    title: 'CrabLink Podcast Studio',
+    localSchema: 'crablink.podcast.local_page.v1',
+    description:
+      'Local podcast studio scaffold for audio upload/live-audio planning. Publishing is intentionally disabled until backend podcast routes are wired.',
+    warning: 'Backend podcast publishing and feed routes are not wired yet.',
+    prepareRoute: '/podcasts/prepare',
+    sectionId: 'podcastDraftSection',
+    bodyClass: 'crablink-podcast-draft-view-mode'
+  }
+});
+
+const LOCAL_CREATOR_SECTION_IDS = Object.freeze([
+  'articleDraftSection',
+  'videoDraftSection',
+  'streamDraftSection',
+  'podcastDraftSection'
+]);
+
+const LOCAL_CREATOR_BODY_CLASSES = Object.freeze([
+  'crablink-article-draft-view-mode',
+  'crablink-video-draft-view-mode',
+  'crablink-stream-draft-view-mode',
+  'crablink-podcast-draft-view-mode'
+]);
+
+const GENERIC_LOCAL_ROUTE_SECTION_IDS = Object.freeze([
+  'workflowSection',
+  'actionsSection',
+  'fieldsSection',
+  'warningsSection',
+  'sitePageSection',
+  'prepareSummary',
+  'holdSection',
+  'submitSection'
+]);
+
 const workflow = createWorkflowController({
   getSettings: () => settings,
   getClient: () => client,
@@ -63,7 +133,7 @@ async function load() {
   renderPassportDrawer();
 
   const urlParam = new URLSearchParams(window.location.search).get('url');
-  const initial = urlParam || settings.lastCrabUrl || HOME_PAGE_URL;
+  const initial = normalizeStartupUrl(urlParam || settings.lastCrabUrl || HOME_PAGE_URL);
 
   navigationStack = [initial];
   navigationIndex = 0;
@@ -75,15 +145,21 @@ async function load() {
 }
 
 async function navigateTo(input, options = {}) {
-  const raw = String(input || '').trim() || HOME_PAGE_URL;
-  currentInput = raw;
-  els.addressInput.value = raw;
+  const raw = normalizeStartupUrl(String(input || '').trim() || HOME_PAGE_URL);
+  const parsed = parseBrowserInput(raw);
+  const isLocalCreator = isLocalCreatorParsed(parsed);
 
-  showLoading(`Resolving ${raw} through ${settings.gatewayUrl}…`);
+  currentInput = raw;
+  els.addressInput.value = parsed.url || raw;
+
+  showLoading(
+    isLocalCreator
+      ? `Opening local ${parsed.url || raw} creator workspace...`
+      : `Resolving ${raw} through ${settings.gatewayUrl}...`
+  );
   setBusy(true);
 
   try {
-    const parsed = parseBrowserInput(raw);
     const response = await resolveParsed(parsed);
 
     currentParsed = parsed;
@@ -103,6 +179,17 @@ async function navigateTo(input, options = {}) {
   }
 }
 
+function normalizeStartupUrl(value) {
+  const raw = String(value || '').trim();
+  const localRoute = localCreatorRouteFromValue(raw);
+
+  if (localRoute) {
+    return `crab://${localRoute}`;
+  }
+
+  return raw || HOME_PAGE_URL;
+}
+
 function parseBrowserInput(input) {
   const value = String(input || '').trim();
 
@@ -112,6 +199,18 @@ function parseBrowserInput(input) {
       name: 'site',
       url: HOME_PAGE_URL,
       display: HOME_PAGE_URL
+    };
+  }
+
+  const localRoute = localCreatorRouteFromValue(value);
+
+  if (localRoute) {
+    return {
+      type: 'builtin',
+      name: localRoute,
+      url: `crab://${localRoute}`,
+      display: `crab://${localRoute}`,
+      localCreator: true
     };
   }
 
@@ -127,7 +226,7 @@ function parseBrowserInput(input) {
   }
 
   if (lower.startsWith('crab://')) {
-    const target = lower.slice('crab://'.length);
+    const target = crabTargetFromValue(lower);
 
     if (BUILT_IN_RON_PAGES.has(target)) {
       return {
@@ -161,6 +260,12 @@ function parseBrowserInput(input) {
 
 async function resolveParsed(parsed) {
   if (parsed.type === 'builtin') {
+    const pageName = String(parsed.name || '').toLowerCase();
+
+    if (LOCAL_CREATOR_PAGES.has(pageName)) {
+      return makeLocalCreatorRouteResponse(parsed);
+    }
+
     return client.resolveCrab(parsed.url);
   }
 
@@ -169,8 +274,23 @@ async function resolveParsed(parsed) {
   }
 
   if (parsed.type === 'site') {
-    if (BUILT_IN_RON_PAGES.has(String(parsed.name || '').toLowerCase())) {
-      return client.resolveCrab(`crab://${String(parsed.name).toLowerCase()}`);
+    const parsedName = String(parsed.name || '').toLowerCase();
+    const localRoute = localCreatorRouteFromValue(parsed.url || parsed.name || '');
+
+    if (localRoute || LOCAL_CREATOR_PAGES.has(parsedName)) {
+      const pageName = localRoute || parsedName;
+
+      return makeLocalCreatorRouteResponse({
+        type: 'builtin',
+        name: pageName,
+        url: `crab://${pageName}`,
+        display: `crab://${pageName}`,
+        localCreator: true
+      });
+    }
+
+    if (BUILT_IN_RON_PAGES.has(parsedName)) {
+      return client.resolveCrab(`crab://${parsedName}`);
     }
 
     const crabUrl = parsed.url || `crab://${parsed.name}`;
@@ -198,14 +318,252 @@ function shouldFallbackToDirectSiteRoute(error) {
   );
 }
 
+function makeLocalCreatorRouteResponse(parsed) {
+  const pageKind = String(parsed?.name || '').toLowerCase();
+  const url = `crab://${pageKind}`;
+  const now = new Date().toISOString();
+  const details = localCreatorRouteDetails(pageKind);
+
+  return {
+    ok: true,
+    status: 200,
+    route: 'local:crablink.creator-route',
+    correlationId: `crablink-local-${Date.now().toString(36)}`,
+    data: {
+      schema: BUILTIN_PAGE_SCHEMA,
+      local_schema: details.localSchema,
+      draft_schema: details.localSchema,
+      url,
+      route: url,
+      crab_url: url,
+      slug: pageKind,
+      page: pageKind,
+      page_kind: pageKind,
+      kind: pageKind,
+      title: details.title,
+      description: details.description,
+      status: 'local_scaffold_not_published',
+      requires_passport: true,
+      requires_wallet: false,
+      local_only: true,
+      custom_local_renderer: true,
+      updated_at: now,
+      links: {
+        crab: url,
+        prepare: details.prepareRoute
+      },
+      warnings: [
+        details.warning,
+        'This is a local CrabLink creator workspace. No b3 CID was assigned, no ROC was charged, and no backend publication occurred.'
+      ],
+      actions: [],
+      fields: [
+        { label: 'Route mode', value: 'local_creator_scaffold' },
+        { label: 'Surface', value: url },
+        { label: 'Publication status', value: 'not published' },
+        { label: 'Backend mutation', value: 'none' },
+        { label: 'Wallet mutation', value: 'none' }
+      ],
+      truth_boundary: {
+        backend_published: false,
+        b3_content_id_assigned: false,
+        manifest_cid_assigned: false,
+        roc_charged: false,
+        wallet_mutated: false,
+        index_pointer_created: false
+      },
+      local_renderer: {
+        owner: `page-${pageKind}-draft.js`,
+        expected_section_id: details.sectionId,
+        body_class: details.bodyClass,
+        route_authority: 'address_bar_or_page_url'
+      }
+    }
+  };
+}
+
+function localCreatorRouteDetails(pageKind) {
+  return (
+    LOCAL_CREATOR_ROUTE_META[pageKind] || {
+      title: `CrabLink ${titleCase(pageKind)} Workspace`,
+      localSchema: `crablink.${pageKind || 'unknown'}.local_page.v1`,
+      description: 'Local CrabLink creator workspace.',
+      warning: 'This local creator route is not backend-published yet.',
+      prepareRoute: '',
+      sectionId: '',
+      bodyClass: ''
+    }
+  );
+}
+
+function titleCase(value) {
+  return String(value || '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function isLocalCreatorParsed(parsed) {
+  const pageName = String(parsed?.name || '').toLowerCase();
+  return parsed?.localCreator === true || LOCAL_CREATOR_PAGES.has(pageName);
+}
+
+function isLocalCreatorPayload(payload, parsed) {
+  const pageName = localCreatorRouteFromValue(
+    payload?.url ||
+      payload?.route ||
+      payload?.crab_url ||
+      payload?.links?.crab ||
+      parsed?.url ||
+      parsed?.display ||
+      parsed?.name ||
+      ''
+  );
+
+  return Boolean(pageName && LOCAL_CREATOR_PAGES.has(pageName));
+}
+
+function localCreatorRouteFromValue(value) {
+  const raw = String(value || '').trim().toLowerCase();
+
+  if (!raw) {
+    return '';
+  }
+
+  if (LOCAL_CREATOR_PAGES.has(raw)) {
+    return raw;
+  }
+
+  if (!raw.startsWith('crab://')) {
+    return '';
+  }
+
+  const target = crabTargetFromValue(raw);
+  return LOCAL_CREATOR_PAGES.has(target) ? target : '';
+}
+
+function crabTargetFromValue(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .slice('crab://'.length)
+    .replace(/^\/+/, '')
+    .split(/[/?#]/)[0]
+    .trim();
+}
+
+function enterLocalCreatorRoute(pageKind) {
+  const route = String(pageKind || '').toLowerCase();
+  const meta = localCreatorRouteDetails(route);
+
+  if (!LOCAL_CREATOR_PAGES.has(route)) {
+    return;
+  }
+
+  clearLocalCreatorBodyClasses(route);
+  removeInactiveLocalCreatorSections(route);
+  hideGenericLocalRouteSections();
+
+  if (document.body) {
+    document.body.dataset.crablinkLocalRoute = route;
+    if (meta.bodyClass) {
+      document.body.classList.add(meta.bodyClass);
+    }
+    document.body.classList.remove('crablink-profile-view-mode');
+    document.body.classList.remove('crablink-site-full-view-mode');
+  }
+
+  document.dispatchEvent(
+    new CustomEvent('crablink:local-route-mode', {
+      detail: {
+        route,
+        url: `crab://${route}`,
+        sectionId: meta.sectionId,
+        bodyClass: meta.bodyClass
+      }
+    })
+  );
+}
+
+function leaveLocalCreatorRoutes() {
+  if (!document.body) {
+    return;
+  }
+
+  for (const className of LOCAL_CREATOR_BODY_CLASSES) {
+    document.body.classList.remove(className);
+  }
+
+  delete document.body.dataset.crablinkLocalRoute;
+}
+
+function clearLocalCreatorBodyClasses(activeRoute) {
+  if (!document.body) {
+    return;
+  }
+
+  const activeMeta = localCreatorRouteDetails(activeRoute);
+
+  for (const className of LOCAL_CREATOR_BODY_CLASSES) {
+    if (className !== activeMeta.bodyClass) {
+      document.body.classList.remove(className);
+    }
+  }
+}
+
+function removeInactiveLocalCreatorSections(activeRoute) {
+  const activeMeta = localCreatorRouteDetails(activeRoute);
+  const activeSectionId = activeMeta.sectionId || '';
+
+  for (const sectionId of LOCAL_CREATOR_SECTION_IDS) {
+    if (sectionId === activeSectionId) {
+      continue;
+    }
+
+    const section = document.getElementById(sectionId);
+    if (section) {
+      section.remove();
+    }
+  }
+}
+
+function hideGenericLocalRouteSections() {
+  for (const sectionId of GENERIC_LOCAL_ROUTE_SECTION_IDS) {
+    const section = document.getElementById(sectionId);
+    if (!section) {
+      continue;
+    }
+
+    section.classList.add('hidden');
+    section.setAttribute('aria-hidden', 'true');
+  }
+}
+
 function renderPage(parsed, response) {
   const payload = response?.data && typeof response.data === 'object' ? response.data : response;
+  const isLocalCreator = isLocalCreatorPayload(payload, parsed);
+  const localRoute = isLocalCreator
+    ? localCreatorRouteFromValue(
+        payload?.url ||
+          payload?.route ||
+          payload?.crab_url ||
+          payload?.links?.crab ||
+          parsed?.url ||
+          parsed?.name ||
+          ''
+      )
+    : '';
 
   hideAllPanels();
   els.pagePanel.classList.remove('hidden');
 
   els.developerDetails.open = false;
   els.developerJson.textContent = JSON.stringify(payload || {}, null, 2);
+
+  if (isLocalCreator && localRoute) {
+    enterLocalCreatorRoute(localRoute);
+  } else {
+    leaveLocalCreatorRoutes();
+  }
 
   if (payload?.schema === BUILTIN_PAGE_SCHEMA) {
     renderBuiltinPage(parsed, response, payload);
@@ -230,6 +588,24 @@ function renderPage(parsed, response) {
 function renderBuiltinPage(parsed, response, payload) {
   currentBuiltinPayload = payload;
   hideSitePageSection();
+
+  const isLocalCreator = isLocalCreatorPayload(payload, parsed);
+  const localRoute = isLocalCreator
+    ? localCreatorRouteFromValue(
+        payload?.url ||
+          payload?.route ||
+          payload?.crab_url ||
+          payload?.links?.crab ||
+          parsed?.url ||
+          parsed?.name ||
+          ''
+      )
+    : '';
+
+  if (isLocalCreator && localRoute) {
+    enterLocalCreatorRoute(localRoute);
+  }
+
   const status = String(payload.status || 'resolved');
 
   setBadgeForStatus(els.pageBadge, status);
@@ -246,10 +622,18 @@ function renderBuiltinPage(parsed, response, payload) {
   addFact('Requires wallet', boolText(payload.requires_wallet ?? payload.requiresWallet));
   addFact('Gateway route', response.route || '/crab/resolve');
 
-  workflow.renderWorkflow(payload);
-  renderActions(payload.actions || []);
-  renderFields(payload.fields || []);
-  renderWarnings(payload.warnings || []);
+  if (isLocalCreator) {
+    workflow.clearWorkflow();
+    hideGenericLocalRouteSections();
+    renderActions([]);
+    renderFields([]);
+    renderWarnings(payload.warnings || []);
+  } else {
+    workflow.renderWorkflow(payload);
+    renderActions(payload.actions || []);
+    renderFields(payload.fields || []);
+    renderWarnings(payload.warnings || []);
+  }
 
   configureCopyButtons(payload.url || parsed.url, payload);
 }
@@ -257,9 +641,11 @@ function renderBuiltinPage(parsed, response, payload) {
 function renderAssetPage(parsed, response, payload) {
   workflow.clearWorkflow();
   hideSitePageSection();
+  leaveLocalCreatorRoutes();
 
   els.pageBadge.className = 'badge badge-ok';
   els.pageBadge.textContent = 'asset';
+
   const title = `${payload.asset_kind || parsed.kind || 'Asset'} page`;
   els.pageTitle.textContent = title;
   updateDocumentTitle(title);
@@ -287,6 +673,7 @@ function renderAssetPage(parsed, response, payload) {
 
 function renderSitePage(parsed, response, payload) {
   workflow.clearWorkflow();
+  leaveLocalCreatorRoutes();
 
   els.pageBadge.className = 'badge badge-ok';
   els.pageBadge.textContent = 'site';
@@ -409,11 +796,16 @@ function appendMapCard(title, mapValue, emptyText) {
 function appendReceiptCard(receipts) {
   const rows = receipts.slice(0, 6).map((receipt, index) => {
     if (receipt && typeof receipt === 'object') {
-      const kind = receipt.receipt_kind || receipt.kind || receipt.action || `receipt ${index + 1}`;
-      const txid = receipt.wallet_txid || receipt.txid || receipt.transaction_id || '';
-      const hash = receipt.wallet_receipt_hash || receipt.receipt_hash || receipt.hash || '';
-      const value = [kind, txid, hash].filter(Boolean).join(' · ');
-      return [`#${index + 1}`, value || JSON.stringify(receipt)];
+      return [
+        receipt.action || receipt.kind || `#${index + 1}`,
+        [
+          receipt.txid || receipt.tx_id || receipt.receipt_id || '',
+          receipt.account || receipt.wallet_account || '',
+          receipt.amount_minor || receipt.amountMinor || ''
+        ]
+          .filter(Boolean)
+          .join(' / ')
+      ];
     }
 
     return [`#${index + 1}`, String(receipt)];
@@ -463,9 +855,11 @@ function manifestStatusText(manifest) {
 function renderGenericPage(parsed, response, payload) {
   workflow.clearWorkflow();
   hideSitePageSection();
+  leaveLocalCreatorRoutes();
 
   els.pageBadge.className = 'badge badge-muted';
   els.pageBadge.textContent = parsed.type || 'result';
+
   const title = parsed.display || parsed.url || 'CrabLink Result';
   els.pageTitle.textContent = title;
   updateDocumentTitle(title);
@@ -599,7 +993,7 @@ function configureCopyButtons(crabUrl, payload) {
 }
 
 function syncBrowserHistory(url, options = {}) {
-  const cleanUrl = String(url || HOME_PAGE_URL).trim() || HOME_PAGE_URL;
+  const cleanUrl = normalizeStartupUrl(String(url || HOME_PAGE_URL).trim() || HOME_PAGE_URL);
 
   if (navigationIndex < 0) {
     navigationStack = [cleanUrl];
@@ -632,7 +1026,7 @@ function syncBrowserHistory(url, options = {}) {
 }
 
 function replaceBrowserState(url, index) {
-  const cleanUrl = String(url || HOME_PAGE_URL).trim() || HOME_PAGE_URL;
+  const cleanUrl = normalizeStartupUrl(String(url || HOME_PAGE_URL).trim() || HOME_PAGE_URL);
   const safeIndex = Number.isInteger(index) && index >= 0 ? index : 0;
   const nextUrl = pageLocationFor(cleanUrl);
   window.history.replaceState({ url: cleanUrl, navigationIndex: safeIndex }, '', nextUrl.toString());
@@ -683,19 +1077,193 @@ function renderTopBarState() {
 }
 
 function renderPassportDrawer() {
-  els.drawerGateway.textContent = settings.gatewayUrl || '—';
+  const usernameRow = ensureDrawerUsernameRow();
+  usernameRow.value.textContent = drawerUsernameHandle(settings);
+  usernameRow.status.textContent = drawerUsernameStatus(settings);
+  styleDrawerUsernameRow(usernameRow);
+
   els.drawerPassport.textContent = settings.passportSubject || 'not loaded';
+  els.drawerGateway.textContent = settings.gatewayUrl || '—';
   els.drawerWallet.textContent = settings.walletAccount || 'not linked';
   els.drawerRoc.textContent = settings.rocBalanceDisplay || 'unknown';
   els.drawerLedger.textContent = settings.rocLedgerBacked ? 'ledger-backed' : 'display-only';
 
+  reorderDrawerIdentityRows(usernameRow.row);
+
   if (settings.passportSubject) {
-    els.drawerMessage.textContent = `${identitySummary(settings)} — ${balanceSummary(settings)}`;
+    const userText = drawerUsernameHandle(settings);
+    const userStatus = drawerUsernameStatus(settings);
+    const userSummary =
+      userText && userText !== 'not requested'
+        ? `${userText} (${userStatus})`
+        : 'no username requested';
+
+    els.drawerMessage.textContent = `${identitySummary(settings)} — ${userSummary} — ${balanceSummary(settings)}`;
   } else {
     els.drawerMessage.textContent = 'No passport loaded yet.';
   }
 
   renderTopBarState();
+}
+
+function ensureDrawerUsernameRow() {
+  let row = document.getElementById('drawerUsernameRow');
+  let label = document.getElementById('drawerUsernameLabel');
+  let value = document.getElementById('drawerUsername');
+  let status = document.getElementById('drawerUsernameStatus');
+
+  if (!row) {
+    row = document.createElement('div');
+    row.id = 'drawerUsernameRow';
+    row.className = 'drawer-username-row';
+  }
+
+  if (!label) {
+    label = document.createElement('span');
+    label.id = 'drawerUsernameLabel';
+  }
+
+  label.textContent = 'USERNAME';
+
+  if (!value) {
+    value = document.createElement('strong');
+    value.id = 'drawerUsername';
+    value.textContent = 'not requested';
+  }
+
+  if (!status) {
+    status = document.createElement('em');
+    status.id = 'drawerUsernameStatus';
+    status.className = 'drawer-username-status';
+    status.textContent = 'local only';
+  }
+
+  if (!row.contains(label)) {
+    row.append(label);
+  }
+
+  if (!row.contains(value)) {
+    row.append(value);
+  }
+
+  if (!row.contains(status)) {
+    row.append(status);
+  }
+
+  reorderDrawerIdentityRows(row);
+
+  return { row, label, value, status };
+}
+
+function reorderDrawerIdentityRows(usernameRow) {
+  const gatewayCell = els.drawerGateway?.parentElement || null;
+  const passportCell = els.drawerPassport?.parentElement || null;
+  const walletCell = els.drawerWallet?.parentElement || null;
+  const host =
+    gatewayCell?.parentElement ||
+    passportCell?.parentElement ||
+    walletCell?.parentElement ||
+    usernameRow?.parentElement ||
+    els.passportDrawer;
+
+  if (!host || !usernameRow) {
+    return;
+  }
+
+  if (usernameRow.parentElement !== host) {
+    host.insertBefore(usernameRow, gatewayCell || passportCell || walletCell || host.firstElementChild);
+  }
+
+  if (gatewayCell && usernameRow !== gatewayCell) {
+    host.insertBefore(usernameRow, gatewayCell);
+  } else if (host.firstElementChild !== usernameRow) {
+    host.insertBefore(usernameRow, host.firstElementChild);
+  }
+
+  if (passportCell && gatewayCell && passportCell !== usernameRow && passportCell !== gatewayCell) {
+    host.insertBefore(passportCell, gatewayCell);
+  }
+}
+
+function styleDrawerUsernameRow(parts) {
+  if (!parts?.row || !parts?.label || !parts?.value || !parts?.status) {
+    return;
+  }
+
+  parts.row.style.borderColor = 'rgba(34, 197, 94, 0.52)';
+  parts.row.style.background =
+    'linear-gradient(180deg, rgba(34, 197, 94, 0.08), rgba(8, 17, 34, 0.78))';
+
+  parts.label.style.color = 'var(--muted, #a9b6cc)';
+  parts.label.style.fontStyle = 'normal';
+  parts.label.style.fontWeight = '900';
+  parts.label.style.letterSpacing = '0.04em';
+  parts.label.style.textTransform = 'uppercase';
+
+  parts.value.style.color = 'var(--good, #86efac)';
+  parts.value.style.fontWeight = '950';
+
+  parts.status.style.display = 'block';
+  parts.status.style.marginTop = '4px';
+  parts.status.style.color = '#d1fae5';
+  parts.status.style.fontStyle = 'italic';
+  parts.status.style.fontWeight = '800';
+}
+
+function drawerUsernameHandle(nextSettings) {
+  const handle = cleanUsernameHandle(
+    nextSettings?.handle ||
+      nextSettings?.requestedHandle ||
+      nextSettings?.username ||
+      nextSettings?.requestedUsername ||
+      ''
+  );
+
+  return handle || 'not requested';
+}
+
+function drawerUsernameStatus(nextSettings) {
+  const status = String(nextSettings?.usernameStatus || '').trim();
+
+  if (nextSettings?.handle && status === 'confirmed') {
+    return 'confirmed by backend';
+  }
+
+  if (nextSettings?.handle) {
+    return status ? `${status} from backend` : 'backend status unknown';
+  }
+
+  if (nextSettings?.requestedHandle || nextSettings?.requestedUsername) {
+    if (status === 'requested') {
+      return 'requested; awaiting backend confirmation';
+    }
+
+    if (status === 'local_draft') {
+      return 'local draft; not backend confirmed';
+    }
+
+    return status ? `${status}; not backend confirmed` : 'pending backend confirmation';
+  }
+
+  return 'none';
+}
+
+function cleanUsernameHandle(value) {
+  const raw = String(value || '').trim().toLowerCase();
+
+  if (!raw) {
+    return '';
+  }
+
+  if (raw.startsWith('@')) {
+    return raw;
+  }
+
+  if (/^[a-z0-9][a-z0-9_.-]{2,31}$/.test(raw)) {
+    return `@${raw}`;
+  }
+
+  return raw;
 }
 
 async function checkNodeFromDrawer() {

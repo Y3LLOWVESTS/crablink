@@ -21348,3 +21348,4162 @@ This is a major milestone. The next instance should treat the CrabLink image/sit
 
 
 ### END NOTE - MAY 4 2026 - 20:45 CST
+
+
+
+### BEGIN NOTE - MAY 5 2026 - 12:25 CST
+
+
+
+# CrabLink / RustyOnions NEXT_LEVEL Carryover Notes — May 5, 2026 Session
+
+## 0. Session outcome summary
+
+This was a **major CrabLink product-polish and NEXT_LEVEL UX session**. We did **not** intentionally work on RustyOnions Rust crates in this session. The work was focused on the separate `crablink` Chrome extension repo and the full-tab CrabLink browser UX.
+
+The main achievement: **CrabLink now feels much closer to an actual RON browser/client instead of a popup extension.**
+
+We moved the extension toward the NEXT_LEVEL direction: RON Passports, `@username` display, creator identity surfaces, read-only proof modals, and manifest-backed site proof display, without breaking the core RustyOnions boundaries. This aligns with NEXT_LEVEL’s goal of turning the proven paid image + site + `<crab-image>` pipeline into reusable creator primitives, identity/display primitives, reputation/moderation surfaces, and reference-graph sites. 
+
+The latest uploaded CrabLink codebundle was generated from `/Users/mymac/Desktop/crablink` and includes the Chrome extension files, shared schemas/fixtures, and relevant scripts for the current working state. 
+
+---
+
+## 1. Current project north star
+
+The active product blueprint moving forward is:
+
+```text
+NEXT_LEVEL.MD
+```
+
+NEXT_LEVEL builds on the WEB3 / WEB3_2 foundation and starts from the proven checkpoint:
+
+```text
+1. Paid image asset path works.
+2. Site creation/open flow works.
+3. CrabLink renders named crab:// sites.
+4. CrabLink can render a site root HTML document.
+5. CrabLink can render <crab-image src="crab://<hash>.image">.
+6. The site root stores only an image reference.
+7. The image remains its own b3-backed asset.
+8. The guard prevents accidentally using an image CID as the site root CID.
+9. crab://thedustyonion6 proves the first working reference-graph embed primitive.
+```
+
+Strategic model:
+
+```text
+Site = manifest + routes + policies + references + revisions
+Post = b3 asset + manifest
+Comment = b3 asset + manifest
+Article = b3 asset + manifest
+Image = b3 asset + manifest
+Video = b3 asset + manifest + future streaming/range plan
+Music = b3 asset + manifest + future streaming/range plan
+Profile = passport-linked read-only page / public manifest
+Passport = identity/capability record + optional public profile manifest
+Alt Passport = separate pseudonymous identity + separate wallet/account + no public main linkage
+```
+
+Important invariants remain:
+
+```text
+- ROC remains internal.
+- b3 hashes remain canonical.
+- crab:// URLs are product/user-facing pointers.
+- Wallet remains the mutation front-door.
+- Ledger remains economic truth.
+- Storage stores bytes only.
+- Sites store references.
+- Passports are identities/capability records, not wallets.
+- Public profile manifests may be b3-addressed.
+- No arbitrary executable linked code.
+- No fake profile/reputation/moderator truth.
+- No silent ROC spending.
+- No private main↔alt linkage by default.
+```
+
+---
+
+## 2. Repository worked on
+
+This session worked on:
+
+```text
+/Users/mymac/Desktop/crablink
+```
+
+Primary target:
+
+```text
+extensions/chrome
+```
+
+Important repo/product naming:
+
+```text
+Repo: crablink
+Product/browser client: CrabLink
+Extension: CrabLink Extension for Chrome
+```
+
+RustyOnions remains the backend/substrate/value-plane repo. CrabLink remains a separate browser-client repo. This separation is correct and should be preserved.
+
+---
+
+## 3. RustyOnions crates touched this session
+
+No RustyOnions Rust crates were intentionally edited in this session.
+
+Crates not touched directly:
+
+```text
+svc-gateway
+omnigate
+ron-proto
+ron-naming
+svc-index
+svc-storage
+svc-wallet
+ron-ledger
+ron-accounting
+svc-rewarder
+svc-passport
+```
+
+The session was CrabLink-only.
+
+However, CrabLink changes were designed around existing RustyOnions route contracts and NEXT_LEVEL direction:
+
+```text
+GET  /healthz
+GET  /readyz
+GET  /identity/me
+GET  /wallet/:account/balance
+GET  /crab/resolve?url=...
+GET  /b3/:hash.kind
+GET  /sites/:name
+POST /identity/passport/bootstrap
+POST /assets/image/prepare
+POST /assets/image
+POST /sites/prepare
+POST /wallet/hold
+POST /sites
+```
+
+---
+
+## 4. Major accomplishments this session
+
+### 4.1 Extension icon now opens the full CrabLink browser
+
+Problem at start:
+
+```text
+Clicking the CrabLink extension icon opened a small popup panel.
+The user did not want that.
+The user wanted clicking the icon to go directly to the full CrabLink browser tab with the URL bar.
+```
+
+What we did:
+
+```text
+- Removed/neutralized the old popup-as-product-control behavior.
+- Ensured manifest no longer depends on default_popup for the real product surface.
+- Added chrome.action.onClicked in background.js.
+- Converted popup.html/popup.js into an emergency launcher.
+- Even if Chrome still invoked popup.html due to extension caching or loaded-source quirks, popup.html now immediately opens src/page.html?url=crab://site and closes itself.
+```
+
+Result:
+
+```text
+Clicking the CrabLink extension icon now goes straight to the full CrabLink browser page.
+This is working exactly as the user wanted.
+```
+
+Important files involved:
+
+```text
+extensions/chrome/manifest.json
+extensions/chrome/src/background.js
+extensions/chrome/src/popup.html
+extensions/chrome/src/popup.js
+scripts/check-chrome.sh
+```
+
+Manual verification:
+
+```text
+User confirmed: “I tested it out and its working exactly as I want it to!”
+```
+
+---
+
+### 4.2 Full-tab browser remains the main product surface
+
+Current intended product surface:
+
+```text
+extensions/chrome/src/page.html
+extensions/chrome/src/page.js
+extensions/chrome/src/page.css
+```
+
+The popup is no longer the main UX. It is only a fallback launcher.
+
+Current product behavior:
+
+```text
+- Opens full CrabLink browser tab.
+- Has CrabLink URL/address bar.
+- Supports crab://site, crab://image, named sites, and b3 asset pages.
+- Shows ROC balance chip.
+- Shows Passport button.
+- Shows Settings gear.
+- Can render named sites such as crab://thedustyonion6.
+- Can render site root HTML.
+- Can render <crab-image> embeds from typed crab image URLs.
+```
+
+---
+
+### 4.3 Settings page redesigned into a real dashboard-style page
+
+Problem:
+
+```text
+The settings page was visually sloppy.
+It was condensed into one column on the left or stretched awkwardly.
+Window proportions were off.
+Bottom content was cut off behind the sticky save bar.
+```
+
+What we did:
+
+```text
+- Rebuilt options.html into a dashboard layout.
+- Added a hero/header section.
+- Added a left sidebar with Current Identity summary and Safety Rules.
+- Added a main content area for Gateway, Identity Labels, Dev Token, and Safety controls.
+- Added a fixed/sticky save bar.
+- Added enough bottom padding / scroll padding so content is no longer hidden behind the save bar.
+```
+
+Key UX improvements:
+
+```text
+- Balanced two-column layout on desktop.
+- Responsive layout for smaller widths.
+- Current identity is easy to scan.
+- Gateway settings are visually separated from identity settings.
+- Dev token and safety controls are visually grouped.
+- Save/Reset actions are persistent but no longer block bottom content.
+```
+
+Important files involved:
+
+```text
+extensions/chrome/src/options.html
+extensions/chrome/src/styles.css
+extensions/chrome/src/options.js
+```
+
+Manual verification:
+
+```text
+User confirmed the settings page looked good after padding fix:
+“perfect! thank you.”
+```
+
+---
+
+### 4.4 First-run / local @username scaffold added
+
+We added an honest local `@username` scaffold.
+
+Current state:
+
+```text
+@skinnycrabby exists locally as a requested/local draft username.
+It is not yet backend-confirmed.
+CrabLink displays this honestly.
+```
+
+Important behavior:
+
+```text
+- The local username draft can be shown in UI.
+- It stays marked local_draft / not backend confirmed.
+- CrabLink does not pretend the backend has reserved the handle.
+- CrabLink does not pretend a public profile route exists yet.
+```
+
+Storage/settings concepts added or used:
+
+```text
+requestedUsername
+requestedHandle
+username
+handle
+usernameStatus
+profileCrabUrl
+publicProfileCid
+usernameUpdatedAt
+```
+
+Allowed/honest status vocabulary:
+
+```text
+local_draft
+requested
+confirmed
+rejected
+unavailable
+backend_unknown
+```
+
+Important files involved:
+
+```text
+extensions/chrome/src/storage.js
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/options.html
+extensions/chrome/src/options.js
+extensions/chrome/src/page.js
+shared/schemas/extension-settings.schema.json
+shared/schemas/passport-bootstrap.schema.json
+shared/fixtures/passport-bootstrap.sample.json
+```
+
+Current manual state seen in UI:
+
+```text
+@skinnycrabby
+local draft; not backend confirmed
+```
+
+This matches NEXT_LEVEL’s identity direction without jumping ahead to a backend `svc-passport` uniqueness/reservation implementation.
+
+---
+
+### 4.5 Passport drawer improved
+
+Problem:
+
+```text
+The full-tab Passport drawer did not show the username at first.
+Then it showed @USERNAME as the label, which the user did not want.
+The user wanted:
+- USERNAME label
+- @skinnycrabby value
+- @skinnycrabby in green
+- label color matching PASSPORT/GATEWAY style
+```
+
+What we did:
+
+```text
+- Added Username row to Passport drawer.
+- Moved USERNAME to the top position.
+- Kept PASSPORT second.
+- Moved GATEWAY third.
+- Kept WALLET / ROC / LEDGER below.
+- Styled @skinnycrabby green.
+- Styled USERNAME label like PASSPORT/GATEWAY label.
+- Preserved the status text:
+  local draft; not backend confirmed
+```
+
+Current Passport drawer order:
+
+```text
+USERNAME
+@skinnycrabby
+local draft; not backend confirmed
+
+PASSPORT
+passport:main:dev
+
+GATEWAY
+http://127.0.0.1:8090
+
+WALLET
+acct_dev
+
+ROC
+1451 ROC
+
+LEDGER
+ledger-backed
+```
+
+Important file involved:
+
+```text
+extensions/chrome/src/page.js
+```
+
+Current UI status:
+
+```text
+User was satisfied with the Passport drawer and requested only the small label tweak.
+```
+
+---
+
+### 4.6 Site creator username chip and creator proof popup added
+
+Problem/opportunity:
+
+```text
+Sites now show a creator username placeholder/chip.
+The user wanted creator @username to be useful/clickable and eventually point to passport/profile data.
+```
+
+What we implemented:
+
+```text
+- Added a site creator chip:
+  site creator: @username
+- Added reputation and moderator score chips:
+  rep —
+  mod —
+- Made creator username clickable.
+- Clicking the creator username opens a centered read-only creator proof modal.
+```
+
+Current modal title/state:
+
+```text
+READ-ONLY CREATOR PROOF
+@username
+Local read-only proof only; backend has not published a profile route yet.
+```
+
+Current creator proof modal fields:
+
+```text
+Username
+Username source
+Passport
+Wallet label
+Profile route
+Reputation
+Moderator
+Site role
+```
+
+Current behavior is intentionally honest:
+
+```text
+- If no backend profile route is published, it says not published.
+- If no reputation score is published, it says not published.
+- If no moderator score is published, it says not published.
+- It does not invent scores.
+- It does not infer private passport keys.
+- It does not infer wallet spend authority.
+- It does not infer main↔alt linkage.
+```
+
+Important file involved:
+
+```text
+extensions/chrome/src/page-site-creator-proof.js
+```
+
+Manual verification:
+
+```text
+User liked the popup:
+“I like this popup…”
+```
+
+---
+
+### 4.7 Site Manifest button now opens a modal instead of appending inline form/details
+
+Problem:
+
+```text
+The Site Manifest button expanded or revealed manifest/proof content at the bottom of the webpage.
+This cluttered the site page and felt inconsistent with the new creator proof modal.
+```
+
+User request:
+
+```text
+Make Site Manifest pop up the same way as the creator proof popup.
+Do not add it to the bottom of the webpage.
+```
+
+What we implemented:
+
+```text
+- Intercepted the Site Manifest button.
+- Prevented the old inline details expansion.
+- Hid the old inline manifest/details section.
+- Added a centered Site Manifest modal.
+```
+
+Current Site Manifest modal fields:
+
+```text
+Crab URL
+Site name
+Root document CID
+Manifest CID
+Manifest status
+Owner passport
+Owner wallet
+Creator
+Payout account
+Payout action
+Routes
+Assets
+Receipts
+Gateway route
+```
+
+Additional modal sections:
+
+```text
+Route map
+Asset map
+Root document source
+Developer JSON
+```
+
+Copy actions added:
+
+```text
+Copy Site URL
+Copy Root CID
+Copy Manifest CID
+Copy Manifest JSON
+```
+
+Security/architecture:
+
+```text
+- Modal is read-only.
+- No backend mutation.
+- No storage/index/wallet/ledger mutation.
+- No fake manifest truth.
+- Uses DTO/developer JSON/root-source preview already available to CrabLink.
+```
+
+Important file involved:
+
+```text
+extensions/chrome/src/page-site-creator-proof.js
+```
+
+Manual verification:
+
+```text
+User confirmed:
+“excellent! very happy with the work we accomplished in this session.”
+```
+
+---
+
+### 4.8 check-chrome.sh improved and false positives fixed
+
+During the session, `scripts/check-chrome.sh` caught or falsely flagged several things.
+
+Issues encountered:
+
+```text
+- page.js missing token: crab://site
+- page-product-preview.js missing token: prepare
+```
+
+These were checker false-negatives because the architecture had evolved:
+
+```text
+- page.js imports HOME_PAGE_URL instead of containing literal crab://site.
+- page-product-preview.js is preview/rendering logic and does not need literal prepare text.
+```
+
+What we did:
+
+```text
+- Adjusted check script to inspect page-constants.js for crab://site.
+- Adjusted check script to check page-product-preview.js for asset/site preview invariants instead of “prepare”.
+- Added checks for popup launcher behavior.
+- Added checks for no default_popup.
+- Added checks for chrome.action.onClicked.
+- Added checks for full browser page modules.
+- Added checks for local-only host permissions.
+- Added checks against risky Chrome permissions and old crab://b3 format.
+```
+
+Important file involved:
+
+```text
+scripts/check-chrome.sh
+```
+
+Final command passed:
+
+```bash
+scripts/check-chrome.sh && scripts/package-chrome.sh && scripts/make_codebundle.sh
+```
+
+The user confirmed everything passed before later UI work.
+
+---
+
+### 4.9 package/check/codebundle workflow stabilized
+
+Current preferred command:
+
+```bash
+scripts/check-chrome.sh && scripts/package-chrome.sh && scripts/make_codebundle.sh
+```
+
+Important note:
+
+```text
+Use && so package/codebundle only run if checks pass.
+Earlier, running commands line-by-line allowed package-chrome.sh to run even after check-chrome.sh failed.
+```
+
+Current package output:
+
+```text
+dist/crablink-extension-chrome.zip
+```
+
+Current codebundle:
+
+```text
+CODEBUNDLE_CHROME_EXTENSION.md
+```
+
+The latest uploaded codebundle includes the current Chrome extension files, shared helpers, schemas, fixtures, and scripts. 
+
+---
+
+## 5. Current known working UX
+
+### 5.1 Extension icon
+
+Expected:
+
+```text
+Click CrabLink extension icon.
+A full browser tab opens directly.
+It goes to crab://site or last CrabLink URL.
+No little control popup is the main experience anymore.
+```
+
+Current status:
+
+```text
+Working exactly as desired.
+```
+
+### 5.2 CrabLink browser page
+
+Expected:
+
+```text
+- Top browser bar with CrabLink logo.
+- Back/forward/home buttons.
+- Address input.
+- Go button.
+- Refresh button.
+- ROC balance chip.
+- Passport button.
+- Settings gear.
+```
+
+Current status:
+
+```text
+Working.
+```
+
+### 5.3 Passport drawer
+
+Expected:
+
+```text
+- USERNAME at top.
+- @skinnycrabby shown in green.
+- Local draft / not backend confirmed status visible.
+- Passport, Gateway, Wallet, ROC, Ledger visible.
+- Check Node, Check Passport, Refresh Balance buttons visible.
+```
+
+Current status:
+
+```text
+Working.
+```
+
+### 5.4 Settings page
+
+Expected:
+
+```text
+- Full-window dashboard layout.
+- Current Identity sidebar.
+- Gateway card.
+- Identity Labels card.
+- Dev Token card.
+- Safety card.
+- Sticky save bar.
+- Enough bottom scroll padding.
+```
+
+Current status:
+
+```text
+Working and visually improved.
+```
+
+### 5.5 Creator proof modal
+
+Expected:
+
+```text
+Click site creator @username.
+Creator proof modal opens.
+No fake profile/reputation/moderator claims.
+```
+
+Current status:
+
+```text
+Working.
+```
+
+### 5.6 Site Manifest modal
+
+Expected:
+
+```text
+Click Site Manifest.
+Centered modal opens.
+Inline bottom-of-page manifest/details section stays hidden.
+```
+
+Current status:
+
+```text
+Working.
+```
+
+---
+
+## 6. Important currently known runtime/account state
+
+The user noticed ROC balance had dropped.
+
+Observed current balance:
+
+```text
+1451 ROC
+```
+
+Known prior context:
+
+```text
+The account previously had 1776 ROC from starter grant/bootstrap.
+Paid image mint/upload and site creation flows deducted/captured ROC.
+A drop in ROC after site/image creation is expected if hold/capture completed.
+```
+
+Current wallet account:
+
+```text
+acct_dev
+```
+
+Current passport:
+
+```text
+passport:main:dev
+```
+
+Current local username draft:
+
+```text
+@skinnycrabby
+```
+
+Current username status:
+
+```text
+local_draft
+not backend confirmed
+```
+
+Current known test site:
+
+```text
+crab://thedustyonion6
+```
+
+Current proof significance:
+
+```text
+crab://thedustyonion6 proves the reference-graph site primitive:
+site root HTML references an independently b3-backed image through <crab-image>.
+```
+
+---
+
+## 7. Files changed or heavily involved this session
+
+Most likely changed files in CrabLink:
+
+```text
+extensions/chrome/manifest.json
+extensions/chrome/src/background.js
+extensions/chrome/src/popup.html
+extensions/chrome/src/popup.js
+extensions/chrome/src/options.html
+extensions/chrome/src/options.js
+extensions/chrome/src/styles.css
+extensions/chrome/src/page.js
+extensions/chrome/src/page-site-creator-proof.js
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/storage.js
+shared/schemas/extension-settings.schema.json
+shared/schemas/passport-bootstrap.schema.json
+shared/fixtures/passport-bootstrap.sample.json
+scripts/check-chrome.sh
+```
+
+Not all of these may have changed in the final state after later overwrites, but these are the major files touched during the session.
+
+Most important final-state files to inspect first next session:
+
+```text
+extensions/chrome/src/page.js
+extensions/chrome/src/page-site-creator-proof.js
+extensions/chrome/src/options.html
+extensions/chrome/src/styles.css
+extensions/chrome/src/background.js
+extensions/chrome/src/popup.js
+scripts/check-chrome.sh
+```
+
+---
+
+## 8. Design decisions made this session
+
+### 8.1 Popup is not the browser
+
+Decision:
+
+```text
+The little Chrome popup is no longer the main UX.
+The extension icon should launch the full CrabLink browser tab.
+```
+
+Keep this.
+
+The popup may remain only as:
+
+```text
+- emergency launcher
+- fallback
+- debug-only artifact
+```
+
+### 8.2 Full-tab browser is the product
+
+Decision:
+
+```text
+All meaningful browsing should happen in the full-tab page.html/page.js browser.
+```
+
+### 8.3 Settings should be full-window dashboard
+
+Decision:
+
+```text
+Settings page should not look like a popup stretched sideways.
+It should be a real dashboard/control panel.
+```
+
+### 8.4 Username is a display/human pointer, not canonical truth
+
+Decision:
+
+```text
+@skinnycrabby may be shown as a local requested handle.
+But it must remain local_draft / not backend confirmed until backend supports reservation/confirmation.
+```
+
+### 8.5 Creator profile proof must be honest
+
+Decision:
+
+```text
+Clicking a site creator username opens useful read-only proof.
+But no fake profile, reputation, moderator score, wallet authority, or private identity linkage is invented.
+```
+
+### 8.6 Manifest proof should be modal
+
+Decision:
+
+```text
+Site Manifest should open a centered read-only modal.
+It should not append proof/details to the bottom of the rendered site page.
+```
+
+---
+
+## 9. Current limitations / honest gaps
+
+### 9.1 @username is local draft only
+
+Current state:
+
+```text
+@skinnycrabby is locally requested/displayed.
+There is no completed backend uniqueness/reservation claim yet.
+```
+
+Needs future backend work:
+
+```text
+svc-passport or equivalent backend route to reserve/confirm @username
+public profile/passport manifest route
+profile_crab_url or public_profile_cid in identity responses
+```
+
+### 9.2 Creator proof uses placeholder unless backend DTO includes creator fields
+
+Current site creator currently appears as:
+
+```text
+@username
+placeholder; not backend confirmed
+```
+
+Why:
+
+```text
+Site page DTO does not yet publish real creator username/profile fields.
+CrabLink correctly refuses to invent them.
+```
+
+Needs future backend DTO work:
+
+```text
+creator.username
+creator.handle
+creator.profile_crab_url
+creator.passport_subject
+creator.wallet_account
+creator.reputation_score
+creator.moderator_score
+```
+
+or equivalent fields.
+
+### 9.3 Reputation and moderator scores are placeholders
+
+Current state:
+
+```text
+rep —
+mod —
+```
+
+Needed later:
+
+```text
+- Decide reputation score model.
+- Decide moderator score model.
+- Decide whether global score, site-scoped score, or both.
+- Decide event inputs and anti-gaming rules.
+- Add DTO fields only after backend has truthful values.
+```
+
+### 9.4 Profile route not published yet
+
+Current state:
+
+```text
+Profile route: not published
+No Profile Route Yet button disabled
+```
+
+Needed later:
+
+```text
+crab://@username
+crab://profile/@username
+or crab://<profile-manifest-hash>.profile
+```
+
+Need to decide canonical route format before implementation.
+
+### 9.5 Site Manifest modal is client-side proof, not a dedicated route
+
+Current state:
+
+```text
+The modal uses existing site page DTO/developer JSON/root-source preview.
+```
+
+Future improvement:
+
+```text
+Add proper manifest raw route / profile route / structured manifest details if backend exposes them.
+```
+
+### 9.6 Popup launcher is a fallback hack
+
+Current state:
+
+```text
+popup.html/popup.js opens page.html and closes.
+This is okay and useful as a safety net.
+```
+
+Future cleanup:
+
+```text
+Once Chrome loading/caching behavior is stable, popup could remain as fallback or be removed.
+For now, keep it because it prevents regression if Chrome invokes popup again.
+```
+
+---
+
+## 10. NEXT_LEVEL remaining work — recommended order
+
+Below is a recommended efficient order for next sessions. This tries to avoid touching too many crates at once.
+
+---
+
+### Phase A — Finish CrabLink UX proof surfaces
+
+This is probably the best immediate next area because it is high-impact and keeps work mostly in CrabLink.
+
+#### A1. Make site creator username come from actual site DTO when available
+
+Current:
+
+```text
+@username placeholder
+```
+
+Goal:
+
+```text
+Site pages display actual creator handle when site DTO includes it.
+```
+
+Backend field possibilities CrabLink already anticipates:
+
+```text
+creator.username
+creator.handle
+owner.username
+owner.handle
+passport.username
+passport.handle
+public_profile.username
+public_profile.handle
+owner_username
+owner_handle
+creator_username
+creator_handle
+```
+
+Next step:
+
+```text
+Add backend DTO fields in omnigate/svc-gateway later.
+CrabLink already has enough fallback parsing to display them once present.
+```
+
+CrabLink-only improvement possible now:
+
+```text
+If site creator matches current local passport/wallet, optionally show local @skinnycrabby as “local display label” instead of generic @username, but must label it honestly.
+```
+
+Be careful:
+
+```text
+Do not claim backend-confirmed creator identity unless backend DTO says so.
+```
+
+---
+
+#### A2. Improve creator proof modal copy / visual polish
+
+Possible improvements:
+
+```text
+- Show “Local display label” instead of “placeholder” when using local username.
+- Add a small badge:
+  LOCAL DRAFT
+  BACKEND CONFIRMED
+  PROFILE PUBLISHED
+- Add visual separation between:
+  local label
+  site DTO label
+  backend profile label
+```
+
+---
+
+#### A3. Add modal behavior polish
+
+Potential improvements:
+
+```text
+- Focus trap in modals.
+- Better ESC handling.
+- Return focus to clicked button after close.
+- Prevent body scroll behind modal.
+- Add consistent animation.
+```
+
+Not urgent, but good polish.
+
+---
+
+#### A4. Add manifest modal tabs
+
+Current manifest modal has:
+
+```text
+Facts grid
+Route map
+Asset map
+Root document source
+Developer JSON
+Copy buttons
+```
+
+Potential next polish:
+
+```text
+Tabs or segmented controls:
+- Overview
+- Routes
+- Assets
+- Receipts
+- JSON
+```
+
+This may make the modal less tall.
+
+---
+
+### Phase B — Backend DTO enrichment for site creator identity
+
+This is the next high-impact backend step after CrabLink polish.
+
+Likely crates:
+
+```text
+omnigate
+svc-gateway
+ron-proto
+ron-naming or svc-index if owner metadata lives there
+```
+
+Goal:
+
+```text
+Site page DTO should publish enough safe creator/owner identity fields for CrabLink.
+```
+
+Possible DTO additions:
+
+```json
+{
+  "creator": {
+    "handle": "@skinnycrabby",
+    "username_status": "local_draft|requested|confirmed",
+    "passport_subject": "passport:main:dev",
+    "wallet_account": "acct_dev",
+    "profile_crab_url": null,
+    "public_profile_cid": null,
+    "reputation_score": null,
+    "moderator_score": null,
+    "site_role": "creator"
+  }
+}
+```
+
+Important:
+
+```text
+The backend must not publish private alt/main linkages.
+It must not publish wallet authority.
+It must not publish fake reputation.
+It must not publish unverified clearnet attribution.
+```
+
+Acceptance gate:
+
+```text
+Open crab://thedustyonion6.
+Top site creator chip shows actual @skinnycrabby if backend confirms/publishes it.
+Creator proof modal says source is backend DTO, not placeholder.
+```
+
+---
+
+### Phase C — RON Passport backend truth
+
+This is a bigger phase and probably requires Rust work.
+
+Likely crates:
+
+```text
+svc-passport or current identity/passport route owner
+svc-gateway
+omnigate
+ron-proto
+ron-auth
+ron-policy
+svc-wallet integration only through wallet front-door
+```
+
+Goals:
+
+```text
+- Create/reserve @username.
+- Confirm uniqueness.
+- Expose identity/passport state through gateway.
+- Optionally publish public profile manifest.
+- Keep local private passport state separate from public profile state.
+```
+
+Needed route concepts:
+
+```text
+POST /identity/passport/bootstrap
+GET  /identity/me
+POST /identity/username/reserve
+GET  /identity/username/:handle
+GET  /identity/profile/:handle
+```
+
+or CrabLink-facing equivalents through gateway.
+
+Acceptance gate:
+
+```text
+1. User enters @skinnycrabby.
+2. Backend confirms reservation or says unavailable.
+3. CrabLink displays confirmed when confirmed.
+4. Public profile route is not shown until backend publishes it.
+5. No private keys or spend authority are stored in extension.
+```
+
+---
+
+### Phase D — Public profile/passport manifest
+
+NEXT_LEVEL wants public profile/passport manifests as discovery/read-only pages.
+
+Possible route formats to decide:
+
+```text
+crab://@skinnycrabby
+crab://profile/@skinnycrabby
+crab://<64hex>.profile
+```
+
+Need to be careful because current canonical typed asset URL format is:
+
+```text
+crab://<64 lowercase hex>.<asset_kind>
+```
+
+Potential profile architecture:
+
+```text
+Passport identity record = service/internal identity/capability state.
+Public profile manifest = optional b3-addressed public document.
+@username = human pointer to public profile/passport manifest.
+```
+
+Public profile manifest fields could include:
+
+```json
+{
+  "schema": "ron.profile.v1",
+  "handle": "@skinnycrabby",
+  "passport_subject": "passport:main:dev",
+  "display_name": "Skinny Crabby",
+  "bio": "",
+  "avatar_image": "crab://<hash>.image",
+  "profile_tags": [],
+  "public_asset_catalogue": [],
+  "public_sites": [],
+  "reputation_summary": null,
+  "moderation_summary": null,
+  "site_roles": []
+}
+```
+
+Security:
+
+```text
+Do not put private keys, wallet secrets, private alt mappings, or private permission state in public profile manifests.
+```
+
+---
+
+### Phase E — Reputation and moderator score model
+
+NEXT_LEVEL mentions:
+
+```text
+- Reputation score for every passport.
+- Moderator score for every passport.
+- Everyone with a passport is automatically a moderator in some base sense.
+- Sites can designate special moderators with greater site-scoped privileges.
+```
+
+Needs design before coding.
+
+Possible model:
+
+```text
+global_reputation_score
+global_moderator_score
+site_reputation_score
+site_moderator_score
+site_roles
+moderation_events
+appeal/undo events
+```
+
+Need to decide:
+
+```text
+- What events increase/decrease score?
+- What actions count as moderation?
+- How to prevent brigading/gaming?
+- How much is global vs site-scoped?
+- Can alts accumulate reputation separately?
+- Can a main delegate site moderation role to an alt?
+- What is public vs private?
+```
+
+Do not rush this into code.
+
+---
+
+### Phase F — Asset primitives beyond image
+
+Current proven:
+
+```text
+.image
+```
+
+Next asset kinds to add:
+
+```text
+.post
+.comment
+.article
+.music
+.video
+.page
+.profile
+```
+
+Recommended order:
+
+```text
+1. post
+2. comment
+3. article
+4. profile
+5. music/video later because streaming/range work is harder
+```
+
+Need shared DTO and route contracts before UI.
+
+---
+
+### Phase G — Reference-graph sites
+
+The current big proof:
+
+```text
+Site root HTML references independent image assets through <crab-image>.
+```
+
+Next reference primitives:
+
+```html
+<crab-image src="crab://<hash>.image">
+<crab-post src="crab://<hash>.post">
+<crab-comment src="crab://<hash>.comment">
+<crab-article src="crab://<hash>.article">
+```
+
+Need to decide:
+
+```text
+- Which custom elements are allowed?
+- How are references hydrated?
+- What fallback appears if unavailable?
+- How are payments enforced for paid asset views?
+- How are references indexed?
+- How are comments/moderation represented?
+```
+
+---
+
+## 11. CrabLink immediate next tasks
+
+If continuing CrabLink next, recommended batch order:
+
+### Batch 1 — Creator identity display source polish
+
+Goal:
+
+```text
+Use current local @skinnycrabby as a local display label for creator proof only when site owner/passport matches current local passport, but keep the status honest.
+```
+
+Possible UI text:
+
+```text
+@skinnycrabby
+source: local display label matched to current passport; backend site DTO has not confirmed public creator handle
+```
+
+This would avoid generic `@username` on the current user’s own test sites while preserving honesty.
+
+Files likely:
+
+```text
+extensions/chrome/src/page-site-creator-proof.js
+extensions/chrome/src/storage.js maybe not needed
+```
+
+Risk:
+
+```text
+Do not claim this is the site creator unless backend owner passport matches current passport or the DTO provides owner passport.
+```
+
+Need inspect current payload fields first.
+
+---
+
+### Batch 2 — Manifest modal polish
+
+Goal:
+
+```text
+Make Site Manifest modal more compact and easier to scan.
+```
+
+Possible changes:
+
+```text
+- Add Overview / Maps / Source / JSON tabs.
+- Keep copy buttons.
+- Keep read-only status.
+```
+
+File:
+
+```text
+extensions/chrome/src/page-site-creator-proof.js
+```
+
+---
+
+### Batch 3 — Settings page final polish
+
+Goal:
+
+```text
+Small refinements after user uses it more.
+```
+
+Potential work:
+
+```text
+- Make current identity sidebar use green username.
+- Add backend confirmation badge.
+- Add “Open CrabLink Browser” button.
+- Add “Reload Identity” result area.
+```
+
+Files:
+
+```text
+extensions/chrome/src/options.html
+extensions/chrome/src/options.js
+extensions/chrome/src/styles.css
+```
+
+---
+
+### Batch 4 — Update docs/manual checklist
+
+Goal:
+
+```text
+Document the new extension icon behavior, settings dashboard, passport drawer, creator proof modal, manifest modal.
+```
+
+Files likely:
+
+```text
+extensions/chrome/README.md
+extensions/chrome/docs/blueprint.md
+extensions/chrome/test/manual-checklist.md
+docs/CHROME_EXTENSION_BLUEPRINT.md
+docs/CRAB_URL_UX.md
+docs/BACKEND_ROUTE_CONTRACTS.md
+```
+
+---
+
+## 12. RustyOnions backend next tasks
+
+If moving back to RustyOnions crates, recommended next Rust batch:
+
+### Batch R1 — Site DTO creator fields
+
+Likely crates:
+
+```text
+ron-proto
+omnigate
+svc-gateway
+possibly ron-app-sdk
+```
+
+Goal:
+
+```text
+Site page DTO includes explicit creator identity block.
+```
+
+Suggested DTO shape:
+
+```json
+"creator": {
+  "handle": "@skinnycrabby",
+  "handle_status": "confirmed|requested|local_draft|backend_unknown",
+  "passport_subject": "passport:main:dev",
+  "wallet_account": "acct_dev",
+  "profile_crab_url": null,
+  "public_profile_cid": null,
+  "reputation_score": null,
+  "moderator_score": null,
+  "site_role": "creator"
+}
+```
+
+Acceptance:
+
+```text
+CrabLink site creator chip shows real backend-published handle/source when present.
+Creator proof modal shows backend field source instead of placeholder.
+```
+
+---
+
+### Batch R2 — Identity/passport @username reservation
+
+Likely crates:
+
+```text
+svc-passport or current passport bootstrap owner
+svc-gateway
+omnigate
+ron-proto
+ron-auth
+ron-policy
+```
+
+Goal:
+
+```text
+@username is no longer just local_draft.
+Backend can return requested/confirmed/unavailable.
+```
+
+Acceptance:
+
+```text
+CrabLink settings creates/requests @skinnycrabby.
+Backend says confirmed or unavailable.
+CrabLink displays confirmed only when backend says confirmed.
+```
+
+---
+
+### Batch R3 — Public profile route/manifest
+
+Likely crates:
+
+```text
+svc-passport
+svc-gateway
+omnigate
+ron-naming
+svc-index
+svc-storage
+ron-proto
+```
+
+Goal:
+
+```text
+@username resolves to read-only public profile/passport manifest.
+```
+
+Acceptance:
+
+```text
+Creator proof modal “Open Profile Route” becomes enabled.
+Clicking it opens a profile page in CrabLink.
+```
+
+---
+
+### Batch R4 — Reputation/moderation DTO skeleton
+
+Likely crates:
+
+```text
+ron-proto
+ron-accounting
+ron-policy
+svc-rewarder later
+svc-passport maybe
+svc-gateway/omnigate presentation
+```
+
+Goal:
+
+```text
+Expose truthful empty/null reputation/moderation summaries first.
+Do not implement full scoring until policy is defined.
+```
+
+Acceptance:
+
+```text
+CrabLink shows “not published yet” or “0 / no events” based on backend truth.
+```
+
+---
+
+## 13. Important commands
+
+### CrabLink check/package/codebundle
+
+```bash
+scripts/check-chrome.sh && scripts/package-chrome.sh && scripts/make_codebundle.sh
+```
+
+### Node syntax check for a specific file
+
+```bash
+node --check extensions/chrome/src/page-site-creator-proof.js
+```
+
+### Reload extension
+
+```text
+chrome://extensions
+CrabLink Extension for Chrome
+Reload
+```
+
+### If Chrome uses stale extension source
+
+```text
+chrome://extensions
+Remove CrabLink Extension for Chrome
+Load unpacked
+Select: /Users/mymac/Desktop/crablink/extensions/chrome
+```
+
+Do not load the `dist` zip/folder for dev testing unless intentionally testing packaged distribution.
+
+---
+
+## 14. Important manual tests
+
+### Test 1 — Extension icon opens browser
+
+```text
+Click CrabLink icon.
+Expected: full CrabLink browser tab opens.
+Expected: no small control popup remains as main UX.
+```
+
+### Test 2 — Passport drawer
+
+```text
+Click Passport.
+Expected:
+USERNAME
+@skinnycrabby
+local draft; not backend confirmed
+
+PASSPORT
+passport:main:dev
+
+GATEWAY
+http://127.0.0.1:8090
+
+WALLET
+acct_dev
+
+ROC
+1451 ROC
+
+LEDGER
+ledger-backed
+```
+
+### Test 3 — Settings page
+
+```text
+Click Settings gear.
+Expected:
+Full dashboard layout.
+No bottom content cut off.
+Save bar does not obscure Safety/Dev Token cards.
+```
+
+### Test 4 — Known site
+
+```text
+Open:
+crab://thedustyonion6
+
+Expected:
+Site renders.
+Root HTML renders.
+crab-image embedded image renders.
+```
+
+### Test 5 — Creator proof modal
+
+```text
+Open crab://thedustyonion6.
+Click site creator @username.
+Expected:
+Read-only creator proof modal opens.
+Expected:
+No fake profile route.
+No fake reputation score.
+No fake moderator score.
+No fake wallet authority.
+```
+
+### Test 6 — Site Manifest modal
+
+```text
+Open crab://thedustyonion6.
+Click Site Manifest.
+Expected:
+Centered Site Manifest modal opens.
+Expected:
+Old inline bottom details do not expand.
+Expected:
+Copy buttons available.
+```
+
+---
+
+## 15. Things to avoid next session
+
+Do not reintroduce:
+
+```text
+default_popup as the main UX
+old crab://b3/<hash> public URL format
+broad Chrome permissions like <all_urls>
+direct calls to internal RustyOnions services
+fake reputation scores
+fake moderator scores
+fake profile routes
+fake username confirmation
+private key or seed phrase storage in CrabLink
+silent ROC spending
+```
+
+Do not turn CrabLink into:
+
+```text
+wallet
+ledger
+storage service
+index service
+backend service
+custodial identity manager
+```
+
+CrabLink should remain:
+
+```text
+thin browser client
+gateway-only
+explicit paid action UI
+read-only proof surfaces unless user explicitly confirms paid/write action
+```
+
+---
+
+## 16. Current emotional/product checkpoint
+
+This session was a strong “product becoming real” checkpoint.
+
+Before:
+
+```text
+CrabLink had strong technical proof, but some UX still felt extension-popup-like or debug-like.
+```
+
+After:
+
+```text
+- Extension icon launches full browser.
+- Settings feels like a real dashboard.
+- Passport drawer exposes username.
+- Creator identity is clickable.
+- Creator proof is a polished modal.
+- Site Manifest is a polished modal.
+- Site pages feel much more like a real RON-native browser/product.
+```
+
+The work materially advances NEXT_LEVEL because it turns raw proof objects into understandable product primitives:
+
+```text
+site creator
+passport identity
+username display
+manifest proof
+reputation placeholder
+moderator placeholder
+profile route placeholder
+site ownership/payout/route/asset proof
+```
+
+All of this was done while preserving honesty and boundaries.
+
+---
+
+## 17. Recommended next immediate prompt
+
+A good next prompt for the next instance would be:
+
+```text
+We are continuing CrabLink/NEXT_LEVEL. Review the latest CODEBUNDLE_CHROME_EXTENSION.md and NEXT_LEVEL.MD. In the previous session we made the extension icon launch the full browser, redesigned settings, added @username display in the Passport drawer, added the creator proof modal, and made Site Manifest open as a modal. Next I want to continue with high-impact NEXT_LEVEL work. Start by inspecting page-site-creator-proof.js, page-site-render-mode.js, page.js, storage.js, ronClient.js, and the latest NEXT_LEVEL carryover notes. Recommend the next focused batch of paste-ready files without touching Rust crates unless needed.
+```
+
+Recommended next batch:
+
+```text
+CrabLink Batch: creator identity source polish
+```
+
+or, if switching to RustyOnions:
+
+```text
+RustyOnions Batch: add backend site creator DTO fields so CrabLink can display actual @skinnycrabby from backend truth.
+```
+
+
+### END NOTE - MAY 5 2026 - 12:25 CST
+
+
+### BEGIN NOTE - MAY 5 2026 - 15:00 CST
+
+## Completion estimate
+
+My current estimate:
+
+```text
+Core RustyOnions substrate / product-proof foundation:     90–92%
+Internal ROC closed-loop beta:                             85–90%
+WEB3_2 product-route foundation:                           82–88%
+CrabLink Chrome extension MVP:                             80–85%
+NEXT_LEVEL foundation slice already proven:                 88–92%
+Full NEXT_LEVEL blueprint overall:                          45–50%
+Overall RustyOnions + CrabLink internal WEB3 beta:          78–82%
+```
+
+The reason full `NEXT_LEVEL.MD` is still around **45–50%** is that the core proof is strong, but the full blueprint includes much more than the current proof: public profile manifests, real backend username reservation, reputation/moderator scoring, alt passport backend semantics, `.post`, `.comment`, `.article`, `.music`, `.video`, paid views, reference-graph expansion, site revisions, provider payouts, hosting placement, and policy hardening. `NEXT_LEVEL.MD` explicitly frames the target as moving from the proven paid image/site/crab-image pipeline into reusable creator primitives, identity primitives, reputation/moderation, alt passports, payout routing, hosting modes, and developer UX. 
+
+The **foundation slice** is now very far along because paid image upload, site creation/opening, named site rendering, site root HTML rendering, `<crab-image>` embeds, image-root guard, and the `crab://thedustyonion6` reference-graph proof are all part of the current proven checkpoint.  This session pushed the identity/profile UX forward without pretending backend profile, reputation, moderation, or username truth exists.
+
+---
+
+# CrabLink / RustyOnions NEXT_LEVEL Carryover Notes — End of May 5, 2026 Session
+
+## 0. Session outcome summary
+
+This was a **major CrabLink profile/passport/identity UX session**.
+
+We did **not** intentionally edit RustyOnions Rust crates in this session. The work stayed in the separate `crablink` Chrome extension repo, primarily under:
+
+```text
+/Users/mymac/Desktop/crablink
+extensions/chrome
+```
+
+The session began with the Passport drawer and `crab://profile` still feeling too much like a debug/control panel. By the end, `crab://profile` looks much more like a real public profile page:
+
+```text
+- Large profile header.
+- Large avatar frame.
+- The provided crab:// image now renders as the profile image.
+- Display name shows prominently.
+- @username shows below the display name.
+- Bio and tags show in an About section.
+- ROC / REP / MOD / Profile chips are visible.
+- Edit Profile button is in the top-right of the profile header.
+- Dev/debug identity cards remain below for now.
+```
+
+The last user-visible state looked good enough to stop and continue later. The user said:
+
+```text
+“This is much better we will fix it more later I think we probably keep the other stuff there for debug and dev purposes for now.”
+```
+
+That is the correct stopping point: profile UX is now directionally right, while still preserving debug panels for development.
+
+---
+
+## 1. Current north-star context
+
+The active blueprint remains:
+
+```text
+NEXT_LEVEL.MD
+```
+
+`NEXT_LEVEL.MD` builds on WEB3 / WEB3_2 and starts from the already proven paid image + site + `<crab-image>` checkpoint. It says RustyOnions should grow from:
+
+```text
+paid image upload
++ crab://site proof
++ <crab-image> reference embed proof
+```
+
+into:
+
+```text
+content-addressed creator web
++ reusable asset primitives
++ reference-graph sites
++ manifest-backed attribution
++ RON Passports with @usernames
++ reputation and moderation summaries
++ anonymous/pseudonymous alt passports
++ privacy-honest alt-wallet handling
++ ROC payout routing
++ decentralized/dedicated/self-hosted placement modes
++ SDK/CrabLink developer UX
+```
+
+Important invariants remain non-negotiable:
+
+```text
+- ROC remains internal.
+- b3 hashes are canonical.
+- crab:// URLs are product-facing pointers.
+- Sites store references.
+- Storage stores bytes only.
+- Wallet remains mutation front-door.
+- Ledger remains economic truth.
+- Passports are identities/capability records, not wallets.
+- Public profile/passport manifests may be b3-addressed.
+- No arbitrary executable linked code.
+- No fake profile truth.
+- No fake reputation truth.
+- No fake moderator truth.
+- No silent ROC spending.
+- No public main↔alt linkage by default.
+- No privacy claims without a real protocol.
+```
+
+These invariants are explicitly present in `NEXT_LEVEL.MD`, including the rule that passports are not merely assets, storage stores bytes only, wallet remains the mutation front-door, and public main↔alt linkage must not be exposed by default. 
+
+---
+
+## 2. Repositories and crates touched
+
+### Worked on
+
+```text
+/Users/mymac/Desktop/crablink
+```
+
+Primary target:
+
+```text
+extensions/chrome
+```
+
+### RustyOnions crates touched
+
+```text
+None intentionally in this session.
+```
+
+No direct edits were made to:
+
+```text
+svc-gateway
+omnigate
+ron-proto
+ron-naming
+svc-index
+svc-storage
+svc-wallet
+ron-ledger
+ron-accounting
+svc-rewarder
+svc-passport
+ron-auth
+ron-policy
+```
+
+This is correct. CrabLink remains the browser/client repo. RustyOnions remains the backend/substrate/value-plane repo. The carryover notes already reinforce that this session’s work was CrabLink-only and that RustyOnions crates were not intentionally touched. 
+
+---
+
+## 3. What we accomplished in this session
+
+### 3.1 Passport drawer decluttered
+
+Earlier in the session, the Passport drawer had too much “NEXT_LEVEL” explanatory content stuffed directly into the drawer. The user correctly called this clutter.
+
+We removed the large explanatory block and kept the drawer focused on identity/wallet basics:
+
+```text
+USERNAME
+PASSPORT
+GATEWAY
+WALLET
+LEDGER
+ROC / REP / MOD row
+Profile / My Sites / My Assets row
+Check Node / Check Passport / Refresh Balance row
+Create Alt / Load Alt row
+Status line
+```
+
+Important UX rule established:
+
+```text
+The Passport drawer should be a compact account/control surface, not a long explanatory webpage.
+```
+
+Remaining desired future shape:
+
+```text
+- Balance
+- Username
+- Passport
+- Wallet label
+- Ledger status
+- Alts
+- Profile
+- My Sites
+- My Assets
+- Create/Load Alt
+- Create/Edit Profile
+```
+
+The drawer should not become a dumping ground for all NEXT_LEVEL concepts.
+
+---
+
+### 3.2 ROC balance display fixed in Passport drawer
+
+The user pointed out two ROC display issues:
+
+```text
+1. The old ROC row was redundant because the new ROC/REP/MOD row exists.
+2. The ROC stat displayed “1426 ROC” even though the label already says ROC.
+```
+
+We fixed that:
+
+```text
+- Removed the old standalone ROC row from visible drawer grid.
+- Kept the new ROC / REP / MOD stat row.
+- Removed duplicate “ROC” unit from the ROC stat body.
+```
+
+Current desired drawer stat row:
+
+```text
+ROC: 1426
+REP: —%
+MOD: —%
+```
+
+This keeps the top-right balance chip and drawer balance compact and avoids visual repetition.
+
+---
+
+### 3.3 My Sites / My Assets moved into Passport drawer
+
+The user wanted `My Sites` and `My Assets` to be user-specific controls, not global quick-nav controls on the site/profile page.
+
+We moved the user catalogue controls into the Passport drawer:
+
+```text
+Profile | My Sites | My Assets
+```
+
+Important product rule:
+
+```text
+My Sites / My Assets belong to the user/passport context, so they live in the Passport drawer, not on every page.
+```
+
+Current state:
+
+```text
+- Profile button opens crab://profile.
+- My Sites opens local catalogue/history-style site view.
+- My Assets opens local catalogue/history-style asset view.
+- They are still local/browser-history scaffolds, not backend-owned public catalogues.
+```
+
+Future backend target:
+
+```text
+My Sites / My Assets should eventually hydrate from public profile/passport manifest pointers or svc-index/profile catalogue routes.
+```
+
+---
+
+### 3.4 Alt Vault UX added and fixed
+
+We added a local-only Alt Vault scaffold for future anonymous/pseudonymous alt passports.
+
+Key behavior now:
+
+```text
+- Passport drawer shows Create Alt if no local alt draft exists.
+- Passport drawer shows Load Alt if a local alt draft exists.
+- Clicking Create Alt opens the Alt Vault.
+- It does not automatically create a draft anymore.
+- User must explicitly click Create Alt Draft inside the vault.
+- Alt drafts are stored locally under crablinkAltDraftsV1.
+- Alt drafts are not backend identities.
+- Alt drafts are not public .alt b3 roots.
+- Alt drafts do not inherit wallet authority.
+```
+
+Important privacy posture established:
+
+```text
+Alts are for privacy/pseudonymity, but CrabLink must not claim real anonymity or private withdrawal guarantees without a backend/protocol design.
+```
+
+Alt public route design note:
+
+```text
+Future .alt route:
+crab://<b3-of-alt-public-root>.alt
+```
+
+Important rule:
+
+```text
+The b3 hash for an alt public ID must be a hash of an independently generated public alt root, not a hash that exposes or derives from the main passport.
+```
+
+The user clarified:
+
+```text
+<passport-public-id>.passport and <alt-public-id>.alt should be b3 hashes of something,
+and the alt hash must be privacy-aware.
+```
+
+Current state:
+
+```text
+- Local alt draft UX exists.
+- Backend alt identity route does not exist yet.
+- Public .alt manifest does not exist yet.
+- No real privacy protocol exists yet.
+```
+
+Do not overclaim this feature next session.
+
+---
+
+### 3.5 `crab://profile` scaffold added
+
+We added a `crab://profile` route in CrabLink.
+
+Initial behavior:
+
+```text
+- It used the local @username.
+- It showed the passport subject.
+- It showed wallet label.
+- It showed ROC balance.
+- It clearly stated backend profile publishing is not wired.
+```
+
+The first version was too debug-like. The user wanted a true profile page, and that was the correct UX critique.
+
+Current behavior after the last batch:
+
+```text
+crab://profile
+→ renders a profile-style page instead of generic cards
+→ shows large avatar image
+→ shows display name
+→ shows @username
+→ shows bio
+→ shows tags
+→ shows ROC/REP/MOD/Profile stat chips
+→ has Edit Profile at top-right
+→ keeps identity/debug cards below for dev
+```
+
+Important honesty boundary:
+
+```text
+- The profile is still local draft only.
+- Backend profile publishing is not wired.
+- Public profile CID is not published.
+- Profile route is not published.
+- REP/MOD are placeholders.
+- @username remains local draft / not backend confirmed.
+```
+
+---
+
+### 3.6 Local Profile Editor added
+
+We added a local-only profile editor.
+
+Current fields:
+
+```text
+Display name
+Bio
+Avatar Image crab:// URL
+Tags
+```
+
+Current storage key:
+
+```text
+crablinkProfileDraftV1
+```
+
+Current behavior:
+
+```text
+- Save Local Draft writes to Chrome local storage.
+- Copy Public Template copies a future-safe public profile template.
+- Clear Draft clears the local profile draft.
+- Close closes the editor.
+```
+
+Important validation:
+
+```text
+Avatar must be empty or:
+crab://<64 lowercase hex>.image
+```
+
+Known working avatar image URL used:
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+Another known-good paid image URL from memory/project context:
+
+```text
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+Important security boundary:
+
+```text
+The profile editor does not publish to backend.
+It does not create a public profile CID.
+It does not store wallet authority.
+It does not store private keys or recovery material.
+It does not claim username ownership.
+```
+
+---
+
+### 3.7 Profile avatar preview fixed by moving rendering into profile page
+
+Initial avatar preview did not show reliably. There were two issues:
+
+```text
+1. check-chrome.sh had a malformed JavaScript string in its Node heredoc.
+2. The standalone page-profile-avatar.js approach was fragile because profile rendering and avatar mounting could race.
+```
+
+We corrected the checker and then improved the architecture:
+
+```text
+- Avatar rendering moved directly into page-profile-home.js.
+- page-profile-avatar.js became a compatibility shim that removes old duplicate mounts.
+- The profile page itself now owns the avatar frame.
+- It fetches image bytes from the configured gateway route:
+  /o/b3:<hash>
+- It includes local auth/passport/wallet headers if available.
+```
+
+Current result:
+
+```text
+The provided crab:// image appears in the large avatar frame at the top-left of crab://profile.
+```
+
+This was visible in the final screenshot and is a big product improvement.
+
+---
+
+### 3.8 `crab://profile` was redesigned into a real profile page
+
+The final version now looks much closer to the intended product shape.
+
+Current `crab://profile` layout:
+
+```text
+Profile cover card
+  - Large avatar on left
+  - Local profile draft badge
+  - Display name
+  - @username
+  - backend/local status copy
+  - Edit Profile button top-right
+  - Copy Profile URL button top-right
+
+About section
+  - bio text
+  - tags as chips
+  - local/pending status pill
+
+Stats row
+  - ROC
+  - REP
+  - MOD
+  - Profile
+
+Dev/detail cards below
+  - Identity
+  - SSO direction
+  - Profile actions
+```
+
+The user agreed this is much better and explicitly said we can keep the other debug/dev cards for now.
+
+Next UX polish later:
+
+```text
+- Make the ROC chip less verbose.
+- Possibly move Identity / SSO direction / Profile actions behind a dev/debug toggle.
+- Improve mobile layout.
+- Add a real public asset/site table once backend profile catalogue exists.
+- Make the profile look less “admin dashboard” and more “social/profile page.”
+```
+
+---
+
+### 3.9 `check-chrome.sh` repeatedly evolved
+
+During the session, `check-chrome.sh` caught several issues and also had several false positives / over-strict checks.
+
+Issues encountered:
+
+```text
+- page-local-catalog.js must not include token: quick-nav .catalog-quick-button
+- page-alt-vault.js missing token: crablinkAltDraftsV1
+- malformed JS string in Node heredoc
+- page-alt-vault.js must not include token: passport-catalog-action-row.has-alt-vault
+```
+
+Important lesson:
+
+```text
+check-chrome.sh is valuable but should not ban cleanup selectors that are intentionally used to remove legacy DOM.
+```
+
+Current checker should enforce:
+
+```text
+- Required extension files exist.
+- No broad Chrome permissions.
+- No old crab://b3/ public URL format.
+- No fake wallet/private key terms.
+- No fake profile publish calls.
+- page-profile-home owns the profile avatar now.
+- page-profile-avatar is a compatibility shim only.
+- page-alt-vault can use legacy selectors for cleanup if needed.
+```
+
+Recommended next-session caution:
+
+```text
+If check-chrome.sh fails on a token, inspect whether it is a real product/security invariant or a false positive caused by architectural evolution.
+```
+
+---
+
+## 4. Current known-good commands
+
+Primary CrabLink local check/package/codebundle command:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+node --check extensions/chrome/src/page-profile-home.js
+node --check extensions/chrome/src/page-profile-avatar.js
+scripts/check-chrome.sh && scripts/package-chrome.sh && scripts/make_codebundle.sh
+```
+
+General command used often:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/check-chrome.sh && scripts/package-chrome.sh && scripts/make_codebundle.sh
+```
+
+Expected good result:
+
+```text
+json/structure checks: ok
+javascript syntax checks: ok
+bash syntax checks: ok
+CrabLink Chrome extension checks passed.
+wrote: dist/crablink-extension-chrome.zip
+CODEBUNDLE_CHROME_EXTENSION.md regenerated
+```
+
+After package/check:
+
+```text
+Reload unpacked extension in Chrome.
+Open CrabLink.
+Go to crab://profile.
+Confirm profile image and profile layout render.
+```
+
+---
+
+## 5. Current known-good local runtime state
+
+Current CrabLink UI state from screenshot:
+
+```text
+URL: crab://profile
+Gateway: http://127.0.0.1:8090
+Passport: passport:main:dev
+Wallet: acct_dev
+ROC: 1426
+Username: @skinnycrabby
+Username status: local draft; not backend confirmed
+Ledger: ledger-backed
+```
+
+Current local profile draft visible in final screenshot:
+
+```text
+Display name: Skinnycrabby
+Handle: @skinnycrabby
+Bio: ldskfjahsdllkjfahsldkjf
+Avatar:
+  crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+Tags:
+  blah
+Profile status:
+  draft saved
+```
+
+The avatar image successfully displayed from gateway raw object bytes.
+
+---
+
+## 6. Important architectural decisions made this session
+
+### 6.1 Profile is a page, not a drawer
+
+We clarified by UX work that:
+
+```text
+Passport drawer = compact account/control surface
+crab://profile = profile page
+Profile editor = modal/editor
+Alt Vault = separate modal
+Assets/Sites = catalogue surfaces
+```
+
+This is important because stuffing all profile/alt/asset content into the Passport drawer created clutter.
+
+### 6.2 Profile is local-only until backend profile manifests exist
+
+Current `crab://profile` is allowed to show:
+
+```text
+- local display name
+- local bio
+- local avatar URL
+- local tags
+- local wallet label
+- local passport label
+- local ROC balance display from gateway-backed wallet state
+```
+
+It must not claim:
+
+```text
+- public profile CID exists
+- backend profile route exists
+- username is backend confirmed
+- reputation score exists
+- moderator score exists
+- profile is globally discoverable
+```
+
+### 6.3 Avatar preview reads bytes, does not publish
+
+The profile avatar is loaded by:
+
+```text
+crab://<hash>.image
+→ parse hash
+→ fetch http://127.0.0.1:8090/o/b3:<hash>
+→ object URL
+→ img src = object URL
+```
+
+This is correct for local preview.
+
+It does not:
+
+```text
+- publish the profile
+- create or mutate a manifest
+- edit the image asset
+- claim ownership of the image
+- change wallet/ledger/storage/index state
+```
+
+### 6.4 Alt privacy remains honest
+
+We established the correct privacy doctrine:
+
+```text
+Alts are meant for privacy.
+Alts should not publicly reveal main passport linkage.
+Alt public IDs should be b3 hashes of independently generated public alt roots.
+Do not hash obvious main-passport material into alt public IDs.
+Do not promise private alt→main withdrawal without a real protocol.
+```
+
+---
+
+## 7. Files changed or introduced in this session
+
+The exact set changed across the session may vary depending on what was pasted last, but the important active files are:
+
+```text
+extensions/chrome/src/page.html
+extensions/chrome/src/page.js
+extensions/chrome/src/page.css
+extensions/chrome/src/page-local-catalog.js
+extensions/chrome/src/page-alt-vault.js
+extensions/chrome/src/page-profile-home.js
+extensions/chrome/src/page-profile-editor.js
+extensions/chrome/src/page-profile-avatar.js
+extensions/chrome/src/page-site-creator-proof.js
+extensions/chrome/src/page-site-render-mode.js
+extensions/chrome/src/storage.js
+extensions/chrome/src/ronClient.js
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+New or important modules added during this identity/profile push:
+
+```text
+page-alt-vault.js
+page-profile-home.js
+page-profile-editor.js
+page-profile-avatar.js
+```
+
+Current intent of each:
+
+```text
+page-profile-home.js
+  Owns crab://profile, .passport reserved route, .alt reserved route, local profile rendering, and now avatar image hydration.
+
+page-profile-editor.js
+  Owns local-only profile draft modal/editor and crablinkProfileDraftV1.
+
+page-profile-avatar.js
+  Compatibility shim only. Removes old duplicate avatar preview mounts. It should not fetch or render now.
+
+page-alt-vault.js
+  Owns local-only alt draft vault, crablinkAltDraftsV1, Create Alt / Load Alt button.
+
+page-local-catalog.js
+  Owns Profile / My Sites / My Assets buttons and ROC/REP/MOD row in Passport drawer.
+
+page-site-creator-proof.js
+  Owns site creator proof modal and site manifest proof modal for rendered site pages.
+
+page-site-render-mode.js
+  Owns named site rendering and crab-image embed hydration.
+```
+
+---
+
+## 8. Current product status by area
+
+### 8.1 Paid image asset path
+
+Status:
+
+```text
+Working / green
+```
+
+Known good:
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+Needs later:
+
+```text
+- Better receipt history UI.
+- Better asset page polish.
+- Better ownership/profile linkage.
+- Asset catalogue on profile page once backend exists.
+```
+
+### 8.2 Site creation/open path
+
+Status:
+
+```text
+Working / green enough for proof
+```
+
+Known site:
+
+```text
+crab://thedustyonion6
+```
+
+Needs later:
+
+```text
+- Site edit/revision flow.
+- Better root HTML editor.
+- Better site manifest page.
+- Site assets route/map display polish.
+- Creator profile backend hydration.
+```
+
+### 8.3 `<crab-image>` embed
+
+Status:
+
+```text
+Working / proven
+```
+
+Architecture:
+
+```text
+Site root HTML contains:
+<crab-image src="crab://<hash>.image"></crab-image>
+
+CrabLink fetches:
+GET /o/b3:<hash>
+
+Then renders image in the site page.
+```
+
+Needs later:
+
+```text
+- More embed types:
+  crab-post
+  crab-comment
+  crab-article
+  crab-video
+  crab-audio
+- Better loading/error UI.
+- Maybe manifest-aware embed cards.
+```
+
+### 8.4 Passport drawer
+
+Status:
+
+```text
+Good MVP / dev-polish level
+```
+
+Current includes:
+
+```text
+- Username
+- Passport
+- Gateway
+- Wallet
+- Ledger
+- ROC/REP/MOD
+- Profile / My Sites / My Assets
+- Check Node / Check Passport / Refresh Balance
+- Create Alt / Load Alt
+```
+
+Needs later:
+
+```text
+- Possibly reduce status text.
+- Add account switcher eventually.
+- Add proper alt selection once backend alts exist.
+- Add profile button behavior polish.
+```
+
+### 8.5 `crab://profile`
+
+Status:
+
+```text
+Good local UX scaffold / much better than before
+```
+
+Current includes:
+
+```text
+- Real profile-style header.
+- Avatar loads.
+- Display name.
+- @username.
+- Bio.
+- Tags.
+- Edit Profile button.
+- ROC/REP/MOD/Profile chips.
+- Debug cards below.
+```
+
+Needs later:
+
+```text
+- Real backend profile publish route.
+- Real public profile CID.
+- Real @username confirmation.
+- Real public asset catalogue.
+- Real public sites list.
+- Real reputation and moderator scores.
+- Better non-dev profile layout.
+```
+
+### 8.6 Alt Vault
+
+Status:
+
+```text
+Local-only scaffold / good UX starting point
+```
+
+Current includes:
+
+```text
+- Create Alt / Load Alt button.
+- Local alt draft table.
+- Copy draft.
+- Copy public-safe template.
+- Delete draft.
+```
+
+Needs later:
+
+```text
+- Backend alt root manifest design.
+- Real .alt route hydration.
+- Separate alt wallet/account semantics.
+- Explicit main/alt switching.
+- Privacy warning surfaces.
+- No public main linkage.
+```
+
+### 8.7 Reputation / moderator scores
+
+Status:
+
+```text
+Placeholder only
+```
+
+Current UI:
+
+```text
+REP: —%
+MOD: —%
+```
+
+Do not fake values.
+
+Needs design before backend code:
+
+```text
+- What events affect reputation?
+- What events affect moderator score?
+- Global vs site-scoped.
+- Anti-gaming.
+- Alt behavior.
+- Public vs private signals.
+- Appeal/reversal/decay model.
+```
+
+The earlier carryover material already warns that reputation and moderator score need design before coding. 
+
+---
+
+## 9. Things to avoid next session
+
+Do not reintroduce:
+
+```text
+- The giant NEXT_LEVEL explanatory card inside Passport drawer.
+- Old crab://b3/<hash> public URL format.
+- Fake username confirmation.
+- Fake public profile CID.
+- Fake reputation score.
+- Fake moderator score.
+- Fake profile route.
+- Silent ROC spending.
+- Direct wallet/ledger mutation from CrabLink.
+- Direct calls to non-gateway backend services.
+- Private key / seed phrase / spend authority storage in Chrome.
+- Public main↔alt linkage.
+- Claims of real alt anonymity without a protocol.
+```
+
+Do not turn CrabLink into:
+
+```text
+wallet
+ledger
+storage service
+index service
+passport backend
+custodial identity manager
+```
+
+CrabLink should remain:
+
+```text
+thin browser client
+gateway-only
+explicit paid action UI
+read-only proof surface unless user confirms a write/paid action
+```
+
+This matches the existing project rule that CrabLink is a browser/client layer while backend services own truth. `NEXT_LEVEL.MD` reinforces gateway-only CrabLink behavior, wallet front-door discipline, and no fake identity/privacy claims. 
+
+---
+
+## 10. Recommended next session order
+
+### Step 1 — Re-run green checks
+
+Start next session with:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/check-chrome.sh && scripts/package-chrome.sh && scripts/make_codebundle.sh
+```
+
+Then reload Chrome unpacked extension and manually verify:
+
+```text
+crab://profile
+crab://site
+crab://image
+crab://thedustyonion6
+Passport drawer
+Create/Load Alt
+Edit Profile modal
+```
+
+### Step 2 — Polish profile page lightly, but do not overdo it
+
+The profile page is good enough now. Next profile polish should be careful and focused:
+
+```text
+- Make ROC stat chip less verbose:
+  currently may show “1426 ROC (ledger-backed, svc_wallet.v1)”
+  better: 1426
+  subtext: ledger-backed
+
+- Consider shrinking or hiding debug cards behind Developer Details.
+- Improve profile header spacing at different widths.
+- Add a small “local draft” warning but do not over-warn.
+- Make Edit Profile remain obvious.
+```
+
+### Step 3 — Decide whether to continue CrabLink UX or move backend for profile truth
+
+There are two good next paths.
+
+#### Path A — Continue CrabLink UX
+
+Recommended if user wants fast visible progress:
+
+```text
+- Polish profile page.
+- Add local My Sites / My Assets modal/table from recent local history.
+- Improve site creator profile proof.
+- Improve Site Manifest modal tabs.
+- Improve asset page rendering.
+```
+
+#### Path B — Start backend identity/profile truth
+
+Recommended if user wants to turn local profile into real network truth:
+
+```text
+- Begin svc-passport / ron-proto / ron-naming work for username reservation.
+- Add backend-confirmed @username DTO.
+- Add profile manifest DTO.
+- Add gateway/omnigate read-only profile route.
+- Keep profile publishing gated.
+```
+
+Path B requires RustyOnions code and must follow code-generation discipline:
+
+```text
+- Review CODECHECK.md before code.
+- Use CODEBUNDLE_RS.md for current Rust code.
+- Provide full paste-ready files.
+- Do not add product logic to kernel/core plumbing.
+```
+
+---
+
+## 11. Best next high-impact batches
+
+### Batch 1 — Profile page final polish
+
+Likely files:
+
+```text
+extensions/chrome/src/page-profile-home.js
+extensions/chrome/src/page-profile-editor.js
+scripts/check-chrome.sh
+```
+
+Goals:
+
+```text
+- Clean ROC chip.
+- Better avatar fallback/error state.
+- Better profile card spacing.
+- Move dev details lower or behind Developer Details.
+- Keep profile page looking like a profile, not admin panel.
+```
+
+### Batch 2 — My Sites / My Assets drawer modals
+
+Likely files:
+
+```text
+extensions/chrome/src/page-local-catalog.js
+extensions/chrome/src/page-profile-home.js
+scripts/check-chrome.sh
+```
+
+Goals:
+
+```text
+- My Sites opens a modal/table of local known sites.
+- My Assets opens a modal/table of local known assets.
+- Include kind, crab URL, title/name, created/seen time, status.
+- Keep local-only label.
+- Do not claim backend public catalogue.
+```
+
+### Batch 3 — Backend username reservation design note
+
+Before code, write a note for NEXT_LEVEL or TODO:
+
+```text
+@username is human pointer.
+passport_subject is canonical identity.
+svc-passport owns uniqueness and persistence.
+ron-naming owns parser/normalizer.
+gateway/omnigate expose safe read/claim routes.
+CrabLink displays confirmed only when backend confirms.
+```
+
+Potential future route shape:
+
+```text
+POST /identity/username/prepare
+POST /identity/username/claim
+GET  /identity/username/:handle
+GET  /profile/:handle
+```
+
+But do not invent routes without checking existing RustyOnions code.
+
+### Batch 4 — Public profile manifest DTO
+
+Likely RustyOnions crates later:
+
+```text
+ron-proto
+ron-naming
+svc-passport
+omnigate
+svc-gateway
+svc-index
+```
+
+Possible manifest:
+
+```json
+{
+  "schema": "ron.profile.v1",
+  "handle": "@skinnycrabby",
+  "passport_subject": "passport:main:dev",
+  "display_name": "Skinnycrabby",
+  "bio": "...",
+  "avatar_image": "crab://<hash>.image",
+  "public_sites": [],
+  "public_asset_catalogue": [],
+  "reputation_summary": null,
+  "moderation_summary": null
+}
+```
+
+Security rule:
+
+```text
+No private keys, wallet secrets, private alt mappings, private receipts, or spend authority.
+```
+
+### Batch 5 — Text asset primitives
+
+Do this only after profile/site/image UX is stable.
+
+Order:
+
+```text
+.post
+.comment
+.article
+```
+
+Likely RustyOnions starting crates:
+
+```text
+ron-proto
+ron-naming
+omnigate
+svc-gateway
+CrabLink
+```
+
+`NEXT_LEVEL.MD` explicitly says the product model should generalize the already proven prepare → hold → paid upload/create → b3 CID → manifest CID → index pointer → crab URL → hydrated page pattern, rather than inventing a parallel system. 
+
+---
+
+## 12. Current proof URLs and values
+
+Known image proof:
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+Known paid image proof:
+
+```text
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+Known named site proof:
+
+```text
+crab://thedustyonion6
+```
+
+Local profile:
+
+```text
+crab://profile
+```
+
+Local username:
+
+```text
+@skinnycrabby
+```
+
+Local passport:
+
+```text
+passport:main:dev
+```
+
+Local wallet:
+
+```text
+acct_dev
+```
+
+Gateway:
+
+```text
+http://127.0.0.1:8090
+```
+
+---
+
+## 13. One-sentence next-session prompt
+
+Use this to start the next instance:
+
+```text
+We are continuing RustyOnions / CrabLink NEXT_LEVEL. In the previous session we kept work CrabLink-only, decluttered the Passport drawer, added Profile/My Sites/My Assets controls, added local Create/Load Alt with Alt Vault, added a local profile editor, and redesigned crab://profile into a real profile page with avatar image loaded from crab://<hash>.image through gateway /o/b3:<hash>. The profile is still local draft only; backend profile publishing, username confirmation, reputation, moderation, and public profile CID are not wired. Please review NEXT_LEVEL.MD, CODEBUNDLE_CHROME_EXTENSION.md, and the carryover notes, then continue with the next focused high-impact batch of full paste-ready files.
+```
+
+---
+
+## 14. Final status statement
+
+This session was a strong product UX win.
+
+Before this identity/profile work:
+
+```text
+CrabLink already proved paid image + site + crab-image embed technically,
+but the identity/profile layer still felt like debug scaffolding.
+```
+
+After this session:
+
+```text
+CrabLink feels more like a real RON browser/client:
+- Passport drawer is cleaner.
+- @username is visible.
+- Alts have a local vault.
+- Profiles have an editor.
+- crab://profile looks like an actual profile page.
+- Profile avatar image renders from b3-backed crab image assets.
+- The UX still tells the truth about what is local, pending, or backend-confirmed.
+```
+
+This is exactly the right direction for NEXT_LEVEL: make the proven b3/crab/ROC substrate understandable and usable without violating the boundary between client UX and backend truth.
+
+
+### END NOTE - MAY 5 2026 - 15:00 CST
+
+
+### BEGIN NOTE - MAY 5 2026 - 18:35 CST
+
+## Carryover Notes — CrabLink / RustyOnions NEXT_LEVEL Session
+
+### Session endpoint
+
+We reached a strong product-surface milestone for CrabLink. The extension now has polished local scaffolds for several new `crab://` built-in creator destinations:
+
+```text
+crab://article
+crab://video
+crab://stream
+crab://podcast
+```
+
+These are intentionally **local UX / prepare scaffolds**, not real backend-published assets yet. They do not create b3 CIDs, upload bytes, charge ROC, mutate wallets, mint stream keys, or claim backend truth. They generate future manifest drafts and make non-mutating gateway prepare attempts to placeholder backend routes that currently return 404 unless wired later.
+
+The user is happy with the forms and product direction, especially the video form, stream scaffold, and podcast scaffold. The current blocking issue is a navigation/state cleanup bug between the new local pages.
+
+---
+
+## Major accomplishments in this session
+
+### 1. Codebundle hygiene was fixed
+
+We replaced `scripts/make_codebundle.sh` to stop dumping `.DS_Store`, OS metadata, and binary garbage into `CODEBUNDLE_CHROME_EXTENSION.md`.
+
+Important outcome:
+
+```text
+scripts/check-chrome.sh && scripts/package-chrome.sh && scripts/make_codebundle.sh
+```
+
+now completes and produces a clean codebundle with expected binary assets omitted.
+
+Earlier bug fixed:
+
+```text
+TEXT_FILES[@]: unbound variable
+```
+
+The final fix avoided fragile Bash arrays and streamed file lists instead.
+
+This is important because future sessions can rely on `CODEBUNDLE_CHROME_EXTENSION.md` again without binary noise corrupting review context.
+
+---
+
+### 2. Profile and Passport drawer polish
+
+We fixed the profile/Passport UI issues shown in screenshots:
+
+```text
+- Profile ROC chip now tries to use the same ROC display source as the top bar / Passport drawer.
+- Passport drawer background was made more solid so page text does not bleed through.
+- Profile page remains honest: local draft/profile display only unless backend confirms profile publication.
+```
+
+Relevant file updated earlier:
+
+```text
+extensions/chrome/src/page-profile-polish.js
+```
+
+Current state:
+
+```text
+crab://profile
+```
+
+is visually much stronger. It includes profile polish, avatar handling, local creator library preview, and developer details collapsed behind a dev section.
+
+---
+
+### 3. Site creator / manifest proof polish
+
+We added a stronger site creator proof layer for rendered sites:
+
+```text
+extensions/chrome/src/page-site-creator-proof.js
+```
+
+Features added:
+
+```text
+- Better creator handle chip.
+- REP / MOD / source chips beside creator identity.
+- Creator proof modal.
+- Tabbed Site Manifest modal with Summary / Ownership / Routes / Assets / Receipts / Raw tabs.
+- Honest truth boundary: no fake profile route, no fake reputation, no backend mutation.
+```
+
+This supports the NEXT_LEVEL direction that site pages should show creator identity, manifest/provenance, payout ownership, and receipts in a clean UX without cluttering the page itself.
+
+---
+
+### 4. `crab://article` local draft scaffold
+
+We created:
+
+```text
+extensions/chrome/src/page-article-draft.js
+```
+
+And wired it into:
+
+```text
+extensions/chrome/src/page.html
+```
+
+Article surface features:
+
+```text
+- Article title, subtitle, summary, body, tags, language, license, author handle.
+- Live article preview.
+- Word/character/body-byte stats.
+- Future article manifest JSON.
+- Copy manifest JSON.
+- Copy plain text.
+- Save local draft.
+- Clear local draft.
+- Non-mutating prepare attempt to /assets/article/prepare.
+```
+
+Observed result:
+
+```text
+Article prepare failed with HTTP 404. Backend article routes may not be wired yet.
+```
+
+This is expected and correct. Backend article publishing is not wired yet.
+
+Important bug fixed during article work:
+
+```text
+Article prepare failed: Cannot access 'correlationId' before initialization
+```
+
+Cause:
+
+```javascript
+const correlationId = correlationId();
+```
+
+Fixed by renaming the helper to:
+
+```javascript
+createCorrelationId()
+```
+
+and using:
+
+```javascript
+const requestCorrelationId = createCorrelationId();
+```
+
+Article scaffold should be considered a successful UX foundation, not a complete publishing feature.
+
+---
+
+### 5. `crab://video` local video draft scaffold
+
+We created:
+
+```text
+extensions/chrome/src/page-video-draft.js
+```
+
+And wired it into:
+
+```text
+extensions/chrome/src/page.html
+extensions/chrome/src/background.js
+extensions/chrome/src/crab.js
+```
+
+Video surface features:
+
+```text
+- Local video file picker.
+- Safe local video preview.
+- Video title, description, tags, language, license, creator handle.
+- Thumbnail crab URL field.
+- Suggested price minor units.
+- Future video manifest JSON.
+- Copy manifest JSON.
+- Copy metadata JSON.
+- Save local draft.
+- Clear draft.
+- Non-mutating prepare attempt to /assets/video/prepare.
+```
+
+Truth boundary:
+
+```text
+No video upload.
+No b3 CID.
+No manifest CID.
+No ROC charge.
+No wallet mutation.
+No streaming/range backend yet.
+```
+
+We also fixed a collision where `crab://article` remained visible above `crab://video`.
+
+Root fix applied in `page-video-draft.js`:
+
+```text
+- Explicitly removes #articleDraftSection on video route.
+- Clears article route body class.
+- Rewrites stale developer JSON when needed.
+```
+
+---
+
+### 6. `crab://stream` local streamer studio scaffold
+
+We created:
+
+```text
+extensions/chrome/src/page-stream-draft.js
+```
+
+And wired it into:
+
+```text
+extensions/chrome/src/page.html
+extensions/chrome/src/background.js
+extensions/chrome/src/crab.js
+```
+
+Stream surface features:
+
+```text
+- Local camera/mic preview.
+- Local screen-share preview.
+- Stream title, category/game, description, tags, language.
+- Visibility mode.
+- Chat mode.
+- Moderation mode.
+- Stream mode.
+- Creator handle.
+- Thumbnail crab URL.
+- Suggested access price minor units.
+- Tips enabled later checkbox.
+- Future stream manifest JSON.
+- Copy manifest JSON.
+- Copy metadata JSON.
+- Save local draft.
+- Clear draft.
+- Non-mutating prepare attempt to /streams/prepare.
+```
+
+Truth boundary:
+
+```text
+No live stream starts.
+No ingest key.
+No stream session.
+No chat room.
+No tips route.
+No ROC charge.
+No b3 stream manifest.
+No wallet mutation.
+```
+
+This is a strong product-direction milestone for streamers.
+
+---
+
+### 7. `crab://podcast` local podcast studio scaffold
+
+We created:
+
+```text
+extensions/chrome/src/page-podcast-draft.js
+```
+
+And wired it into:
+
+```text
+extensions/chrome/src/page.html
+extensions/chrome/src/background.js
+extensions/chrome/src/crab.js
+```
+
+Podcast surface features:
+
+```text
+- Local audio file picker.
+- Local audio preview.
+- Local live mic preview.
+- Show title.
+- Episode title.
+- Season number.
+- Episode number.
+- Podcast kind.
+- Audio mode: upload / live / hybrid later.
+- Description / show notes.
+- Category.
+- Tags.
+- Language.
+- Visibility.
+- Creator handle.
+- Cover image crab URL.
+- Suggested access price minor units.
+- Tips enabled later checkbox.
+- Future podcast manifest JSON.
+- Copy manifest JSON.
+- Copy metadata JSON.
+- Save local draft.
+- Clear draft.
+- Non-mutating prepare attempt to /podcasts/prepare.
+```
+
+Truth boundary:
+
+```text
+No podcast publication.
+No audio upload.
+No live audio session.
+No b3 CID.
+No manifest CID.
+No ROC charge.
+No wallet mutation.
+No RSS/feed creation yet.
+```
+
+This sets up a future pathway for audio creators, podcasters, live audio, show pages, episode pages, transcripts, tips, comments, and RSS/export compatibility.
+
+---
+
+## Current known bug: navigation gets stuck between new local `crab://` pages
+
+### User-reported issue
+
+When navigating between:
+
+```text
+crab://video
+crab://stream
+crab://podcast
+```
+
+the URL changes, but the page content can remain stuck on the previous scaffold.
+
+Example:
+
+```text
+Open crab://video.
+Then click/open crab://stream.
+URL changes to crab://stream, but video UI may remain.
+```
+
+or:
+
+```text
+Open crab://stream.
+Then click/open crab://podcast.
+URL changes to crab://podcast, but stream UI may remain.
+```
+
+The user explicitly wants this fixed next.
+
+---
+
+## Deep diagnosis of the navigation bug
+
+This is likely **not** a backend issue. It is a client-side route-mode cleanup bug caused by multiple independent local scaffold modules trying to own the page.
+
+Current local scaffold modules include:
+
+```text
+page-article-draft.js
+page-video-draft.js
+page-stream-draft.js
+page-podcast-draft.js
+page-profile-home.js / page-profile-polish.js
+page-site-render-mode.js
+```
+
+Each module runs independently, watches DOM mutations, reads the address bar and/or `developerJson`, and decides whether its page is active.
+
+The problematic pattern is:
+
+```text
+isVideoPage()
+isStreamPage()
+isPodcastPage()
+```
+
+These functions often check:
+
+```text
+1. current addressInput URL
+2. developerJson payload
+3. payload title / slug / schema / crab URL
+```
+
+The bug likely happens because `developerJson` can remain stale from the previous route for a short time or permanently if the new route is locally handled. So even after the address bar changes to `crab://podcast`, the stale payload may still say `crablink.stream.local_page.v1` or `crablink.video.local_page.v1`.
+
+Then the old module says:
+
+```text
+"I still see my schema in developerJson, so I am still active."
+```
+
+Meanwhile the new module may also say:
+
+```text
+"The address is crab://podcast, so I am active too."
+```
+
+This creates route collisions where one scaffold does not remove the other, or the previous page wins the race.
+
+We already patched this once for article → video by making video remove article, but now we need a more systematic solution across video/stream/podcast/article.
+
+---
+
+## Best next fix: centralize local route authority
+
+The next session should **not** keep doing one-off cleanup fixes forever. The best high-impact fix is to introduce a small shared route-mode helper or orchestrator.
+
+Recommended new file:
+
+```text
+extensions/chrome/src/page-local-route-mode.js
+```
+
+Purpose:
+
+```text
+- Determine the current local built-in route from addressInput/window query.
+- Treat addressInput / URL query as authoritative over stale developerJson.
+- Clean up inactive local scaffold sections.
+- Set exactly one body class at a time.
+- Remove stale local scaffold sections from previous routes.
+- Optionally rewrite developerJson for local-only routes.
+```
+
+Suggested local route IDs:
+
+```text
+article
+video
+stream
+podcast
+profile
+site
+image
+music
+none
+```
+
+Suggested section IDs to manage:
+
+```text
+articleDraftSection
+videoDraftSection
+streamDraftSection
+podcastDraftSection
+profileHomeSection
+sitePageSection
+workflowSection
+actionsSection
+fieldsSection
+warningsSection
+prepareSummary
+holdSection
+submitSection
+```
+
+Suggested body classes to enforce:
+
+```text
+crablink-article-draft-view-mode
+crablink-video-draft-view-mode
+crablink-stream-draft-view-mode
+crablink-podcast-draft-view-mode
+crablink-profile-view-mode
+crablink-site-full-view-mode
+```
+
+Suggested exported functions:
+
+```javascript
+export function currentCrabRoute()
+export function isExactLocalRoute(routeName)
+export function enterLocalRoute(routeName, options = {})
+export function leaveLocalRoute(routeName)
+export function removeOtherLocalSections(activeRouteName)
+export function clearLocalRouteBodyClasses(activeRouteName)
+```
+
+Then update these modules to use it:
+
+```text
+page-article-draft.js
+page-video-draft.js
+page-stream-draft.js
+page-podcast-draft.js
+```
+
+Most important rule:
+
+```text
+If addressInput or page URL says crab://podcast, then video/stream/article modules must return false immediately, regardless of stale developerJson.
+```
+
+In other words, each module should do:
+
+```javascript
+const route = readCurrentCrabUrl().toLowerCase();
+
+if (route.startsWith('crab://')) {
+  return route === 'crab://video';
+}
+```
+
+for video, and analogous for article/stream/podcast.
+
+Only fall back to `developerJson` when the current address is missing or not authoritative.
+
+---
+
+## Simpler next-session patch option
+
+If we do not want to introduce a shared orchestrator yet, patch all four files with consistent route cleanup:
+
+```text
+extensions/chrome/src/page-article-draft.js
+extensions/chrome/src/page-video-draft.js
+extensions/chrome/src/page-stream-draft.js
+extensions/chrome/src/page-podcast-draft.js
+```
+
+Each file should:
+
+1. Define all sibling section IDs:
+
+```javascript
+const ARTICLE_SECTION_ID = 'articleDraftSection';
+const VIDEO_SECTION_ID = 'videoDraftSection';
+const STREAM_SECTION_ID = 'streamDraftSection';
+const PODCAST_SECTION_ID = 'podcastDraftSection';
+```
+
+2. Define all sibling body classes:
+
+```javascript
+const ARTICLE_VIEW_CLASS = 'crablink-article-draft-view-mode';
+const VIDEO_VIEW_CLASS = 'crablink-video-draft-view-mode';
+const STREAM_VIEW_CLASS = 'crablink-stream-draft-view-mode';
+const PODCAST_VIEW_CLASS = 'crablink-podcast-draft-view-mode';
+```
+
+3. In each `enforceXOnlyLayout()`, remove all sibling sections:
+
+For article:
+
+```text
+remove videoDraftSection
+remove streamDraftSection
+remove podcastDraftSection
+```
+
+For video:
+
+```text
+remove articleDraftSection
+remove streamDraftSection
+remove podcastDraftSection
+```
+
+For stream:
+
+```text
+remove articleDraftSection
+remove videoDraftSection
+remove podcastDraftSection
+```
+
+For podcast:
+
+```text
+remove articleDraftSection
+remove videoDraftSection
+remove streamDraftSection
+```
+
+4. In each `isXPage()`, make address route authoritative:
+
+For video:
+
+```javascript
+const url = readCurrentCrabUrl().toLowerCase();
+
+if (url.startsWith('crab://')) {
+  return url === 'crab://video';
+}
+```
+
+For stream:
+
+```javascript
+if (url.startsWith('crab://')) {
+  return url === 'crab://stream';
+}
+```
+
+For podcast:
+
+```javascript
+if (url.startsWith('crab://')) {
+  return url === 'crab://podcast';
+}
+```
+
+For article:
+
+```javascript
+if (url.startsWith('crab://')) {
+  return url === 'crab://article';
+}
+```
+
+5. Avoid using `developerJson` as active-route truth if the address bar says a different `crab://` route.
+
+This simpler patch is probably fastest and should solve the immediate bug.
+
+---
+
+## Additional route issue to watch
+
+`page.js` may still render backend “coming soon” built-in content underneath or above local scaffolds. The local modules currently hide generic sections:
+
+```text
+workflowSection
+actionsSection
+fieldsSection
+warningsSection
+sitePageSection
+prepareSummary
+holdSection
+submitSection
+```
+
+But if `page.js` rerenders after a local module runs, the old sections can reappear, causing duplicate forms or stale UI. This was already observed with article:
+
+```text
+Article polished top form existed, but generic title/body form also appeared below.
+```
+
+The immediate workaround was local CSS:
+
+```css
+body.crablink-article-draft-view-mode #workflowSection,
+body.crablink-article-draft-view-mode #actionsSection,
+...
+{
+  display: none !important;
+}
+```
+
+The long-term fix is to have `page.js` understand that these local pages are **custom local renderer pages** and should not render generic backend form fields for them.
+
+Potential `page.js` improvement later:
+
+```text
+If resolved crab URL is crab://article/video/stream/podcast:
+  render only page hero/facts/developer shell.
+  skip generic workflow/actions/fields panels.
+  let local module own the page content.
+```
+
+This would reduce race conditions.
+
+---
+
+## New routes added to extension navigation / parser
+
+Current built-in route list in `background.js` should include:
+
+```javascript
+const BUILTIN_TARGETS = [
+  'site',
+  'image',
+  'profile',
+  'music',
+  'article',
+  'video',
+  'stream',
+  'podcast'
+];
+```
+
+Current `crab.js` known asset kinds should include:
+
+```text
+image
+video
+stream
+podcast
+audio
+music
+song
+article
+post
+comment
+page
+site
+app
+file
+manifest
+```
+
+This is important for typed asset URLs later:
+
+```text
+crab://<hash>.image
+crab://<hash>.video
+crab://<hash>.stream
+crab://<hash>.podcast
+crab://<hash>.audio
+crab://<hash>.article
+```
+
+Remember the user’s canonical public URL preference:
+
+```text
+crab://<64 lowercase hex>.<asset_kind>
+```
+
+not:
+
+```text
+crab://b3/<hash>.<kind>
+```
+
+Internal content IDs remain:
+
+```text
+b3:<64 lowercase hex>
+```
+
+---
+
+## Current backend state for these new pages
+
+The backend routes for these new prepare attempts are not wired yet:
+
+```text
+/assets/article/prepare
+/assets/video/prepare
+/streams/prepare
+/podcasts/prepare
+```
+
+Expected result today:
+
+```text
+HTTP 404
+```
+
+That is okay. It proves the frontend is making honest non-mutating gateway attempts.
+
+Do not “fake success” in the extension. Keep showing:
+
+```text
+Backend routes may not be wired yet.
+No publication occurred.
+No b3 CID was assigned.
+No ROC was charged.
+```
+
+This is aligned with RustyOnions WEB3 / NEXT_LEVEL invariants.
+
+---
+
+## Architectural invariants to preserve
+
+For RustyOnions / CrabLink work, preserve these rules:
+
+```text
+- CrabLink is a thin client.
+- CrabLink talks through svc-gateway / omnigate public gateway routes only.
+- CrabLink must not directly call svc-wallet, ron-ledger, svc-storage, svc-index, svc-passport, or internal services.
+- No fake ROC.
+- No fake b3 CIDs.
+- No fake profile publication.
+- No fake username ownership.
+- No fake REP/MOD scores.
+- No silent paid actions.
+- No wallet mutation from client except explicit gateway-mediated hold flow already proven for images.
+- b3 hash remains canonical object identity.
+- crab://<hash>.<kind> remains canonical public asset URL shape.
+- Main passport creates sites.
+- Alt passports can browse/comment later but should not create sites.
+```
+
+---
+
+## Recommended next-session first task
+
+Start by fixing the navigation collision between:
+
+```text
+crab://article
+crab://video
+crab://stream
+crab://podcast
+```
+
+### Best file batch for next session
+
+Recommended full paste-ready batch:
+
+```text
+extensions/chrome/src/page-local-route-mode.js        new
+extensions/chrome/src/page-article-draft.js           update
+extensions/chrome/src/page-video-draft.js             update
+extensions/chrome/src/page-stream-draft.js            update
+extensions/chrome/src/page-podcast-draft.js           update
+extensions/chrome/src/page.html                       update only if importing route-mode or script order changes
+```
+
+Alternative minimal patch batch:
+
+```text
+extensions/chrome/src/page-article-draft.js
+extensions/chrome/src/page-video-draft.js
+extensions/chrome/src/page-stream-draft.js
+extensions/chrome/src/page-podcast-draft.js
+```
+
+### Acceptance test
+
+After patching, run:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+node --check extensions/chrome/src/page-article-draft.js
+node --check extensions/chrome/src/page-video-draft.js
+node --check extensions/chrome/src/page-stream-draft.js
+node --check extensions/chrome/src/page-podcast-draft.js
+scripts/check-chrome.sh && scripts/package-chrome.sh && scripts/make_codebundle.sh
+```
+
+Then reload unpacked extension and manually test this route sequence:
+
+```text
+crab://article
+crab://video
+crab://stream
+crab://podcast
+crab://video
+crab://podcast
+crab://stream
+crab://article
+```
+
+Expected result:
+
+```text
+- URL and page content always match.
+- Only one local scaffold is visible at a time.
+- Article never appears above video.
+- Video never appears above stream.
+- Stream never appears above podcast.
+- Podcast never remains when navigating back to video/stream/article.
+- Profile page does not appear at bottom of article/video/stream/podcast.
+- Generic duplicate backend forms remain hidden on local scaffold pages.
+```
+
+---
+
+## Medium-term next steps after navigation bug
+
+Once local scaffold routing is stable, the next high-impact options are:
+
+### Option A — polish local creator hub navigation
+
+Make the quick nav look more like a real CrabLink creator dashboard:
+
+```text
+Create
+  Site
+  Image
+  Article
+  Video
+  Stream
+  Podcast
+
+Identity
+  Profile
+  Passport
+  My Sites
+  My Assets
+```
+
+This would reduce top-row clutter as more `crab://` surfaces are added.
+
+### Option B — backend article publishing first
+
+Article is the easiest real backend publishing target after image because it is text, not heavy media.
+
+Suggested backend path:
+
+```text
+ron-proto article DTOs
+ron-naming .article typed URL support if needed
+omnigate /assets/article/prepare
+omnigate /assets/article create
+svc-gateway proxy routes
+paid storage write reuse
+index pointer for crab://<hash>.article
+asset page hydration for article kind
+CrabLink hold/capture submit flow
+```
+
+Article should be done before real video/stream/podcast backend because it exercises typed text assets with less complexity.
+
+### Option C — real media backend planning
+
+Video/stream/podcast need a bigger media plan:
+
+```text
+- large object paid storage
+- range reads / streaming
+- thumbnails
+- manifests
+- provider availability metadata
+- archive/VOD plan
+- live ingest/session keys
+- chat/moderation/tips
+- payout splits
+```
+
+Do not rush this into the backend until the local UX and route models are stable.
+
+---
+
+## Current emotional/product checkpoint
+
+The project has crossed from “technical extension shell” into visible product territory. The user is seeing pages that feel like a real creator internet:
+
+```text
+- profile
+- site creator proof
+- article editor
+- video upload draft
+- streamer studio
+- podcast studio
+```
+
+The current local scaffolds are not backend-complete, but they are valuable because they define the product shape before backend implementation. This helps avoid spaghetti across Rust crates and keeps frontend/backend contracts clean.
+
+Next instance should begin with the routing bug, then continue either toward:
+
+```text
+1. article backend publishing, or
+2. more CrabLink creator-dashboard polish.
+```
+
+
+### END NOTE - MAY 5 2026 - 18:35 CST

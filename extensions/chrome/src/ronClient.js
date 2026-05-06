@@ -58,6 +58,23 @@ export class RonClient {
       body.passport_subject || body.passportSubject || this.settings.passportSubject || 'passport:main:dev'
     ).trim();
 
+    const requested = normalizeRequestedUsername(
+      body.requested_username ||
+        body.requestedUsername ||
+        body.requested_handle ||
+        body.requestedHandle ||
+        this.settings.requestedUsername ||
+        this.settings.requestedHandle ||
+        ''
+    );
+
+    const usernameFields = requested
+      ? {
+          requested_username: requested.username,
+          requested_handle: requested.handle
+        }
+      : {};
+
     return this.request('/identity/passport/bootstrap', {
       method: 'POST',
       body: {
@@ -67,11 +84,17 @@ export class RonClient {
         request_starter_grant: true,
         create_wallet: true,
         desired_starting_balance_minor_units: '1776',
-        ...body
+        ...body,
+        ...usernameFields
       },
       label: 'Passport bootstrap',
       mutation: true,
-      idempotencyKey: stableIdempotencyKey('passport-bootstrap', passportSubject, walletAccount)
+      idempotencyKey: stableIdempotencyKey(
+        'passport-bootstrap',
+        passportSubject,
+        walletAccount,
+        requested?.username || ''
+      )
     });
   }
 
@@ -460,6 +483,73 @@ export class RonClient {
     return headers;
   }
 }
+
+function normalizeRequestedUsername(value) {
+  const raw = String(value || '').trim().toLowerCase().replace(/^@+/, '');
+
+  if (!raw) {
+    return null;
+  }
+
+  if (raw.length < 3 || raw.length > 32) {
+    throw new RonClientError('@username must be between 3 and 32 characters.', {
+      route: '/identity/passport/bootstrap'
+    });
+  }
+
+  if (!/^[a-z0-9][a-z0-9_.-]*$/.test(raw)) {
+    throw new RonClientError('@username may only use lowercase letters, numbers, underscore, hyphen, and dot, and must start with a letter or number.', {
+      route: '/identity/passport/bootstrap'
+    });
+  }
+
+  if (raw.includes('..') || raw.endsWith('.') || raw.endsWith('-') || raw.endsWith('_')) {
+    throw new RonClientError('@username has invalid punctuation placement.', {
+      route: '/identity/passport/bootstrap'
+    });
+  }
+
+  if (RESERVED_USERNAMES.has(raw)) {
+    throw new RonClientError(`@${raw} is reserved.`, {
+      route: '/identity/passport/bootstrap'
+    });
+  }
+
+  return {
+    username: raw,
+    handle: `@${raw}`
+  };
+}
+
+const RESERVED_USERNAMES = new Set([
+  'admin',
+  'api',
+  'app',
+  'article',
+  'asset',
+  'assets',
+  'b3',
+  'comment',
+  'crab',
+  'gateway',
+  'image',
+  'mail',
+  'manifest',
+  'mod',
+  'moderator',
+  'music',
+  'passport',
+  'post',
+  'profile',
+  'profiles',
+  'root',
+  'site',
+  'sites',
+  'support',
+  'sys',
+  'system',
+  'wallet'
+]);
 
 function normalizePaidProof(proof = {}) {
   const txid = String(

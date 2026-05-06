@@ -77,6 +77,42 @@
         },
         "source": {
           "type": "string"
+        },
+        "requested_username": {
+          "type": "string"
+        },
+        "requested_handle": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "handle": {
+          "type": "string"
+        },
+        "username_status": {
+          "type": "string",
+          "enum": [
+            "local_draft",
+            "requested",
+            "confirmed",
+            "rejected",
+            "unavailable",
+            "backend_unknown"
+          ]
+        },
+        "profile_crab_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "public_profile_cid": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^$|^b3:[0-9a-f]{64}$"
         }
       }
     },

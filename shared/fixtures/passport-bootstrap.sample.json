@@ -5,7 +5,12 @@
     "kind": "main",
     "display_name": "CrabLink main passport",
     "created_at": null,
-    "source": "omnigate_dev_bootstrap"
+    "source": "omnigate_dev_bootstrap",
+    "requested_username": "crablobsta",
+    "requested_handle": "@crablobsta",
+    "username_status": "requested",
+    "profile_crab_url": null,
+    "public_profile_cid": null
   },
   "wallet": {
     "account": "acct_dev",

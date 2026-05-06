@@ -16,6 +16,14 @@ export const DEFAULT_SETTINGS = Object.freeze({
   gatewayUrl: 'http://127.0.0.1:8090',
   passportSubject: '',
   walletAccount: '',
+  requestedUsername: '',
+  requestedHandle: '',
+  username: '',
+  handle: '',
+  usernameStatus: '',
+  profileCrabUrl: '',
+  publicProfileCid: '',
+  usernameUpdatedAt: '',
   authToken: '',
   requireSpendConfirm: true,
   devMode: true,
@@ -89,6 +97,14 @@ export async function clearIdentityState() {
     ...current,
     passportSubject: '',
     walletAccount: '',
+    requestedUsername: '',
+    requestedHandle: '',
+    username: '',
+    handle: '',
+    usernameStatus: '',
+    profileCrabUrl: '',
+    publicProfileCid: '',
+    usernameUpdatedAt: '',
     lastIdentityCheckAt: '',
     lastBootstrapReceiptId: '',
     lastStarterGrantIssued: false,
@@ -118,6 +134,26 @@ export async function rememberLastCrabUrl(url) {
   return next;
 }
 
+export async function saveUsernameDraft(value) {
+  const current = await getSettings();
+  const normalized = normalizeUsername(value);
+
+  if (!normalized.ok) {
+    throw new Error(normalized.error || '@username is invalid.');
+  }
+
+  const next = normalizeSettings({
+    ...current,
+    requestedUsername: normalized.username,
+    requestedHandle: normalized.handle,
+    usernameStatus: 'local_draft',
+    usernameUpdatedAt: new Date().toISOString()
+  });
+
+  await chrome.storage.local.set(next);
+  return next;
+}
+
 export async function saveIdentityState(payload) {
   const current = await getSettings();
   const identity = extractIdentityState(payload);
@@ -127,6 +163,17 @@ export async function saveIdentityState(payload) {
     ...identity,
     passportSubject: identity.passportSubject || current.passportSubject,
     walletAccount: identity.walletAccount || current.walletAccount,
+    requestedUsername: identity.requestedUsername || current.requestedUsername,
+    requestedHandle: identity.requestedHandle || current.requestedHandle,
+    username: identity.username || current.username,
+    handle: identity.handle || current.handle,
+    usernameStatus: identity.usernameStatus || current.usernameStatus,
+    profileCrabUrl: identity.profileCrabUrl || current.profileCrabUrl,
+    publicProfileCid: identity.publicProfileCid || current.publicProfileCid,
+    usernameUpdatedAt:
+      identity.usernameStatus || identity.username || identity.handle
+        ? new Date().toISOString()
+        : current.usernameUpdatedAt,
     lastBootstrapReceiptId: identity.lastBootstrapReceiptId || current.lastBootstrapReceiptId,
     lastStarterGrantIssued: identity.lastStarterGrantIssued || current.lastStarterGrantIssued,
     lastStarterGrantAmountMinorUnits:
@@ -268,6 +315,34 @@ export function balanceSummary(settings) {
   return source ? `${display} (${ledger}, ${source})` : `${display} (${ledger})`;
 }
 
+export function usernameSummary(settings) {
+  const confirmed = cleanString(settings?.handle) || normalizeHandle(settings?.username);
+  const requested = cleanString(settings?.requestedHandle) || normalizeHandle(settings?.requestedUsername);
+  const status = normalizeUsernameStatus(settings?.usernameStatus);
+
+  if (confirmed) {
+    if (status === 'confirmed') {
+      return `${confirmed} confirmed by backend`;
+    }
+
+    return `${confirmed} from backend (${status || 'backend_unknown'})`;
+  }
+
+  if (requested) {
+    if (status === 'requested') {
+      return `${requested} requested`;
+    }
+
+    if (status === 'local_draft') {
+      return `${requested} local draft`;
+    }
+
+    return `${requested} pending backend`;
+  }
+
+  return 'No @username requested yet.';
+}
+
 export function safeSettingsForDisplay(settings) {
   const safe = normalizeSettings(settings || DEFAULT_SETTINGS);
   return {
@@ -340,9 +415,18 @@ export function extractIdentityState(payload) {
     starterGrant?.reason === 'issued_by_svc_wallet' ||
     starterGrantIssued === true;
 
+  const usernameInfo = extractUsernameState(data);
+
   return {
     passportSubject: cleanString(passportSubject),
     walletAccount: cleanString(walletAccount),
+    requestedUsername: usernameInfo.requestedUsername,
+    requestedHandle: usernameInfo.requestedHandle,
+    username: usernameInfo.username,
+    handle: usernameInfo.handle,
+    usernameStatus: usernameInfo.usernameStatus,
+    profileCrabUrl: usernameInfo.profileCrabUrl,
+    publicProfileCid: usernameInfo.publicProfileCid,
     lastBootstrapReceiptId: cleanString(receiptId),
     lastStarterGrantIssued: starterGrantIssued,
     lastStarterGrantAmountMinorUnits: cleanUnsignedIntegerString(starterGrantAmountMinorUnits),
@@ -403,14 +487,247 @@ export function formatRocMinorUnits(value) {
   return `${cleaned} ROC`;
 }
 
+function extractUsernameState(data) {
+  const passport = data?.passport || {};
+  const profile = data?.profile || passport?.profile || {};
+
+  const requestedCandidate =
+    passport?.requested_username ||
+    passport?.requestedUsername ||
+    passport?.requested_handle ||
+    passport?.requestedHandle ||
+    data?.requested_username ||
+    data?.requestedUsername ||
+    data?.requested_handle ||
+    data?.requestedHandle ||
+    '';
+
+  const backendCandidate =
+    passport?.username ||
+    passport?.handle ||
+    passport?.public_username ||
+    passport?.publicUsername ||
+    data?.username ||
+    data?.handle ||
+    profile?.username ||
+    profile?.handle ||
+    '';
+
+  const requested = normalizeUsername(requestedCandidate);
+  const backend = normalizeUsername(backendCandidate);
+
+  const rawStatus =
+    passport?.username_status ||
+    passport?.usernameStatus ||
+    data?.username_status ||
+    data?.usernameStatus ||
+    profile?.username_status ||
+    profile?.usernameStatus ||
+    '';
+
+  const status = normalizeUsernameStatus(rawStatus) || (backend.ok ? 'backend_unknown' : requested.ok ? 'requested' : '');
+
+  return {
+    requestedUsername: requested.ok ? requested.username : '',
+    requestedHandle: requested.ok ? requested.handle : '',
+    username: backend.ok ? backend.username : '',
+    handle: backend.ok ? backend.handle : '',
+    usernameStatus: status,
+    profileCrabUrl: normalizeProfileCrabUrl(
+      passport?.profile_crab_url ||
+        passport?.profileCrabUrl ||
+        data?.profile_crab_url ||
+        data?.profileCrabUrl ||
+        profile?.crab_url ||
+        profile?.crabUrl ||
+        ''
+    ),
+    publicProfileCid: normalizeB3Cid(
+      passport?.public_profile_cid ||
+        passport?.publicProfileCid ||
+        data?.public_profile_cid ||
+        data?.publicProfileCid ||
+        profile?.cid ||
+        profile?.b3 ||
+        ''
+    )
+  };
+}
+
+export function normalizeUsername(value) {
+  const input = cleanString(value).toLowerCase().replace(/^@+/, '');
+
+  if (!input) {
+    return {
+      ok: false,
+      username: '',
+      handle: '',
+      error: ''
+    };
+  }
+
+  if (input.length < 3) {
+    return {
+      ok: false,
+      username: '',
+      handle: '',
+      error: '@username must be at least 3 characters.'
+    };
+  }
+
+  if (input.length > 32) {
+    return {
+      ok: false,
+      username: '',
+      handle: '',
+      error: '@username must be 32 characters or less.'
+    };
+  }
+
+  if (!/^[a-z0-9]/.test(input)) {
+    return {
+      ok: false,
+      username: '',
+      handle: '',
+      error: '@username must start with a letter or number.'
+    };
+  }
+
+  if (!/^[a-z0-9][a-z0-9_.-]*$/.test(input)) {
+    return {
+      ok: false,
+      username: '',
+      handle: '',
+      error: '@username may only use lowercase letters, numbers, underscore, hyphen, and dot.'
+    };
+  }
+
+  if (input.includes('..')) {
+    return {
+      ok: false,
+      username: '',
+      handle: '',
+      error: '@username cannot contain consecutive dots.'
+    };
+  }
+
+  if (input.endsWith('.') || input.endsWith('-') || input.endsWith('_')) {
+    return {
+      ok: false,
+      username: '',
+      handle: '',
+      error: '@username cannot end with dot, hyphen, or underscore.'
+    };
+  }
+
+  if (RESERVED_USERNAMES.has(input)) {
+    return {
+      ok: false,
+      username: '',
+      handle: '',
+      error: `@${input} is reserved.`
+    };
+  }
+
+  return {
+    ok: true,
+    username: input,
+    handle: `@${input}`,
+    error: ''
+  };
+}
+
+function normalizeHandle(value) {
+  const normalized = normalizeUsername(value);
+  return normalized.ok ? normalized.handle : '';
+}
+
+function normalizeUsernameStatus(value) {
+  const raw = cleanString(value).toLowerCase();
+
+  if (!raw) {
+    return '';
+  }
+
+  if (USERNAME_STATUSES.has(raw)) {
+    return raw;
+  }
+
+  return 'backend_unknown';
+}
+
+function normalizeProfileCrabUrl(value) {
+  const raw = cleanString(value);
+
+  if (!raw) {
+    return '';
+  }
+
+  if (/^crab:\/\/(@[a-z0-9][a-z0-9_.-]{2,31}|profile\/@[a-z0-9][a-z0-9_.-]{2,31}|[0-9a-f]{64}\.[a-z][a-z0-9_-]{0,31})$/i.test(raw)) {
+    return raw;
+  }
+
+  return '';
+}
+
+const RESERVED_USERNAMES = new Set([
+  'admin',
+  'api',
+  'app',
+  'article',
+  'asset',
+  'assets',
+  'b3',
+  'comment',
+  'crab',
+  'gateway',
+  'image',
+  'mail',
+  'manifest',
+  'mod',
+  'moderator',
+  'music',
+  'passport',
+  'post',
+  'profile',
+  'profiles',
+  'root',
+  'site',
+  'sites',
+  'support',
+  'sys',
+  'system',
+  'wallet'
+]);
+
+const USERNAME_STATUSES = new Set([
+  'local_draft',
+  'requested',
+  'confirmed',
+  'rejected',
+  'unavailable',
+  'backend_unknown'
+]);
+
 function normalizeSettings(settings) {
   const gatewayUrl = normalizeGatewayUrl(settings.gatewayUrl || DEFAULT_SETTINGS.gatewayUrl);
+  const requested = normalizeUsername(settings.requestedUsername || settings.requestedHandle || '');
+  const confirmed = normalizeUsername(settings.username || settings.handle || '');
+  const status = normalizeUsernameStatus(settings.usernameStatus);
 
   return {
     schemaVersion: SETTINGS_SCHEMA_VERSION,
     gatewayUrl,
     passportSubject: cleanString(settings.passportSubject),
     walletAccount: cleanString(settings.walletAccount),
+    requestedUsername: requested.ok ? requested.username : '',
+    requestedHandle: requested.ok ? requested.handle : '',
+    username: confirmed.ok ? confirmed.username : '',
+    handle: confirmed.ok ? confirmed.handle : '',
+    usernameStatus: status || (confirmed.ok ? 'backend_unknown' : requested.ok ? 'local_draft' : ''),
+    profileCrabUrl: normalizeProfileCrabUrl(settings.profileCrabUrl),
+    publicProfileCid: normalizeB3Cid(settings.publicProfileCid),
+    usernameUpdatedAt: cleanString(settings.usernameUpdatedAt),
     authToken: cleanString(settings.authToken),
     requireSpendConfirm: settings.requireSpendConfirm !== false,
     devMode: settings.devMode !== false,

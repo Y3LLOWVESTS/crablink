@@ -4,8 +4,7 @@
   "description": "Resolve crab:// links, view b3 asset pages, and connect to local RustyOnions gateways.",
   "version": "0.1.0",
   "action": {
-    "default_title": "CrabLink",
-    "default_popup": "src/popup.html"
+    "default_title": "Open CrabLink Browser"
   },
   "options_page": "src/options.html",
   "background": {

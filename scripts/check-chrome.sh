@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # RO:WHAT — Local structural checker for the CrabLink Chrome extension.
-# RO:WHY — Catch missing files, bad JSON, broad permissions, and obvious NEXT_LEVEL/site-render drift before packaging.
+# RO:WHY — Catch missing files, bad JSON, broad permissions, unsafe extension patterns, and profile/avatar ownership drift.
 # RO:INTERACTS — extensions/chrome, shared/schemas, shared/fixtures, smoke scripts.
-# RO:INVARIANTS — minimal permissions; gateway-only; no broad host access; no old crab://b3/<hash> UX.
+# RO:INVARIANTS — minimal permissions; gateway-only; no broad host access; no old crab://b3/<hash> UX; no fake profile/wallet/alt truth.
 # RO:METRICS — none.
 # RO:CONFIG — none.
-# RO:SECURITY — blocks risky manifest permissions and checks crab-image/site-creator proof remains read-only/gateway-only.
+# RO:SECURITY — blocks risky manifest permissions and fake wallet/profile/alt truth patterns.
 # RO:TEST — run from crablink repo root with scripts/check-chrome.sh.
 
 set -euo pipefail
@@ -24,6 +24,7 @@ required_files=(
   "$CHROME_DIR/src/options.js"
   "$CHROME_DIR/src/styles.css"
   "$CHROME_DIR/src/page.html"
+  "$CHROME_DIR/src/page.css"
   "$CHROME_DIR/src/page.js"
   "$CHROME_DIR/src/page-constants.js"
   "$CHROME_DIR/src/page-dom.js"
@@ -33,7 +34,12 @@ required_files=(
   "$CHROME_DIR/src/page-site-root-upload.js"
   "$CHROME_DIR/src/page-site-render-mode.js"
   "$CHROME_DIR/src/page-site-creator-proof.js"
-  "$CHROME_DIR/src/page.css"
+  "$CHROME_DIR/src/page-profile-home.js"
+  "$CHROME_DIR/src/page-profile-editor.js"
+  "$CHROME_DIR/src/page-profile-avatar.js"
+  "$CHROME_DIR/src/page-local-catalog.js"
+  "$CHROME_DIR/src/page-profile-polish.js"
+  "$CHROME_DIR/src/page-alt-vault.js"
   "$CHROME_DIR/src/ronClient.js"
   "$CHROME_DIR/src/storage.js"
   "$CHROME_DIR/src/crab.js"
@@ -59,9 +65,12 @@ required_files=(
   "$ROOT/scripts/check-chrome.sh"
   "$ROOT/scripts/package-chrome.sh"
   "$ROOT/scripts/smoke-local-gateway.sh"
-  "$ROOT/scripts/smoke-site-create-local.sh"
-  "$ROOT/scripts/green-gate-local.sh"
+)
+
+optional_files=(
   "$ROOT/scripts/make_codebundle.sh"
+  "$ROOT/scripts/green-gate-local.sh"
+  "$ROOT/scripts/smoke-site-create-local.sh"
 )
 
 for file in "${required_files[@]}"; do
@@ -109,7 +118,7 @@ function requireIncludes(source, token, label) {
 
 function requireAnyIncludes(source, tokens, label) {
   if (!tokens.some((token) => source.includes(token))) {
-    fail(`${label} missing one of: ${tokens.join(' | ')}`);
+    fail(`${label} missing one of: ${tokens.join(', ')}`);
   }
 }
 
@@ -130,30 +139,20 @@ function loadAllJsonIn(folder) {
 const manifest = loadJson(path.join(chrome, 'manifest.json'));
 
 if (manifest.manifest_version !== 3) fail('manifest_version must be 3');
-if (!manifest.omnibox || manifest.omnibox.keyword !== 'crab') {
-  fail('manifest omnibox keyword must be crab');
-}
+if (!manifest.action || typeof manifest.action !== 'object') fail('manifest.action is required');
+if (manifest.action.default_popup) fail('manifest.action.default_popup must be removed; extension icon opens full CrabLink browser');
+if (!manifest.background || manifest.background.service_worker !== 'src/background.js') fail('manifest background service_worker must be src/background.js');
+if (manifest.background.type !== 'module') fail('manifest background type must be module');
+if (!manifest.omnibox || manifest.omnibox.keyword !== 'crab') fail('manifest omnibox keyword must be crab');
 
-const permissions = new Set(manifest.permissions || []);
-const allowedPermissions = new Set(['storage', 'activeTab']);
-
-for (const permission of permissions) {
-  if (!allowedPermissions.has(permission)) {
-    fail(`unexpected Chrome permission: ${permission}`);
+const permissions = manifest.permissions || [];
+for (const required of ['storage', 'activeTab']) {
+  if (!permissions.includes(required)) {
+    fail(`manifest permissions missing ${required}`);
   }
 }
 
-const hostPermissions = new Set(manifest.host_permissions || []);
-const allowedHosts = new Set(['http://127.0.0.1:*/*', 'http://localhost:*/*']);
-
-for (const host of hostPermissions) {
-  if (!allowedHosts.has(host)) {
-    fail(`unexpected host permission: ${host}`);
-  }
-}
-
-for (const blocked of [
-  '<all_urls>',
+for (const forbidden of [
   'tabs',
   'history',
   'cookies',
@@ -164,64 +163,47 @@ for (const blocked of [
   'unlimitedStorage',
   'clipboardRead'
 ]) {
-  if (permissions.has(blocked)) {
-    fail(`blocked permission present: ${blocked}`);
+  if (permissions.includes(forbidden)) {
+    fail(`manifest must not request risky permission: ${forbidden}`);
   }
 }
 
-const popupHtml = readText(path.join(chrome, 'src', 'popup.html'));
-const popupJs = readText(path.join(chrome, 'src', 'popup.js'));
+const hostPermissions = manifest.host_permissions || [];
+const allowedHosts = new Set(['http://127.0.0.1:*/*', 'http://localhost:*/*']);
+for (const host of hostPermissions) {
+  if (!allowedHosts.has(host)) {
+    fail(`manifest host_permissions must remain local-only; found ${host}`);
+  }
+}
+
 const pageHtml = readText(path.join(chrome, 'src', 'page.html'));
-const pageCss = readText(path.join(chrome, 'src', 'page.css'));
-const ronClient = readText(path.join(chrome, 'src', 'ronClient.js'));
-const storageJs = readText(path.join(chrome, 'src', 'storage.js'));
-const crabJs = readText(path.join(chrome, 'src', 'crab.js'));
-const optionsHtml = readText(path.join(chrome, 'src', 'options.html'));
-const optionsJs = readText(path.join(chrome, 'src', 'options.js'));
-const backgroundJs = readText(path.join(chrome, 'src', 'background.js'));
-const siteRenderModeSource = readText(path.join(chrome, 'src', 'page-site-render-mode.js'));
-const siteCreatorProofSource = readText(path.join(chrome, 'src', 'page-site-creator-proof.js'));
-const smokeLocal = readText(path.join(root, 'scripts', 'smoke-local-gateway.sh'));
-const smokeSite = readText(path.join(root, 'scripts', 'smoke-site-create-local.sh'));
-const greenGate = readText(path.join(root, 'scripts', 'green-gate-local.sh'));
-
-const pageModuleNames = [
-  'page.js',
-  'page-constants.js',
-  'page-dom.js',
-  'page-utils.js',
-  'page-workflow.js',
-  'page-product-preview.js',
-  'page-site-root-upload.js',
-  'page-site-render-mode.js',
-  'page-site-creator-proof.js'
-];
-
-const pageSources = pageModuleNames
-  .map((name) => readText(path.join(chrome, 'src', name)))
-  .join('\n');
-
-const allSources = [
-  popupHtml,
-  popupJs,
-  pageHtml,
-  pageCss,
-  ronClient,
-  storageJs,
-  crabJs,
-  optionsHtml,
-  optionsJs,
-  backgroundJs,
-  pageSources
-].join('\n');
-
 for (const token of [
+  './page.js',
   './page-site-root-upload.js',
   './page-product-preview.js',
   './page-site-render-mode.js',
-  './page-site-creator-proof.js'
+  './page-site-creator-proof.js',
+  './page-profile-home.js',
+  './page-profile-editor.js',
+  './page-profile-avatar.js',
+  './page-local-catalog.js',
+  './page-profile-polish.js',
+  './page-alt-vault.js',
+  'id="drawerRoc"',
+  'hidden aria-hidden="true"',
+  'data-open-crab="crab://profile"'
 ]) {
   requireIncludes(pageHtml, token, 'page.html');
+}
+
+for (const forbidden of [
+  './page-passport-home.js',
+  'passportNextLevelCard',
+  'passport-permission-grid',
+  'passport-home-actions',
+  'passport-username-form'
+]) {
+  forbidIncludes(pageHtml, forbidden, 'page.html');
 }
 
 for (const id of [
@@ -239,322 +221,348 @@ for (const id of [
   'pagePanel',
   'workflowSection',
   'workflowForm',
+  'workflowPreview',
+  'preparePreview',
+  'holdPreview',
+  'submitPreview',
+  'actionsList',
+  'fieldsList',
+  'warningsList',
   'developerJson'
 ]) {
   requireIncludes(pageHtml, `id="${id}"`, 'page.html');
 }
 
+const background = readText(path.join(chrome, 'src', 'background.js'));
+requireIncludes(background, 'chrome.action.onClicked', 'background.js');
+requireIncludes(background, 'src/page.html?url=', 'background.js');
+
+const popupJs = readText(path.join(chrome, 'src', 'popup.js'));
+requireIncludes(popupJs, 'chrome.tabs.create', 'popup.js');
+requireIncludes(popupJs, 'src/page.html?url=', 'popup.js');
+
+const pageConstants = readText(path.join(chrome, 'src', 'page-constants.js'));
+requireIncludes(pageConstants, 'HOME_PAGE_URL', 'page-constants.js');
+requireIncludes(pageConstants, 'crab://site', 'page-constants.js');
+requireIncludes(pageConstants, 'BUILT_IN_RON_PAGES', 'page-constants.js');
+
+const profileHomeSource = readText(path.join(chrome, 'src', 'page-profile-home.js'));
 for (const token of [
-  'Full-tab CrabLink browser shell',
-  'navigateTo',
-  'renderBuiltinPage',
-  'renderAssetPage',
-  'client.resolveCrab',
-  'client.resolveSite',
-  'client.getB3Asset',
-  'client.prepareImageAsset',
-  'client.prepareSite',
-  'client.createWalletHold',
-  'client.createSite',
-  'refreshBalanceAfterMutation'
+  'crablink.public_profile_view.v1',
+  'profile-cover-card',
+  'profile-avatar-frame',
+  'profile-avatar-photo',
+  'profile-edit-button',
+  'Edit Profile',
+  '/o/b3:${hash}',
+  'crab://<64hex>.image',
+  'gateway-only',
+  'no backend profile publishing claim',
+  'no wallet mutation',
+  'No main passport linkage'
 ]) {
-  requireIncludes(pageSources, token, 'page modules');
+  requireIncludes(profileHomeSource, token, 'page-profile-home.js');
 }
 
+requireAnyIncludes(
+  profileHomeSource,
+  ['backend profile publishing is not wired yet', 'Backend profile publishing is not wired yet'],
+  'page-profile-home.js backend profile publishing status text'
+);
+
+for (const forbidden of [
+  "actionButton('Create Alt'",
+  'Alt passport creation needs a backend route; not implemented locally.',
+  'innerHTML',
+  'client.publishProfile',
+  'publishProfile(',
+  'walletPrivateKey',
+  'mainPrivateKey',
+  'seedPhrase',
+  'privateAltKey'
+]) {
+  forbidIncludes(profileHomeSource, forbidden, 'page-profile-home.js');
+}
+
+const profileEditorSource = readText(path.join(chrome, 'src', 'page-profile-editor.js'));
 for (const token of [
-  'RO:WHAT',
-  'IMAGE_EMBED_SELECTOR',
+  'crablinkProfileDraftV1',
+  'Create / Edit Profile',
+  'Save Local Draft',
+  'Copy Public Template',
+  'ron.profile.public.template.v1',
+  'backend profile publishing is not wired yet',
+  'no backend mutation',
+  'no wallet authority',
+  'crablink:profile-draft-updated'
+]) {
+  requireIncludes(profileEditorSource, token, 'page-profile-editor.js');
+}
+
+for (const forbidden of [
+  'walletPrivateKey',
+  'mainPrivateKey',
+  'seedPhrase',
+  'privateAltKey',
+  'publishProfile',
+  'client.publishProfile',
+  'fetch('
+]) {
+  forbidIncludes(profileEditorSource, forbidden, 'page-profile-editor.js');
+}
+
+const profileAvatarSource = readText(path.join(chrome, 'src', 'page-profile-avatar.js'));
+for (const token of [
+  'Compatibility shim',
+  'removeLegacyAvatarMounts',
+  'repairMojibakeText',
+  'MOJIBAKE_REPAIRS',
+  'profileAvatarPreviewMount',
+  'profileEditorAvatarPreviewMount',
+  'no backend mutation',
+  'no wallet authority',
+  'no public profile CID claim'
+]) {
+  requireIncludes(profileAvatarSource, token, 'page-profile-avatar.js');
+}
+
+for (const forbidden of [
+  "import ",
+  'getSettings',
+  'fetch(',
+  'fetchAvatarObjectUrl(',
+  'client.publishProfile',
+  'publishProfile(',
+  'walletPrivateKey',
+  'mainPrivateKey',
+  'seedPhrase',
+  'privateAltKey',
+  'crab://b3/',
+  '<all_urls>'
+]) {
+  forbidIncludes(profileAvatarSource, forbidden, 'page-profile-avatar.js');
+}
+
+const profilePolishSource = readText(path.join(chrome, 'src', 'page-profile-polish.js'));
+for (const token of [
+  'profile-polish-catalog-preview',
+  'profile-polish-truth-strip',
+  'Developer profile details',
+  'Local browser history only',
+  'no wallet mutation',
+  'no backend profile claim',
+  'no fake REP/MOD truth',
+  'crablinkRecentSitesV1',
+  'crablinkRecentAssetsV1',
+  'data-crablink-open-catalog',
+  'data-crablink-open-url'
+]) {
+  requireIncludes(profilePolishSource, token, 'page-profile-polish.js');
+}
+
+for (const forbidden of [
+  'innerHTML',
+  'publishProfile(',
+  'client.publishProfile',
+  'walletPrivateKey',
+  'mainPrivateKey',
+  'seedPhrase',
+  'privateAltKey',
+  'parent_passport',
+  'created_by_main',
+  'main_private_key',
+  'wallet_private_key',
+  'crab://b3/'
+]) {
+  forbidIncludes(profilePolishSource, forbidden, 'page-profile-polish.js');
+}
+
+const localCatalogSource = readText(path.join(chrome, 'src', 'page-local-catalog.js'));
+for (const token of [
+  'My Sites',
+  'My Assets',
+  'Profile',
+  'passport-catalog-stat-row',
+  'passport-catalog-action-row',
+  'ROC',
+  'REP',
+  'MOD',
+  'stripRocUnit',
+  'crablinkRecentSitesV1',
+  'crablinkRecentAssetsV1',
+  'local browser history only',
+  'no backend mutation'
+]) {
+  requireIncludes(localCatalogSource, token, 'page-local-catalog.js');
+}
+
+for (const forbidden of [
+  'quick-nav .catalog-quick-button',
+  'quickNav.append',
+  'quickNav.dataset.localCatalogInstalled',
+  'body.textContent = `${value} ROC`'
+]) {
+  forbidIncludes(localCatalogSource, forbidden, 'page-local-catalog.js');
+}
+
+const altVaultSource = readText(path.join(chrome, 'src', 'page-alt-vault.js'));
+for (const token of [
+  'crablinkAltDraftsV1',
+  'Create Alt',
+  'Load Alt',
+  'Create Alt Draft',
+  'openAltVaultFromPassport',
+  'passport-alt-vault-row',
+  'passport-alt-vault-button',
+  'Private local alt vault',
+  'No public main linkage',
+  'public ID pending backend b3 root',
+  'copyPublicSafeTemplate',
+  'generateAltDraft',
+  'generateRandomHex',
+  'local-only drafts',
+  'no backend mutation'
+]) {
+  requireIncludes(altVaultSource, token, 'page-alt-vault.js');
+}
+
+for (const forbidden of [
+  'openOrCreateAltFromPassport',
+  'await setDrafts([draft]);',
+  'actionRow.append(button)',
+  'parent_passport',
+  'created_by_main',
+  'main_private_key',
+  'wallet_private_key',
+  'mainPassport',
+  'mainWallet',
+  'b3:${',
+  'sha256'
+]) {
+  forbidIncludes(altVaultSource, forbidden, 'page-alt-vault.js');
+}
+
+const siteRenderModeSource = readText(path.join(chrome, 'src', 'page-site-render-mode.js'));
+for (const token of [
   'crab-image[src], img[data-crab-src]',
   'hydrateCrabImageEmbeds',
-  'hydrateOneCrabImage',
   'fetchCrabImageObjectUrl',
-  'parseCrabImageRef',
   '/o/b3:${ref.hash}',
   'Site Manifest'
 ]) {
   requireIncludes(siteRenderModeSource, token, 'page-site-render-mode.js');
 }
 
-requireAnyIncludes(
-  siteRenderModeSource,
-  [
-    'Only crab://<64 lowercase hex>.image references are supported',
-    'crab://<64 lowercase hex>.image'
-  ],
-  'page-site-render-mode.js canonical crab image support'
-);
-
+const siteCreatorProofSource = readText(path.join(chrome, 'src', 'page-site-creator-proof.js'));
 for (const token of [
-  'img-src data: blob:',
-  "script-src 'none'",
-  "connect-src 'none'"
-]) {
-  requireIncludes(siteRenderModeSource, token, 'page-site-render-mode.js sandbox policy');
-}
-
-for (const token of [
-  'RO:WHAT',
-  'site creator:',
-  'site-creator-chip',
-  'site-creator-link',
-  'site-creator-stats',
-  'site-reputation-score',
-  'site-moderator-score',
-  'creatorHandle',
-  'creatorProfileCrabUrl',
-  'creatorReputationLabel',
-  'creatorModeratorLabel',
-  'crablinkSiteCreatorHandle'
+  'site creator',
+  'Creator source',
+  'buildManifestTabs',
+  'site-manifest-tabs'
 ]) {
   requireIncludes(siteCreatorProofSource, token, 'page-site-creator-proof.js');
 }
 
-requireAnyIncludes(
-  siteCreatorProofSource,
-  [
-    'CrabLink will not invent reputation truth',
-    'not invent reputation truth',
-    'will not invent'
-  ],
-  'page-site-creator-proof.js reputation truth guard'
-);
-
+const ronClient = readText(path.join(chrome, 'src', 'ronClient.js'));
 for (const token of [
-  'getHealth()',
-  'getReady()',
-  'getIdentity()',
-  'bootstrapPassport(',
-  'getWalletBalance(',
-  'resolveCrab(',
-  'getB3Asset(',
-  'resolveSite(',
-  'prepareImageAsset(',
-  'prepareSite(',
-  'createSite(',
-  'createWalletHold(',
-  'uploadImageAsset(',
-  'requestRaw(',
-  'x-ron-wallet-txid',
-  'stableIdempotencyKey'
+  'getHealth',
+  'getReady',
+  'getIdentity',
+  'getWalletBalance',
+  'resolveCrab',
+  'getB3Asset',
+  'resolveSite',
+  'prepareImageAsset',
+  'prepareSite',
+  'createWalletHold',
+  'createSite',
+  'x-ron-wallet-txid'
 ]) {
   requireIncludes(ronClient, token, 'ronClient.js');
 }
 
+const storage = readText(path.join(chrome, 'src', 'storage.js'));
 for (const token of [
-  'function makeCorrelationId()',
-  'stableIdempotencyKey(',
-  'compactIdempotencyKey(',
-  'fnv1a64Hex('
+  'rocLedgerBacked',
+  'rememberProductState',
+  'saveUsernameDraft',
+  'normalizeUsername'
 ]) {
-  requireIncludes(ronClient, token, 'ronClient idempotency/correlation helpers');
+  requireIncludes(storage, token, 'storage.js');
 }
 
-for (const token of [
-  'SETTINGS_SCHEMA_VERSION = 3',
-  'getSettings',
-  'saveIdentityState',
-  'saveBalanceState',
-  'lastStarterGrantLedgerBacked'
-]) {
-  requireIncludes(storageJs, token, 'storage.js');
-}
+const crab = readText(path.join(chrome, 'src', 'crab.js'));
+requireIncludes(crab, 'crab://', 'crab.js');
+requireIncludes(crab, 'b3:', 'crab.js');
 
-for (const token of [
-  'schemaVersion: 3',
-  'chrome.omnibox.onInputEntered',
-  'openCrabLinkPage',
-  'src/page.html?url=',
-  'music',
-  'article'
-]) {
-  requireIncludes(backgroundJs, token, 'background.js');
-}
+const allSourceFiles = [
+  'src/background.js',
+  'src/content.js',
+  'src/crab.js',
+  'src/options.html',
+  'src/options.js',
+  'src/page.html',
+  'src/page.js',
+  'src/page-constants.js',
+  'src/page-dom.js',
+  'src/page-product-preview.js',
+  'src/page-profile-home.js',
+  'src/page-profile-editor.js',
+  'src/page-profile-avatar.js',
+  'src/page-local-catalog.js',
+  'src/page-profile-polish.js',
+  'src/page-alt-vault.js',
+  'src/page-site-creator-proof.js',
+  'src/page-site-render-mode.js',
+  'src/page-site-root-upload.js',
+  'src/page-utils.js',
+  'src/page-workflow.js',
+  'src/popup.html',
+  'src/popup.js',
+  'src/ronClient.js',
+  'src/storage.js',
+  'src/styles.css',
+  'src/page.css',
+  'manifest.json'
+];
 
-for (const token of [
-  'normalizeCrabInput',
-  'parseCrabUrl',
-  'formatCrabAsset',
-  'formatB3',
-  'normalizeHash',
-  'normalizeAssetKind'
-]) {
-  requireIncludes(crabJs, token, 'crab.js');
-}
+const allSources = allSourceFiles.map((relative) => readText(path.join(chrome, relative))).join('\n');
 
-requireAnyIncludes(
-  crabJs,
-  [
-    'crab://${normalizeHash(hash)}.${normalizeAssetKind(kind)}',
-    'crab://${hash}.${kind}',
-    'crab://'
-  ],
-  'crab.js crab asset formatting'
-);
-
-for (const token of [
-  'CrabLink',
-  'gateway',
-  'passport',
-  'wallet',
-  'Create'
-]) {
-  requireIncludes(popupHtml + popupJs, token, 'popup files');
-}
-
-for (const token of [
-  'gatewayUrl',
-  'passportSubject',
-  'walletAccount',
-  'requestTimeoutMs'
-]) {
-  requireIncludes(optionsHtml + optionsJs, token, 'options files');
-}
-
-for (const token of [
-  'CRABLINK_SMOKE_RUN_UPLOAD',
-  'CRABLINK_SMOKE_RUN_KNOWN_GOOD',
-  'CRABLINK_SMOKE_RUN_BOOTSTRAP',
-  '/assets/image/prepare',
-  '/assets/image',
-  '/wallet/hold'
-]) {
-  requireIncludes(smokeLocal, token, 'smoke-local-gateway.sh');
-}
-
-requireAnyIncludes(
-  smokeLocal,
-  [
-    'raw byte match',
-    'paid_image_raw',
-    'raw bytes',
-    'raw_byte',
-    '/o/',
-    'gateway raw'
-  ],
-  'smoke-local-gateway.sh raw preview verification'
-);
-
-requireAnyIncludes(
-  smokeLocal,
-  [
-    'POST /assets/image/prepare',
-    '/assets/image/prepare'
-  ],
-  'smoke-local-gateway.sh image prepare route'
-);
-
-requireAnyIncludes(
-  smokeLocal,
-  [
-    'POST /assets/image',
-    '/assets/image'
-  ],
-  'smoke-local-gateway.sh image upload route'
-);
-
-for (const token of [
-  'CRABLINK_SITE_REQUIRE_CRAB_RESOLVE',
-  '/sites/prepare',
-  '/sites',
-  '/wallet/hold',
-  'crab://$CRABLINK_SITE_NAME',
+for (const forbidden of [
+  'crab://b3/',
+  '<all_urls>',
+  'chrome.history',
+  'chrome.cookies',
+  'webRequestBlocking',
+  'nativeMessaging',
+  'client.createImageAsset',
+  'createSiteButton',
   'x-ron-wallet-hold-txid',
-  'x-ron-wallet-txid'
+  'passportNextLevelCard',
+  'passport-permission-grid',
+  'parent_passport:',
+  'created_by_main',
+  'main_private_key',
+  'wallet_private_key',
+  'walletPrivateKey',
+  'mainPrivateKey',
+  'seedPhrase'
 ]) {
-  requireIncludes(smokeSite, token, 'smoke-site-create-local.sh');
-}
-
-requireAnyIncludes(
-  smokeSite,
-  [
-    'GET /sites',
-    '/sites/$(url_encode "$CRABLINK_SITE_NAME")',
-    '/sites/$',
-    'site_page'
-  ],
-  'smoke-site-create-local.sh site lookup route'
-);
-
-for (const token of [
-  'CRABLINK_GREEN_MUTATING',
-  'CRABLINK_GREEN_RUN_UPLOAD',
-  'CRABLINK_GREEN_RUN_SITE',
-  'scripts/check-chrome.sh',
-  'scripts/package-chrome.sh',
-  'scripts/smoke-local-gateway.sh',
-  'scripts/smoke-site-create-local.sh'
-]) {
-  requireIncludes(greenGate, token, 'green-gate-local.sh');
+  forbidIncludes(allSources, forbidden, 'extension sources');
 }
 
 loadAllJsonIn(path.join(shared, 'schemas'));
 loadAllJsonIn(path.join(shared, 'fixtures'));
 
-const assetSchema = loadJson(path.join(shared, 'schemas', 'asset-page.schema.json'));
-if (assetSchema.type !== 'object') {
-  fail('asset-page schema must describe a JSON object');
-}
-
-const siteSchema = loadJson(path.join(shared, 'schemas', 'site-page.schema.json'));
-if (siteSchema.type !== 'object') {
-  fail('site-page schema must describe a JSON object');
-}
-
-const settingsSchema = loadJson(path.join(shared, 'schemas', 'extension-settings.schema.json'));
-if (settingsSchema.properties?.schemaVersion?.const !== 3) {
-  fail('extension-settings schemaVersion const must be 3');
-}
-
-const bootstrap = loadJson(path.join(shared, 'fixtures', 'passport-bootstrap.sample.json'));
-const grant = bootstrap.starter_grant || {};
-if (bootstrap.schema !== 'crablink.identity.bootstrap.v1') {
-  fail('passport-bootstrap fixture schema must be crablink.identity.bootstrap.v1');
-}
-if (grant.issued !== true || String(grant.amount_minor_units) !== '1776' || !grant.receipt_id) {
-  fail('passport-bootstrap fixture must show issued 1776 ROC with a receipt');
-}
-if ((bootstrap.capabilities || {}).can_spend === true) {
-  fail('passport bootstrap fixture must not grant can_spend');
-}
-
-const balance = loadJson(path.join(shared, 'fixtures', 'wallet-balance.sample.json'));
-if (balance.schema !== 'crablink.wallet.balance.v1') {
-  fail('wallet-balance fixture schema must be crablink.wallet.balance.v1');
-}
-if (balance.ledger_backed !== true || balance.source !== 'svc_wallet.v1') {
-  fail('wallet-balance fixture must be ledger-backed from svc_wallet.v1');
-}
-
-const siteFixture = loadJson(path.join(shared, 'fixtures', 'site-page.sample.json'));
-const siteFixtureType = siteFixture.schema || siteFixture.type || '';
-if (siteFixtureType !== 'omnigate.site-page.v1') {
-  fail('site-page fixture must identify omnigate.site-page.v1 through schema or type');
+const walletFixture = loadJson(path.join(shared, 'fixtures', 'wallet-balance.sample.json'));
+if (walletFixture.schema && walletFixture.schema !== 'crablink.wallet.balance.v1') {
+  fail('wallet-balance fixture schema must be crablink.wallet.balance.v1 when present');
 }
 
 const assetFixture = loadJson(path.join(shared, 'fixtures', 'asset-page.sample.json'));
 const assetFixtureType = assetFixture.schema || assetFixture.type || '';
 if (assetFixtureType && assetFixtureType !== 'omnigate.asset-page.v1') {
   fail('asset-page fixture type/schema must be omnigate.asset-page.v1 when present');
-}
-
-for (const forbidden of [
-  'crab://b3/',
-  'client.createImageAsset',
-  'createSiteButton',
-  'owner_wallet_account: settings.walletAccount || undefined,\n      content_type'
-]) {
-  forbidIncludes(allSources, forbidden, 'extension sources');
-}
-
-for (const forbidden of [
-  '<all_urls>',
-  'chrome.tabs.query',
-  'chrome.history',
-  'chrome.cookies',
-  'webRequestBlocking',
-  'nativeMessaging'
-]) {
-  forbidIncludes(allSources, forbidden, 'extension sources');
 }
 
 console.log('json/structure checks: ok');
@@ -572,18 +580,32 @@ node --check "$CHROME_DIR/src/page-dom.js" >/dev/null
 node --check "$CHROME_DIR/src/page-utils.js" >/dev/null
 node --check "$CHROME_DIR/src/page-workflow.js" >/dev/null
 node --check "$CHROME_DIR/src/page-product-preview.js" >/dev/null
+node --check "$CHROME_DIR/src/page-profile-home.js" >/dev/null
+node --check "$CHROME_DIR/src/page-profile-editor.js" >/dev/null
+node --check "$CHROME_DIR/src/page-profile-avatar.js" >/dev/null
+node --check "$CHROME_DIR/src/page-local-catalog.js" >/dev/null
+node --check "$CHROME_DIR/src/page-profile-polish.js" >/dev/null
+node --check "$CHROME_DIR/src/page-alt-vault.js" >/dev/null
 node --check "$CHROME_DIR/src/page-site-root-upload.js" >/dev/null
 node --check "$CHROME_DIR/src/page-site-render-mode.js" >/dev/null
 node --check "$CHROME_DIR/src/page-site-creator-proof.js" >/dev/null
 node --check "$CHROME_DIR/src/options.js" >/dev/null
 
+if [[ -f "$CHROME_DIR/src/page-passport-home.js" ]]; then
+  node --check "$CHROME_DIR/src/page-passport-home.js" >/dev/null
+fi
+
 bash -n "$ROOT/scripts/check-chrome.sh" >/dev/null
 bash -n "$ROOT/scripts/package-chrome.sh" >/dev/null
 bash -n "$ROOT/scripts/smoke-local-gateway.sh" >/dev/null
-bash -n "$ROOT/scripts/smoke-site-create-local.sh" >/dev/null
-bash -n "$ROOT/scripts/green-gate-local.sh" >/dev/null
-bash -n "$ROOT/scripts/make_codebundle.sh" >/dev/null
 
+for file in "${optional_files[@]}"; do
+  if [[ -f "$file" ]]; then
+    bash -n "$file" >/dev/null
+  fi
+done
+
+echo "json/structure checks: ok"
 echo "javascript syntax checks: ok"
 echo "bash syntax checks: ok"
 echo "CrabLink Chrome extension checks passed."

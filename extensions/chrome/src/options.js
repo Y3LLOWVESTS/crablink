@@ -18,6 +18,7 @@ import {
   getSettings,
   normalizeGatewayUrl,
   normalizeTimeout,
+  normalizeUsername,
   resetSettings,
   saveIdentityState,
   saveSettings
@@ -30,6 +31,9 @@ const els = {
   requestTimeoutMs: document.getElementById('requestTimeoutMs'),
   passportSubject: document.getElementById('passportSubject'),
   walletAccount: document.getElementById('walletAccount'),
+  requestedUsername: document.getElementById('requestedUsername'),
+  usernameStatus: document.getElementById('usernameStatus'),
+  profileCrabUrl: document.getElementById('profileCrabUrl'),
   rocBalanceDisplay: document.getElementById('rocBalanceDisplay'),
   lastBootstrapReceiptId: document.getElementById('lastBootstrapReceiptId'),
   authToken: document.getElementById('authToken'),
@@ -56,6 +60,9 @@ function fillForm(settings) {
   els.requestTimeoutMs.value = settings.requestTimeoutMs;
   els.passportSubject.value = settings.passportSubject || '';
   els.walletAccount.value = settings.walletAccount || '';
+  els.requestedUsername.value = settings.requestedHandle || settings.handle || '';
+  els.usernameStatus.value = usernameStatusLabel(settings);
+  els.profileCrabUrl.value = settings.profileCrabUrl || settings.publicProfileCid || '';
   els.rocBalanceDisplay.value = settings.rocBalanceDisplay || '';
   els.lastBootstrapReceiptId.value = settings.lastBootstrapReceiptId || '';
   els.authToken.value = settings.authToken || '';
@@ -64,11 +71,20 @@ function fillForm(settings) {
 }
 
 function readForm() {
+  const requested = normalizeUsername(els.requestedUsername.value);
+
+  if (els.requestedUsername.value.trim() && !requested.ok) {
+    throw new Error(requested.error || '@username is invalid.');
+  }
+
   return {
     gatewayUrl: normalizeGatewayUrl(els.gatewayUrl.value),
     requestTimeoutMs: normalizeTimeout(els.requestTimeoutMs.value),
     passportSubject: els.passportSubject.value.trim(),
     walletAccount: els.walletAccount.value.trim(),
+    requestedUsername: requested.ok ? requested.username : '',
+    requestedHandle: requested.ok ? requested.handle : '',
+    usernameStatus: requested.ok ? 'local_draft' : '',
     authToken: els.authToken.value.trim(),
     requireSpendConfirm: els.requireSpendConfirm.checked,
     devMode: els.devMode.checked
@@ -187,13 +203,24 @@ async function createPassport() {
       ...readForm()
     };
 
-    const client = new RonClient(pending);
+    const localSaved = await saveSettings(pending);
+    fillForm(localSaved);
+    const client = new RonClient(localSaved);
 
     setBusy(true);
     setBadge('muted', 'creating');
 
+    const requested = normalizeUsername(els.requestedUsername.value);
+    const usernameBody = requested.ok
+      ? {
+          requested_username: requested.username,
+          requested_handle: requested.handle
+        }
+      : {};
+
     const response = await client.bootstrapPassport({
-      desired_starting_balance_minor_units: '1776'
+      desired_starting_balance_minor_units: '1776',
+      ...usernameBody
     });
     const identity = extractIdentityState(response.data);
 
@@ -232,6 +259,33 @@ async function createPassport() {
   }
 }
 
+function usernameStatusLabel(settings) {
+  if (settings?.handle) {
+    return settings.usernameStatus || 'backend_unknown';
+  }
+
+  if (settings?.requestedHandle) {
+    return settings.usernameStatus || 'local_draft';
+  }
+
+  return '';
+}
+
+function renderUsernameHelp() {
+  const requested = normalizeUsername(els.requestedUsername.value);
+
+  if (!els.requestedUsername.value.trim()) {
+    return;
+  }
+
+  if (!requested.ok) {
+    showMessage('warn', requested.error || '@username is invalid.');
+    return;
+  }
+
+  showMessage('warn', `${requested.handle} is a local draft until RustyOnions confirms it.`);
+}
+
 function setBusy(isBusy) {
   els.testGatewayButton.disabled = isBusy;
   els.refreshIdentityButton.disabled = isBusy;
@@ -266,6 +320,7 @@ els.clearIdentityButton.addEventListener('click', clearIdentity);
 els.testGatewayButton.addEventListener('click', testGateway);
 els.refreshIdentityButton.addEventListener('click', refreshIdentity);
 els.createPassportButton.addEventListener('click', createPassport);
+els.requestedUsername.addEventListener('change', renderUsernameHelp);
 
 load().catch((error) => {
   setBadge('bad', 'error');

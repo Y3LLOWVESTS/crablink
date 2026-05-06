@@ -10,6 +10,9 @@ const MAX_SITE_NAME_LEN = 128;
 const KNOWN_ASSET_KINDS = new Set([
   'image',
   'video',
+  'stream',
+  'podcast',
+  'audio',
   'music',
   'song',
   'article',

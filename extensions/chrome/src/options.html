@@ -3,109 +3,232 @@
   <head>
     <meta charset="utf-8" />
     <title>CrabLink Settings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
+
   <body class="options">
-    <header class="app-header">
-      <div class="brand-row">
-        <img class="brand-logo" src="../assets/icons/logo.png" alt="CrabLink logo" />
+    <div class="settings-shell">
+      <header class="settings-hero">
+        <div class="settings-brand">
+          <img class="settings-logo" src="../assets/icons/logo.png" alt="CrabLink logo" />
+          <div>
+            <p class="eyebrow">CrabLink Extension</p>
+            <h1>Settings</h1>
+            <p class="hero-copy">
+              Configure the local RustyOnions gateway, safe identity labels, and developer-mode controls.
+            </p>
+          </div>
+        </div>
+
+        <div class="settings-hero-actions">
+          <span id="saveBadge" class="badge badge-muted">settings</span>
+        </div>
+      </header>
+
+      <main class="settings-layout">
+        <aside class="settings-sidebar">
+          <section class="settings-card profile-card">
+            <div class="section-head">
+              <div>
+                <h2>Current Identity</h2>
+                <p>Display labels only. Backend remains the source of truth.</p>
+              </div>
+            </div>
+
+            <div class="summary-stack">
+              <div class="summary-item">
+                <span>Passport</span>
+                <strong id="summaryPassport">passport:main:dev</strong>
+              </div>
+
+              <div class="summary-item">
+                <span>Wallet</span>
+                <strong id="summaryWallet">acct_dev</strong>
+              </div>
+
+              <div class="summary-item">
+                <span>@username</span>
+                <strong id="summaryUsername">@skinnycrabby</strong>
+              </div>
+
+              <div class="summary-item">
+                <span>ROC</span>
+                <strong id="summaryRoc">1451 ROC</strong>
+              </div>
+            </div>
+
+            <p class="note">
+              These labels help CrabLink build gateway requests. They are not private keys,
+              spend authority, ledger truth, or proof of username ownership.
+            </p>
+          </section>
+
+          <section class="settings-card safety-mini-card">
+            <h2>Safety Rules</h2>
+
+            <ul class="safety-list compact-list">
+              <li>No silent ROC spending.</li>
+              <li>No private keys or seed phrases in this MVP.</li>
+              <li>No direct calls to internal RustyOnions services.</li>
+              <li>Passport bootstrap goes through the configured gateway.</li>
+              <li>@username ownership must come from backend confirmation.</li>
+            </ul>
+          </section>
+        </aside>
+
+        <section class="settings-main">
+          <section class="settings-card">
+            <div class="section-title-row">
+              <div>
+                <p class="eyebrow">Connection</p>
+                <h2>Gateway</h2>
+              </div>
+              <button id="testGatewayButton" type="button" class="secondary small-button">Test Gateway</button>
+            </div>
+
+            <div class="field-grid two-col">
+              <label class="field-block" for="gatewayUrl">
+                <span>Gateway URL</span>
+                <input id="gatewayUrl" type="url" spellcheck="false" placeholder="http://127.0.0.1:8090" />
+              </label>
+
+              <label class="field-block" for="requestTimeoutMs">
+                <span>Request timeout</span>
+                <input id="requestTimeoutMs" type="number" min="1000" max="30000" step="500" />
+              </label>
+            </div>
+          </section>
+
+          <section class="settings-card">
+            <div class="section-title-row">
+              <div>
+                <p class="eyebrow">Passport</p>
+                <h2>Identity Labels</h2>
+              </div>
+              <div class="inline-actions">
+                <button id="refreshIdentityButton" type="button" class="secondary small-button">Refresh</button>
+                <button id="createPassportButton" type="button" class="small-button">Create / Request</button>
+              </div>
+            </div>
+
+            <div class="field-grid two-col">
+              <label class="field-block" for="passportSubject">
+                <span>Passport subject</span>
+                <input id="passportSubject" type="text" spellcheck="false" placeholder="passport:main:dev" />
+              </label>
+
+              <label class="field-block" for="walletAccount">
+                <span>Wallet account</span>
+                <input id="walletAccount" type="text" spellcheck="false" placeholder="acct_dev" />
+              </label>
+
+              <label class="field-block" for="requestedUsername">
+                <span>Requested @username</span>
+                <input id="requestedUsername" type="text" spellcheck="false" autocomplete="off" placeholder="@crablobsta" />
+              </label>
+
+              <label class="field-block" for="usernameStatus">
+                <span>Username status</span>
+                <input id="usernameStatus" type="text" spellcheck="false" placeholder="local_draft / requested / confirmed" readonly />
+              </label>
+
+              <label class="field-block" for="profileCrabUrl">
+                <span>Public profile route</span>
+                <input id="profileCrabUrl" type="text" spellcheck="false" placeholder="backend confirmed profile route" readonly />
+              </label>
+
+              <label class="field-block" for="rocBalanceDisplay">
+                <span>Last known ROC balance</span>
+                <input id="rocBalanceDisplay" type="text" spellcheck="false" placeholder="loaded from gateway" readonly />
+              </label>
+
+              <label class="field-block full-span" for="lastBootstrapReceiptId">
+                <span>Last bootstrap receipt</span>
+                <input id="lastBootstrapReceiptId" type="text" spellcheck="false" placeholder="tx_..." readonly />
+              </label>
+            </div>
+
+            <div class="card-footer-row">
+              <p class="note">
+                Requested @usernames stay local/pending until RustyOnions confirms reservation.
+                The extension does not own passport keys, wallet truth, issuance truth, profile truth, or ledger truth.
+              </p>
+              <button id="clearIdentityButton" type="button" class="secondary danger-soft small-button">
+                Clear Identity Labels
+              </button>
+            </div>
+          </section>
+
+          <section class="settings-card split-card">
+            <div class="split-panel">
+              <div class="section-title-row simple">
+                <div>
+                  <p class="eyebrow">Developer</p>
+                  <h2>Dev Token</h2>
+                </div>
+              </div>
+
+              <label class="field-block" for="authToken">
+                <span>Dev bearer/cap token</span>
+                <input id="authToken" type="password" spellcheck="false" placeholder="optional dev token" />
+              </label>
+
+              <p class="note">
+                MVP token storage is for local development only. Do not store production secrets here.
+              </p>
+
+              <button id="clearTokenButton" type="button" class="secondary full-button">
+                Clear Token
+              </button>
+            </div>
+
+            <div class="split-panel">
+              <div class="section-title-row simple">
+                <div>
+                  <p class="eyebrow">Controls</p>
+                  <h2>Safety</h2>
+                </div>
+              </div>
+
+              <label class="switch-row">
+                <input id="requireSpendConfirm" type="checkbox" />
+                <span>
+                  <strong>Require confirmation</strong>
+                  <small>Before paid/write actions</small>
+                </span>
+              </label>
+
+              <label class="switch-row">
+                <input id="devMode" type="checkbox" />
+                <span>
+                  <strong>Dev mode</strong>
+                  <small>Enable local development behavior</small>
+                </span>
+              </label>
+
+              <p class="note">
+                Site/image creation belongs in RustyOnions built-in pages, not hidden extension actions.
+              </p>
+            </div>
+          </section>
+
+          <section id="message" class="settings-message hidden" aria-live="polite"></section>
+        </section>
+      </main>
+
+      <footer class="settings-savebar">
         <div>
-          <h1>CrabLink Settings</h1>
-          <p>Configure local gateway access and safe identity labels.</p>
+          <strong>CrabLink local settings</strong>
+          <p>Changes affect this Chrome profile only.</p>
         </div>
-      </div>
-      <span id="saveBadge" class="badge badge-muted">settings</span>
-    </header>
 
-    <main>
-      <section class="card">
-        <h2>Gateway</h2>
-
-        <label for="gatewayUrl">Gateway URL</label>
-        <input id="gatewayUrl" type="url" spellcheck="false" placeholder="http://127.0.0.1:8090" />
-
-        <label for="requestTimeoutMs">Request timeout</label>
-        <input id="requestTimeoutMs" type="number" min="1000" max="30000" step="500" />
-
-        <div class="button-row">
-          <button id="testGatewayButton" type="button">Test Gateway</button>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Identity Labels</h2>
-
-        <label for="passportSubject">Passport subject</label>
-        <input id="passportSubject" type="text" spellcheck="false" placeholder="passport:main:dev" />
-
-        <label for="walletAccount">Wallet account</label>
-        <input id="walletAccount" type="text" spellcheck="false" placeholder="acct_dev" />
-
-        <label for="rocBalanceDisplay">Last known ROC balance</label>
-        <input id="rocBalanceDisplay" type="text" spellcheck="false" placeholder="loaded from gateway" readonly />
-
-        <label for="lastBootstrapReceiptId">Last bootstrap receipt</label>
-        <input id="lastBootstrapReceiptId" type="text" spellcheck="false" placeholder="tx_..." readonly />
-
-        <p class="note">
-          These are safe labels for requests and UI context. The extension does not own passport keys,
-          wallet truth, issuance truth, or ledger truth.
-        </p>
-
-        <div class="button-row">
-          <button id="refreshIdentityButton" type="button" class="secondary">Refresh Identity</button>
-          <button id="createPassportButton" type="button">Create Dev Passport</button>
-          <button id="clearIdentityButton" type="button" class="secondary">Clear Identity Labels</button>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Dev Token</h2>
-
-        <label for="authToken">Dev bearer/cap token</label>
-        <input id="authToken" type="password" spellcheck="false" placeholder="optional dev token" />
-
-        <p class="note">
-          MVP token storage is for local development only. Do not store production secrets here.
-        </p>
-
-        <div class="button-row">
-          <button id="clearTokenButton" type="button" class="secondary">Clear Token</button>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Safety</h2>
-
-        <label class="checkbox">
-          <input id="requireSpendConfirm" type="checkbox" />
-          Require confirmation before paid/write actions
-        </label>
-
-        <label class="checkbox">
-          <input id="devMode" type="checkbox" />
-          Dev mode
-        </label>
-
-        <ul class="safety-list">
-          <li>No silent ROC spending.</li>
-          <li>No private keys or seed phrases in this MVP.</li>
-          <li>No direct calls to internal RustyOnions services.</li>
-          <li>Passport bootstrap must go through the configured gateway.</li>
-          <li>1776 ROC must come from backend wallet/ledger truth, never local display state.</li>
-          <li>Site/image creation belongs in RustyOnions built-in pages, not hidden extension actions.</li>
-        </ul>
-      </section>
-
-      <section id="message" class="message hidden" aria-live="polite"></section>
-
-      <section class="card">
-        <div class="button-row">
-          <button id="saveButton" type="button">Save Settings</button>
+        <div class="savebar-actions">
           <button id="resetButton" type="button" class="secondary">Reset Defaults</button>
+          <button id="saveButton" type="button">Save Settings</button>
         </div>
-      </section>
-    </main>
+      </footer>
+    </div>
 
     <script type="module" src="./options.js"></script>
   </body>

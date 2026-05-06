@@ -2,235 +2,99 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>CrabLink</title>
+    <title>Opening CrabLink</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!-- check-token: crab://<hash>.image -->
-    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d1628;
+        --panel: #111c31;
+        --border: #2c3a54;
+        --text: #f7fbff;
+        --muted: #a9b6cc;
+        --blue: #2f67f2;
+        --bad: #fca5a5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 320px;
+        min-width: 320px;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      main {
+        display: grid;
+        gap: 12px;
+        padding: 16px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.15;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      button {
+        min-height: 38px;
+        border: 0;
+        border-radius: 12px;
+        background: var(--blue);
+        color: white;
+        font: inherit;
+        font-weight: 800;
+        cursor: pointer;
+        padding: 10px 12px;
+      }
+
+      #errorText {
+        display: none;
+        color: var(--bad);
+        overflow-wrap: anywhere;
+      }
+
+      body.error #errorText {
+        display: block;
+      }
+
+      body.error #openButton {
+        display: block;
+      }
+
+      #openButton {
+        display: none;
+      }
+    </style>
   </head>
 
-  <body class="popup">
-    <header class="app-header">
-      <div class="brand-row">
-        <img class="brand-logo" src="../assets/icons/logo.png" alt="CrabLink logo" />
-        <div class="brand-copy">
-          <h1>CrabLink</h1>
-          <p>RustyOnions browser client</p>
-        </div>
-      </div>
-
-      <span id="nodeBadge" class="badge badge-muted">loading</span>
-    </header>
-
+  <body>
     <main>
-      <section class="card status-card">
-        <div class="row">
-          <span class="label">Gateway</span>
-          <span id="gatewayUrl" class="value mono">loading...</span>
-        </div>
-
-        <div class="row">
-          <span class="label">Passport</span>
-          <span id="passportSubject" class="value mono">not loaded</span>
-        </div>
-
-        <div class="row">
-          <span class="label">Wallet</span>
-          <span id="walletAccount" class="value mono">not linked</span>
-        </div>
-
-        <div class="row">
-          <span class="label">ROC</span>
-          <span id="rocBalance" class="value mono">unknown</span>
-        </div>
-
-        <div class="row">
-          <span class="label">Ledger</span>
-          <span id="ledgerBacked" class="value">not verified</span>
-        </div>
-
-        <div class="button-row">
-          <button id="checkNodeButton" type="button">Check Node</button>
-          <button id="refreshIdentityButton" type="button">Check Passport</button>
-          <button id="refreshBalanceButton" type="button">Refresh Balance</button>
-          <button id="openOptionsButton" type="button" class="secondary">Settings</button>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="section-head">
-          <div>
-            <h2>RON Passport</h2>
-            <p>Identity and wallet labels come from the gateway. No private keys are stored here.</p>
-          </div>
-          <span id="passportBadge" class="badge badge-muted">unknown</span>
-        </div>
-
-        <p id="passportSummary" class="muted">
-          No passport label is loaded yet. Create or load one through the gateway.
-        </p>
-
-        <div class="mini-grid">
-          <div>
-            <span class="label">Identity checked</span>
-            <strong id="identityCheckedAt">never</strong>
-          </div>
-
-          <div>
-            <span class="label">Balance checked</span>
-            <strong id="balanceCheckedAt">never</strong>
-          </div>
-
-          <div>
-            <span class="label">Starter grant</span>
-            <strong id="starterGrantStatus">pending backend</strong>
-          </div>
-
-          <div>
-            <span class="label">Grant amount</span>
-            <strong id="starterGrantAmount">unknown</strong>
-          </div>
-
-          <div class="wide">
-            <span class="label">Bootstrap receipt</span>
-            <strong id="bootstrapReceiptId" class="mono">none</strong>
-          </div>
-        </div>
-
-        <div class="button-row">
-          <button id="createPassportButton" type="button">Create Dev Passport + Starter ROC</button>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="section-head">
-          <div>
-            <h2>Built-in RON Pages</h2>
-            <p>Open RustyOnions product pages through the gateway resolver.</p>
-          </div>
-          <span id="ronPagesBadge" class="badge badge-muted">ready</span>
-        </div>
-
-        <div class="ron-page-grid">
-          <button type="button" class="ron-page-button" data-crab-page="site">
-            <strong>crab://site</strong>
-            <span>Register or launch RON sites</span>
-          </button>
-
-          <button type="button" class="ron-page-button" data-crab-page="image">
-            <strong>crab://image</strong>
-            <span>Upload images and create asset manifests</span>
-          </button>
-
-          <button type="button" class="ron-page-button" data-crab-page="music">
-            <strong>crab://music</strong>
-            <span>Reserved music workflow — coming soon</span>
-          </button>
-
-          <button type="button" class="ron-page-button" data-crab-page="article">
-            <strong>crab://article</strong>
-            <span>Reserved article workflow — coming soon</span>
-          </button>
-        </div>
-
-        <p class="hint">
-          Chrome shortcut: type <strong>crab</strong>, press <strong>Tab</strong>, then type
-          <strong>site</strong>, <strong>image</strong>, <strong>music</strong>, or
-          <strong>article</strong>.
-        </p>
-      </section>
-
-      <section class="card">
-        <h2>Resolver</h2>
-        <p class="muted">Resolve a crab:// URL, b3 CID, or raw 64-character BLAKE3 hash.</p>
-
-        <label for="crabInput">Crab URL / b3 CID / raw hash</label>
-        <input
-          id="crabInput"
-          type="text"
-          spellcheck="false"
-          autocomplete="off"
-          placeholder="crab://<hash>.image"
-        />
-
-        <label for="defaultAssetKind">Default asset kind</label>
-        <select id="defaultAssetKind">
-          <option value="image">image</option>
-          <option value="video">video</option>
-          <option value="music">music</option>
-          <option value="article">article</option>
-          <option value="post">post</option>
-          <option value="comment">comment</option>
-          <option value="page">page</option>
-          <option value="site">site</option>
-          <option value="app">app</option>
-          <option value="manifest">manifest</option>
-        </select>
-
-        <div class="button-row">
-          <button id="resolveButton" type="button">Resolve</button>
-        </div>
-
-        <article id="result" class="result hidden">
-          <div class="section-head">
-            <div>
-              <h2 id="resultTitle">Result</h2>
-              <p id="resultSubtitle" class="muted"></p>
-            </div>
-            <span id="resultKind" class="badge badge-muted">result</span>
-          </div>
-
-          <div id="resultFacts" class="facts"></div>
-
-          <div class="button-row">
-            <button id="copyCrabButton" type="button" class="secondary hidden">Copy Crab URL</button>
-            <button id="copyB3Button" type="button" class="secondary hidden">Copy b3 CID</button>
-            <button id="copyJsonButton" type="button" class="secondary hidden">Copy JSON</button>
-          </div>
-
-          <pre id="resultJson">{}</pre>
-        </article>
-      </section>
-
-      <section class="card">
-        <div class="section-head">
-          <div>
-            <h2>Route Diagnostics</h2>
-            <p>Read-only gateway probes. Diagnostics never create passports, assets, or sites.</p>
-          </div>
-          <span id="diagnosticsBadge" class="badge badge-muted">idle</span>
-        </div>
-
-        <div class="button-row">
-          <button id="runDiagnosticsButton" type="button" class="secondary">Run Diagnostics</button>
-        </div>
-
-        <div id="diagnosticsList" class="diagnostics-list"></div>
-      </section>
-
-      <section class="card">
-        <div class="section-head">
-          <div>
-            <h2>Recent Receipts</h2>
-            <p>Display-only receipt references returned by the backend.</p>
-          </div>
-          <span id="receiptBadge" class="badge badge-muted">empty</span>
-        </div>
-
-        <div id="receiptList" class="receipt-list"></div>
-      </section>
-
-      <section class="card safety-card">
-        <h2>Safety rules</h2>
-        <ul>
-          <li>CrabLink calls the public gateway only.</li>
-          <li>No private keys, seed phrases, or ledger truth are stored in the extension.</li>
-          <li>Creation/upload workflows belong in RustyOnions built-in pages, not the popup.</li>
-          <li>Coming-soon pages are metadata only and do not mutate backend state.</li>
-        </ul>
-      </section>
+      <h1>Opening CrabLink…</h1>
+      <p>This popup is only a launcher. The full CrabLink browser will open in a normal tab.</p>
+      <p id="errorText"></p>
+      <button id="openButton" type="button">Open CrabLink Browser</button>
     </main>
-
-    <div id="messageBox" class="message message-muted"></div>
 
     <script type="module" src="./popup.js"></script>
   </body>
