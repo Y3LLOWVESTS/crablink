@@ -1,0 +1,5 @@
+{
+  "schema": "crablink.fixture.uniform-manifest.sample.v1",
+  "scaffold": true,
+  "truth_boundary": "fixture-only; not backend truth"
+}

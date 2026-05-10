@@ -1,0 +1,22 @@
+{
+  "name": "crablink",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "CrabLink browser clients for RustyOnions crab:// UX.",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "check:chrome": "bash scripts/check-chrome.sh",
+    "check:react": "bash scripts/check-react-lane.sh",
+    "package:chrome": "bash scripts/package-chrome.sh",
+    "codebundle": "bash scripts/make_codebundle.sh"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {}
+}

@@ -25507,3 +25507,14541 @@ Next instance should begin with the routing bug, then continue either toward:
 
 
 ### END NOTE - MAY 5 2026 - 18:35 CST
+
+
+### BEGIN NOTE - MAY 6 2026 - 00:00 CST
+
+Below is a paste-ready carryover note set for the next instance.
+
+# RustyOnions / CrabLink NEXT_LEVEL Carryover Notes — End of Current Session
+
+## 0. Current north-star
+
+We are still following:
+
+```text
+NEXT_LEVEL.MD
+WEB3.MD
+WEB3_2.MD
+TODO_WEB3_2.MD
+WEB3_2_PRODUCT_ROUTE_CONTRACTS.md
+CODEBUNDLE_RS.md
+CODEBUNDLE_CHROME_EXTENSION.md
+ALLNOTES.MD
+ALL_DOCS_COMBINED.MD
+CODECHECK.md
+CODECOMMENTS.MD
+```
+
+`NEXT_LEVEL.MD` is the active product-layer continuation after WEB3 / WEB3_2. Its purpose is to turn the already proven paid image + site + `<crab-image>` pipeline into reusable creator primitives, RON Passport identity primitives, reputation/moderation surfaces, reference-graph sites, and creator-economy routing. The blueprint explicitly begins from the concrete proof that paid image upload, site creation/open, named site rendering, root HTML rendering, and `<crab-image>` reference rendering already work. 
+
+Core invariants remain non-negotiable:
+
+```text
+- ROC remains internal only.
+- No ROX, Solana, bridge, staking, liquidity, exchange, or external settlement yet.
+- b3:<64 lowercase hex> remains canonical internal content ID.
+- Public typed asset URLs use crab://<64 lowercase hex>.<asset_kind>.
+- Named sites use crab://<site_name>.
+- Sites own route maps, layout, policies, and reference graphs.
+- Assets remain independent b3-backed objects.
+- CrabLink is a thin browser client.
+- CrabLink must remain gateway-only.
+- CrabLink must not fake wallet truth, receipt truth, profile truth, username truth, reputation truth, moderation truth, or backend publication truth.
+- Paid actions require explicit user confirmation.
+- No silent spend.
+- No direct ledger/storage/index/wallet mutation from CrabLink.
+- No public main↔alt linkage by default.
+```
+
+The extension blueprint and latest codebundle both reinforce the same rule: CrabLink should make RustyOnions feel real in a browser while keeping dangerous/backend-owned things out of the browser; RustyOnions remains the source of truth. 
+
+---
+
+## 1. Current completion estimate
+
+Current practical estimate:
+
+```text
+CrabLink Chrome MVP:                               86–90%
+CrabLink product-proof / NEXT_LEVEL foundation:    90–94%
+RustyOnions + CrabLink internal WEB3 beta:         80–84%
+Full NEXT_LEVEL blueprint overall:                 55–60%
+```
+
+Why the full NEXT_LEVEL number is not higher:
+
+```text
+Already strong:
+- paid image upload
+- image asset page
+- raw image preview
+- site create/open
+- named site resolver
+- named site render
+- <crab-image> reference graph
+- profile UX scaffold
+- local alt vault
+- local article/video/stream/podcast workspaces
+- green-gate scripts/checks/codebundle flow
+```
+
+Still not done:
+
+```text
+- real backend @username reservation/confirmation
+- public profile manifests
+- site creator identity hydration from backend truth
+- backend reputation/moderation score fields
+- real .post/.comment/.article primitives
+- real article/video/podcast/stream publication routes
+- paid views / paid content access
+- site revision history
+- backend alt-passport semantics
+- provider payouts and rewarder/accounting productization
+- policy hardening and route-contract tests for the new primitives
+```
+
+Earlier carryover notes already framed the full NEXT_LEVEL blueprint as including public profile manifests, backend username reservation, reputation/moderator scoring, alt passport backend semantics, post/comment/article/media primitives, paid views, reference-graph expansion, site revisions, provider payouts, hosting placement, and policy hardening. 
+
+---
+
+## 2. What we accomplished in this session
+
+This session was mostly about **stabilizing CrabLink after the new local creator workspaces** and deciding whether to keep pushing frontend UX or pivot backend.
+
+### 2.1 Confirmed the route-regression root cause
+
+We had a serious regression around:
+
+```text
+crab://article
+crab://video
+crab://stream
+crab://podcast
+```
+
+Symptoms included:
+
+```text
+- pages getting stuck on the previous local workspace
+- crab://video falling through to /sites/video
+- slow plugin/full-tab load
+- route controller logic fighting the per-page modules
+- too much code added to page.js
+```
+
+The key discovery:
+
+```text
+page-local-route-mode.js caused a route-controller collision.
+```
+
+Once `page-local-route-mode.js` was deleted, the four local creator pages began working correctly again. The current working rule is:
+
+```text
+Do not re-add page-local-route-mode.js.
+Do not add another central local route controller.
+Let page.js prevent named-site fallback.
+Let each creator workspace module own its own local UI.
+```
+
+The latest codebundle tree confirms that the four creator modules exist and that `page-local-route-mode.js` is not part of the current baseline. 
+
+### 2.2 Stabilized the working model for creator workspaces
+
+The stable model is now:
+
+```text
+page.js:
+  - parses local built-in routes
+  - prevents article/video/stream/podcast from falling through to /sites/<name>
+  - keeps normal browser history/rendering behavior
+
+page-article-draft.js:
+  - owns crab://article UI
+
+page-video-draft.js:
+  - owns crab://video UI
+
+page-stream-draft.js:
+  - owns crab://stream UI
+
+page-podcast-draft.js:
+  - owns crab://podcast UI
+```
+
+These pages are **local UX / prepare scaffolds**, not backend-published assets.
+
+They may:
+
+```text
+- collect local creator metadata
+- render safe local previews
+- save local drafts in chrome.storage.local
+- generate future manifest JSON
+- copy local manifest/metadata JSON
+- make explicit non-mutating gateway prepare attempts
+- show honest 404 / not-wired-yet responses
+```
+
+They must not:
+
+```text
+- claim backend publication
+- create b3 CIDs locally
+- create manifest CIDs locally
+- silently upload bytes
+- charge ROC
+- mutate wallet state
+- mint stream keys
+- create chat rooms
+- create RSS feeds
+- invent ownership/provenance/receipt truth
+```
+
+### 2.3 Updated the README around the current truth boundary
+
+We updated the current `extensions/chrome/README.md` rather than replacing it with separate new docs.
+
+The README now documents:
+
+```text
+- current MVP behavior
+- local creator workspaces
+- creator workspace regression rule
+- do not reintroduce page-local-route-mode.js
+- public URL forms
+- canonical proof assets
+- safe green gate
+- full dev green gate
+- paid image proof path
+- site create/open proof path
+- named-site render proof
+- local creator workspace manual proof
+- security rules
+- current next product direction
+- backend order recommendations
+```
+
+The README now explicitly records the working route sequence:
+
+```text
+crab://article
+crab://video
+crab://stream
+crab://podcast
+crab://video
+crab://podcast
+crab://stream
+crab://article
+```
+
+and requires:
+
+```text
+- no stale previous workspace
+- no /sites/article fallback
+- no /sites/video fallback
+- no /sites/stream fallback
+- no /sites/podcast fallback
+- no blank screen
+- no fake backend publication
+- no ROC mutation on page load
+```
+
+The uploaded current README already had the major proof-path structure for green gates, paid image proof, site create/open proof, and named-site rendering; this session updated that structure rather than replacing it wholesale. 
+
+### 2.4 Decided the next real leap is backend
+
+We reached the conclusion:
+
+```text
+CrabLink UX is now far enough for this stage.
+Further UX-only work risks becoming placeholder-heavy.
+The next major NEXT_LEVEL progress needs backend truth.
+```
+
+The frontend now has enough product scaffolding to show what the backend should provide. The next instance should pivot to RustyOnions backend work, beginning with identity/profile truth rather than more route/UI polish.
+
+---
+
+## 3. Current known-good proof state
+
+Known good values:
+
+```text
+Gateway:
+http://127.0.0.1:8090
+
+Local passport:
+passport:main:dev
+
+Local wallet:
+acct_dev
+
+Local username placeholder:
+@skinnycrabby
+
+Known paid image:
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+
+Known reference image:
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+
+Known named site:
+crab://thedustyonion6
+
+Local profile:
+crab://profile
+
+Local creator pages:
+crab://article
+crab://video
+crab://stream
+crab://podcast
+```
+
+Previous notes recorded the full proof threshold:
+
+```text
+Chrome extension loads
+Popup/options/page shell exist
+Local gateway config works
+Identity/balance display works
+Built-in pages work
+Paid image upload works
+Image asset page works
+Raw image preview works
+Named site creation works
+Named site resolver works
+Sandboxed named site render works
+<crab-image> reference graph works
+Creator toolbar placeholder works
+Full safe and mutating green gates pass
+```
+
+That product loop is the foundation for usernames, public profile manifests, site creator identity, reputation/moderation summaries, post/comment/article primitives, creator payout routing, and reference-graph sites. 
+
+---
+
+## 4. Green gate / proof commands to run at the start of the next instance
+
+Before changing backend or frontend, checkpoint the CrabLink baseline.
+
+From CrabLink repo:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/check-chrome.sh && scripts/package-chrome.sh
+scripts/green-gate-local.sh
+scripts/make_codebundle.sh
+```
+
+For full mutating proof, only when intentionally spending dev ROC:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+CRABLINK_GREEN_RUN_BOOTSTRAP=1 \
+CRABLINK_GREEN_RUN_KNOWN_GOOD=1 \
+CRABLINK_GREEN_MUTATING=1 \
+scripts/green-gate-local.sh
+```
+
+The green gate script runs static checks, Chrome package build, non-mutating local gateway smoke, optional bootstrap, optional known-good raw preview, optional paid image upload, optional site create/open, and codebundle regeneration. 
+
+Manual checks after reload:
+
+```text
+chrome://extensions
+→ CrabLink Extension for Chrome
+→ Reload
+→ close old CrabLink tabs
+→ open fresh CrabLink tab
+```
+
+Then test:
+
+```text
+crab://article
+crab://video
+crab://stream
+crab://podcast
+crab://video
+crab://podcast
+crab://stream
+crab://article
+```
+
+And:
+
+```text
+crab://thedustyonion6
+→ crab://site
+```
+
+Expected for named site:
+
+```text
+- no stale iframe
+- full-width site render
+- quick-nav hidden on named site
+- site creator toolbar visible
+- Site Manifest works
+- embedded image loads
+- no binary text regression
+```
+
+These exact checks are already called out in carryover notes as the precondition before touching username/profile/reputation/post/comment/article features. 
+
+---
+
+## 5. Important regression rules for the next instance
+
+### 5.1 Do not re-add route-controller code
+
+Do not re-add:
+
+```text
+extensions/chrome/src/page-local-route-mode.js
+```
+
+Do not add:
+
+```text
+global local route controller
+central local creator router
+MutationObserver-based route authority layer
+page.js mega-controller for all local pages
+```
+
+This was the cause of the creator-page regression.
+
+### 5.2 Do not bloat `page.js` again
+
+`page.js` should stay responsible for:
+
+```text
+- parsing input
+- normalizing known built-in routes
+- resolving backend DTOs through gateway
+- preventing creator routes from falling to /sites/<name>
+- browser history state
+- generic page rendering
+```
+
+`page.js` should not own:
+
+```text
+- article UI
+- video UI
+- stream UI
+- podcast UI
+- profile editor UI
+- alt vault UI
+- reputation/moderation truth
+- backend publishing semantics
+```
+
+### 5.3 Keep CrabLink gateway-only
+
+CrabLink must not call:
+
+```text
+svc-wallet directly
+svc-storage directly
+svc-index directly
+ron-ledger directly
+ron-accounting directly
+svc-rewarder directly
+omnigate directly unless public gateway architecture changes intentionally
+```
+
+The extension acceptance gates include minimal permissions, no private key/seed phrase fields, no silent paid action, safe backend error display, and route normalization. 
+
+### 5.4 Do not fake backend identity/reputation/profile truth
+
+The next features must remain honest:
+
+```text
+@username local draft is allowed.
+@username backend confirmed is only allowed if backend returns it.
+Profile manifest is only real if backend returns a CID/route.
+REP/MOD scores are unknown unless backend returns them.
+Alt passports are local private drafts unless backend supports public alt roots.
+```
+
+---
+
+## 6. What remains for the project
+
+### 6.1 Backend identity/profile truth
+
+The next real blocker is backend truth for:
+
+```text
+@username
+profile route
+profile manifest CID
+site creator identity
+creator handle
+optional reputation score
+optional moderator score
+```
+
+CrabLink can already display these ideas, but it must not claim them as real until the RustyOnions backend provides them.
+
+### 6.2 Public profile manifests
+
+Need backend-owned profile DTO/manifest, likely something like:
+
+```json
+{
+  "schema": "ron.profile.v1",
+  "handle": "@skinnycrabby",
+  "passport_subject": "passport:main:dev",
+  "display_name": "Skinnycrabby",
+  "bio": "...",
+  "avatar_image": "crab://<hash>.image",
+  "public_sites": [],
+  "public_asset_catalogue": [],
+  "reputation_summary": null,
+  "moderation_summary": null
+}
+```
+
+Carryover notes already suggested this shape while warning that private keys, wallet secrets, private alt mappings, private receipts, and spend authority must not be included. 
+
+### 6.3 Site creator identity hydration
+
+Current site toolbar still uses placeholder-ish creator identity. Backend needs to expose:
+
+```text
+creator.handle
+creator.profile_crab_url
+creator.passport_subject maybe
+creator.reputation_score optional/null
+creator.moderator_score optional/null
+creator.source/hydration_status
+```
+
+CrabLink should display these only when backend provides them.
+
+### 6.4 Text primitives
+
+After identity/profile truth, implement the smallest backend content primitives:
+
+```text
+.post
+.comment
+.article
+```
+
+The carryover notes explicitly recommend doing text primitives before video/music/streaming and preserving the proven pattern: prepare → explicit ROC hold → paid upload/create → b3 CID → manifest CID → index pointer → crab URL → hydrated page. 
+
+### 6.5 Media and streaming backend
+
+Do not start with backend streaming.
+
+Later order:
+
+```text
+.video metadata/upload planning
+.music/.audio metadata/upload planning
+.podcast episode metadata
+.stream session prepare/ingest/session policy/archive/chat/mod/tips
+```
+
+Live streaming is complex because it touches sessions, ingest credentials, moderation, chat, storage, payout, and possibly edge delivery. It should come after text/content primitives and profile identity are stable.
+
+---
+
+## 7. Recommended next instance strategy
+
+The most efficient path is:
+
+```text
+Phase 0 — Checkpoint CrabLink.
+Phase 1 — Review backend code and docs.
+Phase 2 — Implement backend identity/profile truth foundation.
+Phase 3 — Expose that truth through svc-gateway.
+Phase 4 — Wire CrabLink to display backend truth.
+Phase 5 — Only then start .post/.comment/.article primitives.
+```
+
+Do not keep building frontend placeholders before backend contracts exist.
+
+---
+
+## 8. Exact next steps for backend/frontend integration
+
+### Step 0 — Review required files before code generation
+
+Next instance should inspect:
+
+```text
+CODECHECK.md
+CODECOMMENTS.MD
+NEXT_LEVEL.MD
+WEB3.MD
+WEB3_2.MD
+CODEBUNDLE_RS.md
+ALLNOTES.MD
+ALL_DOCS_COMBINED.MD
+CODEBUNDLE_CHROME_EXTENSION.md
+```
+
+Before generating Rust code:
+
+```text
+- review CODECHECK.md
+- use CODECOMMENTS.MD header conventions
+- provide full paste-ready files with exact paths
+- include Cargo.toml only if dependencies/features change
+- preserve RO headers and project comments
+```
+
+### Step 1 — Find current identity/passport route code
+
+Search in RustyOnions codebundle for:
+
+```text
+identity
+passport
+/bootstrap
+/identity/me
+svc-passport
+svc-gateway identity proxy
+omnigate identity route
+ron-proto passport DTO
+```
+
+Likely crates/files to inspect first:
+
+```text
+crates/ron-proto
+crates/svc-passport
+crates/omnigate
+crates/svc-gateway
+crates/ron-naming
+crates/svc-index
+crates/ron-auth
+```
+
+Do not assume names; inspect actual codebundle.
+
+### Step 2 — Add/confirm DTO fields for identity response
+
+Target frontend-needed fields:
+
+```json
+{
+  "schema": "ron.identity.me.v1",
+  "passport_subject": "passport:main:dev",
+  "passport_kind": "main",
+  "wallet_account": "acct_dev",
+  "username": "skinnycrabby",
+  "handle": "@skinnycrabby",
+  "username_status": "confirmed",
+  "public_profile_cid": "b3:<64 lowercase hex>",
+  "profile_crab_url": "crab://@skinnycrabby",
+  "can_create_site": true,
+  "can_comment": true,
+  "can_moderate": true,
+  "can_spend": false
+}
+```
+
+Rules:
+
+```text
+- username_status may be local_draft/requested/confirmed/rejected/unavailable/backend_unknown
+- only backend can say confirmed
+- no private keys
+- no seed phrases
+- no spend authority
+- no private alt linkage
+```
+
+### Step 3 — Add optional username request to passport bootstrap only if safe
+
+Potential bootstrap request fields:
+
+```json
+{
+  "requested_username": "skinnycrabby",
+  "requested_handle": "@skinnycrabby"
+}
+```
+
+Validation should be deterministic:
+
+```text
+- lowercase normalized
+- 3–32 chars probably
+- starts with letter/number
+- allow letters/numbers/underscore/hyphen/dot
+- reject consecutive dots
+- reject leading/trailing dot
+- reject reserved names:
+  site, image, music, article, video, stream, podcast, post, comment,
+  admin, wallet, passport, profile, root, gateway, b3, crab
+```
+
+If backend username reservation is not ready, return:
+
+```text
+username_status: requested or backend_unknown
+```
+
+not:
+
+```text
+confirmed
+```
+
+### Step 4 — Public profile manifest foundation
+
+Add a backend DTO/manifest shape for a public profile.
+
+Possible minimal profile manifest:
+
+```json
+{
+  "schema": "ron.profile.v1",
+  "passport_subject": "passport:main:dev",
+  "handle": "@skinnycrabby",
+  "display_name": "Skinnycrabby",
+  "bio": "",
+  "avatar_image": "crab://<hash>.image",
+  "public_sites": [],
+  "public_assets": [],
+  "reputation_summary": null,
+  "moderation_summary": null,
+  "created_at_ms": 0,
+  "updated_at_ms": 0
+}
+```
+
+Important:
+
+```text
+- profile manifest may be b3-addressed later
+- public profile must not expose private wallet authority
+- public profile must not expose private alt mappings
+- public profile must not expose private receipts
+- public profile must not imply reputation/mod scores unless backend computes them
+```
+
+### Step 5 — Site payload creator identity
+
+Update site page payloads so CrabLink’s site toolbar can hydrate creator identity from backend truth.
+
+Candidate fields:
+
+```json
+{
+  "creator": {
+    "passport_subject": "passport:main:dev",
+    "handle": "@skinnycrabby",
+    "profile_crab_url": "crab://@skinnycrabby",
+    "public_profile_cid": "b3:<hash>",
+    "reputation_score": null,
+    "moderator_score": null,
+    "hydration_status": "profile_missing|profile_present|username_confirmed"
+  }
+}
+```
+
+or if existing owner object is preferred:
+
+```json
+{
+  "owner": {
+    "passport_subject": "passport:main:dev",
+    "wallet_account": "acct_dev",
+    "handle": "@skinnycrabby",
+    "profile_crab_url": "crab://@skinnycrabby",
+    "reputation_score": null,
+    "moderator_score": null
+  }
+}
+```
+
+Keep schema stable and deterministic.
+
+### Step 6 — Gateway exposure
+
+Expose everything through `svc-gateway`, not direct extension calls.
+
+Likely public routes:
+
+```text
+GET /identity/me
+POST /identity/passport/bootstrap
+GET /profiles/:handle
+GET /crab/resolve?url=crab://@username
+GET /crab/resolve?url=crab://profile/@username
+```
+
+Do not invent final route names until inspecting existing RustyOnions code. Earlier notes listed these as possible future route shapes, not guaranteed current routes. 
+
+### Step 7 — CrabLink frontend wiring after backend exists
+
+Once backend returns truth fields, update CrabLink:
+
+Likely files:
+
+```text
+extensions/chrome/src/storage.js
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/popup.html
+extensions/chrome/src/popup.js
+extensions/chrome/src/options.html
+extensions/chrome/src/options.js
+extensions/chrome/src/page-profile-home.js
+extensions/chrome/src/page-site-creator-proof.js
+extensions/chrome/src/page-site-render-mode.js
+shared/schemas/identity-me.schema.json
+shared/schemas/passport-bootstrap.schema.json
+shared/fixtures/identity-me.ready.sample.json
+shared/fixtures/passport-bootstrap.sample.json
+scripts/check-chrome.sh
+```
+
+Rules for frontend wiring:
+
+```text
+- local requested @username may display as pending/local
+- confirmed handle only displays when backend returns confirmed
+- profile route only opens if backend returns one
+- rep/mod display dash/unknown unless backend returns values
+- no local score computation
+- no fake public profile CID
+```
+
+### Step 8 — After profile/user truth: implement `.post`
+
+Start with `.post`, not `.stream`.
+
+A minimal `.post` backend pattern should reuse the proven flow:
+
+```text
+POST /assets/post/prepare
+→ /wallet/hold
+→ POST /assets/post
+→ store bytes/manifest by b3
+→ index pointer
+→ crab://<hash>.post
+→ hydrated asset page
+```
+
+The core strategic rule from earlier notes: do not invent a parallel publishing system; generalize the proven prepare → hold → paid upload/create → b3 CID → manifest CID → index pointer → crab URL → hydrated page pattern. 
+
+---
+
+## 9. Suggested backend implementation order by crate
+
+### Batch 1 — Identity DTO groundwork
+
+Likely crates:
+
+```text
+ron-proto
+svc-passport
+omnigate
+svc-gateway
+```
+
+Goals:
+
+```text
+- strict DTOs for identity/me and passport bootstrap
+- optional username/requested_handle fields
+- deterministic validation
+- truthful statuses
+- no profile/reputation fake truth
+```
+
+Acceptance:
+
+```text
+cargo fmt
+cargo test -p ron-proto
+cargo test -p svc-passport
+cargo test -p omnigate identity-related tests
+cargo test -p svc-gateway identity proxy tests
+```
+
+### Batch 2 — Profile manifest read-only DTO
+
+Likely crates:
+
+```text
+ron-proto
+ron-naming
+svc-passport
+svc-index maybe
+omnigate
+svc-gateway
+```
+
+Goals:
+
+```text
+- public profile manifest DTO
+- optional b3 profile CID
+- public profile route contract
+- no private data leakage
+```
+
+Acceptance:
+
+```text
+profile manifest DTO tests
+route-contract tests
+gateway proxy tests
+CrabLink fixture/schema update after backend response shape settles
+```
+
+### Batch 3 — Site creator identity hydration
+
+Likely crates:
+
+```text
+omnigate
+svc-gateway
+ron-proto maybe
+```
+
+Goals:
+
+```text
+- site page payload includes backend creator identity fields
+- existing site render stays green
+- Site Manifest still opens
+- creator toolbar can use backend handle/profile route
+```
+
+Acceptance:
+
+```text
+crab://thedustyonion6 still renders
+site create/open smoke still passes
+CrabLink site toolbar displays confirmed handle when backend provides it
+unknown remains placeholder/dash
+```
+
+### Batch 4 — Text primitive `.post`
+
+Likely crates:
+
+```text
+ron-proto
+ron-naming
+omnigate
+svc-gateway
+svc-index
+svc-storage
+svc-wallet integration through existing paid path
+```
+
+Goals:
+
+```text
+- post prepare route
+- post create route
+- b3 CID
+- manifest CID
+- owner/payout metadata
+- asset page hydration
+- crab://<hash>.post resolution
+```
+
+Acceptance:
+
+```text
+route-contract tests
+paid-flow tests
+gateway smoke
+CrabLink post local workspace or simple viewer
+```
+
+### Batch 5 — `.comment` then `.article`
+
+Only after `.post` is green.
+
+---
+
+## 10. What not to do next
+
+Do not start with:
+
+```text
+full live streaming backend
+podcast publishing
+video range streaming
+music platform
+clearnet attribution
+external settlement
+ROX/Solana bridge
+staking/liquidity/exchange logic
+complex reputation math
+public alt-to-main linkage
+browser private key custody
+seed phrase UX
+uncapped spend authority in Chrome storage
+```
+
+Do not keep building:
+
+```text
+more local-only UX claims
+fake profile pages
+fake profile CIDs
+fake score systems
+fake comments
+fake streams
+fake receipts
+```
+
+---
+
+## 11. Ideal next prompt for the next instance
+
+Use this in the next chat:
+
+```text
+We are continuing RustyOnions / CrabLink NEXT_LEVEL. In the last session, we stabilized CrabLink after the article/video/stream/podcast route regression. Deleting page-local-route-mode.js fixed the issue, and the creator pages now load correctly. We updated the Chrome extension README to document the current working baseline, creator workspace truth boundaries, green gates, and the rule not to re-add page-local-route-mode.js. We concluded that major CrabLink UX-only work is mostly complete for this stage and the next real leap is backend truth.
+
+Please review NEXT_LEVEL.MD, WEB3.MD, WEB3_2.MD, CODEBUNDLE_RS.md, ALLNOTES.MD, ALL_DOCS_COMBINED.MD, CODECHECK.md, CODECOMMENTS.MD, and the latest CODEBUNDLE_CHROME_EXTENSION.md. Start by inspecting the existing RustyOnions identity/passport/profile/site DTO and route code. Recommend the smallest backend-first batch to make @username/profile/site-creator identity real enough for CrabLink to consume, while preserving WEB3/NEXT_LEVEL invariants. Provide full paste-ready files only after reviewing CODECHECK.md and the current code paths.
+```
+
+---
+
+## 12. One-sentence project status
+
+CrabLink has now proven the human-facing UX for the RustyOnions content-addressed creator web — paid images, paid sites, b3 raw bytes, named site rendering, reference-graph `<crab-image>` embeds, local profiles, alts, and creator workspaces — and the next high-impact work is to make the backend provide real username/profile/creator/reputation/text-asset truth so the frontend can stop relying on honest placeholders.
+
+
+### END NOTE - MAY 6 2026 - 00:00 CST
+
+
+
+### BEGIN NOTE - MAY 6 2026 - 18:00 CST
+
+# CrabLink Carryover Notes
+
+## Final Set — Chrome Extension Next-Step Notes After Backend Identity/Profile Chain Went Green
+
+Drop this into the CrabLink project notes / next-session carryover.
+
+---
+
+# CrabLink Chrome Extension Carryover Notes
+
+## NEXT_LEVEL Gateway-Only Profile Claim + Profile Read Integration
+
+## 1. Current CrabLink role
+
+CrabLink is the browser/client layer for RustyOnions. It must remain a **gateway-only** client.
+
+Correct route chain:
+
+```text
+CrabLink
+→ svc-gateway
+→ omnigate
+→ svc-passport / svc-wallet / svc-storage / svc-index
+```
+
+CrabLink must **not** call:
+
+```text
+svc-passport directly
+omnigate directly
+svc-wallet directly
+svc-storage directly
+svc-index directly
+ron-ledger directly
+```
+
+Current dev gateway base URL is usually:
+
+```text
+http://127.0.0.1:8090
+```
+
+CrabLink should continue using gateway routes such as:
+
+```text
+/identity/me
+/wallet/:account/balance
+/assets/image/prepare
+/assets/image
+/sites/prepare
+/sites
+/crab/resolve?url=...
+/b3/:asset
+```
+
+The new profile routes CrabLink should consume next are:
+
+```text
+POST /identity/passport/profile/claim
+GET  /identity/passport/profile/:username
+```
+
+---
+
+## 2. Backend status at end of RustyOnions session
+
+The backend identity/profile chain is now green through the public gateway.
+
+Green crates:
+
+```text
+ron-naming
+ron-proto
+svc-passport
+omnigate
+svc-gateway
+```
+
+New route chain:
+
+```text
+CrabLink future target:
+POST /identity/passport/profile/claim
+GET  /identity/passport/profile/:username
+
+svc-gateway:
+POST /identity/passport/profile/claim
+GET  /identity/passport/profile/:username
+
+omnigate:
+POST /v1/identity/passport/profile/claim
+GET  /v1/identity/passport/profile/:username
+
+svc-passport:
+POST /v1/passport/profile/claim
+GET  /v1/passport/profile/:username
+```
+
+Backend tests passed:
+
+```text
+ron-naming: green
+ron-proto: green
+svc-passport: green
+omnigate: green
+svc-gateway: green
+```
+
+Important final gateway proof:
+
+```text
+cargo test -p svc-gateway --test identity_routes_proxy: 7 passed
+cargo test -p svc-gateway --all-targets: passed
+cargo clippy -p svc-gateway --all-targets --no-deps -- -D warnings: passed
+```
+
+This means the backend route chain is ready for CrabLink UI/client integration.
+
+---
+
+## 3. CrabLink work already done earlier in this instance
+
+Earlier in this same instance, CrabLink had a route regression involving the new creator workspaces:
+
+```text
+crab://article
+crab://video
+crab://stream
+crab://podcast
+```
+
+The issue was that `page.html` still imported:
+
+```text
+./page-local-route-mode.js
+```
+
+This stale route controller caused pages to remain stuck on a previous creator workspace even after the address changed.
+
+Fixes already completed:
+
+```text
+Removed duplicate page-local-route-mode.js imports from page.html.
+Ensured creator draft pages own their own route detection.
+Added readCurrentCrabUrl to page-article-draft.js.
+Made crab://article authoritative in page-article-draft.js.
+Added exact checker safety tokens to article/video/stream/podcast draft files:
+  No b3 CID
+  No ROC charge
+  No wallet mutation
+  No backend publication claim from local drafts.
+Removed forbidden internal-service wording from local creator draft files.
+```
+
+CrabLink green gate passed earlier:
+
+```text
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Important rule from that work:
+
+```text
+The local article/video/stream/podcast workspaces are draft-only right now.
+They must not claim b3 publication.
+They must not claim ROC payment.
+They must not mutate wallets.
+They must not mention direct internal services in frontend code/comments.
+```
+
+---
+
+## 4. Current CrabLink status
+
+CrabLink currently has strong MVP/product-proof support for:
+
+```text
+Full-tab browser shell
+Address bar
+Gateway base URL settings
+Passport drawer / identity display
+Wallet balance display
+crab://site creator
+crab://image paid image publisher
+b3 typed image asset pages
+site creation/open flow
+manifest display modal behavior
+profile page scaffold
+creator workspace scaffolds for article/video/stream/podcast
+```
+
+But CrabLink does **not yet consume** the new backend profile routes:
+
+```text
+POST /identity/passport/profile/claim
+GET  /identity/passport/profile/:username
+```
+
+That is the next highest-impact frontend milestone.
+
+---
+
+## 5. NEXT_LEVEL purpose of the next CrabLink batch
+
+The next CrabLink batch should make the browser UI consume backend-confirmed profile truth instead of treating username/profile as local-only display state.
+
+Main goal:
+
+```text
+User can claim a public @username through CrabLink using the gateway-only route.
+CrabLink can read that public profile back through the gateway.
+CrabLink displays username_status honestly.
+CrabLink only shows confirmed ownership when backend says username_status = "confirmed".
+```
+
+Important UX target:
+
+```text
+When a user creates or configures their main RON Passport, they should be able to choose a @username.
+That username should become a backend-confirmed public profile claim.
+The profile page / passport drawer / settings identity card should display that confirmed @username.
+```
+
+---
+
+## 6. Gateway routes CrabLink should use next
+
+### Claim profile route
+
+```text
+POST /identity/passport/profile/claim
+```
+
+Example request body:
+
+```json
+{
+  "passport_subject": "passport:main:skinnycrabby",
+  "requested_username": "@SkinnyCrabby",
+  "display_name": "Skinny Crabby",
+  "bio": "Building the content-addressed creator web.",
+  "avatar_image": "crab://2222222222222222222222222222222222222222222222222222222222222222.image"
+}
+```
+
+Expected success response:
+
+```json
+{
+  "schema": "svc-passport.public-profile.v1",
+  "passport_subject": "passport:main:skinnycrabby",
+  "passport_kind": "main",
+  "username": "skinnycrabby",
+  "handle": "@skinnycrabby",
+  "username_status": "confirmed",
+  "display_name": "Skinny Crabby",
+  "bio": "Building the content-addressed creator web.",
+  "avatar_image": "crab://2222222222222222222222222222222222222222222222222222222222222222.image",
+  "profile_crab_url": "crab://@skinnycrabby",
+  "public_profile_cid": null,
+  "reputation_score": null,
+  "moderator_score": null,
+  "warnings": [
+    "public profile is read-only",
+    "reputation and moderation scores are not computed yet"
+  ]
+}
+```
+
+### Read profile route
+
+```text
+GET /identity/passport/profile/:username
+```
+
+Examples:
+
+```text
+GET /identity/passport/profile/skinnycrabby
+GET /identity/passport/profile/@skinnycrabby
+```
+
+For browser route safety, probably prefer no `@` in the HTTP path:
+
+```text
+GET /identity/passport/profile/skinnycrabby
+```
+
+CrabLink can display the returned handle:
+
+```text
+@skinnycrabby
+```
+
+---
+
+## 7. Error contracts CrabLink should handle
+
+### Username unavailable
+
+```text
+HTTP 409
+code: username_unavailable
+retryable: false
+```
+
+Suggested UI message:
+
+```text
+That username is already taken. Try another one.
+```
+
+### Reserved username
+
+```text
+HTTP 400
+code: reserved_username
+retryable: false
+```
+
+Suggested UI message:
+
+```text
+That username is reserved by RustyOnions. Try another one.
+```
+
+### Profile not found
+
+```text
+HTTP 404
+code: profile_not_found
+retryable: false
+```
+
+Suggested UI message:
+
+```text
+No public profile found for this username yet.
+```
+
+### Gateway/Omnigate upstream unavailable
+
+Gateway to Omnigate failure:
+
+```text
+HTTP 502
+code: upstream_unavailable
+retryable: true
+```
+
+Omnigate to svc-passport failure, when passed through gateway:
+
+```text
+HTTP 502
+code: passport_upstream
+retryable: true
+```
+
+Suggested UI message:
+
+```text
+Profile service is temporarily unavailable. Check that the RustyOnions dev stack is running.
+```
+
+---
+
+## 8. Important frontend truth rules
+
+CrabLink must follow these rules:
+
+```text
+Do not locally mark a username as confirmed.
+Do not fake backend profile ownership.
+Do not fake reputation_score.
+Do not fake moderator_score.
+Do not fake public_profile_cid.
+Do not invent profile_crab_url unless backend returned it or it is clearly displayed as a local preview.
+Do not claim that local drafts are published.
+Do not claim a b3 CID exists before backend publication.
+Do not claim a ROC charge before wallet/paid flow says it happened.
+```
+
+Display states should be explicit:
+
+```text
+local_draft
+requested
+confirmed
+unavailable
+rejected
+backend_unknown
+```
+
+If backend returns:
+
+```json
+"username_status": "confirmed"
+```
+
+then CrabLink can display:
+
+```text
+Confirmed @username
+```
+
+If state is local-only, display it as draft/local.
+
+---
+
+## 9. Likely CrabLink files to inspect/update next
+
+Likely files:
+
+```text
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/page-profile*.js
+extensions/chrome/src/page.js
+extensions/chrome/src/page-settings*.js
+extensions/chrome/src/storage.js
+extensions/chrome/src/page.html
+extensions/chrome/src/styles.css or equivalent page CSS
+shared/schemas/identity-me.schema.json
+shared/fixtures/identity-me.ready.sample.json
+scripts/check-chrome.sh
+scripts/smoke-local-gateway.sh
+```
+
+Exact file names should be confirmed from the latest `CODEBUNDLE_CHROME_EXTENSION.md` before editing.
+
+---
+
+## 10. Recommended `ronClient.js` additions
+
+Add gateway-only client helpers.
+
+Likely methods:
+
+```js
+async function claimPassportProfile(payload, options = {}) { ... }
+
+async function getPassportProfile(usernameOrHandle, options = {}) { ... }
+```
+
+Expected behavior:
+
+```text
+Use configured gateway base URL.
+POST to /identity/passport/profile/claim.
+GET from /identity/passport/profile/:username.
+Forward x-ron-passport where appropriate.
+Forward x-ron-wallet-account where appropriate.
+Forward idempotency-key for claim.
+Use application/json.
+Return parsed JSON.
+Surface structured error bodies.
+Do not call svc-passport directly.
+Do not call omnigate directly.
+```
+
+Suggested helper behavior:
+
+```text
+normalize handle for path:
+  "@SkinnyCrabby" → "skinnycrabby"
+  "SkinnyCrabby" → "skinnycrabby"
+
+Do not over-normalize display fields.
+Let backend validate final username rules.
+```
+
+Potential method names:
+
+```text
+claimPassportProfile
+getPassportProfile
+normalizeProfileLookupUsername
+```
+
+Important checker rule to add later:
+
+```text
+CrabLink code must contain /identity/passport/profile/claim
+CrabLink code must contain /identity/passport/profile/
+CrabLink code must not contain direct svc-passport base URL
+CrabLink code must not contain :5307 as a hardcoded profile target
+CrabLink code must not call /v1/passport/profile directly
+```
+
+---
+
+## 11. Profile page UI target
+
+The existing CrabLink profile page was recently made more profile-like, but it still needs backend profile hydration.
+
+The next profile page should show:
+
+```text
+avatar image
+display name
+@username
+username status
+profile_crab_url
+passport subject
+profile warning badges
+reputation score placeholder/null state
+moderator score placeholder/null state
+public profile CID if present
+public sites/assets later
+```
+
+Suggested UI logic:
+
+```text
+If username_status = confirmed:
+  show "Confirmed @username"
+  style as backend-confirmed
+
+If username_status missing or backend_unknown:
+  show "Backend status unknown"
+  do not imply ownership
+
+If reputation_score is null:
+  show "Reputation score not computed yet"
+
+If moderator_score is null:
+  show "Moderator score not computed yet"
+
+If public_profile_cid is null:
+  show "Profile manifest not published yet"
+```
+
+Important UX:
+
+```text
+Do not make null rep/mod look like score zero.
+Null means not computed.
+Zero means computed value of 0.
+```
+
+---
+
+## 12. Passport drawer / settings identity card target
+
+Current identity UI should be upgraded to reflect backend profile truth.
+
+Potential display:
+
+```text
+Passport: passport:main:dev
+Wallet: acct_dev
+Username: @skinnycrabby
+Username status: confirmed
+Profile: crab://@skinnycrabby
+ROC: ledger-backed balance
+REP: not computed
+MOD: not computed
+```
+
+If not claimed yet:
+
+```text
+Username: not claimed
+Button: Claim @username
+```
+
+If local draft exists but not backend-confirmed:
+
+```text
+Username draft: @desiredname
+Status: local draft
+Button: Claim username
+```
+
+If claim fails:
+
+```text
+Show backend error message
+Do not overwrite confirmed profile state
+```
+
+---
+
+## 13. First-passport username claim UX
+
+NEXT_LEVEL wants first passport creation to include a username.
+
+Current backend now supports:
+
+```text
+passport_subject
+requested_username
+display_name
+bio
+avatar_image
+```
+
+Potential flow:
+
+```text
+User opens CrabLink for first time.
+User creates main passport or refreshes identity.
+If no confirmed username:
+  show username claim field.
+User enters desired username.
+CrabLink calls POST /identity/passport/profile/claim.
+If confirmed:
+  save returned public profile in local display cache.
+  update profile page, drawer, and settings card.
+If unavailable/reserved:
+  show specific error.
+```
+
+Important caveat:
+
+```text
+The backend profile claim store is currently in-memory in svc-passport.
+During dev, claims may disappear after service restart.
+CrabLink should handle 404 on profile lookup gracefully.
+```
+
+Do not treat 404 as catastrophic; show:
+
+```text
+Profile not found yet. Claim or refresh your username.
+```
+
+---
+
+## 14. Local storage/cache guidance
+
+CrabLink may cache the latest public profile response for UX, but must label/refresh it carefully.
+
+Suggested storage shape:
+
+```json
+{
+  "schema": "crablink.cached-public-profile.v1",
+  "cached_at_ms": 1776000000000,
+  "gateway_base_url": "http://127.0.0.1:8090",
+  "profile": {
+    "schema": "svc-passport.public-profile.v1",
+    "username": "skinnycrabby",
+    "handle": "@skinnycrabby",
+    "username_status": "confirmed"
+  }
+}
+```
+
+Important rules:
+
+```text
+Cache is display cache only.
+Cache is not proof if backend is unavailable.
+On refresh, prefer backend response.
+If backend says not found, show stale cache as stale if displayed at all.
+Do not use cache to authorize site creation.
+Do not use cache as wallet authority.
+```
+
+---
+
+## 15. `crab://@username` status
+
+Backend parser support exists in `ron-naming`, but full route resolution is not done yet.
+
+Current status:
+
+```text
+ron-naming can parse crab://@username.
+svc-passport can claim/read profile by username.
+omnigate/gateway expose direct profile HTTP routes.
+But /crab/resolve?url=crab://@username is not fully wired yet.
+```
+
+So CrabLink next batch should **not require** this to work:
+
+```text
+crab://@skinnycrabby
+```
+
+unless that backend resolver is added in the same later batch.
+
+For now, CrabLink can use the direct gateway profile read route:
+
+```text
+GET /identity/passport/profile/skinnycrabby
+```
+
+Later milestone:
+
+```text
+Address bar opens crab://@skinnycrabby.
+Gateway /crab/resolve forwards to Omnigate.
+Omnigate uses ron-naming CrabRoute::Profile.
+Omnigate returns public profile page.
+CrabLink renders profile route/page.
+```
+
+---
+
+## 16. Site creator identity hydration status
+
+NEXT_LEVEL wants site pages to show creator identity:
+
+```text
+site creator: @username
+```
+
+and eventually reputation/moderation badges.
+
+Current backend route chain for profile exists, but site creator hydration is not fully wired.
+
+Future site display behavior:
+
+```text
+Site manifest contains creator passport subject or creator username/profile pointer.
+CrabLink renders site creator label.
+Creator @username links to public profile.
+Profile read uses gateway.
+If reputation/moderator score null:
+  show not computed yet.
+```
+
+Current warning:
+
+```text
+Do not fake creator profile data.
+Do not assume @username from local display state if site manifest has no backend-confirmed creator pointer.
+```
+
+---
+
+## 17. Smoke script additions recommended
+
+Update `scripts/smoke-local-gateway.sh` or add a focused profile smoke script.
+
+Suggested smoke env toggles:
+
+```text
+CRABLINK_SMOKE_RUN_PROFILE_CLAIM=1
+CRABLINK_SMOKE_PROFILE_USERNAME=skinnycrabby
+CRABLINK_SMOKE_PROFILE_PASSPORT=passport:main:skinnycrabby
+CRABLINK_SMOKE_PROFILE_WALLET=acct_dev
+```
+
+Suggested smoke steps:
+
+```text
+1. Check gateway /healthz and /readyz if available.
+2. POST /identity/passport/profile/claim.
+3. Assert response schema = svc-passport.public-profile.v1.
+4. Assert username_status = confirmed.
+5. Assert handle = @<username>.
+6. GET /identity/passport/profile/<username>.
+7. Assert username and handle match.
+8. Try reserved username @site and expect 400 reserved_username.
+9. Try duplicate username if same svc-passport process supports it and expect 409 username_unavailable for different passport.
+```
+
+Do not make mutating smoke mandatory by default unless it is gated with an env var, because profile claims are currently stateful/in-memory.
+
+---
+
+## 18. `scripts/check-chrome.sh` recommended additions
+
+Future static checks should enforce boundary and route correctness.
+
+Recommended required tokens once code is added:
+
+```text
+/identity/passport/profile/claim
+/identity/passport/profile/
+claimPassportProfile
+getPassportProfile
+username_status
+confirmed
+```
+
+Recommended forbidden tokens in Chrome extension source:
+
+```text
+/v1/passport/profile
+/v1/identity/passport/profile
+127.0.0.1:5307
+127.0.0.1:9090
+svc-passport
+svc-wallet
+ron-ledger
+```
+
+Note: Be careful with forbidden internal-service names in comments. Earlier check failures were caused by forbidden service names appearing in local creator file comments.
+
+Use wording like:
+
+```text
+internal profile service
+internal wallet service
+ledger internals
+```
+
+instead of literal forbidden tokens if checker requires it.
+
+---
+
+## 19. Suggested schema/fixture work
+
+CrabLink currently has:
+
+```text
+shared/schemas/identity-me.schema.json
+shared/fixtures/identity-me.ready.sample.json
+```
+
+Add or extend schemas for public profile response.
+
+Potential new file:
+
+```text
+shared/schemas/public-profile.schema.json
+```
+
+Expected core fields:
+
+```text
+schema
+passport_subject
+passport_kind
+username
+handle
+username_status
+display_name
+bio
+avatar_image
+profile_crab_url
+public_profile_cid
+reputation_score
+moderator_score
+warnings
+```
+
+Potential fixture:
+
+```text
+shared/fixtures/public-profile.confirmed.sample.json
+```
+
+Important schema behavior:
+
+```text
+reputation_score may be null
+moderator_score may be null
+public_profile_cid may be null
+warnings is array
+username_status can be confirmed, requested, rejected, unavailable, backend_unknown, local_draft if shared with frontend states
+```
+
+If using backend route response exactly, current `svc-passport` response uses:
+
+```text
+schema = svc-passport.public-profile.v1
+```
+
+---
+
+## 20. Manual test plan for next CrabLink batch
+
+After implementing CrabLink profile route consumption:
+
+### Backend
+
+Start RustyOnions dev stack with:
+
+```text
+svc-passport
+omnigate
+svc-gateway
+wallet if identity/balance display also needed
+```
+
+Expected ports:
+
+```text
+svc-gateway: http://127.0.0.1:8090
+omnigate:    http://127.0.0.1:9090
+svc-passport: likely http://127.0.0.1:5307
+```
+
+CrabLink should use only:
+
+```text
+http://127.0.0.1:8090
+```
+
+### Terminal smoke
+
+```bash
+curl -sS -X POST http://127.0.0.1:8090/identity/passport/profile/claim \
+  -H 'content-type: application/json' \
+  -H 'idempotency-key: crablink-profile-claim-test-1' \
+  -H 'x-ron-passport: passport:main:skinnycrabby' \
+  -H 'x-ron-wallet-account: acct_dev' \
+  -d '{
+    "passport_subject": "passport:main:skinnycrabby",
+    "requested_username": "@SkinnyCrabby",
+    "display_name": "Skinny Crabby",
+    "bio": "Building the content-addressed creator web.",
+    "avatar_image": "crab://2222222222222222222222222222222222222222222222222222222222222222.image"
+  }' | jq .
+```
+
+Expected:
+
+```text
+username = skinnycrabby
+handle = @skinnycrabby
+username_status = confirmed
+profile_crab_url = crab://@skinnycrabby
+```
+
+Then:
+
+```bash
+curl -sS http://127.0.0.1:8090/identity/passport/profile/skinnycrabby | jq .
+```
+
+Expected same profile.
+
+### Browser test
+
+In CrabLink:
+
+```text
+Open Settings or Profile.
+Claim username.
+Confirm UI shows backend-confirmed @username.
+Refresh profile.
+Confirm profile loads from backend.
+Close and reopen CrabLink tab.
+Confirm cached display is sane and backend refresh works.
+```
+
+### Negative tests
+
+Try:
+
+```text
+@site
+taken
+invalid spaces
+```
+
+Expected:
+
+```text
+@site → reserved username error
+taken duplicate if already claimed by another passport → username unavailable
+spaces → invalid username error
+```
+
+---
+
+## 21. Commands to run after next CrabLink edits
+
+From CrabLink repo:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+If smoke script is updated:
+
+```bash
+scripts/smoke-local-gateway.sh
+```
+
+Use the appropriate env var if mutating profile claim smoke is gated.
+
+---
+
+## 22. Backend recheck commands before/after CrabLink integration
+
+From RustyOnions repo:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+cargo test -p svc-passport --test profile_routes
+cargo test -p omnigate --test passport_profile_routes
+cargo test -p svc-gateway --test identity_routes_proxy
+cargo clippy -p svc-gateway --all-targets --no-deps -- -D warnings
+```
+
+If disk space gets tight, use safe cleanup:
+
+```bash
+cargo clean
+```
+
+Do not recommend destructive file deletion commands.
+
+---
+
+## 23. Expected NEXT_LEVEL progress after next CrabLink batch
+
+Current estimated NEXT_LEVEL status after backend chain:
+
+```text
+Full NEXT_LEVEL overall: about 65–70%
+Working single estimate: about 68%
+```
+
+If CrabLink successfully claims/reads backend-confirmed profile usernames through gateway:
+
+```text
+Full NEXT_LEVEL overall likely rises to about 70–72%
+```
+
+If after that `crab://@username` also resolves through `/crab/resolve` and site creator hydration uses confirmed backend identity:
+
+```text
+Full NEXT_LEVEL overall likely rises to about 73–76%
+```
+
+---
+
+## 24. Remaining NEXT_LEVEL gaps after CrabLink profile integration
+
+Even after the next CrabLink profile batch, these remain:
+
+```text
+crab://@username resolver integration
+site creator hydration from confirmed profile
+b3-published profile manifests
+public_profile_cid population
+real reputation scores
+real moderator scores
+alt passport backend semantics
+alt privacy model
+.post backend asset flow
+.comment backend asset flow
+.article backend publish flow
+.video backend/media-lite publish flow
+.music/.podcast backend publish flow
+paid content views
+view receipts
+site revision history
+provider/curator/moderator payout splits
+full profile manifest asset pages
+```
+
+So do not overclaim completion after profile UI wiring.
+
+---
+
+## 25. Important project decisions to preserve in CrabLink
+
+```text
+Canonical public asset URL:
+crab://<64 lowercase hex>.<asset_kind>
+
+Canonical internal content ID:
+b3:<64 lowercase hex>
+
+Canonical public profile URL:
+crab://@username
+
+Accepted profile input form in backend parser:
+crab://profile/@username
+
+Main passport:
+can eventually create sites
+
+Alt passport:
+can eventually browse/surf/comment
+should not create sites
+
+Profile:
+username is human discovery pointer
+not wallet authority
+not canonical content identity
+
+Wallet:
+ROC balance must be backend/ledger-backed
+no fake ROC
+
+Profile status:
+confirmed only if backend says confirmed
+
+Rep/mod:
+null means not computed
+zero means computed score of 0
+```
+
+---
+
+## 26. Recommended next implementation batch title
+
+Use this as the next work item:
+
+```text
+CrabLink gateway-only public profile claim/read integration
+```
+
+Acceptance criteria:
+
+```text
+ronClient uses only gateway paths.
+CrabLink can POST /identity/passport/profile/claim.
+CrabLink can GET /identity/passport/profile/:username.
+UI shows confirmed @username only when username_status="confirmed".
+UI handles 400 reserved_username.
+UI handles 409 username_unavailable.
+UI handles 404 profile_not_found.
+UI handles 502 upstream unavailable.
+UI does not fake rep/mod/public_profile_cid.
+Chrome static checks pass.
+Chrome package builds.
+Fresh CODEBUNDLE_CHROME_EXTENSION.md generated.
+```
+
+---
+
+## 27. Final CrabLink status at end of this session
+
+Current CrabLink status:
+
+```text
+Chrome extension static checks/package were green earlier in this instance.
+Creator workspace route regression was fixed.
+Backend profile route chain is now green through svc-gateway.
+CrabLink still needs to consume the new profile routes.
+```
+
+Next exact target:
+
+```text
+Update CrabLink to claim and read public profiles through:
+POST /identity/passport/profile/claim
+GET  /identity/passport/profile/:username
+```
+
+Then reload extension and test the profile/username flow from the UI.
+
+
+### END NOTE - MAY 6 2026 - 18:00 CST
+
+
+
+### BEGIN NOTE - MAY 8 2026 - 13:30 CST
+
+# CrabLink / RustyOnions NEXT_LEVEL Carryover Notes
+
+## 0. Session verdict
+
+This session was a **CrabLink Chrome extension session**, not a RustyOnions Rust-crate editing session.
+
+```text
+RustyOnions crates edited: none
+CrabLink extension files edited: yes
+RustyOnions services exercised live: yes
+Major proof achieved: gateway-only first-run RON Passport + @username claim/read path
+```
+
+We advanced the **NEXT_LEVEL identity/profile track** substantially. The key milestone is that CrabLink can now guide a user through a first-run identity path where the browser extension talks only to `svc-gateway`, the backend performs the passport/profile work, and the UI only treats an `@username` as confirmed when backend truth returns `username_status = confirmed`.
+
+This aligns with NEXT_LEVEL’s goal of RON Passports with `@usernames`, b3/crab primitives, creator identity, and safe browser UX, while preserving the rule that CrabLink is a thin client and RustyOnions backend services own truth. 
+
+---
+
+## 1. What we accomplished in this session
+
+### 1.1 Confirmed we only worked in CrabLink
+
+We did **not** modify any Rust crates.
+
+No direct edits were made to:
+
+```text
+svc-gateway
+omnigate
+svc-passport
+svc-wallet
+svc-storage
+svc-index
+ron-proto
+ron-naming
+ron-ledger
+ron-accounting
+svc-rewarder
+```
+
+Those backend crates/services were used as a live stack for proof, but their code was not changed.
+
+The main repo changed was:
+
+```text
+/Users/mymac/Desktop/crablink
+```
+
+---
+
+## 2. Main product milestone achieved
+
+### 2.1 Gateway-only `@username` profile chain is green
+
+We proved:
+
+```text
+CrabLink smoke
+→ svc-gateway :8090
+→ omnigate :9090
+→ svc-passport :5307
+→ profile claim persisted
+→ profile read returned confirmed backend truth
+```
+
+The live route chain used:
+
+```text
+POST /identity/passport/profile/claim
+GET  /identity/passport/profile/:username
+```
+
+Important result:
+
+```text
+username_status = confirmed
+profile_crab_url = crab://@<username>
+```
+
+This is important because the extension now has a real backend-confirmed identity path. CrabLink does not fake a username confirmation locally.
+
+### 2.2 First-run passport + profile path is green
+
+We then proved the full first-run path:
+
+```text
+POST /identity/passport/bootstrap
+→ HTTP 200 OK
+
+POST /identity/passport/profile/claim
+→ HTTP 201 CREATED
+→ username_status = confirmed
+
+GET /identity/passport/profile/<username>
+→ HTTP 200 OK
+→ username_status = confirmed
+```
+
+This directly supports the intended user flow:
+
+```text
+User opens CrabLink Options
+→ enters existing or desired @username
+→ creates/loads main passport through gateway
+→ claims/reads profile through gateway
+→ UI shows confirmed only after backend returns confirmed
+```
+
+This is a major NEXT_LEVEL identity/profile checkpoint.
+
+---
+
+## 3. Files added or updated in CrabLink
+
+### 3.1 Profile gateway smoke
+
+File:
+
+```text
+scripts/smoke-profile-gateway.sh
+```
+
+Purpose:
+
+```text
+Optional live smoke for existing profile claim/read routes.
+```
+
+It proves:
+
+```text
+GET  /identity/passport/profile/<missing>
+POST /identity/passport/profile/claim
+GET  /identity/passport/profile/<username>
+```
+
+Important features added:
+
+```text
+- profile dependency preflight
+- clear 502 diagnostics when svc-passport is unreachable
+- username_status=confirmed assertion
+- profile_crab_url assertion
+- reserved username optional check
+```
+
+This script helped diagnose when:
+
+```text
+svc-gateway was running
+omnigate was running
+svc-passport was not reachable
+```
+
+The diagnostic output correctly showed:
+
+```text
+code: passport_upstream
+reason: passport_upstream_connect
+```
+
+### 3.2 First-run profile smoke
+
+File:
+
+```text
+scripts/smoke-first-run-profile.sh
+```
+
+Purpose:
+
+```text
+Optional live smoke for first-run passport bootstrap + @username profile confirmation.
+```
+
+It proves:
+
+```text
+POST /identity/passport/bootstrap
+POST /identity/passport/profile/claim
+GET  /identity/passport/profile/<username>
+```
+
+Important behavior:
+
+```text
+- creates a unique default first-run username
+- uses a passport subject like passport:main:first...
+- uses a wallet account like acct_first...
+- sends desired_starting_balance_minor_units = "1776"
+- asserts the profile claim/read route is authoritative for username_status
+```
+
+Important fix during this session:
+
+The first version failed because it sent:
+
+```text
+avatar_image = ""
+```
+
+Backend returned:
+
+```text
+HTTP 400 BAD_REQUEST
+code: empty_field
+```
+
+We fixed it by making the default avatar non-empty:
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+After that, the first-run smoke passed.
+
+### 3.3 Green gate integration
+
+File:
+
+```text
+scripts/green-gate-local.sh
+```
+
+New optional flag added:
+
+```text
+CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE=1
+```
+
+Existing/profile flag retained:
+
+```text
+CRABLINK_GREEN_RUN_PROFILE_CLAIM=1
+```
+
+The green gate now supports:
+
+```text
+static extension checks
+Chrome package build
+non-mutating local gateway smoke
+optional bootstrap smoke
+optional profile claim/read smoke
+optional first-run passport + profile smoke
+optional known-good raw smoke
+optional paid image upload smoke
+optional site create/open smoke
+codebundle regeneration
+```
+
+Important distinction:
+
+```text
+Default green gate remains mostly non-mutating.
+Profile claim and first-run profile are opt-in because they create backend state.
+```
+
+### 3.4 Static checker updates
+
+File:
+
+```text
+scripts/check-chrome.sh
+```
+
+We updated the checker so the new profile and first-run identity work is guarded.
+
+It now checks for:
+
+```text
+scripts/smoke-profile-gateway.sh
+scripts/smoke-first-run-profile.sh
+scripts/green-gate-local.sh
+scripts/make_codebundle.sh
+shared/schemas/public-profile.schema.json
+shared/fixtures/public-profile.confirmed.sample.json
+extensions/chrome/src/page-profile-gateway.js
+extensions/chrome/src/options.js
+extensions/chrome/src/options-first-run-polish.js
+```
+
+It also guards against unsafe boundary regressions:
+
+```text
+No direct calls to 127.0.0.1:5307
+No direct calls to localhost:5307
+No direct calls to 127.0.0.1:9090
+No direct calls to localhost:9090
+No /v1/passport/profile direct internal path
+No ron-ledger references in the extension
+No private key / seed phrase patterns
+No crab://b3/ legacy public URL format
+```
+
+This preserves the browser-client rule from the CrabLink carryover notes: the extension must remain gateway-only and must not call internal services directly. 
+
+### 3.5 Codebundle generator fixed
+
+File:
+
+```text
+scripts/make_codebundle.sh
+```
+
+Problem discovered:
+
+The previous codebundle generator scope omitted:
+
+```text
+scripts/smoke-profile-gateway.sh
+scripts/smoke-first-run-profile.sh
+```
+
+That meant the bundle could fail to carry forward the most important new proof scripts.
+
+Fix completed:
+
+```text
+candidate_files / selected_scripts now includes:
+- scripts/smoke-profile-gateway.sh
+- scripts/smoke-first-run-profile.sh
+```
+
+The printed Scope section now includes them too.
+
+Final proof:
+
+```text
+scripts/check-chrome.sh
+scripts/make_codebundle.sh
+scripts/check-chrome.sh
+```
+
+passed cleanly.
+
+### 3.6 Public profile schema and fixture
+
+Files:
+
+```text
+shared/schemas/public-profile.schema.json
+shared/fixtures/public-profile.confirmed.sample.json
+```
+
+Purpose:
+
+```text
+Define and preserve the public profile shape consumed by CrabLink.
+```
+
+Important fields:
+
+```text
+schema
+passport_subject
+passport_kind
+username
+handle
+username_status
+display_name
+bio
+avatar_image
+profile_crab_url
+public_profile_cid
+reputation_score
+moderator_score
+warnings
+updated_at
+```
+
+Important truth rule:
+
+```text
+username_status = confirmed is backend truth.
+CrabLink should not locally invent that state.
+```
+
+### 3.7 Options first-run flow
+
+File:
+
+```text
+extensions/chrome/src/options.js
+```
+
+We updated the Options page logic so:
+
+```text
+Create / Request
+→ saves local requested @username draft
+→ bootstraps/loads passport through gateway
+→ claims @username through POST /identity/passport/profile/claim
+→ saves confirmed username only if backend returns username_status="confirmed"
+```
+
+Important functions added or strengthened:
+
+```text
+createPassport()
+claimPublicProfile()
+refreshPublicProfileIfPossible()
+normalizePublicProfileResponse()
+preserveBackendConfirmedUsername()
+friendlyProfileError()
+statusFromProfileError()
+```
+
+Important behavior:
+
+```text
+- If backend confirms, local settings save usernameStatus="confirmed".
+- If backend returns another status, CrabLink does not mark confirmed.
+- If backend profile service is unavailable, UI explains svc-passport/dev stack issue.
+- If username is unavailable/reserved, UI shows the proper explanation.
+```
+
+### 3.8 Options page layout polish
+
+File:
+
+```text
+extensions/chrome/src/options.html
+```
+
+We added a polished Options layout with:
+
+```text
+Gateway card
+Current Identity sidebar
+Safety rules card
+Passport identity labels card
+Developer token card
+Safety controls
+First-run profile card mount
+```
+
+Important new mount:
+
+```html
+<section
+  id="firstRunProfileCardMount"
+  class="settings-card first-run-profile-card"
+  aria-live="polite"
+></section>
+```
+
+### 3.9 Options first-run polish module
+
+File:
+
+```text
+extensions/chrome/src/options-first-run-polish.js
+```
+
+Purpose:
+
+```text
+Visible UX card for RON Passport + @username status.
+```
+
+It shows:
+
+```text
+Your handle
+Backend-confirmed handle
+Passport
+Wallet
+Profile route
+Public profile CID
+```
+
+It provides actions:
+
+```text
+Create Passport + Use @username
+Refresh / Re-check Existing @username
+Refresh Identity
+Read Existing @username
+Open Profile Page
+Copy Status JSON
+Show Last JSON
+```
+
+Important correction at the end of the session:
+
+The first version sounded like the user needed to choose a new username. The user correctly clarified:
+
+```text
+I cant choose another username I already have one
+```
+
+We fixed the design direction. The card should now treat the existing handle as normal:
+
+```text
+Use your existing @username
+Read Existing @username
+Refresh / Re-check Existing @username
+```
+
+The UX should not pressure the user into choosing another username.
+
+---
+
+## 4. Backend services exercised during the session
+
+Although no Rust crate code was edited, the live backend stack was heavily exercised.
+
+Services used:
+
+```text
+svc-wallet     : 127.0.0.1:8088
+svc-passport   : 127.0.0.1:5307
+svc-storage    : 127.0.0.1:5303
+svc-index      : 127.0.0.1:5304
+omnigate       : 127.0.0.1:9090
+svc-gateway    : 127.0.0.1:8090
+```
+
+The correct local startup model established in this session is:
+
+```text
+Terminal 1: svc-wallet
+Terminal 2: svc-passport
+Terminal 3: RustyOnions CrabLink WEB3_2 dev stack
+Terminal 4: CrabLink tests
+```
+
+### 4.1 Terminal 1 — wallet
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+RUST_LOG=info SVC_WALLET_ADDR=127.0.0.1:8088 cargo run -p svc-wallet
+```
+
+### 4.2 Terminal 2 — passport
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+PASSPORT_CONFIG_FILE=crates/svc-passport/config/default.toml \
+RUST_LOG=info \
+cargo run -p svc-passport
+```
+
+Expected:
+
+```text
+svc-passport listening on 127.0.0.1:5307
+```
+
+If this says address already in use, check:
+
+```bash
+lsof -nP -iTCP:5307 -sTCP:LISTEN
+```
+
+If it shows `svc-passp`, that is usually good: passport is already running.
+
+### 4.3 Terminal 3 — RustyOnions CrabLink dev stack
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+ECON_PATH="$(pwd)/configs/roc-economics.dev.toml"
+
+OMNIGATE_PASSPORT_BASE_URL=http://127.0.0.1:5307 \
+OMNIGATE_WALLET_BASE_URL=http://127.0.0.1:8088 \
+OMNIGATE_WALLET_BEARER=dev \
+RON_STORAGE_ROC_ECONOMICS_PATH="$ECON_PATH" \
+RON_STORAGE_ROC_ECONOMICS_ACTION=paid_storage_put \
+SVC_GATEWAY_STORAGE_BASE_URL=http://127.0.0.1:5303 \
+scripts/web3_crablink_dev_stack.sh
+```
+
+This starts:
+
+```text
+svc-storage :5303
+svc-index   :5304
+omnigate    :9090
+svc-gateway :8090
+```
+
+### 4.4 Terminal 4 — CrabLink green gate
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+CRABLINK_GREEN_RUN_PROFILE_CLAIM=1 scripts/green-gate-local.sh
+```
+
+or:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE=1 scripts/green-gate-local.sh
+```
+
+For the full optional identity proof path:
+
+```bash
+CRABLINK_GREEN_RUN_PROFILE_CLAIM=1 \
+CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE=1 \
+scripts/green-gate-local.sh
+```
+
+---
+
+## 5. Important debugging lessons from this session
+
+### 5.1 `svc-passport` alone is not enough
+
+CrabLink does not call `svc-passport` directly.
+
+Correct chain:
+
+```text
+CrabLink
+→ svc-gateway :8090
+→ omnigate :9090
+→ svc-passport :5307
+```
+
+So the correct runtime requirement is:
+
+```text
+full dev stack + svc-passport + svc-wallet
+```
+
+not just `svc-passport`.
+
+### 5.2 `HTTP 000` from CrabLink smoke means gateway is offline
+
+Error:
+
+```text
+curl: (7) Failed to connect to 127.0.0.1 port 8090
+error: GET /healthz -> HTTP 000
+```
+
+Means:
+
+```text
+svc-gateway is not running
+```
+
+Fix:
+
+```text
+Start Terminal 3 dev stack.
+```
+
+### 5.3 `HTTP 502 passport_upstream` means Omnigate cannot reach passport
+
+If profile smoke says:
+
+```text
+HTTP 502 BAD_GATEWAY
+code: passport_upstream
+reason: passport_upstream_connect
+```
+
+Then:
+
+```text
+svc-gateway is up
+omnigate is up
+svc-passport is down or Omnigate was not pointed at it
+```
+
+Fix:
+
+```bash
+lsof -nP -iTCP:5307 -sTCP:LISTEN
+```
+
+Then start/restart:
+
+```bash
+PASSPORT_CONFIG_FILE=crates/svc-passport/config/default.toml \
+RUST_LOG=info \
+cargo run -p svc-passport
+```
+
+And ensure dev stack has:
+
+```text
+OMNIGATE_PASSPORT_BASE_URL=http://127.0.0.1:5307
+```
+
+### 5.4 Address already in use usually means an old stack is still running
+
+Example:
+
+```text
+error: svc-index bind address 127.0.0.1:5304 is already in use
+```
+
+Check:
+
+```bash
+lsof -nP -iTCP:5303 -sTCP:LISTEN
+lsof -nP -iTCP:5304 -sTCP:LISTEN
+lsof -nP -iTCP:8090 -sTCP:LISTEN
+lsof -nP -iTCP:9090 -sTCP:LISTEN
+lsof -nP -iTCP:5307 -sTCP:LISTEN
+```
+
+Do not stop `5307` if it is the working `svc-passport`.
+
+If needed, stop stale RustyOnions service processes using the PID from `lsof`:
+
+```bash
+kill -TERM <PID>
+```
+
+No `rm` cleanup instructions should be used; user prefers safer cleanup.
+
+### 5.5 `HTTP 400 empty_field` on profile claim was due to empty avatar
+
+The first-run smoke originally sent:
+
+```json
+"avatar_image": ""
+```
+
+Backend rejected with:
+
+```json
+{
+  "code": "empty_field",
+  "message": "a required field was empty",
+  "retryable": false
+}
+```
+
+Fix:
+
+```text
+Set a non-empty default avatar_image to known-good crab image.
+```
+
+Current default:
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+---
+
+## 6. Current green commands
+
+From CrabLink repo:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+node --check extensions/chrome/src/options-first-run-polish.js
+node --check extensions/chrome/src/options.js
+scripts/check-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Passed.
+
+Also proven earlier:
+
+```bash
+CRABLINK_GREEN_RUN_PROFILE_CLAIM=1 scripts/green-gate-local.sh
+```
+
+Passed.
+
+And:
+
+```bash
+CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE=1 scripts/green-gate-local.sh
+```
+
+Passed.
+
+The codebundle was regenerated successfully:
+
+```text
+/Users/mymac/Desktop/crablink/CODEBUNDLE_CHROME_EXTENSION.md
+```
+
+---
+
+## 7. Current status by feature track
+
+### 7.1 CrabLink extension shell
+
+Status:
+
+```text
+GREEN / functional
+```
+
+Existing capabilities:
+
+```text
+- Full-tab CrabLink browser shell
+- Manifest V3 extension
+- Extension icon opens full CrabLink browser
+- Popup/settings paths exist
+- Gateway status checking
+- crab:// resolver
+- typed b3 asset pages
+- site render path
+- image asset page preview
+- profile page
+- profile edit/local draft
+- profile polish/catalog sections
+- article/video/stream/podcast local draft placeholders
+- alt vault local-only drafts
+```
+
+### 7.2 Gateway-only boundary
+
+Status:
+
+```text
+GREEN / guarded
+```
+
+Checker guards against direct calls to:
+
+```text
+svc-passport :5307
+omnigate :9090
+svc-wallet
+ron-ledger
+legacy internal /v1/passport/profile paths
+```
+
+CrabLink should call public `svc-gateway` routes only.
+
+### 7.3 Public profile route
+
+Status:
+
+```text
+GREEN / live-proven
+```
+
+Routes proven:
+
+```text
+POST /identity/passport/profile/claim
+GET  /identity/passport/profile/:username
+```
+
+### 7.4 First-run identity path
+
+Status:
+
+```text
+GREEN / live-proven
+```
+
+Routes proven:
+
+```text
+POST /identity/passport/bootstrap
+POST /identity/passport/profile/claim
+GET  /identity/passport/profile/:username
+```
+
+### 7.5 Options first-run UX
+
+Status:
+
+```text
+GREEN syntax/static, needs manual visual check after latest language tweak
+```
+
+Latest correction:
+
+```text
+Do not imply the user must choose another username.
+Use existing @username as first-class path.
+```
+
+Manual check needed next session.
+
+### 7.6 Codebundle carryover
+
+Status:
+
+```text
+GREEN / fixed
+```
+
+`make_codebundle.sh` now includes new identity smoke scripts.
+
+### 7.7 RustyOnions backend
+
+Status:
+
+```text
+No crate edits this session.
+Live services used and proven.
+```
+
+The backend profile path is working enough for CrabLink proof.
+
+---
+
+## 8. Facets / future reusable code primitives note to preserve
+
+The user explicitly wants this folded into future carryover notes and future architecture decisions.
+
+### 8.1 Facets as the safety contract
+
+When RustyOnions eventually supports reusable code blocks for sites, the project should follow the facet contract design.
+
+Core split:
+
+```text
+Asset primitives = b3-backed things users publish
+Embed primitives = safe CrabLink-rendered tags inside sites
+Code primitives  = b3-backed code modules
+Facet contracts  = permission/sandbox manifests that decide what code may do
+```
+
+### 8.2 `crab://<hash>.code` rule
+
+Future:
+
+```text
+crab://<hash>.code
+```
+
+must **not** mean:
+
+```text
+download and execute arbitrary code
+```
+
+It should resolve to:
+
+```text
+code bytes
++ code manifest
++ facet.toml permissions
++ declared routes/actions
++ resource limits
++ required capabilities
++ sandbox runtime policy
+```
+
+Plain-English rule:
+
+```text
+b3hash.code is the address.
+facet.toml is the contract.
+svc-sandbox is the cage.
+ron-policy is the judge.
+CrabLink is only the renderer/launcher, not the executor of unsafe code.
+```
+
+A future `.code` primitive should require:
+
+```text
+b3:<code-bytes>
+b3:<code-manifest>
+facet.toml
+declared runtime: wasm/js/ts/lua/etc.
+permissions: network/storage/wallet/index/profile/etc.
+limits: memory/time/output/requests
+allowed routes/actions
+required capabilities
+deny-by-default policy
+sandbox execution through svc-mod + svc-sandbox
+```
+
+This preserves the NEXT_LEVEL invariant:
+
+```text
+No arbitrary executable code from crab links.
+```
+
+This also aligns with the broader Developer Suite facet idea: higher-level developer features should be implemented as facets inside existing owners, not by inventing unsafe new boundaries or new crates. 
+
+---
+
+## 9. Important architecture boundaries to preserve
+
+### 9.1 CrabLink extension boundary
+
+CrabLink is:
+
+```text
+browser client
+renderer
+launcher
+gateway caller
+local settings holder
+developer UX surface
+```
+
+CrabLink is not:
+
+```text
+wallet
+ledger
+storage node
+index node
+passport service
+omnigate replacement
+sandbox executor
+policy engine
+```
+
+### 9.2 Identity boundary
+
+```text
+svc-passport owns identity/profile/capability truth.
+CrabLink can display identity state.
+CrabLink can request/refresh identity through gateway.
+CrabLink cannot invent confirmed identity.
+```
+
+### 9.3 Wallet/value boundary
+
+WEB3 still requires `svc-wallet` to remain the normal mutation front-door, with `ron-ledger` as durable truth and no direct ledger mutation from gateway/storage/omnigate. 
+
+CrabLink must preserve:
+
+```text
+No silent ROC spending
+No fake receipts
+No fake balances
+No local ledger truth
+No hidden hold/capture/release
+No uncapped spend authority
+```
+
+### 9.4 Content/addressing boundary
+
+Canonical content IDs:
+
+```text
+b3:<64 lowercase hex>
+```
+
+Public typed asset URLs:
+
+```text
+crab://<64 lowercase hex>.<asset_kind>
+```
+
+Do not reintroduce:
+
+```text
+crab://b3/<hash>.<kind>
+```
+
+WEB3_2 confirms b3 hashes are canonical, names are optional human pointers, and full digest verification remains part of the product-layer invariant. 
+
+---
+
+## 10. What remains for the next session
+
+### 10.1 Immediate next step: manual Options UX check
+
+The next session should start by manually loading the Chrome extension Options page and checking the latest UX language.
+
+Manual expected behavior:
+
+```text
+Open Options
+→ existing @username should be treated as valid normal path
+→ card should say/use language like:
+   - Use your existing @username
+   - Read Existing @username
+   - Refresh / Re-check Existing @username
+→ it should not imply you must choose another username
+```
+
+Run first:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+node --check extensions/chrome/src/options-first-run-polish.js
+scripts/check-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then reload extension in Chrome:
+
+```text
+chrome://extensions
+→ Developer Mode
+→ Reload CrabLink extension
+→ Open Options
+```
+
+### 10.2 Add static checker coverage for `options-first-run-polish.js`
+
+We added the file and it passes syntax, but the checker may not yet have strong token coverage for the latest “existing username” language.
+
+Suggested next batch:
+
+```text
+Update scripts/check-chrome.sh to require:
+- options-first-run-polish.js exists
+- "existing @username" language is present
+- Read Existing @username token is present
+- no direct svc-passport/omnigate URLs
+- no private key/seed phrase patterns
+- no local username confirmation invention
+```
+
+Potential required tokens:
+
+```text
+Use your existing @username
+Read Existing @username
+Refresh / Re-check Existing @username
+username_status
+confirmed
+gateway-only
+no local username confirmation
+```
+
+### 10.3 Verify Options first-run action behavior in actual Chrome
+
+Need manual test:
+
+```text
+Case A: existing confirmed username already stored
+- Card should show confirmed state
+- Read Existing @username should fetch backend profile
+- Copy Status JSON should show backend truth rule
+
+Case B: username typed but not confirmed
+- Card should show not confirmed/pending
+- Create/claim should call existing options.js path
+- UI should not mark confirmed unless backend returns confirmed
+
+Case C: backend offline
+- Card should show profile service unavailable or gateway offline
+- No fake confirmed state
+```
+
+### 10.4 Decide whether Options should be renamed from “first-run” to “identity status”
+
+Now that the user already has a username, the module name may be a little misleading.
+
+Current file:
+
+```text
+options-first-run-polish.js
+```
+
+Possible future rename:
+
+```text
+options-identity-status.js
+```
+
+Do not rename immediately unless we also update:
+
+```text
+options.html script include
+check-chrome.sh
+make_codebundle.sh
+CODEBUNDLE
+any references in docs
+```
+
+Recommendation:
+
+```text
+Leave filename for now to avoid churn.
+Improve language only.
+Maybe rename later once stable.
+```
+
+### 10.5 Profile page should consume confirmed username cleanly
+
+Next likely product UX batch after Options:
+
+```text
+crab://profile page should clearly show:
+- confirmed @username
+- profile route crab://@username
+- passport subject
+- wallet label
+- ROC / REP / MOD display placeholders
+- profile avatar
+- edit profile button
+- developer details collapsible
+```
+
+Important rule:
+
+```text
+REP/MOD are not real yet; show as “not computed yet” or dev placeholder, not fake truth.
+```
+
+### 10.6 Site creator @username integration
+
+NEXT_LEVEL wants site pages to show creator identity.
+
+Next future work:
+
+```text
+On rendered site:
+- top bar should show "site creator: @username"
+- @username should be clickable
+- click opens read-only profile manifest/page
+- reputation/moderation summary eventually appears beside @username
+```
+
+But do not fake profile truth. If the backend/site manifest does not return creator username yet:
+
+```text
+show placeholder with clear source label
+```
+
+### 10.7 Profile manifest publishing still remains
+
+Current `public_profile_cid` is usually:
+
+```text
+null / not published yet
+```
+
+Future backend work will likely need:
+
+```text
+profile public manifest publishing
+profile manifest b3 CID
+profile catalog pointers
+profile asset list pointers
+reputation/moderation summaries
+site-scoped roles
+```
+
+This likely touches RustyOnions crates later:
+
+```text
+svc-passport
+ron-proto
+omnigate
+svc-gateway
+svc-index
+svc-storage
+ron-naming
+```
+
+But we did not do that in this session.
+
+### 10.8 Alt passport backend route remains future work
+
+Current alt vault is local-only.
+
+Rules to preserve:
+
+```text
+Alts should not publicly link to main passport by default.
+Alts should not inherit main wallet authority automatically.
+Alts may browse/comment but should not create sites.
+Site creation should remain tied to main identity/passport permission.
+```
+
+Future backend requirements:
+
+```text
+alt passport create/load route
+alt public ID root
+alt wallet/account separation
+capability scoping
+local vault safety
+```
+
+### 10.9 `.post`, `.comment`, `.article`, `.video`, `.music`, `.code` primitives remain future
+
+Current local draft pages for:
+
+```text
+crab://article
+crab://video
+crab://stream
+crab://podcast
+```
+
+are mostly UI placeholders/draft surfaces. They do not yet publish real b3-backed assets through paid backend routes.
+
+Future work should add these one by one, using the already proven image/site pattern:
+
+```text
+prepare
+hold
+upload/store
+manifest/index pointer
+resolve typed crab URL
+render asset page
+smoke test
+static checker token
+codebundle include
+```
+
+### 10.10 Do not jump into `.code` execution without facets
+
+If the project moves toward reusable site code blocks, the next session must remember:
+
+```text
+No arbitrary executable code from crab links.
+```
+
+Use the facet contract path only.
+
+---
+
+## 11. Recommended next-session plan
+
+### Step 1 — Confirm latest Options patch
+
+Run:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+node --check extensions/chrome/src/options-first-run-polish.js
+node --check extensions/chrome/src/options.js
+scripts/check-chrome.sh
+scripts/make_codebundle.sh
+```
+
+### Step 2 — Reload Chrome extension and visually inspect Options
+
+Manual checklist:
+
+```text
+- The first-run card exists and looks polished
+- It does not say you must choose another username
+- Existing @username is accepted as normal path
+- Buttons are readable
+- Copy Status JSON works
+- Read Existing @username works when stack is running
+```
+
+### Step 3 — Run backend stack if profile read must be tested
+
+Start:
+
+```text
+Terminal 1: svc-wallet
+Terminal 2: svc-passport
+Terminal 3: web3_crablink_dev_stack.sh with passport/wallet env vars
+Terminal 4: CrabLink tests
+```
+
+Then:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+CRABLINK_GREEN_RUN_PROFILE_CLAIM=1 scripts/green-gate-local.sh
+CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE=1 scripts/green-gate-local.sh
+```
+
+### Step 4 — Add checker hardening for latest Options polish
+
+If manual UX looks good, update:
+
+```text
+scripts/check-chrome.sh
+```
+
+to require the new existing-username language and `options-first-run-polish.js` invariants.
+
+### Step 5 — Move to next product-facing UX batch
+
+Recommended next high-impact batch:
+
+```text
+Profile page confirmed-identity polish
+```
+
+Goal:
+
+```text
+crab://profile should look like a real profile page and clearly show:
+- confirmed @username
+- profile route
+- avatar
+- passport subject
+- wallet label
+- profile status
+- local/public truth boundary
+```
+
+This is better than jumping into new backend asset kinds immediately, because identity/profile is now the foundation for site creator attribution and reputation.
+
+---
+
+## 12. Current percentage estimate
+
+These are rough but useful.
+
+### CrabLink Chrome extension overall
+
+```text
+~72–78% toward a strong local beta client
+```
+
+Why:
+
+```text
+- Core shell works
+- Gateway-only route flow works
+- Image/site proofs work
+- Profile claim/read works
+- First-run passport/profile works
+- Static checks and green gate are strong
+- Codebundle workflow is good
+```
+
+Remaining:
+
+```text
+- UX polish
+- profile page polish
+- creator identity integration into site render
+- real public profile manifest publishing
+- real article/video/stream/podcast publish routes
+- paid access views
+- extension install/reload docs
+- broader browser QA
+```
+
+### NEXT_LEVEL identity/profile track
+
+```text
+~45–55% of the first meaningful identity/profile UX layer
+```
+
+Done:
+
+```text
+- backend-confirmed username claim/read path
+- first-run passport/profile smoke
+- Options UX scaffold
+- profile schema/fixture
+```
+
+Remaining:
+
+```text
+- public profile manifest b3 publishing
+- profile page final UX
+- site creator @username linking
+- reputation/moderation summary surfaces
+- alt passport backend support
+```
+
+### RustyOnions WEB3_2 / NEXT_LEVEL overall
+
+```text
+~35–45% of the broader NEXT_LEVEL product layer
+```
+
+Why lower:
+
+```text
+NEXT_LEVEL includes far more than the extension identity flow:
+- reusable asset primitives
+- reference graph sites
+- profile manifests
+- reputation/moderation
+- creator payout routing
+- paid content views
+- dedicated/self-hosted placement modes
+- future facet/code primitive model
+```
+
+The session made a strong identity UX step, but the full blueprint remains broad.
+
+---
+
+## 13. Exact “do not forget” notes
+
+```text
+1. We did not edit RustyOnions crates in this session.
+2. We edited CrabLink extension files and scripts only.
+3. The backend profile route chain is live-proven through gateway-only flow.
+4. The first-run passport + @username claim/read chain is live-proven.
+5. Existing @username must be treated as normal; do not force user to choose another.
+6. CrabLink must never locally mark @username confirmed unless backend returns username_status=confirmed.
+7. svc-passport alone is not enough; full stack + passport + wallet are needed.
+8. make_codebundle.sh was fixed to include smoke-profile-gateway.sh and smoke-first-run-profile.sh.
+9. Future .code primitives must go through facet.toml + svc-sandbox + ron-policy, not arbitrary execution.
+10. NEXT_LEVEL remains the active product blueprint.
+```
+
+---
+
+## 14. Suggested opening message for the next session
+
+A good first message next time would be:
+
+```text
+We are continuing CrabLink/RustyOnions NEXT_LEVEL work. In the last session we completed and green-tested the gateway-only profile claim/read path, the first-run passport + @username profile smoke, Options first-run UX, check-chrome hardening, and make_codebundle scope fixes. We did not modify RustyOnions crates, only CrabLink extension files/scripts. Next I want to visually polish and verify the Options existing-username UX and then move into profile page confirmed-identity polish. Please use CODEBUNDLE_CHROME_EXTENSION.md, NEXT_LEVEL.MD, WEB3.MD, WEB3_2.MD, ALLNOTES.MD, and CODEBUNDLE_RS.md as references.
+```
+
+This should let the next instance resume efficiently.
+
+
+### END NOTE - MAY 8 2026 - 13:30 CST
+
+
+### BEGIN NOTE - MAY 9 2026 - 11:30 CST
+
+# General Carryover Notes — CrabLink / RustyOnions Session Accomplishments
+
+These notes focus on what we accomplished and clarified in this session **besides the refactor strategy itself**. The refactor plan is still important, but this set is meant to preserve the product/design decisions, built-in page expansion, manifest model, media model, ad/theme model, and sandbox/security direction.
+
+---
+
+## 1. Session summary
+
+This session expanded CrabLink from a working creator/prototype browser extension into a much more complete **built-in page and asset-type map** for the RustyOnions internet.
+
+The major accomplishment was not just adding pages. We clarified the future rules for how assets, manifests, renditions, themes, ads, code blocks, algorithms, games, lyrics, comments, posts, and media relationships should work before we do a deeper frontend cleanup.
+
+The big outcome:
+
+```text
+We now have a much clearer map of the built-in CrabLink internet:
+site, image, profile, music, lyrics, article, post, comment,
+video, stream, podcast, ad, algo, code, game,
+with future film and dub support in mind.
+```
+
+This matters because the system should be designed correctly before more backend routes and UI flows are added.
+
+---
+
+## 2. Built-in crab:// pages locked in or discussed
+
+### Current core built-ins
+
+The working/future built-in page set now includes:
+
+```text
+crab://site
+crab://image
+crab://profile
+crab://music
+crab://lyrics
+crab://article
+crab://post
+crab://comment
+crab://video
+crab://stream
+crab://podcast
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+### Future/down-the-line built-ins
+
+We also discussed:
+
+```text
+crab://film
+crab://dub
+```
+
+These are not immediate implementation targets, but they should influence the shared manifest model now so we do not paint ourselves into a corner.
+
+---
+
+## 3. New stub page concepts added
+
+We added or planned local stub behavior for these pages:
+
+```text
+crab://lyrics
+crab://comment
+crab://post
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+These are development stubs only for now.
+
+Important truth boundary for all of them:
+
+```text
+No backend publication.
+No fake b3 CID.
+No fake manifest CID.
+No index pointer.
+No ROC charge.
+No wallet mutation.
+No fake policy enforcement.
+No fake route support.
+```
+
+They exist to lock in the shape of the future built-ins before backend routes are built.
+
+---
+
+## 4. Uniform manifest structure decision
+
+A major decision from this session:
+
+```text
+Every asset type should use one shared uniform manifest structure.
+```
+
+This means we should not have completely separate manifest logic for image, music, post, comment, video, ad, code, game, etc.
+
+Every asset manifest should share common top-level sections such as:
+
+```text
+identity
+ownership
+metadata
+linked_assets
+renditions
+versions/history
+rights_policy
+access_policy
+economics
+feature_gates
+required_capabilities
+provenance
+storage/provider data
+receipts
+truth_boundary
+```
+
+Type-specific data should live inside structured sections, not through totally separate manifest formats.
+
+Examples:
+
+```text
+music-specific data:
+artist, album, cover_image, lyrics reference
+
+image-specific data:
+dimensions, format, color profile, renditions
+
+video-specific data:
+duration, codec, bitrate, renditions, subtitles/dubs
+
+post/comment-specific data:
+parent, thread, moderation state, comment policy
+
+code-specific data:
+runtime, facet contract, sandbox policy
+
+ad-specific data:
+campaign, budget, destination, placement policy
+```
+
+The uniform manifest idea is one of the most important design decisions from the session.
+
+---
+
+## 5. Manifest version/history decision
+
+Every manifest should support version/history entries.
+
+Purpose:
+
+```text
+provenance
+DRM/licensing history
+rights updates
+ownership history
+rendition changes
+edits
+rollback
+takedowns
+receipts
+auditability
+```
+
+The core idea:
+
+```text
+Every version is immutable and b3-addressed.
+The current manifest can point to prior manifest versions.
+```
+
+Example shape:
+
+```text
+manifest_version: 1
+
+current_version:
+  cid: b3:<current_manifest_hash>
+  reason: current
+
+versions:
+  - version: 1
+    cid: b3:<old_manifest_hash>
+    reason: initial_publish
+
+  - version: 2
+    cid: b3:<new_manifest_hash>
+    reason: updated_renditions_or_license
+```
+
+This should be baked into the shared manifest model before backend route contracts get too far.
+
+---
+
+## 6. Linked asset model clarified
+
+We clarified that rich assets should reference other assets rather than embedding everything directly.
+
+Examples:
+
+```text
+.music links to .lyrics
+.music links to .image cover art
+.video links to .image thumbnail/poster
+.film links to .dub subtitles/captions/dubs
+.game links to .image cover art
+.ad links to .image creative
+.article links to .image hero image
+```
+
+This keeps every asset independently addressable, licensable, versionable, and removable.
+
+The principle:
+
+```text
+Assets are b3-addressed objects.
+Manifests describe relationships between assets.
+```
+
+---
+
+## 7. Lyrics design decision
+
+Lyrics should be their own asset type:
+
+```text
+crab://<hash>.lyrics
+```
+
+A music/song manifest should reference lyrics rather than treating lyrics as merely an embedded text field.
+
+Example:
+
+```text
+crab://<music_hash>.music
+  linked_assets:
+    lyrics: crab://<lyrics_hash>.lyrics
+```
+
+Reasons:
+
+```text
+separate licensing
+separate DRM/paywall rules
+separate takedown/versioning
+separate ownership/provenance
+separate publication lifecycle
+```
+
+This is now an important long-term rule for music/song assets.
+
+---
+
+## 8. Image asset rule
+
+All image-like media should use the canonical image asset type:
+
+```text
+crab://<hash>.image
+```
+
+This applies to:
+
+```text
+album covers
+film posters
+film covers
+video thumbnails
+game covers
+profile avatars
+profile banners
+article hero images
+post images
+ad creative images
+site logos
+gallery images
+thumbnails
+```
+
+Other asset manifests should reference image assets through fields like:
+
+```text
+cover_image
+poster
+thumbnail
+hero_image
+avatar
+banner
+creative_image
+linked_assets
+renditions
+```
+
+We should avoid inventing separate image-like asset kinds for every use case.
+
+---
+
+## 9. Rendition/variant model for images
+
+Different image resolutions should each be independent image assets.
+
+Rule:
+
+```text
+Every resolution gets:
+- its own b3 hash
+- its own crab://<hash>.image URL
+- its own image manifest
+- cross-links to sibling renditions
+```
+
+Example:
+
+```text
+crab://aaa....image  original
+crab://bbb....image  desktop
+crab://ccc....image  mobile
+crab://ddd....image  thumbnail
+```
+
+Each manifest should point to the full rendition group so any resolution can discover the rest.
+
+The key idea:
+
+```text
+The bytes are immutable.
+The manifests cross-link the rendition family.
+```
+
+This supports mobile/desktop optimization, bandwidth selection, DRM/licensing boundaries, provenance, and future CDN/provider logic.
+
+---
+
+## 10. Rendition/variant model applies beyond images
+
+The same model should apply to videos and any other media where variants matter.
+
+Example video family:
+
+```text
+crab://aaa....video  original/master
+crab://bbb....video  desktop 1080p
+crab://ccc....video  mobile 720p
+crab://ddd....video  low-bandwidth 480p
+crab://eee....video  audio-only
+crab://fff....image  poster/thumbnail
+crab://ggg....dub    captions/subtitles/dub track
+```
+
+Each separately stored byte object should have its own b3 identity and manifest.
+
+Manifests should connect through:
+
+```text
+rendition_group_id
+canonical_asset
+renditions
+linked_assets
+versions/history
+```
+
+This same pattern may eventually apply to:
+
+```text
+images
+videos
+films
+stream recordings
+trailers
+audio-only variants
+captions
+dubs
+game assets
+media previews
+```
+
+---
+
+## 11. Future film and dub model
+
+Future built-ins discussed:
+
+```text
+crab://film
+crab://dub
+```
+
+`film` should represent film/movie assets.
+
+`dub` should represent subtitles, scripts, captions, dubbed audio, localization metadata, or related alternate language assets.
+
+Design rule:
+
+```text
+dub assets are independent b3-addressed assets,
+linked from film/video manifests.
+```
+
+Example:
+
+```text
+crab://<film_hash>.film
+  linked_assets:
+    poster: crab://<image_hash>.image
+    trailer: crab://<video_hash>.video
+    dubs:
+      - crab://<dub_hash>.dub
+```
+
+This is not immediate scope, but it should influence the uniform manifest structure.
+
+---
+
+## 12. Stream + podcast companion mode
+
+We discussed feature-gated stream + podcast support.
+
+Possible product modes:
+
+```text
+Stream only
+Stream + live podcast simulcast
+Stream + podcast recording
+Stream now, publish podcast later
+```
+
+Terminology clarified:
+
+```text
+simulcast:
+  same live content broadcast simultaneously to multiple outputs
+
+record-for-later:
+  stream is captured/edited into podcast later
+
+post-stream publishing:
+  podcast episode is created after the stream ends
+```
+
+This should remain feature-gated until backend support exists.
+
+No page should claim that a stream/podcast has actually launched unless backend routes and receipts prove it.
+
+---
+
+## 13. Ad system concept
+
+We discussed a single standardized header ad slot.
+
+Development placeholder:
+
+```text
+Ad Space
+```
+
+Long-term route:
+
+```text
+crab://ad
+```
+
+Core ad principles:
+
+```text
+one header ad only
+clearly labeled
+privacy-preserving
+protocol-native
+feature-gated
+safe renderer only
+no third-party tracking
+no popups
+no autoplay
+no page takeover
+creator/site payout split
+```
+
+Possible responsive dimensions:
+
+```text
+Desktop: around 970x90 or 960x90
+Tablet: around 728x90
+Mobile: around 320x80 or 320x100
+```
+
+But it should be a responsive reserved header area rather than a rigid image-only box.
+
+Important design stance:
+
+```text
+Do not recreate hostile web advertising.
+Make ads native, transparent, minimal, and value-sharing.
+```
+
+---
+
+## 14. Uniform global theme decision
+
+We discussed a uniform theme across the entire CrabLink/RustyOnions internet.
+
+Default:
+
+```text
+Light mode
+```
+
+Supported modes should eventually be:
+
+```text
+Light
+Dark
+System
+```
+
+Future support:
+
+```text
+custom themes
+site accent colors
+safe theme manifests
+```
+
+Important rule:
+
+```text
+Theme should be controlled by CrabLink’s shared shell/theme system,
+not reinvented per site.
+```
+
+Every built-in page should use shared semantic tokens rather than hardcoded one-off colors.
+
+Possible theme tokens:
+
+```text
+background
+surface
+card
+text
+muted text
+border
+accent
+warning
+danger
+success
+ad slot
+developer JSON block
+truth boundary
+```
+
+The goal is a consistent, professional experience across all `crab://` pages.
+
+---
+
+## 15. Code primitive / facet safety rule
+
+For `crab://code`, we reaffirmed the facet contract design.
+
+Important rule:
+
+```text
+crab://<hash>.code must not mean “download and execute arbitrary code.”
+```
+
+Safe model:
+
+```text
+b3hash.code = address
+facet.toml = permission contract
+svc-sandbox = execution cage
+ron-policy = judge
+CrabLink = renderer/launcher, not unsafe executor
+```
+
+A code primitive should eventually require:
+
+```text
+code bytes
+code manifest
+facet.toml permissions
+declared runtime
+declared routes/actions
+resource limits
+required capabilities
+deny-by-default policy
+sandbox execution
+```
+
+This is important for future reusable code blocks/primitives.
+
+---
+
+## 16. Open algorithm page concept
+
+`crab://algo` was added for open-source algorithms.
+
+Potential uses:
+
+```text
+feed ranking
+recommendations
+search ranking
+moderation
+curation
+discovery
+```
+
+Important principle:
+
+```text
+Algorithms should be transparent, inspectable, and policy-bound.
+```
+
+If algorithms are executable, they should follow the same sandbox/facet/capability rules as code primitives.
+
+---
+
+## 17. Game page concept
+
+`crab://game` was added for future game manifests.
+
+Potential fields:
+
+```text
+game title
+game kind
+runtime
+asset bundles
+permissions
+save-data policy
+multiplayer/session policy
+paid access
+payout policy
+```
+
+Games likely need:
+
+```text
+sandbox/runtime policy
+asset bundle references
+save-data ownership rules
+optional multiplayer/session routes
+optional ROC economics
+```
+
+Game covers, thumbnails, and images should still be normal `.image` assets.
+
+---
+
+## 18. Sandbox-first browser direction
+
+We discussed whether CrabLink can be completely sandboxed.
+
+Clarified answer:
+
+```text
+Chrome extension version:
+  cannot fully sandbox Chrome itself,
+  but can strongly sandbox CrabLink-rendered content.
+
+Future full CrabLink browser:
+  can go much further with renderer/process/sandbox boundaries.
+```
+
+Desired security model:
+
+```text
+CrabLink shell = trusted UI
+crab:// pages = isolated render surfaces
+user assets = inert by default
+code primitives = never directly executed
+facet.toml = permission contract
+svc-sandbox = execution cage
+ron-policy = capability judge
+```
+
+For the Chrome extension:
+
+```text
+minimal permissions
+gateway-only backend calls
+strict CSP
+sandboxed iframes for untrusted content
+no arbitrary scripts by default
+safe renderers for assets
+code behind facet + sandbox + policy
+```
+
+Important rule:
+
+```text
+React or vanilla UI may render trusted CrabLink controls,
+but untrusted crab content should live behind a sandbox boundary.
+```
+
+---
+
+## 19. React possibility discussed
+
+We discussed whether React might be better for the future CrabLink UI.
+
+Conclusion:
+
+```text
+React is probably a good fit for the full-tab CrabLink browser app.
+Keep background/content/extension glue vanilla.
+```
+
+Potential benefits:
+
+```text
+one route = one mounted component
+clean unmount/remount behavior
+shared layout components
+shared manifest form component
+theme provider
+ad slot component
+less manual DOM patching
+better UX polish
+```
+
+Preferred approach:
+
+```text
+React + Vite
+possibly TypeScript later
+no Next.js
+no large framework bloat
+no huge UI framework at first
+```
+
+This remains an option for the refactor strategy discussion with Grok.
+
+---
+
+## 20. What remains for the project overall
+
+Major remaining work across CrabLink/RustyOnions:
+
+```text
+real profile publishing
+@username claiming/reservation
+main vs alt passport permissions
+reputation score truth
+moderator score truth
+backend routes for post/comment/article/music/lyrics/video/stream/podcast
+ad campaign routes
+algo registry routes
+code/facet/sandbox route contracts
+game manifests
+film/dub future routes
+uniform manifest DTOs
+rendition-group DTOs
+manifest version/history DTOs
+theme system
+header ad slot
+policy/capability enforcement
+paid content views
+creator payout splits
+ad payout splits
+route contract tests
+smoke tests for every built-in page
+```
+
+Backend invariants still remain:
+
+```text
+ROC stays internal
+no ROX/Solana/external settlement yet
+svc-wallet remains wallet mutation front door
+ron-ledger remains durable economic truth
+storage stores bytes by b3 content ID
+gateway/omnigate coordinate but do not directly mutate ledger
+integer minor units only
+deterministic receipts/errors
+policy gates fail closed
+```
+
+---
+
+## 21. Important current state warning
+
+The current extension appears to work, but the UI layer is patch-heavy.
+
+Known current characteristics:
+
+```text
+many independent page scripts
+late-bound panels
+route guards
+lifecycle settlers
+visibility patches
+Builder/Developer rescue logic
+MutationObserver-based settling
+```
+
+This was acceptable for proof-of-concept work, but it should not become the final architecture.
+
+The prototype taught us what the system needs. The next work should turn those lessons into a clean implementation.
+
+---
+
+## 22. Suggested next-session priority
+
+Next session should start with:
+
+```text
+1. Review current CrabLink codebundle with Grok.
+2. Review these carryover notes.
+3. Decide whether to use React/Vite for the full-tab UI.
+4. Design shared route registry, shell, theme system, ad slot, and uniform manifest components.
+5. Move low-risk stub pages first.
+6. Preserve working site/image paid flows until later.
+```
+
+The key goal for the next session:
+
+```text
+Turn the successful prototype into a clean, elegant, modular CrabLink browser UI.
+```
+
+Final product bar:
+
+```text
+professional
+fast
+clean
+beautiful
+trustworthy
+creator-first
+sandbox-first
+theme-consistent
+manifest-consistent
+ad-minimal
+future-proof
+```
+
+
+### END NOTE - MAY 8 2026 - 11:30 CST
+
+
+### BEGIN NOTE - MAY 9 2026 - 14:00 CST
+
+
+# Carryover Notes — CrabLink Refactor Session
+
+## 0. Executive checkpoint
+
+This session moved CrabLink from “prototype with refactor idea” into an actual **hybrid migration state**.
+
+The old extension UI is still the live, working product path. The new React/Vite architecture now exists beside it and builds successfully, but it is not yet the fully shipped replacement. That is intentional. The proven site/image/profile flows are valuable and should not be broken while the new route-owned architecture matures.
+
+The north-star remains:
+
+```text
+One route = one page owner.
+React + Vite for the full-tab CrabLink browser UI.
+Plain MV3 JavaScript for background/content/popup/options glue.
+Shared shell/theme/ad/manifest systems.
+No fake backend truth.
+No silent ROC spend.
+No direct internal RustyOnions service calls.
+No arbitrary executable crab:// code.
+```
+
+The attached refactor todo says the target tree is built around “one route = one page owner,” page folders per built-in `crab://` site, shared shell/theme/ad/manifest systems, and elimination of late DOM patching / MutationObserver rescue logic. It also recommends React + Vite for the full-tab browser UI while keeping Chrome extension glue plain MV3 JavaScript. 
+
+The attached refactor notes describe the current extension as a successful prototype but clearly patch-heavy, with `page-*` modules fragile because multiple scripts patch, hide, show, or rescue the same DOM. The stated strategic conclusion is: the prototype has done its job; now the page layer needs to become elegant, modular, professional, and maintainable. 
+
+---
+
+## 1. Current repository state
+
+The current codebundle proves the refactor scaffold exists and is broad. It includes root docs/configs, Chrome extension source, shared browser-client helpers, schemas, fixtures, scripts, and 269 text files with only 5 binary icon/logo assets omitted. 
+
+Important current top-level state:
+
+```text
+crablink/
+  docs/
+  shared/
+  extensions/chrome/
+  scripts/
+  package.json
+  vite.config.js
+  CODEBUNDLE_CHROME_EXTENSION.md
+```
+
+Important current Chrome state:
+
+```text
+extensions/chrome/src/app/
+extensions/chrome/src/app/shell/
+extensions/chrome/src/pages/
+extensions/chrome/src/shared/
+extensions/chrome/src/legacy/
+```
+
+Important hybrid legacy state still present:
+
+```text
+extensions/chrome/src/page.js
+extensions/chrome/src/page-*.js
+extensions/chrome/src/page.css
+extensions/chrome/src/page.html
+```
+
+The codebundle’s file tree confirms both the old active prototype files and the new React scaffold are present together. It lists old `page-*` modules such as `page-site-render-mode.js`, `page-profile-home.js`, `page-workflow.js`, `page-social-stubs.js`, `page-stream-podcast-mode.js`, and the new React folders under `src/app`, `src/pages`, and `src/shared`. 
+
+This means the correct mental model for the next session is:
+
+```text
+Old source extension path = live product / proven prototype.
+New React/Vite path = migration destination / compile-proven scaffold.
+We are not fully switched over yet.
+```
+
+---
+
+## 2. What we accomplished this session
+
+### 2.1 Created the refactor scaffold
+
+We built a script to generate the target file/folder scaffold for the CrabLink refactor.
+
+The target scaffold includes:
+
+```text
+docs/
+shared/js/
+shared/schemas/
+shared/fixtures/
+extensions/chrome/src/app/
+extensions/chrome/src/app/shell/
+extensions/chrome/src/shared/api/
+extensions/chrome/src/shared/components/
+extensions/chrome/src/shared/embed/
+extensions/chrome/src/shared/manifest/
+extensions/chrome/src/shared/theme/
+extensions/chrome/src/shared/utils/
+extensions/chrome/src/shared/styles/
+extensions/chrome/src/pages/<route>/
+extensions/chrome/src/legacy/
+extensions/chrome/test/
+scripts/
+```
+
+The scaffold script initially failed because Bash interpreted JavaScript template-literal syntax inside a giant double-quoted heredoc/string. We replaced that with a safer heredoc/stream writing style so JS/JSX content cannot trigger shell command substitution.
+
+The final scaffold pass created the missing folders/files without overwriting protected existing files.
+
+### 2.2 Fixed codebundle generation
+
+The original `scripts/make_codebundle.sh` treated `.jsx` files as binary/omitted assets. That made the new React scaffold impossible to review properly.
+
+We updated it so it now includes:
+
+```text
+.jsx
+.tsx
+.MD / .md
+.mjs
+.cjs
+.css
+.html
+.json
+.sh
+root docs/config files
+```
+
+The new codebundle now reports:
+
+```text
+Text files: 269
+Binary assets omitted: 5
+```
+
+Only PNG icons/logo are omitted, which is correct. The codebundle now includes root refactor docs/configs, extension source, shared schemas/fixtures/helpers, scripts, and actual JSX bodies. 
+
+### 2.3 Fixed `.gitignore` issue that grayed out `pages/site/`
+
+We found that a broad unanchored `.gitignore` rule like:
+
+```gitignore
+site/
+```
+
+could ignore nested folders named `site`, including:
+
+```text
+extensions/chrome/src/pages/site/
+```
+
+We replaced it conceptually with root-anchored generated-output rules such as:
+
+```gitignore
+/site/
+/public/
+/storybook-static/
+```
+
+The key lesson:
+
+```text
+Do not use broad unanchored source-folder names in .gitignore.
+```
+
+The `extensions/chrome/src/pages/site/` folder should remain visible/tracked in VS Code and Git.
+
+### 2.4 Added React/Vite build path
+
+We added/updated:
+
+```text
+package.json
+vite.config.js
+extensions/chrome/src/app/main.jsx
+extensions/chrome/src/app/App.jsx
+extensions/chrome/src/app/appState.js
+extensions/chrome/src/app/router.js
+extensions/chrome/src/app/routeRegistry.js
+extensions/chrome/src/app/shell/*
+extensions/chrome/src/shared/components/*
+extensions/chrome/src/shared/styles/*
+extensions/chrome/src/shared/theme/*
+```
+
+The Vite config initially failed because Vite looked for:
+
+```text
+extensions/chrome/src/index.html
+```
+
+but the actual entry was:
+
+```text
+extensions/chrome/src/page.html
+```
+
+We fixed `vite.config.js` to explicitly use `page.html` as the input. After that:
+
+```text
+npm run build ✅
+```
+
+The build currently emits a large chunk warning around ~560 KB minified JS. This is not a failure. Later we should use route-level dynamic imports/code-splitting once the React route pages become real.
+
+### 2.5 Built the first React shell/router foundation
+
+We wired the new React scaffold enough to compile and route in Vite/dev mode.
+
+Files touched/created in this foundation:
+
+```text
+extensions/chrome/src/app/App.jsx
+extensions/chrome/src/app/appState.js
+extensions/chrome/src/app/router.js
+extensions/chrome/src/app/routeRegistry.js
+extensions/chrome/src/app/shell/Shell.jsx
+extensions/chrome/src/app/shell/TopBar.jsx
+extensions/chrome/src/app/shell/AddressBar.jsx
+extensions/chrome/src/app/shell/BrowserNav.jsx
+extensions/chrome/src/app/shell/Shell.css
+extensions/chrome/src/pages/home/HomePage.jsx
+extensions/chrome/src/pages/home/HomeQuickActions.jsx
+extensions/chrome/src/pages/notFound/NotFoundPage.jsx
+extensions/chrome/src/pages/problem/ProblemPage.jsx
+extensions/chrome/src/shared/components/Button.jsx
+extensions/chrome/src/shared/components/Card.jsx
+extensions/chrome/src/shared/components/PageHeader.jsx
+extensions/chrome/src/shared/components/TruthBoundary.jsx
+extensions/chrome/src/shared/components/JsonPreview.jsx
+extensions/chrome/src/shared/styles/cards.css
+```
+
+The current React shell supports:
+
+```text
+address bar route state
+Back / Forward / Home / Refresh
+crab://home
+crab://site
+crab://image
+crab://profile
+crab://music
+crab://lyrics
+crab://article
+crab://post
+crab://comment
+crab://video
+crab://stream
+crab://podcast
+crab://ad
+crab://algo
+crab://code
+crab://game
+typed asset route parsing
+notFound/problem pages
+```
+
+Important: this React path is compile-proven but not yet the default shipped extension UI.
+
+### 2.6 Stabilized hybrid extension/Vite contexts
+
+When testing, we found differences between:
+
+```text
+Chrome extension runtime:
+  chrome.storage.local exists
+
+Vite/dev browser runtime:
+  chrome.storage.local may not exist
+```
+
+This caused errors like:
+
+```text
+Cannot read properties of undefined (reading 'local')
+```
+
+We updated the storage bridge so it can use:
+
+```text
+chrome.storage.local in extension context
+localStorage fallback in Vite/dev browser context
+memory fallback if localStorage is unavailable
+```
+
+This was important because we are temporarily testing both old and new lanes.
+
+### 2.7 Fixed null client/passport drawer crashes
+
+The passport drawer previously could call methods like:
+
+```js
+client.getHealth()
+```
+
+before `client` existed, causing:
+
+```text
+Cannot read properties of null (reading 'getHealth')
+```
+
+We added the safe `ensureClient()` pattern in the live `page.js` path so Check Node / Check Passport / Refresh Balance degrade safely instead of crashing.
+
+### 2.8 Fixed missing `rememberProductState` export
+
+The updated storage bridge temporarily broke imports from:
+
+```text
+page-workflow.js
+page-site-root-upload.js
+```
+
+because they expected:
+
+```js
+rememberProductState
+```
+
+We restored the export and added product-state extraction fields:
+
+```text
+lastProductActionAt
+lastProductSchema
+lastProductCrabUrl
+lastProductB3Cid
+lastProductSiteName
+lastProductSummary
+```
+
+This kept the old product/site/image prototype path compiling.
+
+### 2.9 Fixed passport drawer display bugs
+
+We fixed major passport drawer display issues:
+
+```text
+No more [object Object]
+ROC appears in drawer
+Gateway/passport/wallet/ledger labels display cleanly
+Check Node / Check Passport / Refresh Balance no longer crash
+Profile page still loads
+Site still works
+```
+
+The user’s test showed:
+
+```text
+top chip: 1776 ROC
+drawer ROC: 1,776
+passport: passport:main:dev
+gateway: http://127.0.0.1:8090
+wallet: acct_dev
+ledger: ledger-backed
+username: @skinnycrabby2
+```
+
+Remaining polish issue:
+
+```text
+standardize drawer ROC to 1,776 ROC or decide consistent compact display
+humanize “backend_unknown; not backend confirmed”
+make avatar 404 dev status less ugly
+```
+
+### 2.10 Confirmed old extension path still works
+
+The user tested the unpacked Chrome extension and verified:
+
+```text
+crab://site works
+crab://profile works
+crab://video works
+passport mostly works
+balance shows 1,776 ROC / 1776 ROC
+old extension direct path still works better than Vite dev path for proven flows
+```
+
+This is the correct result for the hybrid stage. The old source extension path remains the active product.
+
+### 2.11 Identified final-session static check issue
+
+The last proposed `page-profile-polish.js` replacement failed:
+
+```text
+error: page-profile-polish.js missing token: data-crablink-open-url
+```
+
+The old uploaded version contains the literal static-check token:
+
+```js
+open.setAttribute('data-crablink-open-url', url);
+```
+
+The newer proposed replacement used `dataset.crablinkOpenUrl`, which works in browser logic but fails the literal token check. The immediate next session should either restore the old version or update the polish file to include the exact literal string:
+
+```text
+data-crablink-open-url
+```
+
+This is an urgent carryover item because the final terminal output in this session was not fully green after that attempted polish replacement.
+
+---
+
+## 3. Current green-gate status
+
+Most of the session reached this green state multiple times:
+
+```text
+npm run build ✅
+scripts/check-chrome.sh ✅
+scripts/package-chrome.sh ✅
+scripts/make_codebundle.sh ✅
+```
+
+The final known exception is the last `page-profile-polish.js` token failure:
+
+```text
+error: page-profile-polish.js missing token: data-crablink-open-url
+```
+
+So next session should begin with:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+node --check extensions/chrome/src/page-profile-polish.js
+scripts/check-chrome.sh
+```
+
+If the token failure remains, restore the old `page-profile-polish.js` or patch the new one to include:
+
+```js
+open.setAttribute('data-crablink-open-url', url);
+```
+
+Then run:
+
+```bash
+npm run build && scripts/check-chrome.sh && scripts/package-chrome.sh && scripts/make_codebundle.sh
+```
+
+Do not proceed to new refactor work until that is green.
+
+---
+
+## 4. Current architecture model
+
+### 4.1 Live product lane
+
+The unpacked Chrome extension currently uses:
+
+```text
+extensions/chrome/src/page.html
+extensions/chrome/src/page.js
+extensions/chrome/src/page-*.js
+extensions/chrome/src/page.css
+extensions/chrome/src/storage.js
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/crab.js
+```
+
+This lane owns the real working prototype.
+
+It currently supports:
+
+```text
+full-tab CrabLink UI
+quick route buttons
+address bar
+gateway settings
+passport drawer
+profile local draft
+balance display
+site render
+site create/open proof path
+image mint/publish proof path
+known-good asset loading
+local creator draft pages
+developer JSON/truth boundaries
+```
+
+### 4.2 React/Vite migration lane
+
+The new lane exists under:
+
+```text
+extensions/chrome/src/app/
+extensions/chrome/src/app/shell/
+extensions/chrome/src/pages/
+extensions/chrome/src/shared/
+```
+
+It currently:
+
+```text
+builds with Vite
+has route state
+has a shell/topbar/address bar
+has home/notFound/problem pages
+has scaffold page owners
+has shared components
+has shared theme/styles directories
+has shared manifest/embed/api utility scaffolds
+```
+
+It does not yet:
+
+```text
+replace the extension source UI
+carry over paid image flow
+carry over site create/render flow
+carry over profile drawer logic
+carry over full passport behavior
+ship as the active unpacked extension UI
+```
+
+### 4.3 How to think about the transition
+
+The migration path is:
+
+```text
+Old live source path remains stable.
+React path becomes route-complete and feature-complete.
+Low-risk pages migrate first.
+Then medium-risk creator drafts.
+Then profile.
+Then image.
+Then site.
+Only after parity do we replace the live entry path.
+```
+
+Do not flip the whole extension to React until site/image/profile are safely migrated or bridged.
+
+---
+
+## 5. Why we are still touching old files
+
+This was clarified during the session.
+
+We are not supposed to keep polishing old files forever. But old files are still the active extension source path. Therefore, touching old files is acceptable only for:
+
+```text
+build break fixes
+static checker fixes
+protecting proven flows
+passport/site/image crash fixes
+compatibility bridges during migration
+small UX fixes needed to avoid embarrassing regressions
+```
+
+Touching old files is not acceptable for:
+
+```text
+new long-term architecture
+new route ownership design
+new page expansion
+deep product buildout
+new major UI systems
+large rewrites
+```
+
+From here forward:
+
+```text
+Old files = compatibility/protection only.
+React files = destination architecture.
+```
+
+---
+
+## 6. Product and design decisions to preserve
+
+### 6.1 Built-in CrabLink routes
+
+The refactor notes preserve the built-in route universe:
+
+```text
+crab://site
+crab://image
+crab://profile
+crab://music
+crab://lyrics
+crab://article
+crab://post
+crab://comment
+crab://video
+crab://stream
+crab://podcast
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+Future/down-the-line:
+
+```text
+crab://film
+crab://dub
+```
+
+The refactor notes specifically call out these built-ins and future routes so the architecture does not require repeated chopping later. 
+
+### 6.2 Canonical URL rule
+
+Public typed asset URLs must use:
+
+```text
+crab://<64 lowercase hex>.<asset_kind>
+```
+
+Internal content IDs remain:
+
+```text
+b3:<64 lowercase hex>
+```
+
+Do not reintroduce:
+
+```text
+crab://b3/<hash>.<kind>
+```
+
+### 6.3 Image-like asset rule
+
+All image-like media should be canonical `.image` assets:
+
+```text
+album covers
+music cover art
+video thumbnails
+film posters
+film covers
+game covers
+profile avatars
+profile banners
+article hero images
+post images
+ad creative images
+site logos
+thumbnails
+```
+
+Other manifests reference image assets through linked fields:
+
+```text
+cover_image
+poster
+thumbnail
+hero_image
+avatar
+banner
+creative_image
+```
+
+### 6.4 Renditions rule
+
+Each media rendition is its own content-addressed object:
+
+```text
+original image/video
+desktop version
+mobile version
+thumbnail/poster
+low-bandwidth version
+audio-only version
+caption/dub file
+```
+
+Each separate byte object gets:
+
+```text
+own b3 hash
+own typed crab URL
+own manifest
+cross-links to sibling renditions
+shared rendition_group_id or canonical pointer
+```
+
+### 6.5 Version/history rule
+
+Every manifest should support:
+
+```text
+manifest_version
+current_version
+versions/history array
+reason
+created_at
+previous manifest CIDs
+provenance/rights/license changes
+```
+
+### 6.6 Lyrics as separate asset
+
+Lyrics are not embedded directly as the only truth inside music/song manifests. They should be separate:
+
+```text
+crab://<hash>.lyrics
+```
+
+Music/song manifests link to lyrics:
+
+```text
+linked_assets.lyrics = crab://<lyrics_hash>.lyrics
+```
+
+### 6.7 Facet/code safety rule
+
+Future `crab://<hash>.code` must not mean arbitrary code execution.
+
+The safety model remains:
+
+```text
+b3hash.code = address
+facet.toml = contract
+svc-sandbox = cage
+ron-policy = judge
+CrabLink = renderer/launcher, not unsafe executor
+```
+
+### 6.8 Sandbox-first browser rule
+
+Trusted/untrusted split:
+
+```text
+CrabLink shell = trusted UI
+crab:// site content = sandboxed render surface
+asset bytes = inert by default
+code primitives = no execution unless facet/policy/sandbox allows
+wallet/value operations = explicit user confirmation only
+```
+
+### 6.9 Theme/ad slot rule
+
+Global theme:
+
+```text
+light default
+dark supported
+system later
+shared semantic tokens
+```
+
+Header ad slot:
+
+```text
+one header ad
+clearly labeled “Ad Space” during development
+privacy-preserving
+protocol-native
+no third-party tracking
+no popups
+no autoplay
+future crab://ad campaign manifests
+```
+
+---
+
+## 7. Refactor invariants
+
+Keep these non-negotiable:
+
+```text
+Gateway-only client boundary.
+No direct svc-wallet calls from extension.
+No direct svc-storage calls from extension.
+No direct svc-index calls from extension.
+No direct omnigate calls from extension.
+No direct ron-ledger calls from extension.
+No silent ROC spending.
+No fake balances.
+No fake receipts.
+No fake b3 CIDs.
+No fake backend publication.
+No fake profile confirmation.
+No hidden wallet mutation.
+No arbitrary code execution from crab links.
+No broad Chrome permissions.
+No private key or seed phrase storage.
+No main↔alt linkage leakage.
+```
+
+The codebundle’s included security/contributing docs emphasize the browser-client boundary: keep clients thin, call public `svc-gateway` routes only, do not call internal services directly, do not silently spend ROC, do not fake receipts, and do not store private keys or seed phrases. 
+
+---
+
+## 8. Files and roles after this session
+
+### 8.1 Root/docs/scripts
+
+Important:
+
+```text
+package.json
+vite.config.js
+scripts/scaffold_crablink_refactor.sh
+scripts/make_codebundle.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/green-gate-local.sh
+scripts/smoke-local-gateway.sh
+scripts/smoke-profile-gateway.sh
+scripts/smoke-first-run-profile.sh
+scripts/smoke-site-create-local.sh
+docs/CRABLINK_REFACTOR_PLAN.md
+docs/ROUTE_CONTRACTS.md
+docs/MANIFEST_MODEL.md
+docs/THEME_AND_AD_SLOT.md
+docs/SANDBOX_MODEL.md
+docs/TESTING_MATRIX.md
+```
+
+Status:
+
+```text
+scaffolded
+some docs still placeholders
+make_codebundle fixed
+vite build working
+check/package mostly green except final page-profile-polish token issue
+```
+
+### 8.2 Old active extension files
+
+Important:
+
+```text
+extensions/chrome/src/page.html
+extensions/chrome/src/page.js
+extensions/chrome/src/storage.js
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/crab.js
+extensions/chrome/src/page-profile-*.js
+extensions/chrome/src/page-site-*.js
+extensions/chrome/src/page-workflow.js
+extensions/chrome/src/page-product-preview.js
+extensions/chrome/src/page-uniform-manifest.js
+extensions/chrome/src/page-social-stubs.js
+extensions/chrome/src/page-video-draft.js
+extensions/chrome/src/page-stream-draft.js
+extensions/chrome/src/page-podcast-draft.js
+extensions/chrome/src/page-article-draft.js
+```
+
+Status:
+
+```text
+live prototype
+still active in unpacked extension
+site/profile/image routes proven
+must preserve while migrating
+```
+
+### 8.3 New React app files
+
+Important:
+
+```text
+extensions/chrome/src/app/main.jsx
+extensions/chrome/src/app/App.jsx
+extensions/chrome/src/app/appState.js
+extensions/chrome/src/app/router.js
+extensions/chrome/src/app/routeRegistry.js
+extensions/chrome/src/app/settings.js
+extensions/chrome/src/app/shell/*
+extensions/chrome/src/pages/*
+extensions/chrome/src/shared/*
+```
+
+Status:
+
+```text
+scaffolded
+builds
+route shell wired
+mostly placeholders
+not yet active shipped extension UI
+```
+
+### 8.4 Legacy folder
+
+Important:
+
+```text
+extensions/chrome/src/legacy/README.md
+extensions/chrome/src/legacy/page-legacy-bridge.js
+```
+
+Role:
+
+```text
+temporary transition zone
+should not accumulate new product behavior
+delete after migration parity
+```
+
+---
+
+## 9. Migration plan going forward
+
+The attached refactor todo recommends this migration order:
+
+```text
+Phase 0 — Freeze current working prototype.
+Phase 1 — Add app/router/shared folders and keep old flows untouched.
+Phase 2 — Move local-only stubs: lyrics, post, comment, ad, algo, code, game.
+Phase 3 — Move creator drafts: music, article, video, stream, podcast.
+Phase 4 — Move profile.
+Phase 5 — Move image, preserving paid image upload.
+Phase 6 — Move site, preserving site create/open/render.
+Phase 7 — Delete legacy patch/rescue files.
+Phase 8 — Tighten checks and smoke tests.
+```
+
+The same document explains the reason: stub pages move first because they do not mutate backend state, while site/image move later because they touch proven backend flows. 
+
+### 9.1 Phase 0 — Freeze working prototype
+
+Next session should start with:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/check-chrome.sh
+npm run build
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then manually test:
+
+```text
+crab://site
+crab://image
+crab://profile
+crab://video
+crab://stream
+crab://podcast
+crab://article
+known-good image:
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+First fix the `page-profile-polish.js` token issue if it remains.
+
+### 9.2 Phase 1 — Finish shell foundation
+
+The React shell exists. It needs enough shared app context to become useful:
+
+```text
+appContext.js real implementation
+appEvents.js real event bus
+settings.js bridge hardened
+gatewayClient.js shared with old RonClient expectations
+ThemeProvider applied
+HeaderAdSlot consistent
+ToastHost real
+ModalHost real
+```
+
+Do not yet migrate site/image.
+
+### 9.3 Phase 2 — Migrate local-only stubs
+
+Move these first:
+
+```text
+crab://lyrics
+crab://post
+crab://comment
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+Why:
+
+```text
+no paid storage
+no wallet mutation
+no backend publication
+no proven site/image flow risk
+```
+
+Each migrated page should have:
+
+```text
+Page.jsx
+Draft.jsx
+page.css
+shared manifest draft
+TruthBoundary
+JsonPreview developer view
+no fake b3 CID
+no fake ROC
+no fake publication
+```
+
+### 9.4 Phase 3 — Migrate creator drafts
+
+Then migrate:
+
+```text
+crab://music
+crab://article
+crab://video
+crab://stream
+crab://podcast
+```
+
+These have more UI complexity but still should remain mostly local/future prepare scaffolds.
+
+Special care:
+
+```text
+video local file preview
+stream camera/mic cleanup
+podcast audio/mic cleanup
+music rights/linked lyrics
+article body and tags
+```
+
+### 9.5 Phase 4 — Migrate profile
+
+Migrate profile only after the shared shell and local pages are proven.
+
+Profile must preserve:
+
+```text
+passport drawer behavior
+local profile draft
+avatar `.image` reference
+@username display
+balance display
+REP/MOD placeholders
+local My Sites / My Assets history
+alt vault boundaries
+no main-alt leakage
+no fake backend-confirmed username
+```
+
+### 9.6 Phase 5 — Migrate image
+
+Image is dangerous because it already proves a real paid path.
+
+Must preserve:
+
+```text
+/assets/image/prepare
+explicit wallet hold
+paid proof headers
+/assets/image raw upload
+resulting crab://<hash>.image
+gateway b3 raw/object fetch
+receipt display
+no nonce pain where possible
+```
+
+### 9.7 Phase 6 — Migrate site
+
+Site is also dangerous because it proves real site creation/render.
+
+Must preserve:
+
+```text
+/sites/prepare
+/sites
+root document CID
+route_map
+asset_map
+site name
+site manifest drawer
+safe site rendering
+site creator proof
+crab://<site_name> resolution
+```
+
+### 9.8 Phase 7 — Delete patch/rescue files
+
+Once parity is proven, delete/absorb:
+
+```text
+page-creator-route-guard.js
+page-lifecycle-settler.js
+page-next-level-panels.js
+page-music-rights.js
+page-stream-podcast-mode.js
+page-social-stubs.js
+page-local-catalog.js if replaced
+page-profile-polish.js if replaced
+page-uniform-manifest.js if moved to shared/manifest
+```
+
+The refactor todo specifically names these patch-style files as files that should not survive long-term and maps them to route-owned pages or shared components. 
+
+---
+
+## 10. Immediate next session task list
+
+### Task 1 — Fix final static check regression
+
+Check:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/check-chrome.sh
+```
+
+If error remains:
+
+```text
+page-profile-polish.js missing token: data-crablink-open-url
+```
+
+Patch `page-profile-polish.js` to contain the exact literal token:
+
+```js
+open.setAttribute('data-crablink-open-url', url);
+```
+
+Then run:
+
+```bash
+npm run build && scripts/check-chrome.sh && scripts/package-chrome.sh && scripts/make_codebundle.sh
+```
+
+### Task 2 — Confirm extension runtime is still good
+
+Reload unpacked extension:
+
+```text
+chrome://extensions
+→ CrabLink
+→ Reload
+```
+
+Manual smoke:
+
+```text
+crab://profile
+Passport → Check Node
+Passport → Check Passport
+Passport → Refresh Balance
+crab://site
+crab://image
+crab://video
+known-good image asset
+```
+
+Expected:
+
+```text
+no [object Object]
+no null getHealth error
+no chrome.storage.local error
+site loads
+profile loads
+balance visible
+local creator routes do not fall through to /sites/<route>
+```
+
+### Task 3 — Update docs placeholders enough to guide next migration
+
+The docs currently include placeholder scaffold docs. Prioritize filling:
+
+```text
+docs/CRABLINK_REFACTOR_PLAN.md
+docs/ROUTE_CONTRACTS.md
+docs/MANIFEST_MODEL.md
+docs/SANDBOX_MODEL.md
+docs/TESTING_MATRIX.md
+```
+
+Do not overdo docs forever. Use them as migration contracts.
+
+### Task 4 — Add route regression checks
+
+Enhance `scripts/check-chrome.sh` to prevent:
+
+```text
+page-local-route-mode.js returns
+page.html imports page-local-route-mode.js
+crab://video falling through to /sites/video
+crab://stream falling through to /sites/stream
+crab://podcast falling through to /sites/podcast
+local draft claiming b3 CID
+local draft claiming ROC charge
+extension direct-calling internal services
+```
+
+The uploaded codebundle/refactor docs include a regression watchlist with exactly these kinds of failures, including page-local-route-mode returning, local creator routes resolving through `/sites/*`, fake b3/ROC/wallet mutation claims, broad permissions, and direct internal service calls. 
+
+### Task 5 — Start React migration with one low-risk page
+
+Recommended first actual migration:
+
+```text
+crab://post
+```
+
+Why post first:
+
+```text
+text-only
+no media preview
+no mic/camera
+no paid path
+no current backend mutation
+small enough to prove manifest form + TruthBoundary + route owner
+```
+
+Alternative first migration:
+
+```text
+crab://lyrics
+```
+
+Why lyrics:
+
+```text
+text-only
+important linked-asset design
+separate asset model
+low risk
+```
+
+Do not start with:
+
+```text
+site
+image
+profile
+```
+
+---
+
+## 11. Acceptance gates for first React-migrated page
+
+For `crab://post` or `crab://lyrics`:
+
+```text
+npm run build passes
+scripts/check-chrome.sh passes
+scripts/package-chrome.sh passes
+scripts/make_codebundle.sh passes
+route opens in Vite dev shell
+route opens or is bridged in extension if applicable
+no old page leakage
+no fake b3 CID
+no fake ROC
+no fake receipt
+no backend publication claim
+manifest draft generated locally
+Builder view clean
+Developer JSON collapsible
+TruthBoundary visible
+file sizes remain reasonable
+```
+
+Suggested implementation pattern:
+
+```text
+pages/post/PostPage.jsx
+pages/post/PostDraft.jsx
+pages/post/post.css
+shared/manifest/manifestDrafts.js
+shared/manifest/uniformManifest.js
+shared/components/PageHeader.jsx
+shared/components/Card.jsx
+shared/components/TruthBoundary.jsx
+shared/components/JsonPreview.jsx
+```
+
+---
+
+## 12. Testing commands to carry forward
+
+### Standard green path
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build && scripts/check-chrome.sh && scripts/package-chrome.sh && scripts/make_codebundle.sh
+```
+
+### Static only
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/check-chrome.sh
+```
+
+### Codebundle only
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/make_codebundle.sh
+```
+
+### Vite dev shell
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run dev
+```
+
+Then test:
+
+```text
+/page.html?url=crab://home
+/page.html?url=crab://post
+/page.html?url=crab://lyrics
+/page.html?url=crab://site
+/page.html?url=crab://image
+```
+
+### Chrome extension manual
+
+```text
+chrome://extensions
+→ Reload CrabLink
+→ open CrabLink full tab
+```
+
+Test:
+
+```text
+crab://site
+crab://image
+crab://profile
+crab://music
+crab://article
+crab://video
+crab://stream
+crab://podcast
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+### Known-good asset
+
+```text
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+---
+
+## 13. Current risks
+
+### 13.1 Hybrid architecture confusion
+
+Risk:
+
+```text
+Thinking the React shell is already the shipped extension.
+```
+
+Reality:
+
+```text
+Vite builds React shell.
+Unpacked Chrome extension still mainly uses old page.js/page-* source path.
+```
+
+Mitigation:
+
+```text
+Treat old path as compatibility lane.
+Treat React path as destination lane.
+Do not delete old path until parity.
+```
+
+### 13.2 Static checker token fragility
+
+Risk:
+
+```text
+Browser-correct code fails static check because expected literal token is absent.
+```
+
+Example:
+
+```text
+dataset.crablinkOpenUrl works but check requires data-crablink-open-url literal.
+```
+
+Mitigation:
+
+```text
+Preserve literal tokens in source where check-chrome.sh expects them.
+Update checks carefully when architecture changes.
+```
+
+### 13.3 Regressing proven site/image flows
+
+Risk:
+
+```text
+Moving site/image too early breaks the real product proof.
+```
+
+Mitigation:
+
+```text
+Migrate site/image last.
+Keep smoke scripts green.
+Do not touch paid flow internals unless necessary.
+```
+
+### 13.4 Patch files accumulating
+
+Risk:
+
+```text
+Continuing to improve old files creates more legacy debt.
+```
+
+Mitigation:
+
+```text
+Only old-file fixes for build/crash/proven-flow protection.
+All new product UI should go to React route-owned architecture.
+```
+
+### 13.5 Theme/CSS drift
+
+Risk:
+
+```text
+Old dark-only hardcoded styles fight new theme tokens.
+```
+
+Mitigation:
+
+```text
+Use shared theme tokens in new React files.
+Avoid new hardcoded dark-only CSS.
+Migrate old styles gradually.
+```
+
+### 13.6 Large bundle warning
+
+Risk:
+
+```text
+React route registry imports everything eagerly.
+```
+
+Mitigation later:
+
+```text
+dynamic import route pages
+lazy/Suspense
+route-level code splitting
+```
+
+Not urgent until React shell becomes real shipped UI.
+
+---
+
+## 14. What remains for the refactor
+
+### Scaffold completion remaining
+
+```text
+Fill docs placeholders.
+Turn scaffold stubs into real shared utilities/components.
+Implement appContext/appEvents.
+Implement real ThemeProvider.
+Implement modal/toast systems.
+Implement shared gateway/identity/wallet/asset/site clients.
+Implement real manifest form and sections.
+Implement safe embed registry.
+Implement sandbox frame rules.
+```
+
+### React migration remaining
+
+```text
+Migrate post or lyrics first.
+Migrate comment/ad/algo/code/game.
+Migrate music/article/video/stream/podcast.
+Migrate profile.
+Migrate image.
+Migrate site.
+Delete legacy patch files.
+Switch extension packaging/entry to React build output when ready.
+```
+
+### Backend/API remaining
+
+```text
+profile publishing
+@username reservation/claiming
+reputation score truth
+moderator score truth
+post/comment/article routes
+lyrics routes
+music/song routes
+video routes
+stream routes
+podcast routes
+ad campaign routes
+algo registry routes
+code primitive/facet routes
+game manifest routes
+rendition-group DTOs
+manifest version/history DTOs
+uniform manifest DTOs
+paid view/access flows
+creator payout splits
+ad payout splits
+policy/capability gates
+route-contract tests
+```
+
+### UX polish remaining
+
+```text
+final profile visual polish
+passport drawer final layout
+consistent ROC formatting
+avatar unavailable handling
+real light/dark toggle
+standard header ad slot in shipped shell
+Builder/Developer view consistency
+clean manifest drawers
+site creator @username proof
+profile public catalog once backend supports it
+```
+
+---
+
+## 15. Grok handoff prompt
+
+Use this in the next session with Grok:
+
+```text
+We are refactoring the CrabLink Chrome extension for RustyOnions.
+
+Current state:
+- The old page.html/page.js/page-* source path is still the live working extension.
+- The new React/Vite scaffold exists under extensions/chrome/src/app, src/pages, and src/shared.
+- npm run build works after vite.config.js was fixed to use page.html.
+- make_codebundle now includes JSX and root docs/configs.
+- The extension still works for crab://site, crab://profile, creator pages, and known-good image assets.
+- We fixed storage fallback for Vite/dev mode and fixed null client passport drawer crashes.
+- The final known issue may be scripts/check-chrome.sh requiring page-profile-polish.js to contain the literal token data-crablink-open-url.
+
+Hard rules:
+- One route = one page owner.
+- React + Vite for full-tab CrabLink app.
+- Plain MV3 JS for background/content/popup/options glue.
+- Gateway-only backend access.
+- No direct svc-wallet/storage/index/omnigate/ledger calls.
+- No fake backend truth.
+- No fake b3 CIDs.
+- No silent ROC spend.
+- No arbitrary crab:// code execution.
+- Site/image paid flows migrate late.
+- Files should remain modular and ideally under 400 lines.
+
+Please review:
+- CODEBUNDLE_CHROME_EXTENSION.md
+- CRABLINK_REFACTOR.MD
+- REFACTOR_TODO.MD
+
+Then help us:
+1. Fix any remaining static-check failure.
+2. Confirm the old extension path is green.
+3. Pick the first low-risk React route to migrate, preferably crab://post or crab://lyrics.
+4. Implement it as route-owned React files using shared components and uniform manifest helpers.
+5. Preserve all extension safety boundaries.
+```
+
+---
+
+## 16. Bottom-line recommendation for next session
+
+Start next session like this:
+
+```text
+1. Fix/confirm page-profile-polish.js static token issue.
+2. Run full green command.
+3. Reload Chrome extension and confirm site/profile/image still work.
+4. Do not polish old files further unless they break.
+5. Begin actual React route migration with crab://post or crab://lyrics.
+```
+
+The most important discipline now is to stop broad old-file patching and move into deliberate route-by-route migration. The old prototype is stable enough to protect; the React scaffold is build-proven enough to start absorbing low-risk pages.
+
+
+
+### END NOTE - MAY 9 2026 - 14:00 CST
+
+
+
+### BEGIN NOTE - MAY 9 2026 - 15:50 CST
+
+Below are the carryover notes for the next session. I reviewed the uploaded `REFACTOR_TODO.MD`, `CRABLINK_REFACTOR.MD`, the current `CODEBUNDLE_CHROME_EXTENSION.md`, and the screenshots from the final React-lane theme test. The refactor docs still define the north star as **one route = one page owner**, folder-based built-ins, shared shell/theme/ad/manifest systems, and no more late DOM patching or MutationObserver rescue logic. They also explicitly recommend **React + Vite for the full-tab CrabLink browser UI** while keeping Chrome extension glue plain MV3 JavaScript.  The current codebundle confirms the repo now contains both the old live `page-*` lane and the new React folders under `src/app`, `src/pages`, and `src/shared`. 
+
+# Carryover Notes — CrabLink React Refactor Session
+
+## 0. Executive checkpoint
+
+This session moved CrabLink from “React scaffold exists” to a **protected hybrid migration checkpoint**.
+
+The old extension lane is still the active product path:
+
+```text
+extensions/chrome/src/page.html
+extensions/chrome/src/page.js
+extensions/chrome/src/page-*.js
+extensions/chrome/src/page.css
+extensions/chrome/src/storage.js
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/crab.js
+```
+
+The new React/Vite lane now builds separately:
+
+```text
+extensions/chrome/src/react.html
+extensions/chrome/src/app/main.jsx
+extensions/chrome/src/app/App.jsx
+extensions/chrome/src/app/
+extensions/chrome/src/app/shell/
+extensions/chrome/src/pages/
+extensions/chrome/src/shared/
+```
+
+This is intentional. The old lane remains the live, proven UI for site/image/profile/passport/paid flows. The React lane is the destination architecture and is currently tested separately over local HTTP.
+
+The final green gate from this session:
+
+```text
+npm run build ✅
+scripts/check-react-lane.sh ✅
+scripts/check-chrome.sh ✅
+scripts/package-chrome.sh ✅
+scripts/make_codebundle.sh ✅
+```
+
+The current product truth:
+
+```text
+Old page.html lane = active unpacked Chrome extension / proven prototype.
+React react.html lane = route-owned refactor destination / tested separately.
+Do not flip the extension toolbar to React yet.
+```
+
+---
+
+## 1. Why we did not switch the Chrome extension to React yet
+
+The toolbar-loaded Chrome extension still opens the old proven `page.html` lane on purpose.
+
+Reason:
+
+```text
+site/image/profile/passport/paid flows are already proven in the old lane.
+React does not yet have parity for these flows.
+Switching too early could break the most valuable product proof.
+```
+
+Current testing model:
+
+```text
+Chrome extension toolbar click
+→ old live lane
+→ page.html/page.js/page-* files
+
+React refactor test
+→ local HTTP server
+→ react.html
+→ app/main.jsx
+→ React route-owned pages
+```
+
+React test URL used:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Flyrics
+```
+
+Important lesson from this session:
+
+```text
+Do not test React lane through file://.
+Serve dist/chrome-src over local HTTP.
+```
+
+The `file://` route produced a blank page because the Vite-built dynamic chunks/module imports do not reliably run from local file URLs. Local HTTP fixed it.
+
+Command used:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+---
+
+## 2. What was completed in this session
+
+## 2.1 React lane was separated from the legacy lane
+
+We discovered that earlier code-splitting attempts appeared to “not work” because Vite was only building the legacy `page.html/page.js` entry. The solution was to add a separate React entry:
+
+```text
+extensions/chrome/src/react.html
+```
+
+Vite now builds both entries:
+
+```text
+page.html   → legacy proven lane
+react.html  → React refactor lane
+```
+
+The final build output confirmed both:
+
+```text
+dist/chrome-src/react.html
+dist/chrome-src/page.html
+```
+
+This is a major architectural milestone because we can now grow React without risking the live extension path.
+
+## 2.2 React route lazy-loading and route chunk splitting now work
+
+We converted the React route registry to use lazy imports:
+
+```text
+lazy(() => import('../pages/.../...Page.jsx'))
+```
+
+We added a `Suspense` boundary in `App.jsx`.
+
+Final build output confirmed route-level chunks, including:
+
+```text
+page-site-*.js
+page-image-*.js
+page-profile-*.js
+page-social-*.js
+page-media-*.js
+page-builder-stubs-*.js
+vendor-react-*.js
+shared-shell-*.js
+react-*.js
+```
+
+The remaining large file:
+
+```text
+page-*.js ~553 KB
+```
+
+is the old legacy lane. That is acceptable for now.
+
+The React lane itself is split cleanly.
+
+## 2.3 `vite.config.js` now builds hybrid entries
+
+`vite.config.js` now uses a hybrid model:
+
+```text
+page: react? no — legacy page.html
+react: yes — react.html
+```
+
+The important conceptual result:
+
+```text
+React can be built and tested beside the old UI.
+Old UI remains preserved.
+Route chunks are now emitted for the React lane.
+```
+
+The current build warning is not the same as before. The large chunk belongs to the old page lane, not the React lane.
+
+## 2.4 `appContext.js` JSX parser failure was fixed
+
+Rolldown/Vite treated `appContext.js` as plain JS, so JSX inside it failed:
+
+```text
+return <AppContext.Provider ...>
+```
+
+We fixed this by using:
+
+```text
+createElement(AppContext.Provider, { value }, children)
+```
+
+This kept the file path and imports stable without forcing a rename to `.jsx`.
+
+Current rule:
+
+```text
+.js files should not contain JSX unless Vite is explicitly configured for it.
+Prefer .jsx for JSX-bearing components.
+For appContext.js, keep createElement to avoid churn.
+```
+
+## 2.5 Missing scaffold exports were fixed
+
+The React lane initially failed because these extension-local scaffold files did not export the functions the app expected:
+
+```text
+extensions/chrome/src/shared/api/gatewayClient.js
+extensions/chrome/src/shared/theme/ThemeProvider.jsx
+```
+
+Errors fixed:
+
+```text
+createGatewayClient missing
+useTheme missing
+```
+
+We replaced the correct **extension-local** files, not the root `shared/` copies.
+
+Current files now provide:
+
+```text
+createGatewayClient()
+GatewayClient
+GatewayClientError
+ThemeProvider
+useTheme()
+themeStore helpers
+```
+
+Important lesson:
+
+```text
+There are both root shared files and extension-local shared files.
+The React app imports extension-local files under extensions/chrome/src/shared/...
+Patch the exact path Vite reports.
+```
+
+## 2.6 Added `scripts/check-react-lane.sh`
+
+We added a dedicated guardrail script:
+
+```text
+scripts/check-react-lane.sh
+```
+
+Purpose:
+
+```text
+protect hybrid checkpoint
+ensure react.html exists
+ensure Vite has both page and react entries
+ensure route registry uses lazy imports
+ensure App.jsx has Suspense
+ensure appContext.js avoids JSX
+ensure createGatewayClient/useTheme exports exist
+ensure forbidden internal-service references are absent from React app/shared/pages
+ensure built dist has split chunks
+```
+
+This script passed at the end:
+
+```text
+React lane checks: ok
+```
+
+This is now a required gate for future React work.
+
+## 2.7 First real React-owned route was implemented: `crab://lyrics`
+
+The first low-risk migrated page is:
+
+```text
+crab://lyrics
+```
+
+Files:
+
+```text
+extensions/chrome/src/pages/lyrics/LyricsPage.jsx
+extensions/chrome/src/pages/lyrics/LyricsDraft.jsx
+extensions/chrome/src/pages/lyrics/lyrics.css
+```
+
+This is not just a stub anymore. It is a real local creator workspace.
+
+Current `crab://lyrics` features:
+
+```text
+Lyrics Workspace hero
+route owner card
+three principle cards
+local lyrics draft form
+title
+linked music/song crab URL
+author/creator display
+language
+rights mode
+access mode
+tags
+lyrics body
+Builder/Developer toggle
+draft stats
+truth boundary panel
+preview panel
+manifest JSON preview
+copy local manifest JSON
+clear local draft
+```
+
+The current codebundle shows the lyrics CSS is now a polished route-owned page using shared theme tokens and local-draft-only invariants. 
+
+## 2.8 Lyrics truth boundary is correctly preserved
+
+The React lyrics workspace explicitly does **not** claim backend truth.
+
+Current invariant:
+
+```text
+local draft only
+no fake b3 CID
+no fake canonical crab URL
+no fake manifest CID
+no backend publication
+no wallet mutation
+no ROC charge
+no index pointer
+no receipt
+```
+
+This is exactly how low-risk React migrations should work.
+
+The generated local manifest uses a draft schema:
+
+```text
+crablink.local.lyrics-draft.v1
+```
+
+and truth boundary flags like:
+
+```text
+assigns_b3_cid: false
+assigns_manifest_cid: false
+publishes_asset: false
+writes_index_pointer: false
+performs_paid_action: false
+backend_route_claimed: false
+```
+
+This pattern should be reused for the next low-risk pages.
+
+## 2.9 Theme was changed from blue to neutral off-white / true black
+
+User feedback:
+
+```text
+dark blue dark mode was not liked
+blue-ish light mode was not liked
+desired direction: black dark mode, neutral light mode
+```
+
+We updated shared React theme tokens:
+
+```text
+extensions/chrome/src/shared/theme/themeTokens.css
+extensions/chrome/src/shared/theme/light.css
+extensions/chrome/src/shared/theme/dark.css
+```
+
+Current theme direction:
+
+```text
+Light mode: neutral off-white / paper / black text
+Dark mode: true black / neutral gray / white text
+No blue default theme
+```
+
+The final screenshots confirmed the result is much better.
+
+Current user reaction:
+
+```text
+“This is a lot better for the themes thank you.”
+```
+
+Keep this visual direction.
+
+## 2.10 Header ad slot exists in React shell
+
+The React shell includes a standardized header ad placeholder:
+
+```text
+Ad Space
+protocol-native header slot · crab://lyrics
+```
+
+This matches the refactor / product rule that every site/page eventually has one visible protocol-native header ad slot. The refactor docs include the shared header ad slot as part of the target architecture. 
+
+Current state:
+
+```text
+placeholder only
+no ad campaign backend
+no tracking
+no third-party scripts
+clearly labeled
+```
+
+## 2.11 React shell exists and works
+
+React shell currently has:
+
+```text
+CrabLink brand
+browser nav buttons
+address bar
+Go button
+Gateway chip
+Passport chip
+ROC balance chip
+theme toggle
+settings gear
+header ad slot
+route outlet
+modal host
+toast host
+```
+
+The shell is good enough to start migrating low-risk route pages.
+
+## 2.12 React HTTP test mode is correctly shown
+
+When testing React through local HTTP, the React app cannot access the loaded Chrome extension’s `chrome.storage.local`.
+
+So the passport chip now honestly shows:
+
+```text
+HTTP test mode
+```
+
+This is not a backend or passport failure. It is the correct truth boundary for this testing mode.
+
+Important explanation for next session:
+
+```text
+http://127.0.0.1:4173/react.html is not the extension origin.
+It cannot see the loaded extension storage.
+It uses fallback/local browser storage for that HTTP origin.
+```
+
+Therefore, no real passport dropdown appears yet in React.
+
+## 2.13 Old extension path still owns the real passport drawer
+
+The old live extension path still has the working passport drawer/profile functionality from previous sessions.
+
+React currently only has:
+
+```text
+PassportChip status display
+HTTP test mode explanation
+settings summary modal
+```
+
+React does **not** yet have:
+
+```text
+passport dropdown
+passport drawer
+main passport card
+alt vault drawer
+profile shortcut list
+asset/site listing buttons
+real extension-storage-backed identity display
+gateway-backed identity refresh UX
+```
+
+This is a known remaining task.
+
+---
+
+# 3. Current terminal proof
+
+Final successful commands:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Final status:
+
+```text
+vite build ✅
+React lane checks: ok ✅
+CrabLink Chrome extension checks passed ✅
+dist/crablink-extension-chrome.zip written ✅
+CODEBUNDLE_CHROME_EXTENSION.md written ✅
+```
+
+Final React test path:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Open:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Flyrics
+```
+
+Observed:
+
+```text
+React shell loads
+crab://lyrics route loads
+neutral light mode works
+true black dark mode works
+HTTP test mode passport chip appears
+Builder/Developer toggle works visually
+Developer JSON preview appears
+truth boundary appears
+```
+
+---
+
+# 4. Current architecture model
+
+## 4.1 Live product lane
+
+Still active when loading the Chrome extension normally.
+
+Files:
+
+```text
+extensions/chrome/src/page.html
+extensions/chrome/src/page.js
+extensions/chrome/src/page-*.js
+extensions/chrome/src/page.css
+extensions/chrome/src/storage.js
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/crab.js
+```
+
+Owns:
+
+```text
+working site creation/open proof
+working image mint/publish proof
+working profile prototype
+passport drawer
+known-good typed asset loading
+local creator pages from prior sessions
+gateway settings
+live extension UX
+```
+
+Do not aggressively modify this lane except for:
+
+```text
+build break fixes
+static checker fixes
+crash fixes
+compatibility protection
+proven-flow preservation
+```
+
+## 4.2 React migration lane
+
+Tested separately.
+
+Files:
+
+```text
+extensions/chrome/src/react.html
+extensions/chrome/src/app/main.jsx
+extensions/chrome/src/app/App.jsx
+extensions/chrome/src/app/appContext.js
+extensions/chrome/src/app/appEvents.js
+extensions/chrome/src/app/appState.js
+extensions/chrome/src/app/router.js
+extensions/chrome/src/app/routeRegistry.js
+extensions/chrome/src/app/settings.js
+extensions/chrome/src/app/shell/*
+extensions/chrome/src/pages/*
+extensions/chrome/src/shared/*
+```
+
+Owns:
+
+```text
+new shell
+new route registry
+new route parsing
+new theme system
+new modal/toast hosts
+new gateway/identity/wallet client wrappers
+new low-risk route pages
+new local draft/truth-boundary pattern
+```
+
+Does not yet own:
+
+```text
+paid image upload
+site creation/rendering
+profile drawer
+full passport UX
+extension toolbar entry
+production active page.html replacement
+```
+
+---
+
+# 5. Updated refactor completion estimate
+
+Rough estimate for **CrabLink refactor only**:
+
+```text
+Planning/target structure:           90%
+Hybrid build setup:                  95%
+React shell foundation:              70%
+React route registry/splitting:      90%
+Theme foundation:                    75%
+First route migration:               20%
+Full low-risk route migration:       10–15%
+Profile migration:                   0–5%
+Image paid-flow migration:           0%
+Site paid/render-flow migration:     0%
+Legacy deletion:                     0%
+Extension entry switch to React:     0%
+```
+
+Overall refactor completion estimate:
+
+```text
+~25–30%
+```
+
+This is good progress because the hardest architectural seam is solved: React now builds in parallel without endangering the old product path.
+
+---
+
+# 6. Current highest-priority remaining items
+
+## 6.1 Build a real React Passport dropdown/drawer
+
+User noticed correctly:
+
+```text
+There is no passport dropdown in React lane.
+```
+
+This is not implemented yet.
+
+Next ideal React files:
+
+```text
+extensions/chrome/src/app/shell/PassportChip.jsx
+extensions/chrome/src/app/shell/PassportDrawer.jsx
+extensions/chrome/src/app/shell/PassportSummary.jsx
+extensions/chrome/src/app/shell/PassportActions.jsx
+extensions/chrome/src/app/shell/PassportDrawer.css
+```
+
+Expected React passport drawer features:
+
+```text
+opens from PassportChip
+shows current mode: HTTP test mode / extension storage / gateway identity
+shows passport label if available
+shows handle if confirmed
+shows requested handle draft if local only
+shows wallet account label
+shows ROC display if backend available
+shows identity truth boundary
+shows buttons:
+  Profile
+  Refresh identity
+  Settings
+  Alt vault placeholder
+  Copy safe identity summary
+```
+
+Important truth boundary:
+
+```text
+HTTP local test mode cannot read chrome.storage.local.
+Extension mode can.
+Backend-confirmed identity must come from gateway.
+Local labels are not backend truth.
+```
+
+Do not fake loaded passport state in React HTTP mode.
+
+## 6.2 Decide how to test React inside real extension origin
+
+Currently React is tested over HTTP.
+
+Eventually we need a way to test React from the extension origin so it can read extension storage.
+
+Options:
+
+```text
+Option A: add a temporary background/open route to react.html
+Option B: add a dev-only extension action/menu to open src/react.html
+Option C: package dist/chrome-src/react.html into extension and open it manually
+Option D: eventually flip page.html to React after parity
+```
+
+Do not flip default toolbar action yet.
+
+A good next small step:
+
+```text
+Add a dev-only “Open React Preview” button/link in old settings or docs,
+but avoid making it the default extension path.
+```
+
+## 6.3 Migrate the next low-risk React route
+
+Good candidates:
+
+```text
+crab://post
+crab://comment
+```
+
+Why:
+
+```text
+text-only
+local draft only
+no backend mutation
+easy to preserve truth boundary
+similar form structure to lyrics
+good proving ground for shared manifest helpers
+```
+
+Avoid next:
+
+```text
+crab://image
+crab://site
+crab://profile
+```
+
+Reason:
+
+```text
+image/site/profile are proven and higher-risk.
+Migrate them later.
+```
+
+## 6.4 Extract shared local draft/manifest components
+
+`LyricsDraft.jsx` currently contains a page-specific local manifest builder and form. That is okay for first migration, but the next two pages should not copy-paste this forever.
+
+Start extracting:
+
+```text
+shared/components/TruthBoundary.jsx
+shared/components/JsonPreview.jsx
+shared/components/SegmentedControl.jsx
+shared/components/StatChip.jsx
+shared/manifest/manifestDrafts.js
+shared/manifest/uniformManifest.js
+shared/manifest/linkedAssets.js
+shared/manifest/rightsPolicy.js
+shared/manifest/accessPolicy.js
+```
+
+The `REFACTOR_TODO.MD` target tree already includes this shared manifest/component direction. 
+
+## 6.5 Fill placeholder docs
+
+The current codebundle contains placeholder docs such as:
+
+```text
+docs/CRABLINK_REFACTOR_PLAN.md
+docs/ROUTE_CONTRACTS.md
+docs/MANIFEST_MODEL.md
+docs/THEME_AND_AD_SLOT.md
+docs/SANDBOX_MODEL.md
+docs/TESTING_MATRIX.md
+```
+
+These should be filled as the React architecture stabilizes.
+
+Suggested next docs order:
+
+```text
+1. docs/CRABLINK_REFACTOR_PLAN.md
+2. docs/THEME_AND_AD_SLOT.md
+3. docs/ROUTE_CONTRACTS.md
+4. docs/MANIFEST_MODEL.md
+5. docs/SANDBOX_MODEL.md
+6. docs/TESTING_MATRIX.md
+```
+
+## 6.6 Keep `check-react-lane.sh` updated
+
+Now that `check-react-lane.sh` exists, it should become stricter over time.
+
+Future checks to add:
+
+```text
+ensure react.html is not loaded by default extension action yet
+ensure page-local-route-mode.js does not return
+ensure React pages do not include hardcoded blue theme values
+ensure React pages do not call direct internal services
+ensure local draft pages do not claim b3 CIDs
+ensure local draft pages do not claim ROC charges
+ensure routeRegistry stays lazy
+ensure React app has PassportDrawer once implemented
+ensure each route page exists for registry entries
+```
+
+The codebundle regression watchlist already says to fail changes if local drafts claim backend publication, fake b3 assignment, ROC charges, wallet mutation, direct internal-service calls, or broad Chrome permissions. 
+
+---
+
+# 7. Known issues / open questions
+
+## 7.1 No React passport dropdown yet
+
+Status:
+
+```text
+known missing feature
+not a bug in current HTTP test path
+```
+
+Reason:
+
+```text
+React is served from http://127.0.0.1:4173 and cannot access chrome.storage.local.
+```
+
+Next:
+
+```text
+Build React PassportDrawer with explicit HTTP test mode truth boundary.
+Later test React under extension origin.
+```
+
+## 7.2 Gateway chip shows offline/red in HTTP test mode
+
+Current behavior:
+
+```text
+Gateway chip exists.
+It may show red/offline until clicked or if gateway is not running.
+```
+
+Next:
+
+```text
+Decide whether React should auto-check gateway on startup or only on click.
+```
+
+Recommendation:
+
+```text
+Do not auto-spam gateway initially.
+Add optional startup check later, with timeout and clean error.
+```
+
+## 7.3 ROC chip shows dash in React HTTP mode
+
+Current behavior:
+
+```text
+ROC —
+```
+
+Reason:
+
+```text
+No extension storage / wallet account / gateway-backed balance in HTTP test mode.
+```
+
+Next:
+
+```text
+Wallet display should remain honest.
+Do not inject fake 1776 ROC in React HTTP mode.
+```
+
+## 7.4 Light mode still may be too plain later
+
+User liked the new neutral direction, but final design can be refined.
+
+Current direction:
+
+```text
+off-white paper
+black accent
+neutral cards
+minimal color
+```
+
+Future polish:
+
+```text
+slightly warmer background
+better typography scale
+more polished card shadows
+less cramped zoomed-out layout
+more controlled max-width per route
+```
+
+## 7.5 Dark mode now true black but may need contrast tuning
+
+Current direction:
+
+```text
+black background
+near-black cards
+gray borders
+white text
+```
+
+Future polish:
+
+```text
+improve input contrast
+improve JSON preview readability
+tone down pure-white button glare
+adjust warning truth panel for dark mode
+```
+
+## 7.6 Legacy files are still present
+
+This is expected.
+
+Current rule:
+
+```text
+Do not delete old page-* files until React has parity.
+```
+
+The refactor docs list old patch-style files to absorb/delete eventually, including `page-creator-route-guard.js`, `page-lifecycle-settler.js`, `page-next-level-panels.js`, `page-music-rights.js`, `page-stream-podcast-mode.js`, and `page-social-stubs.js`. 
+
+---
+
+# 8. Next recommended implementation batch
+
+Best next batch:
+
+```text
+React PassportDrawer + identity truth panel
+```
+
+Why:
+
+```text
+User noticed it missing.
+It is shell-level, not a risky paid-flow migration.
+It teaches React how to handle extension-vs-HTTP storage truth.
+It will be reused by every future React page.
+```
+
+Recommended files:
+
+```text
+extensions/chrome/src/app/shell/PassportDrawer.jsx
+extensions/chrome/src/app/shell/PassportDrawer.css
+extensions/chrome/src/app/shell/PassportChip.jsx
+extensions/chrome/src/app/shell/TopBar.jsx
+extensions/chrome/src/app/shell/Shell.css
+scripts/check-react-lane.sh
+```
+
+Expected behavior:
+
+```text
+click PassportChip
+drawer/modal opens
+shows HTTP test mode if served over 127.0.0.1
+shows explanation that extension storage is unavailable in HTTP preview
+shows local settings summary
+shows safe identity summary copy button
+shows placeholder for main passport / alts
+does not fake backend identity
+```
+
+Second-best next batch:
+
+```text
+Migrate crab://post as a local-only React workspace.
+```
+
+Files:
+
+```text
+extensions/chrome/src/pages/post/PostPage.jsx
+extensions/chrome/src/pages/post/PostDraft.jsx
+extensions/chrome/src/pages/post/post.css
+```
+
+Third-best next batch:
+
+```text
+Extract shared draft components from lyrics before copying patterns.
+```
+
+Files:
+
+```text
+extensions/chrome/src/shared/components/TruthBoundary.jsx
+extensions/chrome/src/shared/components/JsonPreview.jsx
+extensions/chrome/src/shared/components/SegmentedControl.jsx
+extensions/chrome/src/shared/components/StatChip.jsx
+extensions/chrome/src/shared/manifest/manifestDrafts.js
+```
+
+My recommendation for next session:
+
+```text
+1. Add React PassportDrawer.
+2. Keep all gates green.
+3. Then migrate crab://post or extract shared draft components.
+```
+
+---
+
+# 9. Migration order from here
+
+Updated phased plan:
+
+```text
+Phase 0 — Preserve proven old lane.
+Status: active / ongoing.
+
+Phase 1 — Build React lane beside old lane.
+Status: done enough to proceed.
+
+Phase 2 — Protect React lane with checks.
+Status: done; check-react-lane.sh exists and passes.
+
+Phase 3 — Move low-risk local-only pages.
+Status: started with crab://lyrics.
+
+Next low-risk pages:
+  crab://post
+  crab://comment
+  crab://ad
+  crab://algo
+  crab://code
+  crab://game
+
+Phase 4 — Move medium-risk local creator drafts.
+  crab://music
+  crab://article
+  crab://video
+  crab://stream
+  crab://podcast
+
+Phase 5 — Move profile.
+  Requires passport drawer, public profile layout, identity truth, alt boundaries.
+
+Phase 6 — Move image.
+  Must preserve paid image prepare/hold/upload/receipt flow.
+
+Phase 7 — Move site.
+  Must preserve site create/open/render, manifest drawer, site creator proof.
+
+Phase 8 — Switch extension toolbar/default full-tab entry to React.
+  Only after parity.
+
+Phase 9 — Delete legacy patch/rescue files.
+  Only after old lane no longer needed.
+```
+
+Do not jump to phases 6–8 early.
+
+---
+
+# 10. Hard invariants to preserve
+
+For every React route:
+
+```text
+one route = one page owner
+React route pages own their own UI
+shared shell owns topbar/theme/ad slot/modal/toast
+gateway-only client boundary
+no direct svc-wallet / svc-storage / svc-index / ron-ledger / omnigate calls
+no silent ROC spend
+no fake receipts
+no fake b3 CID
+no fake manifest CID
+no fake backend publication
+no local wallet truth
+no arbitrary crab:// code execution
+untrusted content must be sandboxed later
+```
+
+For local draft routes:
+
+```text
+local draft only
+copy JSON is allowed
+preview is allowed
+stats are allowed
+backend prepare route can be future/optional
+no mutation unless explicit backend route and user confirmation exist
+```
+
+For themes:
+
+```text
+no default blue theme
+use shared CSS variables
+light mode default
+dark mode true black/neutral
+avoid hardcoded page-specific colors
+```
+
+For ads:
+
+```text
+one header ad slot only
+clearly labeled
+protocol-native
+no third-party tracking
+no hostile anti-adblock behavior
+```
+
+For old files:
+
+```text
+old files = compatibility/protection only
+React files = destination architecture
+```
+
+---
+
+# 11. Manual testing checklist for next session
+
+Before changing code:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Run React preview:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Open:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Flyrics
+```
+
+Test:
+
+```text
+theme toggle light/dark
+address bar crab://lyrics
+Builder toggle
+Developer toggle
+copy local manifest JSON
+clear local draft
+passport chip shows HTTP test mode
+settings gear opens summary modal
+gateway chip does not crash
+```
+
+Test old extension separately:
+
+```text
+chrome://extensions
+reload CrabLink
+click toolbar icon
+confirm old page.html lane still opens
+confirm site/image/profile known flows still not broken
+```
+
+Known-good old routes from existing notes/codebundle include:
+
+```text
+crab://site
+crab://image
+crab://profile
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+The codebundle’s regression watchlist says to fail a change if old creator routes start resolving through `/sites/*`, if stale pages remain visible, if local drafts claim fake b3/ROC/backend publication, if broad permissions are added, or if direct internal service calls appear. 
+
+---
+
+# 12. Suggested next-session prompt
+
+Use this at the start of the next session:
+
+```text
+We are continuing the CrabLink React refactor. Current state:
+- Old page.html/page.js/page-* lane remains the active unpacked Chrome extension and preserves proven site/image/profile/passport/paid flows.
+- New React/Vite lane builds separately through react.html.
+- React lane is tested over local HTTP at http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Flyrics.
+- npm run build, scripts/check-react-lane.sh, scripts/check-chrome.sh, scripts/package-chrome.sh, and scripts/make_codebundle.sh were green.
+- React route splitting works.
+- React shell has topbar/address/nav/gateway/passport chip/ROC chip/theme/settings/header ad slot/modal/toast.
+- First real low-risk migrated route is crab://lyrics with local draft form, Builder/Developer toggle, manifest JSON preview, stats, and truth boundary.
+- Theme was changed from blue to neutral off-white light mode and true black dark mode.
+- React passport dropdown/drawer is not implemented yet. The chip shows HTTP test mode when served outside the extension origin.
+- Next likely batch: add React PassportDrawer with honest HTTP-test/extension-storage/backend-truth boundaries, or migrate crab://post as another local-only route.
+- Do not migrate image/site/profile yet.
+- Preserve no fake b3, no fake manifest, no fake receipt, no silent ROC spend, no direct internal service calls.
+Please review CODEBUNDLE_CHROME_EXTENSION.md, REFACTOR_TODO.MD, CRABLINK_REFACTOR.MD, and continue with the next high-impact safe batch using full paste-ready files.
+```
+
+---
+
+# 13. Final recommendation for next session
+
+Start with **React PassportDrawer**.
+
+Reason:
+
+```text
+The user noticed there is no dropdown.
+It is foundational shell UX.
+It clarifies identity truth in HTTP preview vs real extension origin.
+It can be done without touching site/image paid flows.
+It will be reused by profile, site creator proof, post/comment author identity, and future alts.
+```
+
+After that:
+
+```text
+migrate crab://post or crab://comment
+```
+
+Do **not** start by moving:
+
+```text
+crab://image
+crab://site
+crab://profile
+```
+
+Those are too important to risk until React shell, passport drawer, shared manifest helpers, and route guardrails are stronger.
+
+
+### END NOTE - MAY 9 2026 - 15:50 CST
+
+
+
+### BEGIN NOTE - MAY 9 2026 - 16:50 CST
+
+Below is a complete carryover note set for the next instance.
+
+I reviewed the latest `CODEBUNDLE_CHROME_EXTENSION.md`, `REFACTOR_TODO.MD`, `CRABLINK_REFACTOR.MD`, and the current screenshots/context from this session. The latest codebundle confirms the repo now contains both the legacy lane and the new React lane, including `src/app`, `src/app/shell`, `src/pages`, `src/shared`, page folders for all built-ins, shared manifest/theme/embed utilities, check scripts, and the new `react.html` entry.  The refactor TODO still defines the intended architecture as React + Vite for the full-tab browser UI, with plain MV3 JavaScript retained for extension glue like background/content/popup/options. 
+
+# Carryover Notes — CrabLink React Refactor, May 9 2026
+
+## 0. Executive checkpoint
+
+CrabLink is now in a **protected hybrid refactor state**.
+
+There are two lanes:
+
+```text
+Legacy lane:
+extensions/chrome/src/page.html
+extensions/chrome/src/page.js
+extensions/chrome/src/page-*.js
+```
+
+```text
+React lane:
+extensions/chrome/src/react.html
+extensions/chrome/src/app/main.jsx
+extensions/chrome/src/app/
+extensions/chrome/src/app/shell/
+extensions/chrome/src/pages/
+extensions/chrome/src/shared/
+```
+
+The legacy lane is still the active unpacked Chrome extension/product path. It preserves the proven site/image/profile/passport/paid flows. The React lane is the destination architecture and is being tested separately over local HTTP.
+
+Do **not** flip the Chrome toolbar/default extension entry to React yet.
+
+The safest product truth right now:
+
+```text
+old page.html lane = protected working product/prototype
+new react.html lane = route-owned refactor destination
+```
+
+The latest codebundle shows the hybrid tree now includes React app files, shell files, route pages, shared API clients, shared components, shared embed helpers, shared manifest helpers, theme files, utilities, legacy files, and scripts. 
+
+---
+
+## 1. Green-gate status
+
+The latest green command sequence has been passing:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Observed successful output this session:
+
+```text
+npm run build ✅
+scripts/check-react-lane.sh ✅
+scripts/check-chrome.sh ✅
+scripts/package-chrome.sh ✅
+scripts/make_codebundle.sh ✅
+```
+
+The build output confirms Vite is compiling both:
+
+```text
+dist/chrome-src/react.html
+dist/chrome-src/page.html
+```
+
+The React chunks are being emitted separately, and the old large `page-*.js` chunk is still the legacy lane. That is acceptable for now.
+
+---
+
+## 2. Local React testing workflow
+
+Always include this testing step in future React-lane batches.
+
+First run the build/check/package/codebundle gate:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then in a **separate terminal**, keep the local HTTP preview server open:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Then test routes through:
+
+```text
+http://127.0.0.1:4173/react.html?url=<encoded crab URL>
+```
+
+Examples:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Flyrics
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fpost
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fcomment
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Farticle
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fmusic
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fpodcast
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fstream
+```
+
+Important lesson:
+
+```text
+Do not test React lane through file://.
+Do not expect raw crab:// URLs in Chrome’s native URL bar to load the React lane.
+Use react.html?url=<encoded crab URL> while in HTTP test mode.
+Keep the Python server terminal open.
+```
+
+---
+
+## 3. What we completed this session
+
+## 3.1 React shell is now visibly usable
+
+The React lane now has a full CrabLink browser shell with:
+
+```text
+top bar
+CrabLink logo/brand
+back/forward/home/refresh nav buttons
+address bar
+Go button
+Gateway chip
+HTTP test mode chip
+ROC chip
+theme toggle
+settings chip/button
+standardized header Ad Space slot
+content outlet
+passport drawer
+modal/toast support
+```
+
+The standardized header ad slot is visible and says `AD SPACE`. This matches the refactor/product rule that CrabLink should have one protocol-native header ad slot, clearly labeled and not cluttering the page.
+
+## 3.2 Theme improved significantly
+
+We replaced the earlier blue-heavy theme direction with:
+
+```text
+light mode: neutral/off-white, cleaner and more professional
+dark mode: true black/neutral, no dark blue cast
+```
+
+This matches the user’s stated preference and the project direction:
+
+```text
+uniform theme across CrabLink
+light mode default
+dark mode black/neutral
+avoid hardcoded page-specific color drift
+```
+
+All new React routes use CSS variables and shared theme tokens. Continue this pattern.
+
+## 3.3 Passport drawer added and visually confirmed
+
+The React topbar passport chip now opens a drawer.
+
+In local HTTP test mode, the drawer honestly reports:
+
+```text
+HTTP test mode
+React is outside the extension origin and cannot read loaded extension storage.
+```
+
+This is correct. It must not pretend to have real extension storage or backend identity when served from local HTTP.
+
+The drawer currently shows/communicates:
+
+```text
+passport mode/status
+wallet state
+ROC state
+storage mode
+gateway URL
+handle status
+requested handle
+passport subject
+wallet account
+ledger status
+extension origin status
+identity refresh status
+wallet refresh status
+profile action placeholder
+```
+
+The visual result is good. Later, when React runs inside extension origin, this drawer should read real extension storage and then gateway-backed identity/wallet truth.
+
+## 3.4 React route ownership is working
+
+The target refactor rule is:
+
+```text
+one route = one page owner
+```
+
+The React lane is now proving that rule.
+
+The following route-owned React pages are visually working:
+
+```text
+crab://lyrics
+crab://post
+crab://comment
+crab://article
+crab://music
+crab://podcast
+crab://stream
+```
+
+Each route is a page-owned React workspace with:
+
+```text
+hero/header
+route owner card
+principle cards
+Builder / Developer toggle
+local draft form
+right-side stats
+truth boundary box
+preview panel
+route debug panel
+copy local manifest JSON
+clear local draft
+```
+
+This is a major improvement over the old vanilla patch approach.
+
+## 3.5 `crab://lyrics` migrated
+
+`crab://lyrics` is a local-only lyrics workspace.
+
+Purpose:
+
+```text
+draft standalone lyrics assets
+keep lyrics separate from music/song/video/film manifests
+prepare for future .lyrics asset support
+preserve separate rights/access/takedown/versioning boundary
+```
+
+Key invariants:
+
+```text
+lyrics are their own asset
+lyrics may later be linked from .music/.song/.video/.film manifests
+no fake b3 CID
+no fake manifest CID
+no backend publication
+no ROC spend
+```
+
+This route helped prove the first real React-owned low-risk built-in page.
+
+## 3.6 `crab://post` migrated
+
+`crab://post` is now a local-only post workspace.
+
+Purpose:
+
+```text
+draft standalone social/text post assets
+prepare for posts referenced by sites/profiles/feeds/threads/comments
+shape future manifest contract
+```
+
+It includes fields for:
+
+```text
+title
+creator display
+post type
+language
+visibility/access mode
+rights mode
+site context crab URL
+parent post/thread/comment reference
+moderation mode
+content warning
+tags
+body
+```
+
+It builds a local post manifest with truth boundary fields stating that no content ID, manifest ID, index pointer, wallet mutation, or ROC charge exists.
+
+## 3.7 `crab://comment` migrated
+
+`crab://comment` is now a local-only comment workspace.
+
+Purpose:
+
+```text
+draft standalone comment assets
+attach later to posts/articles/sites/profiles/videos/streams/moderation threads
+shape parent/target/site-context/moderation fields
+```
+
+It includes fields for:
+
+```text
+title/summary
+creator display
+comment type
+tone/intent
+target asset/page
+parent comment/thread
+site context
+language
+visibility/access mode
+moderation mode
+tags
+content warning
+body
+```
+
+The preview shows target, parent, tone, tags, and draft body.
+
+## 3.8 `crab://article` migrated
+
+`crab://article` is now a local-only article workspace.
+
+Purpose:
+
+```text
+draft long-form written assets
+prepare for articles referenced by sites/profiles/posts/feeds/publications
+support hero image references and rights/access metadata
+```
+
+It includes fields for:
+
+```text
+title
+author display
+subtitle
+summary/abstract
+article type
+language
+visibility/access mode
+rights mode
+hero image crab URL
+hero caption
+site context crab URL
+canonical source URL
+review mode
+content warning
+tags
+article body
+```
+
+The preview includes title, subtitle, author, type, read-time, summary block, article text, tags, and optional hero image reference.
+
+## 3.9 `crab://music` migrated
+
+`crab://music` is now a local-only music workspace.
+
+Purpose:
+
+```text
+draft music/song assets
+link cover image
+link lyrics as separate asset
+link previews/full audio/stems/video
+shape rights/access/payout policy
+```
+
+It is split into multiple files:
+
+```text
+MusicPage.jsx
+MusicDraft.jsx
+MusicLinkedAssets.jsx
+MusicRights.jsx
+music.css
+```
+
+This was a good step because it moved beyond a single page file and started modeling a cleaner modular route folder.
+
+It includes:
+
+```text
+track/song title
+artist/creator display
+album/collection
+release type
+genre
+mood
+duration
+BPM
+key
+explicit rating
+language
+tags
+description
+track notes
+cover image crab URL
+lyrics crab URL
+preview audio crab URL
+full audio crab URL
+stem pack crab URL
+music video crab URL
+site/album context
+rights mode
+license mode
+access mode
+payout mode
+```
+
+Important design rule preserved:
+
+```text
+Lyrics stay separate as a linked asset.
+Cover art is an .image asset.
+Music does not embed lyrics as source-of-truth text.
+```
+
+The refactor notes define music as the owner for draft metadata, linked cover image, lyrics reference, rights, and future upload/publish flow. 
+
+## 3.10 `crab://podcast` migrated
+
+`crab://podcast` is now a local-only podcast workspace.
+
+Purpose:
+
+```text
+draft podcast episode/show assets
+support audio upload later
+support live-stream-derived episode metadata
+link cover image/transcript/clip/live stream
+shape rights/access/payout
+```
+
+It includes fields for:
+
+```text
+episode title
+show title
+host display
+co-hosts/guests
+episode type
+source mode
+language
+category
+season
+episode number
+duration
+explicit rating
+description
+episode notes
+transcript summary
+cover image crab URL
+audio crab URL
+live stream crab URL
+transcript crab URL
+clip/preview crab URL
+show/site context
+schedule mode
+release date/window
+access mode
+rights mode
+payout mode
+content warning
+tags
+```
+
+This route is intentionally local only. It does not upload audio, create an RSS feed, publish a podcast, or generate a b3 asset.
+
+## 3.11 `crab://stream` migrated
+
+`crab://stream` is now a local-only stream workspace.
+
+Purpose:
+
+```text
+draft live stream assets
+model future ingest/session/access/moderation/chat/replay/podcast companion configuration
+```
+
+It is split into:
+
+```text
+StreamPage.jsx
+StreamDraft.jsx
+StreamPodcastMode.jsx
+stream.css
+```
+
+It includes:
+
+```text
+stream title
+channel display
+host display
+stream type
+category
+language
+duration goal
+timezone
+description
+stream notes
+schedule mode
+start window
+source mode
+ingest mode
+cover image crab URL
+poster image crab URL
+trailer video crab URL
+replay video crab URL
+site/channel context
+access mode
+replay mode
+chat mode
+moderation mode
+rights mode
+payout mode
+tags
+content warning
+podcast companion mode
+podcast title
+podcast output crab URL
+podcast description
+podcast transcript crab URL
+```
+
+The stream + podcast companion mode is feature-gated in the UI and explicitly states that it does not record audio, create a podcast asset, generate transcript, or publish after stream.
+
+Important truth boundary:
+
+```text
+no stream endpoint
+no ingest session
+no ingest token
+no live stream starts
+no replay asset
+no podcast output
+no wallet mutation
+no ROC charge
+```
+
+---
+
+## 4. Current user-facing quality assessment
+
+The React pages are visibly cleaner than the old vanilla pages. The screenshots show a more consistent, professional, creator-studio style.
+
+The old vanilla pages had more immediate working functionality in some places, especially uploads. The React routes are intentionally less functional right now because they are local draft pages first.
+
+This is the correct order:
+
+```text
+1. Build clean route-owned UI.
+2. Preserve old proven flows.
+3. Prove navigation/theme/passport/layout.
+4. Standardize manifest and truth boundaries.
+5. Reconnect backend flows one at a time.
+```
+
+Do not rush upload/payment flows into React until the shared architecture is stronger.
+
+---
+
+## 5. Important current limitation
+
+Some React pages do **not** yet have the full old functionality.
+
+Examples:
+
+```text
+no real file upload in music/podcast/stream React routes yet
+no paid image upload in React image page yet
+no site creation flow in React site page yet
+no backend-published profile flow in React profile page yet
+no real wallet spend/hold/capture/receipt from local draft pages
+no real post/comment/article/music/video/stream/podcast backend publication
+```
+
+This is intentional.
+
+The current React pages are:
+
+```text
+local draft workspaces
+manifest contract previews
+UX/product shape proofs
+not backend truth
+```
+
+Use them as product contracts and future backend design references, not as completed publication flows.
+
+The uploaded `CREATOR_WORKSPACES` material also frames local creator workspaces as local UX/prepare scaffolds only, not backend-published assets. 
+
+---
+
+## 6. Hard invariants to preserve
+
+Every future batch must preserve:
+
+```text
+one route = one page owner
+React route pages own their own UI
+shared shell owns topbar/theme/ad slot/modal/toast
+gateway-only client boundary
+no direct svc-wallet calls
+no direct svc-storage calls
+no direct svc-index calls
+no direct ron-ledger calls
+no direct omnigate calls
+no silent ROC spend
+no fake receipts
+no fake b3 CID
+no fake manifest CID
+no fake backend publication
+no local wallet truth
+no arbitrary crab:// code execution
+untrusted content must be sandboxed later
+```
+
+For local draft routes:
+
+```text
+local draft only
+copy JSON is allowed
+preview is allowed
+stats are allowed
+route debug is allowed
+future prepare route can be optional
+no mutation unless explicit backend route + user confirmation exists
+```
+
+For themes:
+
+```text
+light mode default
+dark mode true black/neutral
+no blue default theme
+use shared CSS variables
+avoid hardcoded route-specific color drift
+```
+
+For ads:
+
+```text
+one header ad slot only
+clearly labeled
+protocol-native
+privacy-preserving
+no third-party tracking
+no hostile anti-adblock behavior
+```
+
+For old files:
+
+```text
+old files = compatibility/protection only
+React files = destination architecture
+```
+
+The refactor docs explicitly say the goal is one route/one owner, folder-based built-ins, shared shell/theme/ad/manifest systems, and no more late DOM patching or MutationObserver rescue logic. 
+
+---
+
+## 7. Route/product map
+
+Current built-in page universe:
+
+```text
+crab://site
+crab://image
+crab://profile
+crab://music
+crab://lyrics
+crab://article
+crab://post
+crab://comment
+crab://video
+crab://stream
+crab://podcast
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+Future/down-the-line:
+
+```text
+crab://film
+crab://dub
+```
+
+Purpose summary:
+
+```text
+site      → site creation/open/rendering, route maps, manifests
+image     → image upload/asset page/renditions/paid storage
+profile   → passport-linked identity, @username, avatar, assets, alts
+music     → music/song metadata, lyrics link, cover art, rights, payout
+lyrics    → independent lyrics asset, separate rights/takedowns/versioning
+article   → long-form article asset, hero image, tags, access
+post      → short/social post asset, feed/thread/profile references
+comment   → comment asset, target/parent/moderation/site policy
+video     → video asset, renditions, poster, captions/dubs
+stream    → live stream/session draft, chat/mod/replay/podcast companion
+podcast   → podcast/audio episode/show asset, transcript, clips
+ad        → protocol-native ad campaign manifests and header ad slot
+algo      → transparent algorithms for feed/search/moderation/recommendation
+code      → code primitives with facet.toml contracts and sandbox policy
+game      → game manifests, runtime, asset bundles, saves, multiplayer
+film      → future film/movie assets, poster/trailers/dubs
+dub       → future subtitles/dubs/captions/scripts/localization assets
+```
+
+The refactor document lists these built-ins and calls out code as facet/sandbox-based, game as runtime/asset/save/multiplayer-policy based, and film/dub as later additions. 
+
+---
+
+## 8. Current completed React route list
+
+Completed/visually confirmed this session:
+
+```text
+crab://lyrics
+crab://post
+crab://comment
+crab://article
+crab://music
+crab://podcast
+crab://stream
+```
+
+Need to test each in both light and dark mode:
+
+```text
+crab://lyrics    ✅ visually confirmed
+crab://post      ✅ visually confirmed
+crab://comment   ✅ visually confirmed
+crab://article   ✅ visually confirmed
+crab://music     ✅ visually confirmed
+crab://podcast   ✅ visually confirmed
+crab://stream    ✅ visually confirmed
+```
+
+Need to keep testing the passport drawer on each route.
+
+---
+
+## 9. Recommended next batch
+
+The next safest high-impact batch is:
+
+```text
+crab://video
+```
+
+Reason:
+
+```text
+video is in the medium-risk creator/media group
+it should remain local-only for now
+it can model renditions, poster image, trailer, captions/dubs, rights/access
+it does not need to reconnect real upload yet
+it fits the already-started media route set after music/podcast/stream
+```
+
+Suggested files:
+
+```text
+extensions/chrome/src/pages/video/VideoPage.jsx
+extensions/chrome/src/pages/video/VideoDraft.jsx
+extensions/chrome/src/pages/video/VideoRenditions.jsx
+extensions/chrome/src/pages/video/video.css
+```
+
+Video should include:
+
+```text
+title
+creator display
+description
+video kind
+language
+category
+duration
+resolution
+aspect ratio
+codec/format
+poster image crab URL
+thumbnail image crab URL
+trailer video crab URL
+source/master video crab URL
+desktop rendition crab URL
+mobile rendition crab URL
+low-bandwidth rendition crab URL
+audio-only rendition crab URL
+captions/dub reference
+site context crab URL
+rights mode
+access mode
+payout mode
+tags
+content warning
+```
+
+Truth boundary must state:
+
+```text
+no upload
+no streaming endpoint
+no b3 CID
+no manifest CID
+no range/streaming backend
+no paid access
+no wallet mutation
+```
+
+After video, the next safe group:
+
+```text
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+---
+
+## 10. Very important architectural recommendation
+
+We are starting to repeat the same structure across pages:
+
+```text
+hero
+route owner card
+principle cards
+Builder/Developer toggle
+local draft form
+stats card
+truth boundary
+preview
+route debug
+copy manifest
+clear draft
+labelFromSnake()
+stats builder
+manifest builder
+similar CSS layout
+```
+
+This repetition is acceptable for rapid route migration, but we should soon extract shared components.
+
+Recommended shared extraction batch after `crab://video` or after `ad/algo/code/game`:
+
+```text
+CreatorWorkspaceLayout.jsx
+RouteHero.jsx
+PrincipleGrid.jsx
+BuilderDeveloperToggle.jsx
+DraftStatsPanel.jsx
+TruthBoundaryBox.jsx
+RouteDebugPanel.jsx
+ManifestActions.jsx
+PreviewCard.jsx
+LinkedAssetsEditor.jsx
+RightsAccessEditor.jsx
+```
+
+Potential shared manifest helpers:
+
+```text
+createLocalDraftManifest()
+createTruthBoundary()
+createOwnershipDraft()
+createAccessPolicyDraft()
+createRightsPolicyDraft()
+createLinkedAssetsDraft()
+normalizeTagList()
+labelFromSnake()
+```
+
+Existing shared folders already exist for components and manifest utilities in the codebundle, including `shared/components`, `shared/manifest`, `shared/theme`, and `shared/utils`. 
+
+Do not over-extract too early if it slows progress, but do not let every page become permanent copy/paste drift.
+
+---
+
+## 11. Migration phase status
+
+Updated migration phase map:
+
+```text
+Phase 0 — Preserve proven old lane.
+Status: active / ongoing.
+
+Phase 1 — Build React lane beside old lane.
+Status: done enough to proceed.
+
+Phase 2 — Protect React lane with checks.
+Status: done; check-react-lane.sh exists and passes.
+
+Phase 3 — Move low-risk local-only pages.
+Status: partially done.
+Completed:
+  crab://lyrics
+  crab://post
+  crab://comment
+  crab://article
+Also medium/media started:
+  crab://music
+  crab://podcast
+  crab://stream
+
+Phase 4 — Finish remaining local/creator/media pages.
+Next:
+  crab://video
+  crab://ad
+  crab://algo
+  crab://code
+  crab://game
+
+Phase 5 — Consolidate shared creator workspace components.
+Status: not done.
+
+Phase 6 — Move profile.
+Status: not done.
+Requires:
+  passport drawer stronger
+  profile page React parity
+  identity truth boundaries
+  @username/public profile plan
+  alt vault boundaries
+
+Phase 7 — Move image.
+Status: not done.
+Must preserve:
+  paid image prepare
+  explicit wallet hold
+  upload
+  receipt
+  known-good image view
+  rendition rules
+
+Phase 8 — Move site.
+Status: not done.
+Must preserve:
+  site create
+  site open/render
+  site manifest drawer
+  site creator proof
+  sandboxed render surface
+  crab-image embeds
+
+Phase 9 — Switch extension toolbar/default full-tab entry to React.
+Status: not ready.
+Only after parity.
+
+Phase 10 — Delete legacy patch/rescue files.
+Status: not ready.
+Only after React replaces old lane.
+```
+
+The earlier refactor plan says site/image paid flows should move late because they touch proven backend flows, while low-risk stubs should move first. 
+
+---
+
+## 12. Legacy lane must remain protected
+
+Do not break:
+
+```text
+crab://site
+crab://image
+crab://profile
+known-good image asset display
+paid image upload
+site create/open/render
+passport drawer/identity in old lane
+wallet balance display in old lane
+```
+
+Known-good image asset addresses to keep around for smoke/manual checks:
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+Regression watchlist includes preventing `page-local-route-mode.js` from returning, preventing local routes from resolving through `/sites/*`, preventing stale page leakage, preventing developer JSON from claiming backend publication, preventing fake b3/ROC/wallet mutation claims, avoiding broad permissions, and avoiding direct internal service calls. 
+
+---
+
+## 13. Files that should eventually be absorbed/deleted
+
+The old patch-style files should not survive as independent long-term modules:
+
+```text
+extensions/chrome/src/page-creator-route-guard.js
+extensions/chrome/src/page-lifecycle-settler.js
+extensions/chrome/src/page-next-level-panels.js
+extensions/chrome/src/page-music-rights.js
+extensions/chrome/src/page-stream-podcast-mode.js
+extensions/chrome/src/page-social-stubs.js
+```
+
+Their logic should move into route-owned React pages or shared components:
+
+```text
+page-creator-route-guard.js      → app/router.js + routeRegistry.js
+page-lifecycle-settler.js        → React lifecycle/mount/unmount
+page-next-level-panels.js        → shared components + page-owned sections
+page-music-rights.js             → pages/music/MusicRights.jsx
+page-stream-podcast-mode.js      → pages/stream/StreamPodcastMode.jsx
+page-social-stubs.js             → pages/post/comment/article/ad/algo/code/game
+```
+
+Do not delete these yet while the old lane is still active.
+
+---
+
+## 14. Backend work still remaining
+
+Major backend areas still future or incomplete:
+
+```text
+real profile publishing
+@username reservation/claiming
+main vs alt passport permissions
+reputation score truth
+moderator score truth
+post routes
+comment routes
+article routes
+lyrics routes
+music/song routes
+video routes
+stream routes
+podcast routes
+ad campaign routes
+algo registry routes
+code primitive/facet routes
+game manifest routes
+film/dub future routes
+rendition-group DTOs
+manifest version/history DTOs
+uniform manifest DTOs
+paid view/access flows
+creator payout splits
+ad payout splits
+policy gates
+capability checks
+route-contract tests
+CrabLink smoke tests for each built-in
+```
+
+RustyOnions invariants remain:
+
+```text
+ROC remains internal
+no ROX/Solana/external settlement yet
+svc-wallet remains mutation front-door
+ron-ledger remains durable economic truth
+storage stores bytes by b3 content ID only
+gateway/omnigate coordinate but do not directly mutate ledger
+integer minor units only
+no floating-point money math
+deterministic receipts/errors
+policy/capability gates fail closed
+```
+
+The refactor document also lists backend gaps for profile, username, reputation/mod score, routes for content/media/ad/algo/code/game, rendition DTOs, manifest history, paid view/access, payout splits, policy gates, capability checks, and route-contract tests. 
+
+---
+
+## 15. Manifest model decisions to preserve
+
+Uniform manifest direction:
+
+```text
+all asset types should share one common top-level manifest shape
+type-specific fields go into metadata/linked_assets/policy/renditions
+local drafts must show truth boundaries
+future backend DTOs should be stricter than local draft JSON
+```
+
+Common manifest sections should include:
+
+```text
+schema
+status
+route
+asset
+metadata
+content or media plan
+linked_assets
+ownership
+rights_policy
+access_policy
+economics
+moderation
+provenance
+versions
+receipts
+truth_boundary
+```
+
+Every local draft should set null/false for backend truth:
+
+```text
+canonical_cid: null
+canonical_crab_url: null
+manifest_cid: null
+backend_confirmed: false
+creates_content_id: false
+creates_manifest_id: false
+creates_index_pointer: false
+publishes_to_gateway: false
+charges_roc: false
+wallet_mutation: false
+```
+
+For media:
+
+```text
+cover images, posters, thumbnails, avatars, banners, album art, ad creative, game covers are all .image assets
+lyrics are separate .lyrics assets
+dubs/captions/subtitles should become separate .dub or caption-like assets later
+renditions are separate b3-addressed assets linked through manifests
+versions/history should exist on all manifests
+```
+
+---
+
+## 16. Sandbox/facet/security decisions to preserve
+
+The future `crab://code` direction must be:
+
+```text
+crab://<hash>.code is not arbitrary code execution
+b3hash.code = address
+facet.toml = contract
+svc-sandbox = cage
+ron-policy = judge
+CrabLink = renderer/launcher, not unsafe executor
+```
+
+Future code primitives require:
+
+```text
+code bytes
+code manifest
+facet.toml permissions
+declared runtime: wasm/js/ts/lua/etc.
+declared routes/actions
+resource limits
+required capabilities
+deny-by-default policy
+sandbox execution
+```
+
+React should render trusted CrabLink UI only. Untrusted crab content must eventually render inside sandboxed surfaces.
+
+Future site rendering must preserve:
+
+```text
+safe renderer
+sandbox frame
+no arbitrary script execution in privileged extension page
+safe declarative embeds only
+facet/sandbox/policy for executable primitives
+```
+
+---
+
+## 17. Testing checklist for next session
+
+Before any new files:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then run local React server:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Manual React route smoke:
+
+```text
+crab://lyrics
+crab://post
+crab://comment
+crab://article
+crab://music
+crab://podcast
+crab://stream
+```
+
+Next after implementation:
+
+```text
+crab://video
+```
+
+For each route:
+
+```text
+route loads
+address bar updates
+header ad slot visible
+theme toggle works
+passport drawer opens
+Builder toggle works
+Developer toggle works
+copy local manifest works
+clear draft works
+truth boundary does not claim backend truth
+route debug shows correct route kind/type/normalized URL
+no stale page remains visible
+```
+
+Test both:
+
+```text
+light mode
+dark mode
+```
+
+Test old extension separately:
+
+```text
+chrome://extensions
+reload CrabLink
+click toolbar icon
+confirm old page.html lane still opens
+confirm site/image/profile known flows still not broken
+```
+
+The refactor notes say future proof checks should include static checks, packaging, smoke scripts, known-good image load, paid image upload, site create/open, route navigation for every built-in, theme toggle, ad slot visibility, manifest generation, no stale page leakage, and no duplicate page ownership. 
+
+---
+
+## 18. Next-session suggested prompt
+
+Use this at the start of the next session:
+
+```text
+We are continuing the CrabLink React refactor.
+
+Current state:
+- Old page.html/page.js/page-* lane remains the active unpacked Chrome extension and preserves proven site/image/profile/passport/paid flows.
+- New React/Vite lane builds separately through react.html.
+- React lane is tested over local HTTP:
+  cd /Users/mymac/Desktop/crablink/dist/chrome-src
+  python3 -m http.server 4173 --bind 127.0.0.1
+  then open http://127.0.0.1:4173/react.html?url=<encoded crab URL>.
+- Green gate has been passing:
+  npm run build
+  scripts/check-react-lane.sh
+  scripts/check-chrome.sh
+  scripts/package-chrome.sh
+  scripts/make_codebundle.sh
+- React shell has topbar/address/nav/gateway chip/passport drawer/ROC chip/theme/settings/header Ad Space slot/modal/toast.
+- Light theme is neutral/off-white. Dark theme is true black/neutral.
+- Completed visually working local-only React routes:
+  crab://lyrics
+  crab://post
+  crab://comment
+  crab://article
+  crab://music
+  crab://podcast
+  crab://stream
+- These routes are local draft only and must not claim backend publication, fake b3/manifest CIDs, receipts, wallet mutation, ROC charges, ingest endpoints, streams, uploads, or paid access.
+- Next recommended route batch: crab://video.
+- After video, finish crab://ad, crab://algo, crab://code, and crab://game.
+- Then consolidate repeated draft UI into shared components and shared manifest helpers.
+- Do not migrate image/site/profile yet.
+- Preserve one route = one owner, gateway-only boundary, no silent ROC spend, no fake backend truth, no arbitrary crab:// code execution, and old lane compatibility.
+
+Please review CODEBUNDLE_CHROME_EXTENSION.md, REFACTOR_TODO.MD, and CRABLINK_REFACTOR.MD before generating paste-ready files.
+```
+
+---
+
+## 19. Recommended next implementation batch
+
+Start with:
+
+```text
+crab://video
+```
+
+Replace/update:
+
+```text
+extensions/chrome/src/pages/video/VideoPage.jsx
+extensions/chrome/src/pages/video/VideoDraft.jsx
+extensions/chrome/src/pages/video/VideoRenditions.jsx
+extensions/chrome/src/pages/video/video.css
+```
+
+Keep it local-only.
+
+Core sections:
+
+```text
+metadata
+linked assets
+renditions
+rights/access/payout
+preview
+stats
+truth boundary
+developer manifest JSON
+route debug
+```
+
+Do not add real upload yet.
+
+After video:
+
+```text
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+Then:
+
+```text
+shared component extraction
+shared manifest builder extraction
+profile migration
+image migration
+site migration
+```
+
+---
+
+## 20. Completion estimate
+
+Current React refactor completion estimate:
+
+```text
+~35–45% of React-lane refactor foundation
+```
+
+Reason:
+
+Completed:
+
+```text
+hybrid React/legacy build
+route-owned architecture proof
+shell/topbar/address/nav/theme/ad slot
+passport drawer
+multiple local draft routes
+green gates
+local HTTP test workflow
+```
+
+Still missing:
+
+```text
+video/ad/algo/code/game React pages
+shared component extraction
+shared manifest helper consolidation
+profile React parity
+image paid upload React parity
+site create/render React parity
+extension toolbar switch to React
+legacy deletion
+expanded smoke tests for every built-in route
+backend reconnects for new asset types
+```
+
+Overall CrabLink product completion estimate:
+
+```text
+~65–75% as a proven local/dev browser-client prototype
+~35–45% as the final React-based CrabLink browser UI
+```
+
+The reason for the split is important: the old product proof is strong, but the React destination architecture is still under active migration.
+
+Final quality target:
+
+```text
+professional
+fast
+clean
+beautiful
+trustworthy
+creator-first
+sandbox-first
+theme-consistent
+manifest-consistent
+ad-minimal
+future-proof
+```
+
+The refactor is on the right track.
+
+
+### END NOTE - MAY 9 2026 - 16:50 CST
+
+
+
+### BEGIN NOTE - MAY 9 2026 - 18:00 CST
+
+I reviewed the new `CODEBUNDLE_CHROME_EXTENSION.md`, `REFACTOR_TODO.MD`, and `CRABLINK_REFACTOR.MD`. The latest codebundle confirms the current repo now has the React/Vite lane, route-owned page folders for all current built-ins, shared API/components/manifest/theme/utils/styles folders, and the old legacy `page-*` lane still present in the same extension tree.  The refactor TODO still defines the north star as **one route = one page owner**, React + Vite for the full-tab CrabLink UI, and plain MV3 JavaScript for background/content/popup/options glue.  The refactor notes also preserve the product rules around uniform manifests, theme/ad slot, facet/sandbox safety, local-only workspaces, and protecting proven site/image/profile/paid flows until React parity is deliberate. 
+
+# Carryover Notes — CrabLink React Refactor Checkpoint
+
+## 0. Executive checkpoint
+
+CrabLink is now in a **protected hybrid refactor state**.
+
+The old lane remains the working/proven Chrome extension product path:
+
+```text
+extensions/chrome/src/page.html
+extensions/chrome/src/page.js
+extensions/chrome/src/page-*.js
+extensions/chrome/src/page.css
+extensions/chrome/src/storage.js
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/crab.js
+```
+
+The new React/Vite lane is the destination architecture and is tested separately:
+
+```text
+extensions/chrome/src/react.html
+extensions/chrome/src/app/main.jsx
+extensions/chrome/src/app/App.jsx
+extensions/chrome/src/app/
+extensions/chrome/src/app/shell/
+extensions/chrome/src/pages/
+extensions/chrome/src/shared/
+```
+
+Important rule for the next session:
+
+```text
+Do not flip the Chrome toolbar / live extension path to React yet.
+```
+
+Reason:
+
+```text
+The old lane still contains the proven site/image/profile/passport/paid flows.
+The React lane now has the route-owned architecture and most local creator pages, but it does not yet have full protected-route parity.
+```
+
+The current architecture is exactly what we wanted at this stage:
+
+```text
+old lane = protected product proof
+React lane = migration runway
+```
+
+## 1. Hard rules to preserve
+
+These are non-negotiable for the next instance:
+
+```text
+One route = one page owner.
+React + Vite for the full-tab CrabLink browser UI.
+Plain MV3 JavaScript remains fine for background/content/popup/options glue.
+Gateway-only backend access.
+No direct svc-wallet, svc-storage, svc-index, omnigate, or ron-ledger calls from CrabLink.
+No fake backend truth.
+No fake b3 CIDs.
+No fake manifest CIDs.
+No silent ROC spend.
+No arbitrary crab:// code execution.
+No page-local-route-mode.js resurrection.
+No broad Chrome permissions unless explicitly justified.
+Site/image/profile/asset parity migrates late and carefully.
+Files should remain modular and ideally under ~400 lines when possible.
+```
+
+The browser client must stay thin, explicit, and honest. CrabLink can display backend truth from `svc-gateway`; it must not invent truth locally.
+
+## 2. What has been accomplished so far
+
+### 2.1 React/Vite full-tab lane exists and builds
+
+The project now has a Vite/React lane living beside the legacy lane. The codebundle confirms `vite.config.js` builds both `page.html` and `react.html`, and the route chunks are split by shell, shared components, manifest helpers, embeds, protected pages, media pages, social pages, and builder-stub pages. 
+
+Current test model:
+
+```text
+Legacy extension test:
+chrome://extensions
+→ load/reload extensions/chrome
+→ toolbar opens old/proven page.html lane
+
+React lane test:
+build first
+serve dist/chrome-src over local HTTP
+open react.html?url=<encoded crab URL>
+```
+
+Critical testing lesson:
+
+```text
+Do not test the React lane directly through file://.
+Use the local HTTP preview server.
+```
+
+Required local HTTP preview step:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Then test React routes like:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fhome
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fmusic
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fcode
+```
+
+### 2.2 App shell and route-owned architecture are in place
+
+The React lane now has:
+
+```text
+extensions/chrome/src/app/App.jsx
+extensions/chrome/src/app/main.jsx
+extensions/chrome/src/app/router.js
+extensions/chrome/src/app/routeRegistry.js
+extensions/chrome/src/app/appContext.js
+extensions/chrome/src/app/appState.js
+extensions/chrome/src/app/settings.js
+extensions/chrome/src/app/shell/
+```
+
+The shell includes the browser frame, top bar, address bar, nav controls, gateway/status chips, theme toggle, passport surfaces, modal/toast hosts, and standardized header ad slot.
+
+Current shell status:
+
+```text
+Topbar works.
+Address bar works.
+Back/forward/home/refresh behavior exists.
+Theme toggle exists.
+Header ad slot exists.
+Gateway chip exists.
+HTTP test mode chip exists when testing over local HTTP.
+Passport drawer exists in the React lane now.
+```
+
+### 2.3 Global theme direction is established
+
+The user disliked the first dark blue/dull blue theme direction. We corrected the React lane to a much better neutral theme:
+
+```text
+Light mode: neutral/off-white, cleaner cards, no blue-heavy UI.
+Dark mode: true black / near-black, not dark blue.
+```
+
+Important visual rule going forward:
+
+```text
+Dark-mode form fields should look like the Music route:
+near-black input backgrounds,
+subtle gray borders,
+gray placeholder text,
+no giant bright white input blocks.
+```
+
+We fixed `ad.css` and `video.css` after the screenshot showed those big white form fields. The standard now is:
+
+```text
+#000000 / #050505 / #0b0b0b style dark surfaces
+#2a2a2a subtle borders
+#f4f4f4 text
+#8a8a8a placeholders
+```
+
+### 2.4 Header ad slot is standardized in the shell
+
+Every React route currently shows the development header ad slot:
+
+```text
+AD SPACE — protocol-native header slot — crab://...
+```
+
+Preserve this:
+
+```text
+one header ad only
+clearly labeled
+protocol-native
+privacy-preserving
+no third-party scripts
+no popups
+no autoplay
+no hostile anti-adblock tricks
+```
+
+Long-term route:
+
+```text
+crab://ad
+```
+
+Future backend:
+
+```text
+svc-ads
+campaign manifests
+budget/payout policy
+review status
+impression/accounting policy
+creator/site splits
+```
+
+### 2.5 Local creator workspace sweep is functionally complete
+
+The React lane now has the local-only creator/workspace set:
+
+```text
+crab://lyrics
+crab://post
+crab://comment
+crab://article
+crab://music
+crab://podcast
+crab://stream
+crab://video
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+The new `crab://home` dashboard explicitly counts these as 12 local creator routes and separates the protected routes as 4 late-migration surfaces: `site`, `image`, `profile`, and generic `asset`. 
+
+These routes are intentionally **local draft only**.
+
+They may:
+
+```text
+render creator forms
+build local manifest JSON previews
+copy manifest JSON
+copy facet.toml previews where relevant
+show preview cards
+show stats
+show route debug panels
+show truth boundaries
+```
+
+They must not:
+
+```text
+upload bytes
+mint b3 CIDs
+mint manifest CIDs
+write index pointers
+claim backend publication
+charge ROC
+hold/capture/release ROC
+mutate wallet state
+create sessions
+stream media
+execute code
+launch a sandbox
+```
+
+### 2.6 `crab://video` was upgraded
+
+`crab://video` is now a full local-only Video Studio route.
+
+Implemented shape:
+
+```text
+VideoPage.jsx
+VideoDraft.jsx
+VideoRenditions.jsx
+video.css
+```
+
+Core concepts:
+
+```text
+video identity
+creator display
+video kind
+category
+language
+duration
+playback shape
+resolution
+aspect ratio
+codec/format
+frame rate
+color profile
+rights/access/payout/moderation policy
+linked assets
+renditions
+preview card
+draft stats
+truth boundary
+developer manifest JSON
+```
+
+Important product rule:
+
+```text
+Video renditions are independent assets when real.
+Each rendition gets its own b3 hash and typed crab URL.
+Manifests cross-link rendition groups.
+```
+
+### 2.7 `crab://ad` was upgraded
+
+`crab://ad` is now a local-only Ad Campaign Studio.
+
+Implemented shape:
+
+```text
+AdPage.jsx
+AdCampaignDraft.jsx
+AdCreativePreview.jsx
+ad.css
+```
+
+Core concepts:
+
+```text
+campaign identity
+sponsor display
+sponsor passport
+campaign kind
+tags
+headline
+body copy
+call to action
+destination crab URL
+creative image crab URL
+disclaimer label
+placement/device/audience policy
+review policy
+payout policy
+frequency policy
+privacy policy
+campaign summary
+safe header ad preview
+truth boundary
+developer manifest JSON
+```
+
+Important product rule:
+
+```text
+CrabLink ads should be native, labeled, policy-reviewed, payout-aware, and privacy-preserving.
+No third-party tracking, fingerprinting, popups, autoplay, hidden pixels, arbitrary scripts, or page takeovers.
+```
+
+### 2.8 `crab://algo` was upgraded
+
+`crab://algo` is now a local-only Algorithm Transparency Studio.
+
+Implemented shape:
+
+```text
+AlgoPage.jsx
+AlgoDraft.jsx
+AlgoTransparency.jsx
+algo.css
+```
+
+Core concepts:
+
+```text
+algorithm identity
+creator/maintainer display
+maintainer passport
+algorithm kind
+output shape
+purpose
+allowed input signals
+denied input signals
+ranking goal
+fairness notes
+moderation notes
+evaluation notes
+transparency level
+execution mode
+sandbox mode
+audit mode
+governance mode
+linked source code/facet/policy/evaluation/safety references
+manifest summary
+readable algorithm contract
+truth boundary
+developer manifest JSON
+```
+
+Important product rule:
+
+```text
+Algorithms should be transparent, inspectable, and policy-bound.
+This route does not rank, recommend, moderate, score, load models, execute code, or launch sandboxes.
+```
+
+If future algorithms are executable, they need the same style of facet/sandbox/policy model as code primitives.
+
+### 2.9 `crab://code` was upgraded with facets
+
+`crab://code` is now a local-only Code Primitive Studio.
+
+Implemented shape:
+
+```text
+CodePage.jsx
+CodeDraft.jsx
+CodeFacet.jsx
+FacetContractPreview.jsx
+code.css
+```
+
+Core concepts:
+
+```text
+code primitive identity
+creator display
+maintainer passport
+code kind
+runtime
+language
+source visibility
+linked code bytes
+linked code manifest
+linked facet.toml
+docs/test/audit/example references
+execution mode
+sandbox mode
+policy mode
+review mode
+network/storage/wallet/profile policy
+allowed routes
+allowed actions
+denied actions
+required capabilities
+memory/cpu/output/request limits
+rights/access/payout mode
+facet.toml preview
+truth boundary
+developer manifest JSON
+```
+
+Critical invariant:
+
+```text
+crab://<hash>.code does not mean “download and execute arbitrary code.”
+```
+
+Safe model:
+
+```text
+b3hash.code = address
+facet.toml = contract
+svc-sandbox = cage
+ron-policy = judge
+CrabLink = renderer/launcher, not unsafe executor
+```
+
+The refactor notes explicitly preserve this rule for code primitives and require facet permissions, declared runtimes, declared routes/actions, resource limits, required capabilities, deny-by-default policy, and sandbox execution before any future execution path. 
+
+### 2.10 `crab://game` was upgraded with facets
+
+`crab://game` is now a local-only Game Manifest Studio.
+
+Implemented shape:
+
+```text
+GamePage.jsx
+GameDraft.jsx
+GameAssets.jsx
+game.css
+```
+
+Core concepts:
+
+```text
+game title
+creator/studio display
+studio passport
+game kind
+runtime
+engine
+platform mode
+content rating
+release mode
+runtime facet
+execution mode
+sandbox mode
+policy mode
+review mode
+network/storage/wallet/profile policy
+allowed routes
+allowed actions
+denied actions
+required capabilities
+memory/cpu/save/output/request limits
+save-data policy
+save ownership
+multiplayer policy
+session policy
+economy policy
+access mode
+payout mode
+moderation mode
+linked assets
+cover image
+thumbnail image
+trailer video
+source/desktop/mobile bundles
+WASM/runtime reference
+asset manifest
+audio pack
+map pack
+docs/manual
+save schema
+facet.toml
+facet.toml preview
+truth boundary
+developer manifest JSON
+```
+
+Important game-specific rule:
+
+```text
+Games are runtime/executable assets.
+Playable games must require facet contracts, sandbox/policy gates, resource limits, save-data rules, and explicit wallet/economy rules.
+```
+
+The refactor docs identify `crab://game` as the place for game manifests, asset bundles, runtime policy, save data, multiplayer, and economy gates. 
+
+### 2.11 `crab://home` was upgraded into a route smoke dashboard
+
+`crab://home` now functions as a React lane control room.
+
+Implemented shape:
+
+```text
+HomePage.jsx
+HomeQuickActions.jsx
+home.css
+```
+
+It shows:
+
+```text
+12 local creator routes
+4 protected late-migration routes
+0 fake backend actions
+protected hybrid mode warning
+route groups
+quick action cards
+copy local preview URL buttons
+copy full smoke list button
+manual route-switching regression sequence
+recommended next work
+```
+
+The dashboard is now useful for next-session QA. It makes it easy to test:
+
+```text
+crab://lyrics
+crab://post
+crab://comment
+crab://article
+crab://music
+crab://podcast
+crab://stream
+crab://video
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+It also clearly marks the protected routes:
+
+```text
+crab://site
+crab://image
+crab://profile
+crab://<known-good>.image / generic asset
+```
+
+### 2.12 Shared component foundation was added
+
+The last batch created a shared UI foundation, but most routes have **not yet been refactored to use it**.
+
+Created/replaced:
+
+```text
+extensions/chrome/src/shared/components/ActionBar.jsx
+extensions/chrome/src/shared/components/Badge.jsx
+extensions/chrome/src/shared/components/CopyButton.jsx
+extensions/chrome/src/shared/components/Field.jsx
+extensions/chrome/src/shared/components/SegmentedControl.jsx
+extensions/chrome/src/shared/components/StatChip.jsx
+extensions/chrome/src/shared/components/TextArea.jsx
+extensions/chrome/src/shared/components/TextInput.jsx
+extensions/chrome/src/shared/styles/forms.css
+extensions/chrome/src/shared/styles/cards.css
+```
+
+These components provide:
+
+```text
+reusable badges
+copy buttons with feedback
+field wrappers
+text inputs
+text areas
+Builder/Developer segmented controls
+stat chips
+action bars
+shared card/button/badge/stat styling
+shared form styling
+consistent dark-mode field treatment
+```
+
+Important clarification:
+
+```text
+This was a foundation cleanup batch, not a full route conversion batch.
+The route pages still mostly use their page-local markup and CSS.
+Next work should start applying these shared pieces to one low-risk route at a time.
+```
+
+## 3. Current route status matrix
+
+### Local-only React routes that are in good shape
+
+```text
+crab://lyrics
+crab://post
+crab://comment
+crab://article
+crab://music
+crab://podcast
+crab://stream
+crab://video
+crab://ad
+crab://algo
+crab://code
+crab://game
+crab://home
+```
+
+These are safe local workspaces / dashboards.
+
+Status:
+
+```text
+React-mounted
+route-owned
+no backend truth claims
+good visual direction
+Builder/Developer concepts present where needed
+truth boundary present or conceptually present
+```
+
+### Protected routes that should not be aggressively refactored yet
+
+```text
+crab://site
+crab://image
+crab://profile
+crab://<hash>.<kind> generic asset
+```
+
+Reason:
+
+```text
+They touch proven product/prototype flows:
+site creation/open/render
+paid image prepare/hold/upload/receipt
+profile/passport identity display
+hydrated gateway asset pages
+```
+
+The home dashboard correctly marks these as “move later.”
+
+### Legacy lane still matters
+
+Do not delete or gut these yet:
+
+```text
+extensions/chrome/src/page.html
+extensions/chrome/src/page.js
+extensions/chrome/src/page.css
+extensions/chrome/src/page-*.js
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/storage.js
+extensions/chrome/src/crab.js
+```
+
+They are patch-heavy, but they still protect the working proof.
+
+## 4. Product/design decisions that must carry forward
+
+### 4.1 Canonical crab asset URL format
+
+Public typed asset URLs:
+
+```text
+crab://<64 lowercase hex>.<asset_kind>
+```
+
+Internal content IDs:
+
+```text
+b3:<64 lowercase hex>
+```
+
+Do not reintroduce:
+
+```text
+crab://b3/<hash>.<kind>
+```
+
+### 4.2 All image-like assets are `.image`
+
+All visual assets should use canonical image type:
+
+```text
+crab://<hash>.image
+internal b3:<hash>
+kind: image
+```
+
+This includes:
+
+```text
+album covers
+video thumbnails
+film posters
+game covers
+profile avatars
+profile banners
+article hero images
+post images
+ad creative images
+site logos
+gallery images
+thumbnails
+```
+
+Other manifests should link to image assets rather than inventing special cover/poster/avatar kinds.
+
+### 4.3 Renditions are independent b3 assets
+
+For images/videos/media variants:
+
+```text
+each rendition has its own bytes
+each rendition gets its own b3 hash
+each rendition gets its own typed crab URL
+each rendition gets its own manifest
+manifests cross-link sibling renditions
+```
+
+Important:
+
+```text
+Bytes are immutable.
+Manifests describe relationships.
+```
+
+### 4.4 Manifests should support versions/history
+
+Every manifest should eventually support:
+
+```text
+manifest_version
+current_version
+previous versions
+history entries
+reason
+created_at
+cid
+ownership/provenance changes
+rights changes
+rendition changes
+receipt history
+```
+
+### 4.5 Lyrics are a separate asset
+
+Preferred model:
+
+```text
+crab://<music_hash>.music
+  linked_assets.lyrics = crab://<lyrics_hash>.lyrics
+```
+
+Lyrics stay separate for:
+
+```text
+rights
+licensing
+DRM/paywall boundary
+takedown/version history
+publication lifecycle
+```
+
+### 4.6 Stream + podcast mode remains feature-gated
+
+Product concepts:
+
+```text
+Stream only
+Stream + live podcast simulcast
+Stream + podcast recording
+Stream now, publish podcast later
+```
+
+No backend session, ingest key, podcast output, replay, chat room, or monetization should be claimed until real backend support exists.
+
+### 4.7 Future built-ins remain reserved
+
+Future/down-the-line:
+
+```text
+crab://film
+crab://dub
+```
+
+`film` should represent movie/film assets. `dub` should represent subtitles, dubs, scripts, captions, and localization assets, independently b3-addressed and linked from video/film manifests.
+
+### 4.8 Facets are the safety contract
+
+For code/game/algo and future executable primitives:
+
+```text
+b3 hash = address
+manifest = metadata/provenance/ownership
+facet.toml = permissions contract
+svc-sandbox = execution cage
+ron-policy = capability judge
+CrabLink = trusted renderer/launcher, not unsafe executor
+```
+
+Never allow:
+
+```text
+crab://<hash>.code loads arbitrary JS into extension DOM
+crab://game launches runtime without facet/policy/sandbox
+crab://algo executes hidden ranking/moderation code without transparency and policy gates
+```
+
+## 5. Current testing workflow
+
+Use this exact build/check sequence:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then run the preview server in a separate terminal and keep it open:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Test route dashboard first:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fhome
+```
+
+Then manually test the route switching sequence:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Flyrics
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fpost
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fcomment
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Farticle
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fmusic
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fpodcast
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fstream
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fvideo
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fad
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Falgo
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fcode
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fgame
+```
+
+Known-good paid image asset for protected/gateway tests:
+
+```text
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+Also remembered from earlier:
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+Expected manual QA:
+
+```text
+Route loads.
+Address bar updates.
+Header ad slot remains visible.
+Theme toggle works.
+Passport drawer opens.
+Builder/Developer toggle works where present.
+Copy manifest works where present.
+Copy facet.toml works on code/game.
+No stale previous page content remains.
+No backend publication is claimed for local routes.
+No fake CID appears.
+No fake ROC spend appears.
+No wallet mutation is claimed.
+Dark mode fields are near-black, not white blocks.
+```
+
+## 6. Regression watchlist
+
+Fail the next change if any of these happen:
+
+```text
+page-local-route-mode.js comes back.
+React route starts resolving crab://video through /sites/video.
+React route starts resolving crab://stream through /sites/stream.
+React route starts resolving crab://podcast through /sites/podcast.
+Article content remains visible after navigating to video.
+Video content remains visible after navigating to stream.
+Stream content remains visible after navigating to podcast.
+Podcast content remains visible after navigating away.
+Site render iframe stays stuck after leaving a named site.
+Developer JSON claims backend publication for local drafts.
+Local route claims b3 CID assignment.
+Local route claims manifest CID assignment.
+Local route claims ROC charge.
+Local route claims hold/capture/release receipt.
+Local route mutates wallet.
+Extension adds broad Chrome permissions.
+Extension calls internal services directly.
+Dark mode gets white form fields again.
+Route pages duplicate giant local CSS patterns without moving toward shared components.
+```
+
+The refactor notes already call out the patch-style files that should eventually be absorbed into route-owned pages or shared components: `page-creator-route-guard.js`, `page-lifecycle-settler.js`, `page-next-level-panels.js`, `page-music-rights.js`, `page-stream-podcast-mode.js`, and `page-social-stubs.js`; their long-term replacements are the React router/registry lifecycle, shared components, and route-owned components. 
+
+## 7. What remains for the refactor
+
+### 7.1 Immediate next work: start using shared components
+
+The shared components exist, but most route pages still use route-local controls and custom CSS.
+
+Next session should start with one low-risk route and convert it to shared components.
+
+Best first candidates:
+
+```text
+crab://lyrics
+crab://post
+crab://comment
+```
+
+Recommended first target:
+
+```text
+crab://lyrics
+```
+
+Why lyrics first:
+
+```text
+small route
+low-risk
+local-only
+no paid/backend flow
+good place to prove shared Field/TextInput/TextArea/Badge/StatChip/SegmentedControl/CopyButton usage
+```
+
+The first shared-component adoption batch should replace only:
+
+```text
+extensions/chrome/src/pages/lyrics/LyricsPage.jsx
+extensions/chrome/src/pages/lyrics/LyricsDraft.jsx
+extensions/chrome/src/pages/lyrics/lyrics.css
+```
+
+Do not touch site/image/profile yet.
+
+### 7.2 Extract route layout patterns
+
+Repeated patterns now exist across video/ad/algo/code/game:
+
+```text
+hero
+principle cards
+Builder/Developer toggle
+copy manifest button
+clear draft button
+draft stats side panel
+truth boundary side panel
+summary side panel
+developer JSON preview
+local manifest builder
+linked assets section
+facet.toml preview
+```
+
+Recommended shared components to add next:
+
+```text
+CreatorWorkspaceLayout.jsx
+WorkspaceHero.jsx
+DraftStatsPanel.jsx
+TruthBoundaryBox.jsx
+ManifestSummaryPanel.jsx
+RouteDebugPanel.jsx
+LinkedAssetsEditor.jsx
+FacetPreviewPanel.jsx
+PolicySelectGrid.jsx
+WorkspacePrinciples.jsx
+```
+
+Do this carefully. Do not over-abstract too early, but reduce obvious copy/paste drift.
+
+### 7.3 Consolidate manifest helpers
+
+Current route pages still build many local manifest JSON shapes.
+
+Next shared helper target:
+
+```text
+extensions/chrome/src/shared/manifest/
+```
+
+Likely work:
+
+```text
+makeLocalDraftManifest()
+makeTruthBoundary()
+makeLinkedAsset()
+makePolicyBlock()
+makeRightsPolicy()
+makeAccessPolicy()
+makeEconomicsPolicy()
+makeProvenance()
+parseTags()
+parseList()
+labelFromSnake()
+```
+
+Goal:
+
+```text
+Route pages define type-specific fields.
+Shared manifest helpers define common sections.
+```
+
+Do not claim these are backend DTOs. They are local draft contracts until RustyOnions backend routes exist.
+
+### 7.4 Harden route contracts and docs
+
+The root docs currently include placeholders:
+
+```text
+docs/CRABLINK_REFACTOR_PLAN.md
+docs/ROUTE_CONTRACTS.md
+docs/MANIFEST_MODEL.md
+docs/THEME_AND_AD_SLOT.md
+docs/SANDBOX_MODEL.md
+docs/TESTING_MATRIX.md
+```
+
+They should be filled in as the React lane stabilizes.
+
+Recommended doc order:
+
+```text
+1. docs/ROUTE_CONTRACTS.md
+2. docs/MANIFEST_MODEL.md
+3. docs/SANDBOX_MODEL.md
+4. docs/THEME_AND_AD_SLOT.md
+5. docs/TESTING_MATRIX.md
+6. docs/CRABLINK_REFACTOR_PLAN.md
+```
+
+### 7.5 Expand static checks
+
+Current checks are green, but the next phase should add assertions that prevent regressions.
+
+Add checks for:
+
+```text
+page-local-route-mode.js must not exist/import.
+React local draft routes must include local-only/truth-boundary language.
+No route page may include direct svc-wallet/svc-storage/svc-index/omnigate/ron-ledger URLs.
+No route page may claim fake b3 CID publication.
+No route page may claim wallet mutation.
+No route page may use crab://b3/<hash> format.
+Code/game/algo pages must include no-execution/sandbox/facet language.
+Dark mode CSS should not include bright white rgba fallback for inputs.
+```
+
+### 7.6 Protected route migration remains
+
+Protected routes are still the big work:
+
+```text
+crab://profile
+crab://image
+crab://site
+crab://<hash>.<kind> generic asset
+```
+
+Suggested order:
+
+```text
+1. profile
+2. generic asset
+3. image
+4. site
+```
+
+Why:
+
+```text
+profile is complex but less dangerous than paid image/site flows.
+generic asset helps typed b3 pages.
+image has paid upload/receipt/renditions risk.
+site has render/sandbox/manifest/root upload risk.
+```
+
+Do not migrate image/site until:
+
+```text
+shared components are proven
+route debug is solid
+manifest helpers are stable
+gateway clients are reviewed
+manual route smoke dashboard is used regularly
+```
+
+### 7.7 Legacy cleanup comes last
+
+Only after React has parity for protected routes should we delete or retire:
+
+```text
+page-creator-route-guard.js
+page-lifecycle-settler.js
+page-next-level-panels.js
+page-music-rights.js
+page-stream-podcast-mode.js
+page-social-stubs.js
+other old page-* route owners
+```
+
+Until then, these are ugly but protective.
+
+## 8. Backend work still future / not solved by React
+
+Do not confuse local React workspace completion with backend completion.
+
+Still future or incomplete:
+
+```text
+real profile publishing
+@username reservation/claiming
+reputation score truth
+moderator score truth
+post/comment/article backend routes
+lyrics backend routes
+music/song backend routes
+video backend routes
+stream backend routes
+podcast backend routes
+ad campaign backend routes
+algo registry routes
+code primitive/facet routes
+game manifest routes
+film/dub routes later
+rendition-group DTOs
+manifest version/history DTOs
+uniform manifest DTOs
+paid view/access flows
+creator payout splits
+ad payout splits
+policy gates
+capability checks
+route-contract tests
+CrabLink smoke tests for each built-in route
+```
+
+RustyOnions economic invariants still apply:
+
+```text
+ROC remains internal.
+No ROX/Solana/external settlement yet.
+svc-wallet remains mutation front-door.
+ron-ledger remains durable economic truth.
+storage stores bytes by content ID only.
+gateway/omnigate coordinate but do not directly mutate ledger.
+Integer minor units only.
+No floating-point money math.
+Deterministic receipts.
+Deterministic errors.
+Policy/capability gates fail closed.
+```
+
+## 9. Recommended next-session plan
+
+Start next session with verification, not new code.
+
+### Step 1 — Verify current state
+
+Run:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then start preview server:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Open:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fhome
+```
+
+Use the home dashboard to smoke test routes.
+
+### Step 2 — Choose one small shared-component conversion
+
+Recommended:
+
+```text
+crab://lyrics
+```
+
+Goal:
+
+```text
+Convert LyricsPage/LyricsDraft to use:
+PageHeader
+Card
+Field
+TextInput
+TextArea
+SegmentedControl
+StatChip
+Badge
+CopyButton
+TruthBoundary
+JsonPreview
+```
+
+Do **not** introduce backend calls.
+
+Acceptance:
+
+```text
+same or better UI
+less route-local CSS
+no dark-mode regression
+copy manifest still works
+truth boundary still honest
+build/check scripts green
+```
+
+### Step 3 — Repeat for `post` and `comment`
+
+After lyrics proves the pattern:
+
+```text
+crab://post
+crab://comment
+```
+
+These are still low-risk and good for refining shared form/manifest patterns.
+
+### Step 4 — Create shared workspace layout
+
+Once 2–3 routes use shared components, introduce:
+
+```text
+CreatorWorkspaceLayout.jsx
+WorkspaceHero.jsx
+DraftStatsPanel.jsx
+TruthBoundaryBox.jsx
+ManifestSummaryPanel.jsx
+RouteDebugPanel.jsx
+```
+
+Then refactor:
+
+```text
+article
+music
+podcast
+stream
+video
+ad
+algo
+code
+game
+```
+
+### Step 5 — Only then begin protected-route planning
+
+After local routes are cleaner:
+
+```text
+profile migration plan
+asset page migration plan
+image migration plan
+site migration plan
+```
+
+Do not start with image/site.
+
+## 10. Suggested next-instance prompt
+
+Use this at the start of the next session:
+
+```text
+We are continuing the CrabLink React refactor.
+
+Please review:
+- CODEBUNDLE_CHROME_EXTENSION.md
+- REFACTOR_TODO.MD
+- CRABLINK_REFACTOR.MD
+- the latest carryover notes
+
+Current status:
+- Old page.html/page.js lane remains protected for proven site/image/profile/passport/paid flows.
+- React lane is tested through local HTTP at:
+  http://127.0.0.1:4173/react.html?url=<encoded crab URL>
+- Always include:
+  cd /Users/mymac/Desktop/crablink/dist/chrome-src
+  python3 -m http.server 4173 --bind 127.0.0.1
+  in testing instructions.
+- Local React routes now exist for home, lyrics, post, comment, article, music, podcast, stream, video, ad, algo, code, and game.
+- Protected routes site/image/profile/asset must remain late-migration surfaces.
+- Shared component foundation exists but most routes are not yet using it.
+
+Next task:
+Start converting crab://lyrics to use shared components and shared form/card styles, without changing backend behavior and without touching protected routes. Provide full paste-ready files only.
+```
+
+## 11. Completion estimate
+
+Subjective estimate after the latest work:
+
+```text
+Old CrabLink prototype/product proof:
+~75–82% for local/dev proof-of-concept browser-client functionality.
+
+React-lane refactor foundation:
+~55–65% complete.
+
+Final React-based CrabLink browser UI:
+~40–50% complete.
+
+Overall CrabLink as final polished browser-client product:
+~45–55% complete.
+```
+
+Why the estimates are split:
+
+```text
+The old lane proves real backend product loops.
+The React lane now proves route ownership, shell, themes, local creator routes, and shared component foundation.
+But protected parity routes, shared manifest consolidation, backend route integration for new asset types, and legacy deletion remain.
+```
+
+## 12. Bottom-line recommendation
+
+The project is on the correct path.
+
+The next session should **not add another built-in page** unless absolutely necessary. The built-in page universe is large enough for now.
+
+The best next move is:
+
+```text
+1. Verify green checks.
+2. Use crab://home to smoke test every React route.
+3. Start shared-component adoption with crab://lyrics.
+4. Repeat with crab://post and crab://comment.
+5. Extract common CreatorWorkspace layout/components.
+6. Consolidate local manifest helpers.
+7. Harden route-contract docs and static checks.
+8. Migrate profile/asset/image/site only after the local route pattern is clean.
+```
+
+Final guiding sentence:
+
+```text
+Protect the proven old lane, improve the React lane route-by-route, and do not let any local draft page pretend to be backend truth.
+```
+
+
+### END NOTE - MAY 9 2026 - 18:00 CST
+
+
+
+
+### BEGIN NOTE - MAY 9 2026 - 19:55 CST
+
+
+# Carryover Notes — CrabLink React Refactor Checkpoint
+
+## 0. Executive checkpoint
+
+CrabLink is in a **protected hybrid refactor state**. The legacy `page.html/page.js/page-*` lane remains the proven product path for the real extension flows, especially site/image/profile/passport/paid interactions. The React/Vite lane is now the destination architecture and is being tested separately through `react.html` over local HTTP. This is exactly the correct shape for this phase: **old lane = protected product proof; React lane = migration runway**.
+
+The current codebundle confirms that the repo now contains both the old legacy lane and the React lane side by side, with React app files under `extensions/chrome/src/app`, page folders under `extensions/chrome/src/pages`, shared API/components/manifest/theme/utils/styles folders, and the legacy `page-*` files still present.  The refactor blueprint remains anchored on **one route = one page owner**, page folders per built-in `crab://` site, shared shell/theme/ad/manifest systems, and eliminating late DOM patching or MutationObserver rescue logic. 
+
+Current working estimate:
+
+```text
+React refactor completion: ~52%
+Overall CrabLink local/dev prototype: ~70–75%
+Final React-based CrabLink browser UI: ~45–55%
+```
+
+The reason the React percentage is not higher is that we have a strong shell and several clean local creator routes, but we have not migrated the protected parity routes yet: `site`, `image`, `profile`, and generic typed `asset`.
+
+---
+
+## 1. Non-negotiable hard rules for the next session
+
+Preserve these exactly:
+
+```text
+One route = one page owner.
+React + Vite for the full-tab CrabLink browser UI.
+Plain MV3 JavaScript remains fine for background/content/popup/options glue.
+The live toolbar/extension path should NOT be flipped to React yet.
+Gateway-only backend access.
+No direct svc-wallet, svc-storage, svc-index, omnigate, or ron-ledger calls from CrabLink.
+No fake backend truth.
+No fake b3 CIDs.
+No fake manifest CIDs.
+No fake receipts.
+No silent ROC spend.
+No arbitrary crab:// code execution.
+No page-local-route-mode.js resurrection.
+No broad Chrome permissions unless explicitly justified.
+Site/image/profile/asset parity migrates late and carefully.
+Files should remain modular and ideally under ~400 lines where possible.
+```
+
+The browser client must stay thin, explicit, and honest. CrabLink may display backend truth returned by `svc-gateway`; it must not invent truth from local UI state.
+
+---
+
+## 2. What we accomplished in this session
+
+### 2.1 Confirmed the current React lane visually and architecturally
+
+We continued testing the React lane through local HTTP instead of the extension’s old `page.html` path. The screenshots confirmed that React routes are rendering inside the shared shell with:
+
+```text
+CrabLink topbar
+address bar
+Back / Forward / Home / Refresh controls
+Gateway chip
+HTTP test mode chip
+ROC chip
+theme toggle
+settings/action button
+header AD SPACE slot
+route-owned content area
+```
+
+The UI direction is now much cleaner than the old patch-heavy vanilla lane. The screenshots showed that the shared creator-workspace layout is visually coherent, readable, and reusable across routes.
+
+### 2.2 Preserved the protected hybrid model
+
+We did **not** switch the live unpacked Chrome extension toolbar path over to React. That was intentional. The old lane still contains proven behavior for:
+
+```text
+site create/open/render
+image paid upload/preview
+profile/passport flows
+known-good typed image asset views
+wallet/ROC proof UX
+legacy smoke coverage
+```
+
+The React lane is still tested through:
+
+```text
+http://127.0.0.1:4173/react.html?url=<encoded crab URL>
+```
+
+That separation must continue until the protected routes have parity.
+
+### 2.3 Added shared creator workspace infrastructure
+
+We extracted the reusable creator workspace pattern so low-risk local routes do not each reinvent layout, stats, truth panels, and manifest previews.
+
+New or updated shared pieces from this session:
+
+```text
+extensions/chrome/src/shared/components/CreatorWorkspaceLayout.jsx
+extensions/chrome/src/shared/components/DraftStatsPanel.jsx
+extensions/chrome/src/shared/components/ManifestPreviewPanel.jsx
+extensions/chrome/src/shared/components/RouteTruthPanel.jsx
+extensions/chrome/src/shared/hooks/useCreatorDraft.js
+extensions/chrome/src/shared/styles/layout.css
+```
+
+Purpose of each:
+
+```text
+CreatorWorkspaceLayout.jsx
+  Shared page header + principles + main/side two-column workspace layout.
+
+DraftStatsPanel.jsx
+  Shared completeness/progress/stats card.
+
+ManifestPreviewPanel.jsx
+  Shared developer JSON preview + copy action.
+
+RouteTruthPanel.jsx
+  Shared polished truth-boundary panel listing what is allowed and what is not claimed.
+
+useCreatorDraft.js
+  Shared local draft state hook for draft, view mode, manifest, stats, JSON, completeness, update, clear.
+
+layout.css
+  Shared workspace layout, creator grid, stats panel, route truth panel, and responsive behavior.
+```
+
+This was the most important architectural improvement of the session because it prevents repeated route-local state hacks.
+
+### 2.4 Fixed the lyrics architecture
+
+Earlier in the session, `crab://lyrics` used a module-level side-panel bridge state. It worked visually, but it was not clean React architecture.
+
+We fixed it by introducing:
+
+```text
+extensions/chrome/src/pages/lyrics/lyricsDraftModel.js
+```
+
+and rewiring:
+
+```text
+extensions/chrome/src/pages/lyrics/LyricsPage.jsx
+extensions/chrome/src/pages/lyrics/LyricsDraft.jsx
+extensions/chrome/src/pages/lyrics/lyrics.css
+```
+
+The final shape is now:
+
+```text
+LyricsPage.jsx
+  Owns the route-level draft state through useCreatorDraft.
+
+lyricsDraftModel.js
+  Owns default draft shape, options, manifest builder, stats, completeness, tag parsing.
+
+LyricsDraft.jsx
+  Pure props-driven builder form and side panel.
+
+lyrics.css
+  Route-specific visual polish only.
+```
+
+`crab://lyrics` now has:
+
+```text
+local-only lyrics draft form
+linked music/song crab URL field
+creator display
+language
+rights mode
+access mode
+tags
+plain text lyrics body
+builder/developer toggle
+stats
+preview
+manifest JSON preview/copy
+truth boundary
+no backend publication claim
+no fake b3 CID
+no wallet/ROC action
+```
+
+### 2.5 Migrated `crab://post`
+
+We migrated `crab://post` onto the same clean creator workspace architecture.
+
+Files created/updated:
+
+```text
+extensions/chrome/src/pages/post/postDraftModel.js
+extensions/chrome/src/pages/post/PostPage.jsx
+extensions/chrome/src/pages/post/PostDraft.jsx
+extensions/chrome/src/pages/post/post.css
+```
+
+`crab://post` now has:
+
+```text
+local post draft form
+title
+body
+creator display
+language
+post kind
+visibility
+rights mode
+moderation mode
+site context crab URL
+parent post/comment crab URL
+tags
+content warning
+stats
+preview
+manifest JSON preview/copy
+truth boundary
+```
+
+The route is **local draft only**. It must not claim publication, index writes, receipts, wallet mutation, ROC spend, or paid access.
+
+### 2.6 Migrated `crab://comment`
+
+We migrated `crab://comment` onto the same shared creator workspace architecture.
+
+Files created/updated:
+
+```text
+extensions/chrome/src/pages/comment/commentDraftModel.js
+extensions/chrome/src/pages/comment/CommentPage.jsx
+extensions/chrome/src/pages/comment/CommentDraft.jsx
+extensions/chrome/src/pages/comment/comment.css
+```
+
+`crab://comment` now has:
+
+```text
+local comment draft form
+title
+body
+creator display
+language
+comment kind
+visibility
+rights mode
+moderation mode
+parent post/comment crab URL
+site context crab URL
+thread context crab URL
+tags
+content warning
+stats
+preview
+manifest JSON preview/copy
+truth boundary
+```
+
+The route is **local draft only** and does not create a comment asset, manifest, receipt, thread truth, moderation truth, wallet mutation, or paid operation.
+
+### 2.7 Migrated `crab://article`
+
+We migrated `crab://article` onto the same shared creator workspace architecture.
+
+Files created/updated:
+
+```text
+extensions/chrome/src/pages/article/articleDraftModel.js
+extensions/chrome/src/pages/article/ArticlePage.jsx
+extensions/chrome/src/pages/article/ArticleDraft.jsx
+extensions/chrome/src/pages/article/article.css
+```
+
+`crab://article` now has:
+
+```text
+local article draft form
+title
+subtitle
+summary
+body
+creator display
+language
+article kind
+visibility
+rights mode
+moderation mode
+site context crab URL
+hero image crab URL
+linked source crab URL
+tags
+content warning
+reading-time estimate
+stats
+preview
+manifest JSON preview/copy
+truth boundary
+```
+
+The route is **local draft only** and does not store article bytes, mint CIDs, publish a manifest, index anything, charge ROC, or mutate wallet state.
+
+### 2.8 Updated `scripts/check-react-lane.sh`
+
+We updated the React lane checker to stop being a one-off route-by-route maintenance burden. The user correctly pointed out that if we had to edit the script every time a page changed, we should make it future-aware now.
+
+The current checker now does these important things:
+
+```text
+verifies package scripts
+verifies Vite/react.html build structure
+verifies app shell files
+verifies route registry entries
+verifies router invariants
+verifies shell/topbar/passport drawer invariants
+verifies required page folders/files
+verifies local-only routes do not claim fake backend truth
+verifies shared components/hooks/styles exist
+verifies creator workspace layout tokens exist
+verifies useCreatorDraft exists and exposes expected behavior
+verifies RouteTruthPanel / DraftStatsPanel / ManifestPreviewPanel basics
+forbids page-local-route-mode
+forbids crab://b3/
+forbids broad extension permissions
+forbids direct internal-service URLs
+forbids old wrong wallet hold header
+forbids private-key/seed tokens
+forbids legacy profile API paths
+runs npm build unless CRABLINK_REACT_SKIP_BUILD=1
+checks dist/chrome-src/react.html and page.html exist
+```
+
+It also has a reusable creator workspace contract for:
+
+```text
+lyrics
+post
+comment
+article
+music
+podcast
+stream
+video
+ad
+algo
+code
+game
+```
+
+Current strict migrated routes:
+
+```text
+lyrics
+post
+```
+
+But the checker automatically enforces the workspace contract for any listed route when it detects migration signals such as:
+
+```text
+*DraftModel.js
+useCreatorDraft
+CreatorWorkspaceLayout
+draftState
+<Route>SidePanel
+```
+
+So because `comment` and `article` now include those signals, they should be checked automatically without further script changes.
+
+### 2.9 Confirmed the route screenshots
+
+Screenshots reviewed during the session:
+
+```text
+crab://lyrics
+crab://post
+crab://comment
+crab://article
+```
+
+All four rendered successfully in the React lane with the shared shell, shared AD SPACE slot, shared route layout, builder/developer toggle, stats, truth boundaries, and preview panels.
+
+Visual quality improved substantially compared with the old vanilla/stub pages. The page shape now feels like a real creator studio rather than a set of debug panels.
+
+---
+
+## 3. Current migrated route status
+
+### Fully migrated to clean shared creator-workspace architecture in this session
+
+```text
+crab://lyrics
+crab://post
+crab://comment
+crab://article
+```
+
+These routes now share:
+
+```text
+CreatorWorkspaceLayout
+DraftStatsPanel
+RouteTruthPanel
+ManifestPreviewPanel
+useCreatorDraft
+route-local DraftModel
+route-specific CSS only
+pure props-driven draft components
+local-only truth boundaries
+```
+
+### Existing React pages present but not yet confirmed in the new clean pattern
+
+The codebundle shows React page folders/files already exist for the remaining current built-ins, including `music`, `podcast`, `stream`, `video`, `ad`, `algo`, `code`, `game`, `site`, `image`, `profile`, and `asset`.  Some of these were already visually working from previous work, but they should not be assumed to be fully migrated to the new `useCreatorDraft + DraftModel + SidePanel` pattern until inspected and/or rewritten.
+
+### Protected routes to defer
+
+Do **not** migrate these next unless we intentionally enter a protected parity phase:
+
+```text
+crab://site
+crab://image
+crab://profile
+generic crab://<hash>.<kind> asset page
+```
+
+Reason: these touch proven backend/product flows. The migration plan explicitly says local-only stubs should move first, while site/image move later because they touch real working backend flows. 
+
+---
+
+## 4. Important architecture state
+
+### 4.1 Old lane
+
+The old lane remains active/proven:
+
+```text
+extensions/chrome/src/page.html
+extensions/chrome/src/page.js
+extensions/chrome/src/page-*.js
+extensions/chrome/src/page.css
+extensions/chrome/src/storage.js
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/crab.js
+```
+
+This lane still protects:
+
+```text
+paid image upload
+site create/open/render
+profile/passport UX
+known-good typed image loading
+legacy smoke scripts
+unpacked Chrome extension toolbar path
+```
+
+### 4.2 React lane
+
+The React lane is the destination architecture:
+
+```text
+extensions/chrome/src/react.html
+extensions/chrome/src/app/main.jsx
+extensions/chrome/src/app/App.jsx
+extensions/chrome/src/app/router.js
+extensions/chrome/src/app/routeRegistry.js
+extensions/chrome/src/app/shell/
+extensions/chrome/src/pages/
+extensions/chrome/src/shared/
+```
+
+This lane currently provides:
+
+```text
+route-owned mounting
+lazy route chunks
+shared shell
+topbar/address/nav
+gateway chip
+HTTP test mode chip
+ROC chip
+theme toggle
+settings action
+header AD SPACE slot
+modal/toast scaffolding
+passport drawer scaffolding
+shared creator workspace components
+local-only manifest previews
+```
+
+### 4.3 Current public testing path
+
+React lane route testing must keep using local HTTP preview:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Then open encoded URLs such as:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Flyrics
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fpost
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fcomment
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Farticle
+```
+
+Keep the Python server terminal open while testing.
+
+---
+
+## 5. Green-gate commands to preserve
+
+Use this command sequence after each batch:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+For full local green gate:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/green-gate-local.sh
+```
+
+For React preview:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+The refactor docs still call for preserving checks like `check-chrome.sh`, package, codebundle, gateway smoke, site create/open, known-good image load, route navigation, theme toggle, ad slot visibility, manifest draft generation, and no stale page leakage. 
+
+---
+
+## 6. Current working design pattern for local creator routes
+
+Every migrated local creator route should follow this pattern:
+
+```text
+<Route>Page.jsx
+  Owns route-level useCreatorDraft hook.
+  Supplies app + route to the route-local manifest builder.
+  Renders CreatorWorkspaceLayout.
+  Passes draftState to <Route>Draft and <Route>SidePanel.
+
+<Route>Draft.jsx
+  Pure props-driven form component.
+  Receives app and draftState.
+  Renders form fields, builder/developer toggle, optional inline developer manifest, copy/clear actions.
+  Exports <Route>SidePanel as named export.
+
+<route>DraftModel.js
+  Owns DEFAULT_*_DRAFT.
+  Owns view/kind/visibility/rights/moderation options.
+  Owns build*ManifestDraft.
+  Owns statsFor*Draft.
+  Owns get*Completeness.
+  Owns parseTags or route-specific helpers.
+
+<route>.css
+  Owns only route-specific layout and preview styles.
+  Uses shared theme tokens.
+  Does not hardcode backend truth.
+```
+
+The target architecture remains “one route = one page owner,” with page-specific helpers/styling inside that page folder and shared shell/theme/ad/manifest/components above it. 
+
+---
+
+## 7. Local draft manifest truth boundary
+
+Every local-only route must keep this shape:
+
+```text
+schema: crablink.local.<kind>-draft.v1
+status: local_draft_only
+
+asset:
+  kind: <kind>
+  title: ...
+  canonical_cid: null
+  canonical_crab_url: null
+  manifest_cid: null
+
+ownership:
+  creator_display: ...
+  passport_subject_label: display label only
+  wallet_account_label: display label only
+  backend_confirmed: false
+
+access_policy:
+  paid_access_active: false
+
+truth_boundary:
+  local_draft_only: true
+  assigns_b3_cid: false
+  assigns_manifest_cid: false
+  publishes_asset: false
+  writes_index_pointer: false
+  performs_paid_action: false
+  backend_route_claimed: false
+```
+
+Never let local draft pages say or imply:
+
+```text
+published
+minted
+stored
+indexed
+paid
+charged
+captured
+released
+receipt created
+CID created
+manifest CID created
+ownership confirmed
+moderation confirmed
+profile confirmed
+```
+
+unless the backend returned that truth through gateway.
+
+---
+
+## 8. Regression watchlist
+
+Fail the change if any of these happen:
+
+```text
+page-local-route-mode.js returns.
+page.html imports page-local-route-mode.js.
+crab://video resolves through /sites/video.
+crab://stream resolves through /sites/stream.
+crab://podcast resolves through /sites/podcast.
+crab://article stays visible on crab://video.
+post/comment/article/lyrics pages leak into one another.
+site render iframe remains stuck after leaving a named site.
+Developer JSON claims backend publication for local drafts.
+Local draft claims b3 CID assignment.
+Local draft claims manifest CID assignment.
+Local draft claims ROC charge.
+Local draft claims wallet mutation.
+Extension adds broad Chrome permissions.
+Extension calls internal services directly.
+React route calls svc-wallet/storage/index/omnigate/ledger directly.
+crab://b3/<hash> appears as a public URL.
+Dark mode becomes blue again instead of black/neutral.
+Light mode becomes blue-heavy again instead of neutral/off-white.
+Header AD SPACE slot disappears.
+Builder/Developer toggle breaks.
+Copy manifest JSON breaks.
+Side panel uses module-level bridge state again.
+```
+
+The refactor documents specifically call out eliminating DOM rescue scripts, visibility patching, focus hacks, duplicate Builder/Developer toggles, and MutationObserver-based ownership. 
+
+---
+
+## 9. Remaining work for the refactor
+
+### 9.1 Immediate next route work
+
+Recommended next implementation batch:
+
+```text
+crab://video
+```
+
+Files likely to update:
+
+```text
+extensions/chrome/src/pages/video/videoDraftModel.js        (new)
+extensions/chrome/src/pages/video/VideoPage.jsx
+extensions/chrome/src/pages/video/VideoDraft.jsx
+extensions/chrome/src/pages/video/VideoRenditions.jsx
+extensions/chrome/src/pages/video/video.css
+```
+
+Keep it local-only.
+
+Core sections to include:
+
+```text
+metadata
+video file/local preview if already supported safely
+linked assets
+poster/thumbnail crab URL
+renditions
+duration/codec/resolution planning fields
+rights/access/payout planning fields
+preview
+stats
+truth boundary
+developer manifest JSON
+route debug
+```
+
+Do **not** add real video upload yet.
+
+### 9.2 Next after video
+
+After `video`, finish the low-risk local/future routes:
+
+```text
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+Recommended order:
+
+```text
+1. video
+2. ad
+3. algo
+4. code
+5. game
+```
+
+Reason:
+
+```text
+video completes the media-local route group and introduces rendition complexity.
+ad ties directly to the standardized header AD SPACE future.
+algo and code need extra truth/sandbox/facet warnings.
+game likely depends on code/facet/sandbox patterns.
+```
+
+### 9.3 Inspect and possibly normalize existing routes
+
+These already exist in React folders but should be inspected for parity with the new pattern:
+
+```text
+crab://music
+crab://podcast
+crab://stream
+```
+
+If they are not using:
+
+```text
+useCreatorDraft
+<Route>DraftModel.js
+CreatorWorkspaceLayout
+DraftStatsPanel
+RouteTruthPanel
+ManifestPreviewPanel
+pure props-driven draft state
+```
+
+then migrate them before moving to protected routes.
+
+### 9.4 Shared manifest consolidation
+
+Right now the route-local draft models duplicate useful patterns:
+
+```text
+parseTags
+countCrabLinks
+labelFromSnake
+reading-time estimate
+truth_boundary shape
+ownership label shape
+asset null CID shape
+route metadata shape
+policy note shape
+stats shape
+completeness helper shape
+```
+
+Eventually consolidate into shared helpers under:
+
+```text
+extensions/chrome/src/shared/manifest/
+extensions/chrome/src/shared/utils/
+```
+
+Possible future helpers:
+
+```text
+createLocalDraftTruthBoundary()
+createLocalAssetShell(kind, title)
+createRouteDraftMeta(route, fallbackUrl, fallbackKind)
+createDisplayOwnership(app, creatorDisplay)
+parseCommaTags()
+countCrabLinks()
+estimateReadingMinutes()
+normalizeDraftString()
+buildLocalDraftManifestBase()
+```
+
+Do **not** over-consolidate too early if it slows migration. But after `video/ad/algo/code/game`, consolidation will be worth it.
+
+### 9.5 Protected parity routes
+
+Defer until the React low-risk lane is stable:
+
+```text
+crab://profile
+crab://image
+crab://site
+generic typed crab://<hash>.<kind> asset pages
+```
+
+Important risk notes:
+
+```text
+profile has identity/@username/passport implications.
+image has real paid upload/proof/receipt flow.
+site has real create/open/render flow and sandbox/render concerns.
+asset page has hydrated backend truth and typed asset resolution.
+```
+
+These must not be copied as fake local drafts. They need backend-truth rendering.
+
+### 9.6 Legacy deletion phase
+
+Do not delete legacy files yet.
+
+Eventually, when React parity is proven, old patch modules should be absorbed/deleted:
+
+```text
+extensions/chrome/src/page-creator-route-guard.js
+extensions/chrome/src/page-lifecycle-settler.js
+extensions/chrome/src/page-next-level-panels.js
+extensions/chrome/src/page-music-rights.js
+extensions/chrome/src/page-stream-podcast-mode.js
+extensions/chrome/src/page-social-stubs.js
+```
+
+The TODO explicitly maps these old patch-style files into route-owned pages or shared components and says they should not survive as independent long-term modules. 
+
+---
+
+## 10. Product/design rules to keep prominent
+
+### 10.1 Uniform global theme
+
+The whole CrabLink internet should share a consistent theme system:
+
+```text
+light mode default
+dark mode true black/neutral
+future system mode
+future safe custom themes
+```
+
+Do not let each route invent disconnected colors. Use shared semantic tokens.
+
+### 10.2 Standard header ad slot
+
+Every React route should keep the header slot visible:
+
+```text
+AD SPACE
+protocol-native header slot
+one ad slot only
+clearly labeled
+privacy-preserving
+no third-party tracking
+no popups
+no autoplay
+```
+
+Future `crab://ad` should connect to this concept, but current routes must not pretend an ad backend exists.
+
+### 10.3 Image-like assets remain `.image`
+
+All cover art, thumbnails, hero images, posters, profile avatars, banners, ad creatives, etc. should be references to canonical `.image` assets later:
+
+```text
+crab://<64 lowercase hex>.image
+```
+
+Do not create separate `cover`, `poster`, `thumbnail`, or `avatar` asset kinds. Those are roles of image assets, not separate content kinds.
+
+### 10.4 Renditions are separate b3 assets
+
+Each actual media file variant should eventually be its own content-addressed object:
+
+```text
+original
+desktop
+mobile
+thumbnail
+poster
+low bandwidth
+audio-only
+captions/dubs
+```
+
+Manifests discover relationships; bytes remain immutable.
+
+### 10.5 Lyrics and dubs remain separate assets
+
+Lyrics are not embedded as permanent truth inside music/song manifests. Dubs/captions/subtitles should be separate assets linked from film/video manifests later.
+
+### 10.6 Code/facet safety
+
+`crab://code` must never imply arbitrary code execution in the extension page. The future safe model remains:
+
+```text
+b3hash.code = address
+facet.toml = contract
+svc-sandbox = cage
+ron-policy = judge
+CrabLink = renderer/launcher, not unsafe executor
+```
+
+---
+
+## 11. Backend work still remaining
+
+The React local workspaces are product contracts, not backend completion. Backend work still needed:
+
+```text
+real profile publishing
+@username reservation/claiming
+reputation score truth
+moderator score truth
+post routes
+comment routes
+article routes
+lyrics routes
+music/song routes
+video routes
+stream routes
+podcast routes
+ad campaign routes
+algo registry routes
+code primitive/facet routes
+game manifest routes
+film/dub routes later
+rendition-group DTOs
+manifest version/history DTOs
+uniform manifest DTOs
+paid view/access flows
+creator payout splits
+ad payout splits
+policy gates
+capability checks
+route-contract tests
+CrabLink smoke tests for every built-in
+```
+
+RustyOnions invariants remain:
+
+```text
+ROC is internal first.
+No ROX/Solana/public settlement yet.
+svc-wallet remains mutation front-door.
+ron-ledger remains durable economic truth.
+storage stores bytes by content ID only.
+gateway/omnigate coordinate but do not directly mutate ledger.
+integer minor units only.
+no floating-point money math.
+deterministic receipts.
+deterministic errors.
+policy/capability gates fail closed.
+```
+
+---
+
+## 12. Suggested first message for the next session
+
+Use this:
+
+```text
+We are continuing the CrabLink React refactor.
+
+Current state:
+- Old page.html/page.js/page-* lane remains the active/proven extension path for site/image/profile/passport/paid flows.
+- React/Vite lane builds separately through react.html and is tested over local HTTP.
+- Current React shell has topbar/address/nav/gateway chip/HTTP test mode/ROC chip/theme/settings/header AD SPACE slot/passport drawer/modal/toast scaffolding.
+- Shared creator workspace infrastructure exists:
+  CreatorWorkspaceLayout.jsx
+  DraftStatsPanel.jsx
+  ManifestPreviewPanel.jsx
+  RouteTruthPanel.jsx
+  useCreatorDraft.js
+- Clean migrated local creator routes:
+  crab://lyrics
+  crab://post
+  crab://comment
+  crab://article
+- These are local draft only and must not claim backend publication, fake b3/manifest CIDs, receipts, wallet mutation, ROC charges, uploads, streams, or paid access.
+- check-react-lane.sh is future-aware and should auto-enforce the creator-workspace contract when a route adds DraftModel/useCreatorDraft signals.
+- Next recommended batch: migrate crab://video into the same pattern.
+- After video: ad, algo, code, game.
+- Do not migrate image/site/profile/asset yet.
+- Preserve one route = one owner, gateway-only boundary, no silent ROC spend, no fake backend truth, no arbitrary crab:// code execution, and old lane compatibility.
+
+Before generating files, review:
+CODEBUNDLE_CHROME_EXTENSION.md
+REFACTOR_TODO.MD
+CRABLINK_REFACTOR.MD
+
+Please provide the next batch of complete paste-ready files.
+```
+
+---
+
+## 13. Exact next-session commands
+
+Start by confirming the current state:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then start React preview:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Quick route smoke:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Flyrics
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fpost
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fcomment
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Farticle
+```
+
+Then implement:
+
+```text
+crab://video
+```
+
+---
+
+## 14. Bottom line
+
+This session was a major stabilization step. We moved from “React lane exists” into a **repeatable route migration pattern**. The important win is not only that `lyrics`, `post`, `comment`, and `article` look better; it is that they now share a clean architecture:
+
+```text
+route-owned page
+route-local draft model
+shared draft hook
+shared workspace layout
+shared stats panel
+shared truth panel
+shared manifest preview panel
+local-only truth boundary
+```
+
+The refactor is now on the right path. Next session should continue route-by-route with `crab://video`, avoid protected flows, and keep the old lane safe until React parity is strong enough to replace it.
+
+
+
+### END NOTE - MAY 9 2026 - 19:55 CST
+
+
+### BEGIN NOTE - MAY 10 2026 - 11:10 CST
+
+## Estimated refactor completion rate
+
+My working estimate is **74% complete** for the CrabLink React refactor.
+
+That estimate is for the **frontend/refactor track**, not the entire RustyOnions backend/product ecosystem. The reason I would not call it 85–90% yet is that the React lane now has the shell, route registry, shared components, theme system, passport drawer pieces, and all low-risk local-only creator/workspace pages, but the **protected production routes** still need careful parity work: `crab://site`, `crab://image`, `crab://profile`, and generic typed `crab://<hash>.<kind>` asset views. Those are the routes most likely to break real proven backend flows, so they are correctly deferred.
+
+The current codebundle shows the React/Vite lane is no longer just a sketch: it includes `app/`, `shell/`, shared API clients, shared components, shared manifest/theme/util layers, and route folders for ad/algo/article/asset/code/comment/game/home/image/lyrics/music/podcast/post/profile/site/stream/video. It also still includes the old compatibility `page-*` files, which confirms we are in a protected hybrid state rather than a fully completed migration. 
+
+---
+
+# Carryover Notes — CrabLink React Refactor, 2026-05-10
+
+## 1. Current strategic checkpoint
+
+CrabLink is now in a **protected hybrid React refactor state**.
+
+The original vanilla/legacy extension path is still preserved, especially for proven backend/product flows. The React lane has become the new design direction for the full-tab CrabLink browser UI. It is being built as a cleaner, modular, route-owned architecture rather than patching the old `page.html/page.js/page-*` structure all at once.
+
+The core refactor doctrine remains:
+
+```text
+One route = one page owner.
+React owns the full-tab CrabLink app shell.
+Old vanilla/MV3 glue remains for extension background/content/options/popup where appropriate.
+Protected backend-backed routes move last.
+No fake backend truth.
+No fake b3 CIDs.
+No fake manifests.
+No silent ROC spend.
+No direct internal service calls from CrabLink.
+```
+
+The attached refactor TODO explicitly recommends **React + Vite for the full-tab CrabLink browser UI**, while keeping Chrome extension glue like `background`, `content`, `popup`, and `options` plain MV3 JavaScript. It also anchors the target structure around shared shell/theme/ad/manifest systems and page folders per built-in route. 
+
+The older refactor blueprint/carryover notes correctly identified the old prototype as successful but patch-heavy: many `page-*` scripts were fighting over the same DOM, and the long-term goal became a folder-based, professional, maintainable architecture with one page owner per route. 
+
+---
+
+## 2. What we accomplished before this session
+
+Before this latest batch, the project had already established the major React lane foundation:
+
+```text
+extensions/chrome/src/app/
+extensions/chrome/src/app/shell/
+extensions/chrome/src/shared/api/
+extensions/chrome/src/shared/components/
+extensions/chrome/src/shared/embed/
+extensions/chrome/src/shared/hooks/
+extensions/chrome/src/shared/manifest/
+extensions/chrome/src/shared/styles/
+extensions/chrome/src/shared/theme/
+extensions/chrome/src/shared/utils/
+extensions/chrome/src/pages/
+```
+
+Important existing pieces now present in the codebundle include:
+
+```text
+App.jsx
+appContext.js
+appEvents.js
+appState.js
+main.jsx
+router.js
+routeRegistry.js
+settings.js
+
+Shell.jsx
+TopBar.jsx
+AddressBar.jsx
+BrowserNav.jsx
+HeaderAdSlot.jsx
+PassportChip.jsx
+PassportDrawer.jsx
+PassportSummary.jsx
+BalanceChip.jsx
+CreatorChip.jsx
+ToastHost.jsx
+ModalHost.jsx
+
+gatewayClient.js
+identityClient.js
+walletClient.js
+assetClient.js
+siteClient.js
+
+CreatorWorkspaceLayout.jsx
+RouteTruthPanel.jsx
+DraftStatsPanel.jsx
+ManifestPreviewPanel.jsx
+Card.jsx
+Badge.jsx
+Field.jsx
+Button.jsx
+TextInput.jsx
+TextArea.jsx
+SegmentedControl.jsx
+CopyButton.jsx
+
+useCreatorDraft.js
+```
+
+This means the React lane is already real, not theoretical. The shell exists. The route registry exists. Shared components exist. Draft state abstraction exists. Theme tokens exist. Page folders exist. The current codebundle confirms these files are present. 
+
+Earlier sessions also established:
+
+```text
+crab://lyrics
+crab://post
+crab://comment
+crab://article
+crab://music
+crab://stream
+crab://podcast
+```
+
+as React route-owned surfaces or route-folder pages, with the common Builder/Developer pattern, manifest previews, truth boundaries, and local-only behavior.
+
+The local HTTP React preview workflow was also proven and should keep being included in test instructions:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Then test routes through URLs like:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Flyrics
+```
+
+Do **not** assume React preview routes can be tested directly as `crab://...` in Chrome HTTP preview mode.
+
+---
+
+## 3. What we accomplished in this latest session
+
+This session completed the remaining **low-risk, local-only creator/workspace route sequence**.
+
+The sequence completed:
+
+```text
+crab://video
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+These were intentionally chosen because they are **local-only draft/workspace surfaces** and do not mutate backend truth. They are safer to migrate before the protected routes.
+
+The refactor TODO’s recommended migration order says local-only stubs should move early, while site/image move later because they touch proven backend flows. 
+
+---
+
+## 4. `crab://video` completed
+
+We migrated `crab://video` into the shared creator workspace model.
+
+Files added/replaced:
+
+```text
+extensions/chrome/src/pages/video/videoDraftModel.js
+extensions/chrome/src/pages/video/VideoPage.jsx
+extensions/chrome/src/pages/video/VideoDraft.jsx
+extensions/chrome/src/pages/video/video.css
+```
+
+The route now follows the pattern:
+
+```text
+VideoPage.jsx
+  owns the route
+  uses useCreatorDraft
+  builds manifest through videoDraftModel.js
+  renders CreatorWorkspaceLayout
+  renders RouteTruthPanel
+  delegates form/side panel to VideoDraft.jsx
+
+VideoDraft.jsx
+  owns the local video form
+  exports VideoSidePanel
+  supports Builder/Developer view
+  supports manifest JSON preview
+  supports local completeness/stats
+  supports renditions and linked assets
+
+videoDraftModel.js
+  owns DEFAULT_VIDEO_DRAFT
+  owns constants/options
+  owns buildVideoManifestDraft
+  owns stats/completeness helpers
+  owns linked asset/rendition normalization
+```
+
+Important video concepts captured:
+
+```text
+poster image reference
+thumbnail image reference
+trailer video reference
+source/master video reference
+desktop/mobile/low-bandwidth renditions
+audio-only rendition
+captions asset reference
+dub/alternate audio reference
+transcript reference
+site context reference
+rights/access/payout/moderation planning
+```
+
+Truth boundary preserved:
+
+```text
+no video upload
+no range serving
+no streaming claim
+no b3 CID minted
+no manifest CID minted
+no wallet/ROC action
+no backend publication claim
+```
+
+Manual result: user tested `crab://video`; screenshot looked good.
+
+---
+
+## 5. `crab://ad` completed
+
+We migrated `crab://ad` into the shared creator workspace model.
+
+Files added/replaced:
+
+```text
+extensions/chrome/src/pages/ad/adDraftModel.js
+extensions/chrome/src/pages/ad/AdPage.jsx
+extensions/chrome/src/pages/ad/AdCampaignDraft.jsx
+extensions/chrome/src/pages/ad/AdCreativePreview.jsx
+extensions/chrome/src/pages/ad/ad.css
+```
+
+The route now models a future protocol-native ad campaign system without claiming backend support.
+
+Important ad concepts captured:
+
+```text
+campaign name
+sponsor display
+sponsor passport hint
+headline
+body
+call to action
+destination crab URL
+creative image crab URL
+campaign kind
+creative kind
+placement
+device mode
+schedule mode
+budget minor units
+budget asset
+pacing mode
+payout mode
+review mode
+audience mode
+targeting notes
+frequency mode
+content policy
+disclaimer label
+```
+
+Safety/ad policy preserved:
+
+```text
+one labeled header slot
+protocol-native ads
+privacy-first/contextual only
+no third-party tracking
+no tracking pixels
+no scripts
+no popups
+no autoplay
+no page takeover
+no impressions recorded
+no clicks recorded
+no ROC budget hold
+no spend
+no backend approval claim
+```
+
+The preview is intentionally inert: it displays creative references as text/placeholder and does not fetch external content.
+
+Manual result: user tested `crab://ad`; screenshot looked good.
+
+---
+
+## 6. `crab://algo` completed
+
+We migrated `crab://algo` into the shared creator workspace model.
+
+Files added/replaced:
+
+```text
+extensions/chrome/src/pages/algo/algoDraftModel.js
+extensions/chrome/src/pages/algo/AlgoPage.jsx
+extensions/chrome/src/pages/algo/AlgoDraft.jsx
+extensions/chrome/src/pages/algo/AlgoTransparency.jsx
+extensions/chrome/src/pages/algo/algo.css
+```
+
+The route now models algorithm transparency manifests without executing algorithms or ranking anything.
+
+Important algorithm concepts captured:
+
+```text
+algorithm name
+creator/maintainer display
+maintainer passport hint
+purpose
+algorithm kind
+transparency level
+execution mode
+sandbox mode
+audit mode
+input signals
+excluded signals
+output shape
+ranking goal
+fairness notes
+moderation notes
+evaluation notes
+source code crab URL
+facet.toml crab URL
+policy bundle crab URL
+evaluation report crab URL
+safety review crab URL
+example input/output references
+rights/access/payout/governance/release planning
+```
+
+Key safety rule preserved:
+
+```text
+crab://algo is a transparency workspace only.
+It does not execute code.
+It does not rank content.
+It does not mutate feeds.
+It does not record impressions.
+It does not launch a sandbox.
+```
+
+Important design carryover:
+
+```text
+Future executable algorithms require the same facet/sandbox/capability model as code primitives.
+```
+
+Manual result: user tested `crab://algo`; it worked.
+
+---
+
+## 7. `crab://code` completed
+
+We migrated `crab://code` into the shared creator workspace model.
+
+Files added/replaced:
+
+```text
+extensions/chrome/src/pages/code/codeDraftModel.js
+extensions/chrome/src/pages/code/CodePage.jsx
+extensions/chrome/src/pages/code/CodeDraft.jsx
+extensions/chrome/src/pages/code/CodeFacet.jsx
+extensions/chrome/src/pages/code/FacetContractPreview.jsx
+extensions/chrome/src/pages/code/code.css
+```
+
+This route is especially important because it captures the “facets as safety contract” doctrine.
+
+Core rule preserved:
+
+```text
+crab://<hash>.code must not mean “download and execute arbitrary code.”
+```
+
+Plain-English safety contract preserved:
+
+```text
+b3hash.code is the address.
+facet.toml is the contract.
+svc-sandbox is the cage.
+ron-policy is the judge.
+CrabLink is only the renderer/launcher, not the unsafe executor.
+```
+
+Important code/facet concepts captured:
+
+```text
+primitive name
+creator/maintainer display
+maintainer passport hint
+description
+code kind
+declared runtime
+language
+source visibility
+execution mode
+sandbox mode
+policy mode
+review mode
+code bytes crab URL
+code manifest crab URL
+facet.toml crab URL
+docs/test/audit/example references
+allowed routes
+allowed actions
+denied actions
+required capabilities
+memory/cpu/output/request limits
+network/storage/wallet/profile permissions
+rights/access/payout planning
+facet.toml preview text
+```
+
+Critical invariants preserved:
+
+```text
+no code fetch
+no eval
+no compile
+no WASM instantiate
+no sandbox launch
+no capability issuance
+no wallet mutation
+no backend publication claim
+```
+
+Manual result: user tested `crab://code`; it looked good.
+
+---
+
+## 8. `crab://game` completed
+
+We migrated `crab://game` into the shared creator workspace model.
+
+Files added/replaced:
+
+```text
+extensions/chrome/src/pages/game/gameDraftModel.js
+extensions/chrome/src/pages/game/GamePage.jsx
+extensions/chrome/src/pages/game/GameDraft.jsx
+extensions/chrome/src/pages/game/GameAssets.jsx
+extensions/chrome/src/pages/game/game.css
+```
+
+This was the final low-risk local-only route batch.
+
+Important game concepts captured:
+
+```text
+game title
+creator/studio display
+studio passport hint
+description
+game kind
+runtime
+engine
+platform mode
+content rating
+release mode
+execution mode
+sandbox mode
+policy mode
+review mode
+network/storage/wallet/profile policy
+allowed routes
+allowed actions
+denied actions
+required capabilities
+memory/cpu/save/output/request limits
+save data policy
+save ownership
+multiplayer policy
+session policy
+economy policy
+access mode
+payout mode
+moderation mode
+cover image
+thumbnail image
+trailer video
+source bundle
+desktop bundle
+mobile bundle
+WASM/runtime asset
+asset manifest
+audio pack
+map pack
+docs/manual
+save schema
+facet.toml
+policy bundle
+```
+
+Game asset policy captured:
+
+```text
+Every real game resource should become its own immutable b3-backed object later.
+Cover art remains .image.
+Trailers remain .video.
+Audio/music remains .music.
+Runtime/code assets remain .code/facet-governed.
+Game bundles/manifests remain inert references until backend support exists.
+```
+
+Runtime safety preserved:
+
+```text
+no bundle fetch
+no WASM instantiate
+no game execution
+no sandbox launch
+no save writes
+no session creation
+no multiplayer lobby
+no in-game spend
+no wallet action
+no backend publication claim
+```
+
+Manual result: user tested `crab://game`; it works.
+
+---
+
+## 9. Current route migration status
+
+### Completed or functionally present in React lane
+
+These route folders/files exist in the current codebundle:
+
+```text
+home
+lyrics
+post
+comment
+article
+music
+video
+stream
+podcast
+ad
+algo
+code
+game
+notFound
+problem
+```
+
+The codebundle also shows React route folders already exist for the protected routes:
+
+```text
+asset
+image
+profile
+site
+```
+
+but these are still considered **protected migration/parity targets**, because their full real-world behavior must be validated carefully against the old proven product flows. 
+
+### Low-risk local-only sequence status
+
+```text
+crab://lyrics      done
+crab://post        done
+crab://comment     done
+crab://article     done
+crab://video       done
+crab://ad          done
+crab://algo        done
+crab://code        done
+crab://game        done
+```
+
+Remaining in this low-risk sequence:
+
+```text
+none
+```
+
+### Protected routes remaining
+
+```text
+crab://site
+crab://image
+crab://profile
+generic typed asset page: crab://<64hex>.<kind>
+```
+
+These should be done next, but carefully.
+
+---
+
+## 10. What remains for the refactor
+
+## 10.1 Protected route parity
+
+The biggest remaining work is to migrate/validate the protected routes without regressing the currently proven product flows.
+
+### `crab://image`
+
+Must preserve:
+
+```text
+image prepare
+explicit ROC hold
+paid upload proof headers
+raw byte upload
+manifest/index pointer behavior
+image preview
+known-good asset loading
+rendition planning
+receipt/proof display
+no silent spend
+```
+
+Known-good paid image asset to keep using:
+
+```text
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+Image route must not fake:
+
+```text
+b3 CIDs
+manifest CIDs
+ownership
+receipts
+wallet balance
+payment success
+```
+
+### `crab://site`
+
+Must preserve:
+
+```text
+site create/prepare
+site root upload
+site open/render
+site manifest drawer
+site creator proof
+safe rendering
+named site resolution
+route map behavior
+embed behavior
+gateway-only calls
+```
+
+Potentially dangerous regressions:
+
+```text
+using image CIDs as site roots incorrectly
+losing manifest drawer behavior
+site render iframe stuck after route change
+site create/open smoke failing
+named site fallback interfering with built-ins
+```
+
+### `crab://profile`
+
+Must preserve/improve:
+
+```text
+passport drawer integration
+public profile page
+profile editor
+avatar handling
+asset/site listing placeholders
+alt vault separation
+no main↔alt linkage leak
+no fake reputation/mod score truth
+```
+
+Future profile backend still needed:
+
+```text
+real profile publishing
+@username reservation/claiming
+backend-confirmed avatar/banner
+public profile manifest
+reputation truth
+moderation score truth
+```
+
+### Generic typed asset route
+
+Must preserve:
+
+```text
+crab://<64 lowercase hex>.<kind>
+gateway resolution
+asset hydration
+manifest display
+raw byte preview where safe
+image preview for image assets
+problem responses
+policy-denied display
+not-found display
+```
+
+The generic asset page should probably stay conservative and route type-specific assets to the right page only when safe.
+
+---
+
+## 10.2 Legacy cleanup remains
+
+The old compatibility files still exist and should not be deleted yet. The current codebundle still includes many old `page-*` files such as:
+
+```text
+page-article-draft.js
+page-creator-route-guard.js
+page-lifecycle-settler.js
+page-music-draft.js
+page-music-rights.js
+page-next-level-panels.js
+page-podcast-draft.js
+page-profile-avatar.js
+page-profile-editor.js
+page-profile-gateway.js
+page-site-render-mode.js
+page-social-stubs.js
+page-stream-draft.js
+page-stream-podcast-mode.js
+page-uniform-manifest.js
+page-video-draft.js
+page-workflow.js
+page.js
+page.html
+```
+
+The refactor TODO specifically says old patch-style files should be absorbed or deleted after their behavior is owned by route folders, mapping things like `page-creator-route-guard.js` into `app/router.js + routeRegistry.js`, lifecycle settler behavior into React mount/unmount, music rights into `MusicRights.jsx`, stream/podcast mode into `StreamPodcastMode.jsx`, and social stubs into the route folders. 
+
+Do **not** remove the old files until protected route parity has been proven.
+
+Final deletion phase should wait until:
+
+```text
+site route works in React
+image route works in React
+profile route works in React
+generic asset route works in React
+known-good asset smoke passes
+paid image upload smoke passes
+site create/open smoke passes
+check-chrome passes
+check-react-lane passes
+package-chrome passes
+```
+
+---
+
+## 10.3 Shared manifest consolidation
+
+We now have strong draft models per route. That is good for safety and clarity, but there is still likely duplication across:
+
+```text
+lyricsDraftModel.js
+postDraftModel.js
+commentDraftModel.js
+articleDraftModel.js
+videoDraftModel.js
+adDraftModel.js
+algoDraftModel.js
+codeDraftModel.js
+gameDraftModel.js
+```
+
+Next medium-term cleanup should extract common helpers into:
+
+```text
+shared/manifest/uniformManifest.js
+shared/manifest/manifestDrafts.js
+shared/manifest/linkedAssets.js
+shared/manifest/renditionGroups.js
+shared/manifest/versionHistory.js
+shared/manifest/rightsPolicy.js
+shared/manifest/accessPolicy.js
+shared/manifest/economicsPolicy.js
+shared/manifest/provenance.js
+```
+
+But this should be done carefully. The current per-route models are explicit and readable. Do not over-abstract too early and accidentally hide truth boundaries.
+
+Recommended approach:
+
+```text
+1. Keep per-route draft models for now.
+2. Extract only obvious pure helpers:
+   parseTags
+   parseList
+   labelFromSnake
+   countCrabLinks
+   trimOrNull
+   parsePositiveInt
+3. Then extract uniform top-level manifest envelope once all route models stabilize.
+```
+
+---
+
+## 10.4 Better docs/checks need to catch the new React lane
+
+The codebundle includes:
+
+```text
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+scripts/green-gate-local.sh
+```
+
+The next session should make sure the checker enforces the new architecture:
+
+```text
+required route files exist
+required route exports exist
+old forbidden global patch patterns do not return
+no direct internal service URLs in React pages
+no fake b3 CID literals in local-only routes
+no fake receipt claims
+no direct wallet mutation
+no extension broad permissions
+no eval/new Function/dynamic script injection
+no unsafe HTML injection outside safe renderer
+```
+
+The React lane should also keep enforcing:
+
+```text
+route-owned files
+useCreatorDraft where appropriate
+RouteTruthPanel presence
+ManifestPreviewPanel developer path
+local-only truth boundary for unbacked routes
+```
+
+---
+
+## 10.5 UI polish remains
+
+The UI is now significantly cleaner than the old vanilla patches, but it still needs polish before it feels production-quality.
+
+Remaining UI polish targets:
+
+```text
+consistent spacing across all pages
+consistent card widths
+consistent side panel behavior
+mobile responsiveness pass
+dark mode pass for every route
+light mode default verification
+form section density reduction
+better empty states
+better copy for local-only truth boundaries
+less debug-heavy default builder views
+developer view made consistent
+manifest modal/drawer consistency
+footer/route diagnostics cleanup
+```
+
+The user specifically prefers the dark mode to be black/neutral, not dark blue, and light mode should stay neutral/off-white rather than blue.
+
+Keep the “Ad Space” header slot visible as a protocol-native placeholder.
+
+---
+
+## 11. Current safety and truth boundary doctrine
+
+These are non-negotiable across all remaining work:
+
+```text
+CrabLink is a thin browser client.
+CrabLink calls public gateway routes only.
+CrabLink does not call ron-ledger directly.
+CrabLink does not call svc-wallet directly except through approved gateway/client boundary if already established.
+CrabLink does not call svc-storage or svc-index directly.
+CrabLink does not silently spend ROC.
+CrabLink does not fake receipts.
+CrabLink does not fake wallet balances.
+CrabLink does not fake backend publication.
+CrabLink does not mint fake b3 CIDs.
+CrabLink does not mint fake manifest CIDs.
+CrabLink does not execute crab://code.
+CrabLink does not execute crab://game.
+CrabLink does not run ad tracking scripts.
+CrabLink does not leak passport alt linkage.
+```
+
+For unbacked routes, allowed behavior is:
+
+```text
+local draft
+local preview
+local manifest JSON preview
+copy JSON
+truth boundary display
+future route contract planning
+```
+
+Forbidden behavior is:
+
+```text
+claiming backend success
+claiming publication
+claiming payment
+claiming ownership proof
+claiming moderation approval
+claiming policy review
+claiming b3 assignment
+claiming manifest CID assignment
+```
+
+---
+
+## 12. Current architecture assessment
+
+The refactor is now in a strong state because it has proven the target pattern repeatedly:
+
+```text
+Page.jsx
+Draft.jsx
+DraftModel.js
+optional subcomponent(s)
+page.css
+useCreatorDraft
+CreatorWorkspaceLayout
+RouteTruthPanel
+DraftStatsPanel
+ManifestPreviewPanel
+Builder/Developer view
+```
+
+This pattern has now worked for multiple different product surfaces:
+
+```text
+text/social assets
+video/media assets
+ads
+algorithms
+code primitives/facets
+games
+```
+
+That is important because it means the architecture is not overfit to one page.
+
+The next risks are no longer “can this pattern work?” The risks are:
+
+```text
+Can we preserve the real paid image flow?
+Can we preserve the real site flow?
+Can we preserve the profile/passport UX?
+Can we remove legacy files without breaking extension packaging?
+Can we make the route registry fully authoritative?
+Can we keep the old page.html/page.js path protected while React gains parity?
+```
+
+---
+
+## 13. Recommended next session plan
+
+### Step 1 — Do not add a new product route
+
+We have enough built-in routes for now.
+
+Do **not** start by adding:
+
+```text
+crab://film
+crab://dub
+```
+
+Those should remain future-aware manifest considerations, not new pages yet.
+
+### Step 2 — Run the full green gate
+
+Start next session by running:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then run the React preview server:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Test these routes manually:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Flyrics
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fpost
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fcomment
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Farticle
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fvideo
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fad
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Falgo
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fcode
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fgame
+```
+
+### Step 3 — Pick one protected route, probably `profile`
+
+The safest protected route to migrate next is probably:
+
+```text
+crab://profile
+```
+
+Reason:
+
+```text
+It is important to the product and UI, but less dangerous than image/site because it should not perform paid storage mutations.
+```
+
+However, profile still has privacy and identity risks, so be careful.
+
+Recommended profile goals:
+
+```text
+make profile look like a real profile page
+preserve avatar/banner image reference model
+keep Edit Profile button top-right
+show @username if available
+show passport identity chip
+show local-vs-backend truth boundary
+show public assets/sites placeholders
+do not fake reputation/mod score
+do not leak alt linkage
+do not claim backend profile publication unless gateway confirms it
+```
+
+### Step 4 — Then migrate `asset`
+
+After profile, generic typed asset route is a good next target:
+
+```text
+crab://<hash>.<kind>
+```
+
+Goals:
+
+```text
+resolve through gateway
+show hydrated asset page
+show manifest/provenance/ownership when returned
+show safe preview where supported
+show problem page on not-found/policy-denied
+do not invent missing fields
+```
+
+### Step 5 — Migrate `image` after asset
+
+`image` is next because generic asset hydration and image preview overlap. But image has paid upload flow, so protect it heavily.
+
+Must test:
+
+```text
+known-good image load
+image prepare
+wallet hold
+paid upload
+receipt display
+new image typed URL load
+```
+
+### Step 6 — Migrate `site` last
+
+`site` should be last because it touches:
+
+```text
+site create
+root upload
+site render
+sandboxing
+route maps
+named site resolution
+manifest drawer
+site creator proof
+```
+
+The old flow is valuable and should not be broken.
+
+---
+
+## 14. Route-by-route remaining checklist
+
+### `crab://profile`
+
+Status:
+
+```text
+React folder exists.
+Needs parity/polish pass.
+Protected because identity/privacy matters.
+```
+
+Next work:
+
+```text
+ProfilePage owner review
+ProfileHome polish
+ProfileEditor polish
+ProfileAvatar canonical .image reference
+ProfileGateway safety
+ProfileAssets placeholder/backed split
+AltVault privacy boundary
+passport drawer integration
+```
+
+Acceptance:
+
+```text
+profile route loads cleanly
+edit button top-right
+avatar visible when image URL/reference provided
+no fake backend publication
+no fake username claim
+no fake reputation/mod score
+no alt linkage leak
+```
+
+### `crab://asset` / typed asset route
+
+Status:
+
+```text
+React folder exists.
+Needs careful validation.
+```
+
+Next work:
+
+```text
+AssetPage route owner review
+AssetResolver gateway flow
+AssetHydratedView UI
+problem/not-found integration
+image preview handoff
+manifest/provenance display
+```
+
+Acceptance:
+
+```text
+known-good image resolves
+bad hash shows safe error
+policy-denied fixture shows safe problem UI
+no fake metadata
+no direct storage/index call
+```
+
+### `crab://image`
+
+Status:
+
+```text
+React folder exists.
+Real paid backend flow exists elsewhere.
+High-risk.
+```
+
+Next work:
+
+```text
+ImagePage owner review
+ImageCreate paid flow parity
+ImagePreview local and backend preview
+ImageManifest fields
+ImageRenditions planning
+hold proof headers
+receipt card
+clear failure states
+```
+
+Acceptance:
+
+```text
+prepare works
+hold works
+upload works
+receipt visible
+new b3 URL visible
+known-good asset still loads
+no silent spend
+no fake receipt
+```
+
+### `crab://site`
+
+Status:
+
+```text
+React folder exists.
+Real site flow exists elsewhere.
+Highest risk.
+```
+
+Next work:
+
+```text
+SitePage owner review
+SiteCreate parity
+SiteRender safe sandbox
+SiteManifestDrawer modal/drawer
+SiteCreatorProof
+SiteRootUpload
+named site resolution
+site create/open smoke
+```
+
+Acceptance:
+
+```text
+site prepare works
+site create works
+site open works
+manifest drawer works
+site render does not leak/stick after route change
+no unsafe arbitrary script execution
+```
+
+---
+
+## 15. Backend/product work still outside this frontend refactor
+
+These remain backend/product-layer work, not just CrabLink UI work:
+
+```text
+real profile publishing
+@username reservation/claiming
+reputation score truth
+moderator score truth
+post/comment/article backend routes
+lyrics routes
+music/song routes
+video routes
+stream routes
+podcast routes
+ad campaign routes
+algo registry routes
+code primitive/facet routes
+game manifest routes
+film/dub routes later
+rendition-group DTOs
+manifest version/history DTOs
+uniform manifest DTOs
+paid view/access flows
+creator payout splits
+ad payout splits
+policy gates
+capability checks
+route-contract tests
+CrabLink smoke tests for each built-in
+```
+
+RustyOnions invariants still apply:
+
+```text
+ROC remains internal.
+No ROX/Solana/public settlement yet.
+svc-wallet remains normal mutation front-door.
+ron-ledger remains durable truth.
+storage stores bytes by content ID only.
+gateway/omnigate coordinate but do not directly mutate ledger.
+integer minor units only.
+no floating-point money math.
+deterministic receipts.
+deterministic errors.
+policy/capability gates fail closed.
+```
+
+---
+
+## 16. Files that should be treated as active references next session
+
+Use these as current references:
+
+```text
+/mnt/data/CODEBUNDLE_CHROME_EXTENSION.md
+/mnt/data/REFACTOR_TODO.MD
+/mnt/data/CRABLINK_REFACTOR.MD
+```
+
+Within the repo, the important current folders are:
+
+```text
+extensions/chrome/src/app/
+extensions/chrome/src/app/shell/
+extensions/chrome/src/shared/
+extensions/chrome/src/pages/
+extensions/chrome/src/legacy/
+extensions/chrome/src/page*.js
+scripts/
+```
+
+The current codebundle was generated on **2026-05-10T15:32:48Z**, includes **293 text files**, and shows the complete present hybrid tree. 
+
+---
+
+## 17. Important commands for the next instance
+
+Run static/build checks:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Run local React preview:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Open route preview pattern:
+
+```text
+http://127.0.0.1:4173/react.html?url=<encoded crab URL>
+```
+
+Examples:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fprofile
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fimage
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fsite
+```
+
+Known-good asset test URL:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2F984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+---
+
+## 18. Regression watchlist
+
+Fail the change if any of these happen:
+
+```text
+React route opens blank white screen.
+Address changes but page remains stuck on previous route.
+Old local route fallback sends built-ins to /sites/<route>.
+Profile content appears inside unrelated route.
+Site render iframe remains stuck after leaving site route.
+Builder/Developer toggle disappears.
+Manifest preview claims backend truth for local-only draft.
+Local-only route shows fake b3 CID.
+Local-only route shows fake manifest CID.
+Any route claims ROC charge without backend receipt.
+Any route silently performs wallet hold/capture/release.
+Any React page calls internal services directly.
+Any route uses eval/new Function/dynamic script injection.
+Any route fetches crab://code bytes for execution.
+Any route instantiates WASM.
+Any broad Chrome permission is added.
+Any auth token is logged/rendered.
+```
+
+---
+
+## 19. My recommendation for the next session
+
+The next session should **not** create another local-only product page. That sequence is complete.
+
+Best next move:
+
+```text
+1. Run full checks.
+2. Smoke all local-only React routes.
+3. Begin protected route parity with crab://profile.
+4. After profile, move generic typed asset route.
+5. After asset, move image.
+6. Move site last.
+7. Only after protected parity, delete legacy page-* files.
+```
+
+The refactor has crossed the point where it is clearly working. The next goal is not more breadth; it is **parity, hardening, and cleanup**.
+
+Final carryover summary:
+
+```text
+CrabLink React lane is now the right path.
+The shell/shared/page architecture is established.
+All low-risk local-only creator/workspace pages are complete.
+The remaining work is protected route parity: profile, asset, image, site.
+Old vanilla page-* files must remain until parity is proven.
+The next highest-value route is likely profile.
+Do not break paid image or site create/open flows.
+Keep every route honest about local draft vs backend truth.
+Keep testing through the local HTTP preview server.
+```
+
+
+### END NOTE - MAY 10 2026 - 11:10 CST
+
+
+
+### BEGIN NOTE - MAY 10 2026 - 12:59 CST
+
+## Estimated completion rate
+
+My current estimate for the **CrabLink React refactor track** is **about 80% complete**, with one major caveat: the **profile page layout is currently unstable and must be fixed first next session**.
+
+The reason I am still comfortable calling the refactor roughly 80% is that the React lane now has the shell, route registry, shared API clients, shared components, shared theme system, header ad slot, shared manifest utilities, page folders, and React route owners for the full built-in set. The current codebundle confirms the React tree now includes app/shell/shared layers and route folders for home, site, image, profile, music, lyrics, article, post, comment, video, stream, podcast, ad, algo, code, game, asset, notFound, and problem pages. 
+
+But for **final polished CrabLink browser-client product completion**, I would estimate closer to **55–60%**, because backend-connected parity, real paid image/site flows in React, real profile publishing, typed asset hydration polish, and final legacy-lane retirement are still not finished.
+
+---
+
+# Carryover Notes — CrabLink React Refactor, 2026-05-10
+
+## 1. Current checkpoint
+
+CrabLink is in a **protected hybrid refactor state**.
+
+The old vanilla lane remains the protected working path for proven backend/product flows, while the React lane is now the forward-looking full-tab CrabLink browser UI. The refactor TODO explicitly says the target is **React + Vite for the full-tab UI**, while keeping Chrome extension glue like `background`, `content`, `popup`, and `options` as plain MV3 JavaScript. It also anchors the desired structure around route-owned pages, shared shell/theme/ad/manifest systems, and no more late DOM patching or MutationObserver rescue logic. 
+
+The doctrine going forward remains:
+
+```text
+One route = one page owner.
+React owns the new full-tab CrabLink route UI.
+Legacy lane stays protected until React parity is proven.
+No fake backend truth.
+No fake b3 CIDs.
+No fake manifests.
+No silent ROC spend.
+No direct calls to internal RustyOnions services.
+No arbitrary executable crab:// code.
+Gateway-only browser-client boundary.
+```
+
+The top priority next session is **fixing the React `crab://profile` layout regression**.
+
+---
+
+## 2. Important current problem: profile page layout is broken
+
+The latest screenshot shows the profile page has regressed back into the same failure pattern: the **right-side identity/alt panels overlap or float over the editor**, and the form content is squeezed/partially obscured. The page loads, the route works, and the components render, but the layout is wrong.
+
+What happened:
+
+```text
+We first built a polished React profile page with hero, avatar placeholder, editor, gateway/passport panel, profile assets panel, manifest preview, and Alt Vault.
+
+The first version loaded successfully but had clipping: center/right form elements were cut off.
+
+We tried moving the sidebar below the editor.
+That removed the overlap but lost the intended right-side panel layout.
+
+We then restored the right panel and tried widening the profile page.
+That put us back into overlap/squeeze behavior.
+
+The repeated problem is not routing.
+It is layout containment.
+```
+
+The next instance should **not continue random CSS guessing**. It should compare against the working page patterns, especially:
+
+```text
+extensions/chrome/src/shared/components/CreatorWorkspaceLayout.jsx
+extensions/chrome/src/pages/image/ImagePage.jsx
+extensions/chrome/src/pages/image/image.css
+extensions/chrome/src/pages/site/SitePage.jsx
+extensions/chrome/src/pages/site/site.css
+extensions/chrome/src/shared/styles/layout.css
+extensions/chrome/src/app/shell/Shell.css
+```
+
+The profile route should probably be rebuilt around the same stable layout pattern used by the working workspace pages, rather than continuing to manually tune a custom profile grid.
+
+## 3. Profile fix plan for next session
+
+The next session should begin with the profile layout only. Do not add new pages until this is fixed.
+
+### Recommended approach
+
+Rebuild `ProfilePage.jsx` layout around a stable workspace container:
+
+```text
+Hero card
+Truth boundary
+Main content / side content layout
+Profile editor in main column
+ProfileGateway + AltVault in side column
+ProfileAssets and manifest preview below, or in main column after editor
+```
+
+Use the existing stable shared pattern if possible:
+
+```text
+CreatorWorkspaceLayout
+```
+
+The image workspace already uses a shared side panel pattern successfully, so profile should borrow that strategy. The codebundle confirms `CreatorWorkspaceLayout.jsx` exists in shared components and image/profile/site route folders now exist in the route-owned React page tree. 
+
+### Likely root causes to investigate
+
+The overlap may be caused by one or more of these:
+
+```text
+A parent shell/content container has a max-width that is narrower than the profile grid expects.
+.profile-page width changes are not escaping the parent constraint.
+The right panel width is being calculated inside a constrained card/page region.
+A sticky side panel is staying inside a column whose parent width is too small.
+The editor field grid is auto-fitting into too many columns while the side column still exists.
+Card overflow/hidden rules are clipping fields.
+The profile page uses a custom layout instead of the working shared workspace pattern.
+```
+
+### What not to do next
+
+Avoid these unless absolutely verified:
+
+```text
+Do not keep increasing profile-page max-width blindly.
+Do not use sticky side panel until the parent grid is proven stable.
+Do not set the form to multi-column by default while the side panel is present.
+Do not move the side panel under the editor as the final design unless we intentionally accept that UX.
+Do not touch backend routes or wallet/profile integration while the layout is broken.
+```
+
+### Practical target layout
+
+The ideal profile layout should be:
+
+```text
+Desktop wide:
+  hero full-width
+  truth boundary full-width
+  editor/main column on left
+  identity/alt panels on right
+  assets and manifest below editor or below the whole grid
+
+Medium width:
+  editor full-width
+  identity/alt panels either right only if enough room, or below in two cards
+
+Small width:
+  single column
+```
+
+A safe CSS target:
+
+```text
+Only use the right side panel above maybe 1250–1350px.
+Below that, stack side panels under the editor.
+Never allow side panel overlap.
+Never allow form fields to extend under the side panel.
+```
+
+The next assistant should inspect `Shell.css` and any `.cl-page` constraints before patching `profile.css`.
+
+---
+
+## 4. What we accomplished in this session
+
+### 4.1 Confirmed typed asset routing behavior
+
+We tested:
+
+```text
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+Because the RustyOnions stack was restarted, the local dev storage/index no longer had the old image bytes. The React typed asset page correctly showed a failure instead of inventing asset truth. That is a good protected behavior:
+
+```text
+No fake image.
+No fake manifest.
+No fake b3 proof.
+No fake backend hydration.
+```
+
+We also confirmed:
+
+```text
+crab://image
+```
+
+routes separately to the built-in image workspace, not the typed asset hydrator.
+
+### 4.2 Replaced `crab://image` scaffold with a real React Image Workspace
+
+We added a complete React local-first image workspace:
+
+```text
+extensions/chrome/src/pages/image/imageDraftModel.js
+extensions/chrome/src/pages/image/ImagePage.jsx
+extensions/chrome/src/pages/image/ImageCreate.jsx
+extensions/chrome/src/pages/image/ImagePreview.jsx
+extensions/chrome/src/pages/image/ImageRenditions.jsx
+extensions/chrome/src/pages/image/ImageManifest.jsx
+extensions/chrome/src/pages/image/image.css
+```
+
+The image workspace now supports:
+
+```text
+local image file selection
+local object URL preview
+title/creator/owner metadata
+description and alt text
+image role
+source mode
+expected MIME type
+dimensions and color profile hints
+rights/access/payout/moderation modes
+tags
+content warning
+provenance notes
+rendition group planning
+canonical/desktop/mobile/thumbnail/poster .image references
+local image manifest JSON preview
+side stats panel
+completion percentage
+truth boundary
+```
+
+Important invariant:
+
+```text
+This image workspace is local-only.
+It does not upload bytes.
+It does not mint b3 CIDs.
+It does not mint manifest CIDs.
+It does not charge ROC.
+It does not call wallet hold.
+It does not replace the proven paid image upload lane yet.
+```
+
+### 4.3 Replaced `crab://profile` scaffold with a real React profile route
+
+We added or updated:
+
+```text
+extensions/chrome/src/pages/profile/profileDraftModel.js
+extensions/chrome/src/pages/profile/ProfilePage.jsx
+extensions/chrome/src/pages/profile/ProfileHome.jsx
+extensions/chrome/src/pages/profile/ProfileAvatar.jsx
+extensions/chrome/src/pages/profile/ProfileEditor.jsx
+extensions/chrome/src/pages/profile/ProfileGateway.jsx
+extensions/chrome/src/pages/profile/ProfileAssets.jsx
+extensions/chrome/src/pages/profile/AltVault.jsx
+extensions/chrome/src/pages/profile/profile.css
+```
+
+The profile route now has:
+
+```text
+profile hero card
+avatar placeholder
+display name
+@username hint
+bio/tagline
+Edit Profile button
+local profile editor
+gateway/passport hints panel
+Alt Vault privacy panel
+asset/site catalogue placeholders
+manifest JSON preview
+truth boundary
+local profile manifest model
+backend truth flags all false
+```
+
+Important invariant:
+
+```text
+No fake username claim.
+No fake public profile publication.
+No fake reputation score.
+No fake moderator score.
+No fake alt linkage.
+No wallet mutation.
+No backend profile truth claim.
+```
+
+Current status:
+
+```text
+Profile route logic works.
+Profile page loads.
+Visual layout is currently broken and must be fixed before proceeding.
+```
+
+### 4.4 Replaced `crab://site` scaffold with a real React Site Workspace
+
+We added or updated:
+
+```text
+extensions/chrome/src/shared/api/siteClient.js
+extensions/chrome/src/pages/site/siteDraftModel.js
+extensions/chrome/src/pages/site/SitePage.jsx
+extensions/chrome/src/pages/site/SiteCreate.jsx
+extensions/chrome/src/pages/site/SiteRootUpload.jsx
+extensions/chrome/src/pages/site/SiteRender.jsx
+extensions/chrome/src/pages/site/SiteCreatorProof.jsx
+extensions/chrome/src/pages/site/SiteManifestDrawer.jsx
+extensions/chrome/src/pages/site/site.css
+```
+
+The site route now supports two modes:
+
+```text
+crab://site
+  local site builder workspace
+
+crab://<site_name>
+  read-only named-site gateway resolve/render attempt
+```
+
+Local site workspace features:
+
+```text
+site name
+title
+description
+creator display
+owner passport hint
+owner wallet hint
+root document CID hint
+local root HTML editor
+safe iframe preview
+route map JSON
+asset map JSON
+tags
+hosting mode
+access mode
+render policy
+payout mode
+moderation policy
+provenance note
+site manifest draft
+creator proof panel
+root guard
+safe manifest drawer
+```
+
+Named site mode features:
+
+```text
+gateway-only read
+/crab/resolve attempt
+/sites/:name fallback attempt
+root document fetch if a valid b3 root CID is returned
+safe error if site cannot be resolved
+sandboxed iframe preview
+no mutation
+```
+
+Important invariant:
+
+```text
+No /sites/prepare mutation.
+No /sites create mutation.
+No wallet hold.
+No receipt.
+No fake site pointer.
+No direct storage/index call.
+No script execution in preview iframe.
+```
+
+### 4.5 Preserved the local HTTP React test workflow
+
+The React lane must still be tested through the local HTTP server after build:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Then test:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fprofile
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fsite
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fimage
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fmusic
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Flyrics
+```
+
+The local HTTP server step must keep being included in future test instructions.
+
+---
+
+## 5. What was accomplished before this session and remains true
+
+The React/Vite lane already had the correct destination architecture:
+
+```text
+extensions/chrome/src/react.html
+extensions/chrome/src/app/
+extensions/chrome/src/app/shell/
+extensions/chrome/src/shared/
+extensions/chrome/src/pages/
+```
+
+The codebundle confirms this current tree includes shared API clients, shared components, shared embed helpers, shared manifest helpers, shared theme files, shared utilities, and page folders for all the major built-ins. 
+
+The active route-owned built-ins include:
+
+```text
+home
+site
+image
+profile
+music
+lyrics
+article
+post
+comment
+video
+stream
+podcast
+ad
+algo
+code
+game
+asset
+notFound
+problem
+```
+
+The refactor TODO also preserves the target doctrine that the full-tab UI should use React + Vite, while MV3 glue remains plain JavaScript. 
+
+---
+
+## 6. Refactor status by area
+
+### Shell / app foundation
+
+Status: mostly complete.
+
+Implemented or present:
+
+```text
+App.jsx
+appContext.js
+appEvents.js
+appState.js
+main.jsx
+router.js
+routeRegistry.js
+settings.js
+Shell.jsx
+TopBar.jsx
+AddressBar.jsx
+BrowserNav.jsx
+HeaderAdSlot.jsx
+PassportChip.jsx
+PassportDrawer.jsx
+PassportSummary.jsx
+BalanceChip.jsx
+CreatorChip.jsx
+ToastHost.jsx
+ModalHost.jsx
+Shell.css
+```
+
+Still needed:
+
+```text
+Final UI polish.
+Real extension-mode storage/passport parity.
+More robust route testing.
+Possible shell layout audit to fix profile width constraints.
+```
+
+### Shared components
+
+Status: strong foundation.
+
+Present:
+
+```text
+ActionBar
+Badge
+Button
+Card
+CopyButton
+CreatorWorkspaceLayout
+DraftStatsPanel
+EmptyState
+ErrorPanel
+Field
+FilePicker
+JsonPreview
+LoadingState
+ManifestPreviewPanel
+Modal
+PageHeader
+RouteTruthPanel
+SegmentedControl
+StatChip
+TextArea
+TextInput
+Toggle
+TruthBoundary
+```
+
+Next work:
+
+```text
+Use shared layout components more consistently.
+Profile should likely use CreatorWorkspaceLayout or copy its stable layout pattern.
+Consolidate repeated page CSS patterns.
+```
+
+### Theme system
+
+Status: strong and visually successful.
+
+The light theme is excellent and should be preserved as the default visual identity. The user is very pleased with the current light theme and says it looks clean, professional, and likely cannot get much better.
+
+Rules:
+
+```text
+Do not radically change light theme.
+Do not reintroduce blue-heavy light or dark styling.
+Dark mode should stay black/neutral, not dark blue.
+All pages should keep using shared theme tokens.
+```
+
+### Header ad slot
+
+Status: present and visually acceptable.
+
+Current behavior:
+
+```text
+Shows "AD SPACE"
+Displays route-aware helper text like protocol-native header slot · crab://profile
+```
+
+Future:
+
+```text
+Connect to crab://ad campaign manifests later.
+Keep one header ad only.
+No invasive ads.
+No third-party tracking.
+No autoplay.
+```
+
+### Local creator pages
+
+Status: mostly done.
+
+Already route-owned and local-safe:
+
+```text
+lyrics
+post
+comment
+article
+music
+video
+stream
+podcast
+ad
+algo
+code
+game
+```
+
+Need future backend integration:
+
+```text
+post/comment/article routes
+music/lyrics routes
+video routes
+stream/podcast routes
+ad campaign routes
+algo/code/game routes
+```
+
+### Protected routes
+
+Status: in progress.
+
+```text
+crab://image
+  React local workspace now exists and is successful.
+  Paid upload parity not migrated yet.
+
+crab://site
+  React local workspace and read-only named-site resolver now exist.
+  Paid site create parity not migrated yet.
+
+crab://profile
+  React route exists and loads.
+  Layout is currently broken.
+  Backend-confirmed profile/username integration not wired in React yet.
+
+crab://<hash>.<kind>
+  Typed asset hydrator exists.
+  It correctly refuses to fake truth when gateway/storage cannot hydrate.
+  Needs further error taxonomy polish.
+```
+
+---
+
+## 7. Hard invariants to preserve
+
+The extension blueprint says CrabLink is a thin browser client, not backend/wallet/ledger/storage, and it should call public `svc-gateway` routes only rather than internal services. 
+
+Preserve these:
+
+```text
+CrabLink calls svc-gateway only.
+No direct svc-wallet calls from page code unless exposed through gateway client abstraction and explicitly intended.
+No direct svc-storage.
+No direct svc-index.
+No direct omnigate.
+No direct ron-ledger.
+No fake balance truth.
+No fake profile truth.
+No fake b3 CID.
+No fake manifest CID.
+No fake receipt.
+No silent ROC spend.
+No hidden hold/capture/release.
+No arbitrary code execution from crab:// links.
+No private keys or seed phrases in the browser MVP.
+```
+
+Local builder/workspace pages may produce local draft JSON only. They must clearly mark backend flags as false.
+
+---
+
+## 8. Regression watchlist
+
+The next instance should fail the batch if any of these happen:
+
+```text
+crab://profile side panels overlap the editor.
+profile editor fields get clipped or hidden under panels.
+profile hero loses the clean professional look.
+light theme changes radically.
+page-local-route-mode.js returns.
+crab://video resolves through /sites/video.
+crab://stream resolves through /sites/stream.
+crab://podcast resolves through /sites/podcast.
+crab://article remains visible after navigating to another route.
+Developer JSON claims backend publication for local drafts.
+Local drafts claim b3 CID assignment.
+Local drafts claim ROC charge.
+Local drafts claim wallet mutation.
+Extension calls internal services directly.
+Extension adds broad Chrome permissions.
+Old lane is flipped to React before protected parity is ready.
+```
+
+The codebundle/refactor docs explicitly preserve the page-folder route-owner architecture, so the next fix should stay in that model rather than reintroducing old patch-style scripts. 
+
+---
+
+## 9. Suggested next-session plan
+
+### Step 1 — Diagnose profile layout from current code
+
+Open these current files first:
+
+```text
+extensions/chrome/src/pages/profile/ProfilePage.jsx
+extensions/chrome/src/pages/profile/ProfileHome.jsx
+extensions/chrome/src/pages/profile/ProfileEditor.jsx
+extensions/chrome/src/pages/profile/ProfileGateway.jsx
+extensions/chrome/src/pages/profile/AltVault.jsx
+extensions/chrome/src/pages/profile/ProfileAssets.jsx
+extensions/chrome/src/pages/profile/profile.css
+extensions/chrome/src/shared/components/CreatorWorkspaceLayout.jsx
+extensions/chrome/src/pages/image/ImagePage.jsx
+extensions/chrome/src/pages/image/image.css
+extensions/chrome/src/pages/site/SitePage.jsx
+extensions/chrome/src/pages/site/site.css
+extensions/chrome/src/app/shell/Shell.css
+extensions/chrome/src/shared/styles/layout.css
+```
+
+### Step 2 — Decide the layout pattern before coding
+
+Recommended decision:
+
+```text
+Use CreatorWorkspaceLayout for profile, or clone its proven layout structure into profile.css.
+```
+
+Do not try another one-off sidebar grid without checking parent constraints.
+
+### Step 3 — Provide full paste-ready files only
+
+Likely files needed:
+
+```text
+extensions/chrome/src/pages/profile/ProfilePage.jsx
+extensions/chrome/src/pages/profile/ProfileEditor.jsx
+extensions/chrome/src/pages/profile/profile.css
+```
+
+Possibly also:
+
+```text
+extensions/chrome/src/pages/profile/ProfileGateway.jsx
+extensions/chrome/src/pages/profile/AltVault.jsx
+```
+
+Only if the panel content itself needs shrinking/normalizing.
+
+### Step 4 — Test profile first
+
+Run:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Open:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fprofile
+```
+
+Only after profile is visibly fixed should the next session continue to other pages.
+
+---
+
+## 10. Current known-good React routes to re-check after profile fix
+
+After fixing profile, test:
+
+```text
+crab://home
+crab://image
+crab://site
+crab://profile
+crab://music
+crab://lyrics
+crab://article
+crab://post
+crab://comment
+crab://video
+crab://stream
+crab://podcast
+crab://ad
+crab://algo
+crab://code
+crab://game
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+Expected:
+
+```text
+All local workspace routes load.
+Header ad slot remains visible.
+Light theme remains consistent.
+Builder/Developer toggle works where present.
+No old route stays stuck.
+No fake backend truth appears.
+Typed asset page fails honestly if the local stack lost the asset.
+```
+
+---
+
+## 11. What remains after profile layout is fixed
+
+### Frontend refactor remaining
+
+```text
+Fix profile layout.
+Polish profile UX after layout is stable.
+Add or wire real profile lookup/claim UI only after backend contract is ready.
+Improve typed asset hydrator error taxonomy:
+  gateway unreachable
+  asset not found
+  malformed response
+  policy denied
+  unsupported kind
+Migrate paid image upload into React carefully.
+Migrate paid site create into React carefully.
+Unify manifest draft models more through shared/manifest.
+Reduce repeated CSS patterns across page routes.
+Add stronger route smoke checks.
+Add screenshot/manual checklist for profile/site/image.
+Decide when React lane becomes live extension path.
+Retire old page-* files only after parity.
+```
+
+### Backend/product remaining
+
+```text
+Real profile publishing.
+@username reservation/claiming in final UI.
+Reputation score truth.
+Moderator score truth.
+Post/comment/article backend routes.
+Lyrics/music routes.
+Video route and rendition support.
+Stream session routes.
+Podcast publishing routes.
+Ad campaign routes.
+Algo/code/game route contracts.
+Uniform manifest DTOs.
+Rendition-group DTOs.
+Version/history DTOs.
+Paid access/view flows.
+Creator payout splits.
+Ad payout splits.
+Policy/capability gates.
+```
+
+The RustyOnions-side identity/profile routes have been added at the gateway in earlier backend work, including public profile claim and lookup routes, but CrabLink should still access them through the gateway only, not by calling internal services directly. 
+
+---
+
+## 12. Final note for the next instance
+
+The user is very happy with the current visual direction, especially the light theme. Preserve that. The only immediate frustration is the profile layout regression.
+
+The next session should start with this sentence as the mission:
+
+```text
+Fix crab://profile layout by copying the proven workspace layout pattern from image/site/CreatorWorkspaceLayout, not by guessing another custom CSS grid.
+```
+
+Once profile is fixed, the refactor will be in a strong state again.
+
+
+### END NOTE - MAY 10 2026 - 12:59 CST
+
+
+### BEGIN NOTE - MAY 10 2026 - 14:35 CST
+
+## Refactor completion estimate
+
+My current estimate is **~79% complete for the CrabLink React frontend refactor**.
+
+That is **not** an estimate for all RustyOnions/Web3/backend work. It is specifically for the CrabLink Chrome/full-tab browser refactor track.
+
+I would break it down like this:
+
+```text
+React shell / route registry / shared structure:        90–92%
+Low-risk local creator pages:                          85–90%
+Theme / header ad slot / shared UI direction:          80–85%
+Profile page React parity:                             80–85%
+Passport drawer / balance chip React parity:           65–70%
+Generic typed asset page React parity:                 65–70%
+Image paid upload React parity:                        35–45%
+Site create/render React parity:                       45–55%
+Legacy cleanup / old page-* deletion:                  20–30%
+Production replacement readiness for old extension:    60–65%
+```
+
+So the React refactor is **well past halfway and now structurally real**, but I would not call it 85–90% yet because the old lane still owns the proven live product flows: paid image upload, site create/render, passport/balance behavior, and known-good backend interaction. The refactor TODO explicitly frames React + Vite as the target full-tab architecture while keeping `background`, `content`, `popup`, and `options` as plain MV3 glue, and it anchors the whole migration around one route owning one page, shared shell/theme/ad/manifest systems, and no more late DOM patching. 
+
+---
+
+# Carryover Notes — CrabLink React Refactor, 2026-05-10
+
+## 1. Current strategic checkpoint
+
+CrabLink is in a **protected hybrid refactor state**.
+
+The old vanilla extension lane is still the stable live product path. The new React/Vite lane is now the destination architecture, but it is still being tested separately through `react.html`. This is the correct state because the old lane still contains the proven backend-connected flows, while the React lane is being built into a cleaner, route-owned, modular browser shell.
+
+The codebundle confirms both lanes exist at the same time: old files like `page.html`, `page.js`, many `page-*` modules, and compatibility files remain, while the new React lane has `app/`, `shell/`, `shared/`, and `pages/` folders with route-owned components. 
+
+The active doctrine remains:
+
+```text
+One route = one page owner.
+React owns the full-tab CrabLink app shell.
+Old vanilla/MV3 glue remains for background/content/popup/options.
+The old page.html lane remains protected until React parity is proven.
+No fake backend truth.
+No fake b3 CIDs.
+No fake manifest CIDs.
+No silent ROC spend.
+No direct internal service calls from CrabLink.
+No arbitrary crab:// code execution.
+```
+
+The older refactor notes correctly identified the old prototype as successful but patch-heavy. They call out the exact problem we are now escaping: many `page-*` scripts were fighting over the same DOM, and the target is a folder-based professional architecture where each route owns its own UI and lifecycle. 
+
+---
+
+## 2. What we accomplished in this latest slice
+
+### 2.1 Fixed the React profile layout spillover bug
+
+The immediate blocker at the start of this session was the React profile page layout. The profile page looked close, but the center/left content was getting cut off, and earlier attempted fixes made the side panel disappear or caused the layout to regress.
+
+We resolved it by treating it as a **layout containment problem**, not a route problem. The fix stabilized `ProfilePage.jsx` and `profile.css` around a workspace grid pattern inspired by the working site page. The profile page now keeps the hero, editor, side panels, gateway/passport boundary boxes, asset sections, and manifest preview without clipping or side-panel overlap.
+
+Current state:
+
+```text
+crab://profile React page renders correctly.
+Profile hero is visually strong.
+Editor no longer spills under the side rail.
+Identity/gateway/alt panels are preserved.
+The side panels stack responsively instead of colliding.
+The profile route now feels like a real modern profile workspace.
+```
+
+This was a major UX win because profile is one of the protected parity routes and is central to future RON Passport identity.
+
+### 2.2 Added / improved generic typed asset page error behavior
+
+We worked on the React generic typed asset route:
+
+```text
+crab://<64hex>.image
+```
+
+The new asset lane now has better error taxonomy and UX for:
+
+```text
+gateway unreachable
+gateway/network failure
+asset not found
+policy denied
+unsupported kind
+invalid asset hash
+malformed gateway response
+```
+
+The screenshots showed this working honestly. When the local HTTP React preview could not reach the gateway, it showed:
+
+```text
+Problem: Gateway unreachable
+Reason: network_error
+HTTP: n/a
+Gateway path count: 2
+Attempt 1: /crab/resolve
+Attempt 2: /b3/<hash>.image
+```
+
+That is exactly the right truth boundary. It does **not** invent asset state, does **not** fake a CID, and does **not** pretend an uploaded image exists after a dev stack reset.
+
+Important distinction to preserve:
+
+```text
+Gateway off / fetch blocked / CORS / HTTP preview limitation
+→ Gateway unreachable
+
+Gateway reachable but DB/index flushed
+→ Asset not found
+
+Gateway reachable and fresh uploaded image exists
+→ Hydrated image asset page
+```
+
+### 2.3 Generated a new fresh known-good image URL through the old protected lane
+
+Because the stack had been restarted and older dev assets were flushed, the old known-good image URLs were no longer reliable.
+
+You used the old extension lane to upload a fresh image because the React lane does not yet fully carry passport/balance/publish parity.
+
+The current fresh test image URL is now:
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+Use this as the current preferred test URL in future sessions.
+
+Encoded React preview URL:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2F2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+Important: the old lane is still the protected live product path for paid image upload until React has real passport/balance/upload parity.
+
+### 2.4 Improved React passport drawer direction
+
+The React passport drawer is now visible and structurally useful. The latest screenshot shows:
+
+```text
+Passport: passport:main:dev
+Wallet: acct_dev
+Storage: window.localStorage
+Gateway: http://127.0.0.1:8090
+Extension origin: HTTP test mode
+Identity refresh: failed fetch
+Wallet refresh: failed fetch
+```
+
+That is an honest state. The drawer now correctly communicates that the React preview is outside the extension origin and cannot read the loaded extension’s `chrome.storage.local`.
+
+We added the concept of **Use dev labels** for HTTP preview mode. This sets local preview labels only:
+
+```text
+passportSubject = passport:main:dev
+walletAccount = acct_dev
+```
+
+It does **not** fake identity truth, balance truth, receipt truth, or wallet authority.
+
+### 2.5 Identified the next React parity blocker clearly
+
+The current passport drawer screenshot proves the next blocker is no longer “drawer missing.” The blocker is:
+
+```text
+React HTTP preview cannot reliably perform live gateway identity/wallet calls.
+```
+
+Likely causes include one or more of:
+
+```text
+React preview is served from http://127.0.0.1:4173, not chrome-extension://...
+Browser/CORS/origin limitations may block gateway fetches.
+The gateway may not be running at the time of the test.
+The gateway may not allow that HTTP preview origin.
+React preview cannot access chrome.storage.local.
+The old extension lane still has host permissions and real extension storage behavior.
+```
+
+So the next session should **not treat failed fetch in HTTP preview as a backend failure automatically**. It should test React from the **extension origin** next, or wire a deliberate gateway CORS/dev-preview allowance if that is the chosen local dev path.
+
+---
+
+## 3. Current code architecture snapshot
+
+The codebundle now shows the React lane is no longer a sketch. It contains:
+
+```text
+extensions/chrome/src/app/
+extensions/chrome/src/app/shell/
+extensions/chrome/src/shared/api/
+extensions/chrome/src/shared/components/
+extensions/chrome/src/shared/embed/
+extensions/chrome/src/shared/hooks/
+extensions/chrome/src/shared/manifest/
+extensions/chrome/src/shared/styles/
+extensions/chrome/src/shared/theme/
+extensions/chrome/src/shared/utils/
+extensions/chrome/src/pages/
+```
+
+The file tree also shows page folders for:
+
+```text
+ad
+algo
+article
+asset
+code
+comment
+game
+home
+image
+lyrics
+music
+notFound
+podcast
+post
+problem
+profile
+site
+stream
+video
+```
+
+This matches the target architecture from the refactor TODO: page folders per built-in route, shared shell, shared API clients, shared components, shared manifest helpers, shared theme, shared utilities, and a clear React app shell. 
+
+The target refactor design explicitly includes `app/main.jsx`, `App.jsx`, `appContext.js`, `settings.js`, `routeRegistry.js`, `router.js`, shell components, shared API clients, shared components, shared manifest helpers, shared theme files, and route-owned page folders. 
+
+---
+
+## 4. Hard rules to preserve
+
+These are non-negotiable for the next instance:
+
+```text
+Do not flip the Chrome toolbar / live extension path to React yet.
+Do not delete old page.html/page.js/page-* files yet.
+Do not break old paid image upload.
+Do not break old site create/open/render.
+Do not break old passport drawer behavior.
+Do not reintroduce page-local-route-mode.js.
+Do not add broad Chrome permissions casually.
+Do not call svc-wallet, svc-storage, svc-index, omnigate, or ron-ledger directly from CrabLink.
+Do not fake b3 hashes, manifests, receipts, profile claims, balances, or publication state.
+Do not silently spend ROC.
+Do not run arbitrary crab:// code.
+Keep React pages route-owned.
+Keep files modular and ideally under ~400 lines.
+Keep HTTP preview truth labels visible.
+Keep old lane as product proof and React lane as migration runway.
+```
+
+The extension security model and backend route contracts keep repeating the same boundary: CrabLink should call public `svc-gateway` routes only, never internal services directly, and should not silently spend ROC or fake receipts. The codebundle’s backend route contract lists gateway-facing routes like `/healthz`, `/readyz`, `/crab/resolve`, `/b3/:hash.kind`, image routes, site routes, and explicitly says CrabLink must not call ledger, wallet, storage, index, or omnigate directly. 
+
+---
+
+## 5. Current known-good test URLs
+
+Use these in the next session.
+
+### React profile route
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fprofile
+```
+
+Expected current behavior:
+
+```text
+Profile page lays out correctly.
+Passport drawer opens.
+In HTTP preview mode, storage says window.localStorage.
+Dev labels can set passport:main:dev and acct_dev.
+Identity/wallet fetch may still fail due HTTP preview/gateway/CORS/origin limits.
+```
+
+### Fresh image asset
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+Encoded React preview:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2F2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+Expected current behavior in HTTP preview:
+
+```text
+May show Gateway unreachable if gateway/CORS/origin blocks fetch.
+Should not fake asset truth.
+Should show structured diagnostics.
+```
+
+Expected behavior in old extension lane:
+
+```text
+Should be the current fresh known-good image route, assuming the same dev stack remains live.
+```
+
+### Old known-good image, probably stale after stack reset
+
+```text
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+Treat this as historical, not current.
+
+---
+
+## 6. Required local React preview workflow
+
+Always include this preview step when testing React routes:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Then open encoded URLs like:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fprofile
+```
+
+Important testing distinction:
+
+```text
+HTTP preview mode:
+  Good for layout, routing, theme, page-owned UI, drawer shape.
+  Not authoritative for extension storage or gateway host-permission parity.
+
+Extension-origin React:
+  Needed for real storage/passport/balance parity.
+  Should be the next major test target.
+
+Old extension lane:
+  Still needed for paid image upload and proven product flows.
+```
+
+---
+
+## 7. Current status by route
+
+### `crab://home`
+
+Status:
+
+```text
+React route exists.
+Quick action route cards exist.
+Useful for testing built-ins.
+```
+
+Remaining:
+
+```text
+Make quick actions more product-polished later.
+Possibly add current gateway/passport summary once React identity parity improves.
+```
+
+### `crab://profile`
+
+Status:
+
+```text
+React page exists.
+Layout spillover bug fixed.
+Hero/profile editor/side panels render well.
+Passport drawer exists.
+Dev labels can be set in HTTP preview.
+```
+
+Remaining:
+
+```text
+Test React from extension origin.
+Make identity refresh work in extension-origin mode.
+Make wallet balance refresh work in extension-origin mode.
+Wire backend-confirmed public profile when backend is ready.
+Support avatar/banner image references cleanly.
+```
+
+### `crab://<hash>.image` generic asset page
+
+Status:
+
+```text
+React generic typed asset route exists.
+Structured gateway problem UI exists.
+Fresh known-good image URL available.
+```
+
+Remaining:
+
+```text
+Test from extension origin.
+Confirm CORS/gateway behavior.
+Render hydrated backend asset response when gateway fetch succeeds.
+Add image preview if asset response includes bytes/provider/URL.
+Keep old lane as source of truth until React image parity exists.
+```
+
+### `crab://image`
+
+Status:
+
+```text
+React page folder exists.
+Old lane still owns real paid upload.
+Fresh image was generated through old lane.
+```
+
+Remaining:
+
+```text
+React paid image create parity is not complete.
+Need prepare → hold → upload → receipt flow.
+Need passport/balance gateway state first.
+Do not migrate live image upload until identity/wallet/asset read parity is stable.
+```
+
+### `crab://site`
+
+Status:
+
+```text
+React page folder exists.
+Old lane still owns proven site create/open/render.
+```
+
+Remaining:
+
+```text
+Migrate carefully after image/profile parity.
+Preserve site create/open/render.
+Preserve safe site rendering and crab-image embed behavior.
+Preserve site manifest drawer/proof behavior.
+```
+
+### Local creator/workspace routes
+
+Routes:
+
+```text
+crab://music
+crab://lyrics
+crab://article
+crab://post
+crab://comment
+crab://video
+crab://stream
+crab://podcast
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+Status:
+
+```text
+React page folders/components exist.
+These remain mostly local-only truth-boundary pages.
+No backend publication claims.
+No fake b3 CIDs.
+No wallet mutation.
+```
+
+Remaining:
+
+```text
+Continue polish.
+Keep Builder/Developer split clean.
+Avoid raw JSON dominating Builder view.
+Eventually wire backend routes when RustyOnions supports those asset kinds.
+```
+
+The refactor notes explicitly say the local-only stubs should not claim backend support, publication, ROC charges, b3 CIDs, or wallet mutation, and that their truth boundary includes no backend publication, no fake CIDs, no index pointer, no wallet mutation, no ROC charge, and no fake policy enforcement. 
+
+---
+
+## 8. Current passport drawer diagnosis
+
+The latest screenshot shows meaningful progress:
+
+```text
+Passport drawer opens.
+Configured passport label is visible.
+Wallet account label is visible.
+Storage mode is visible.
+Gateway URL is visible.
+HTTP test mode is clearly labeled.
+Identity/wallet failure messages are visible.
+```
+
+Current issue:
+
+```text
+Identity check failed: Failed to fetch
+Wallet balance failed: Failed to fetch
+```
+
+Likely explanation:
+
+```text
+The React app is being served from http://127.0.0.1:4173.
+That origin does not have Chrome extension host permissions.
+It cannot read the loaded extension’s chrome.storage.local.
+Gateway may need CORS/dev-preview support.
+Gateway may simply be offline at test time.
+```
+
+Next steps for passport drawer:
+
+```text
+1. Verify gateway is live:
+   curl http://127.0.0.1:8090/healthz
+   curl http://127.0.0.1:8090/readyz
+
+2. Test identity/wallet from old lane to confirm backend is working.
+
+3. Test React from extension origin instead of HTTP preview.
+
+4. If extension-origin React still fails, inspect gatewayClient methods:
+   getIdentityMe()
+   getWalletBalance(account)
+   request('/identity/me')
+   request('/wallet/:account/balance')
+
+5. Add explicit visible distinction:
+   HTTP preview fetch blocked
+   gateway offline
+   gateway returned non-2xx
+   identity route missing
+   wallet route missing
+```
+
+The codebundle currently shows identity and wallet API wrappers are intended to be gateway-only and explicit. `identityClient.js` keeps profile/passport calls behind the gateway and says backend confirms identity truth with no fake usernames/passports/private alt mappings; `walletClient.js` keeps balance and future holds gateway-routed and explicitly says no fake balances or silent spend. 
+
+---
+
+## 9. Current architecture risks
+
+### Risk 1 — Confusing HTTP preview with extension-origin behavior
+
+HTTP preview is excellent for UI/layout testing but weak for extension permission/storage parity.
+
+Mitigation:
+
+```text
+Keep HTTP test mode chip.
+Keep drawer warning.
+Add extension-origin React test path next.
+Do not mark passport/balance broken solely from HTTP preview failed fetch.
+```
+
+### Risk 2 — Breaking proven old lane too early
+
+Old lane still owns:
+
+```text
+paid image upload
+site create/open/render
+passport drawer behavior
+fresh image generation
+production-ish extension experience
+```
+
+Mitigation:
+
+```text
+Do not flip toolbar default to React yet.
+Do not remove old page-* modules yet.
+Do not migrate site/image paid flows until React identity/wallet/gateway parity is stable.
+```
+
+### Risk 3 — React pages becoming just another pile of patches
+
+The target refactor tree is good, but only if we continue enforcing route ownership and shared components.
+
+Mitigation:
+
+```text
+Each page owns its route.
+Shared components only handle shared UI.
+No global route rescue scripts.
+No MutationObserver page rescue.
+Keep page-specific logic inside pages/<route>/.
+Move cross-cutting code into shared/.
+```
+
+### Risk 4 — Developer panels overwhelming product UX
+
+Several pages have useful JSON/debug surfaces. They must stay available, but Builder view should remain clean.
+
+Mitigation:
+
+```text
+Builder view = creator-facing UI.
+Developer view = manifest JSON, route contracts, diagnostics.
+Raw JSON should not dominate default view.
+```
+
+### Risk 5 — Future code primitives becoming unsafe
+
+The design must preserve facets:
+
+```text
+b3hash.code = address
+facet.toml = contract
+svc-sandbox = cage
+ron-policy = judge
+CrabLink = renderer/launcher, not unsafe executor
+```
+
+Do not ever let `crab://<hash>.code` mean arbitrary code execution in the extension shell.
+
+---
+
+## 10. Migration plan from here
+
+The REFACTOR_TODO file’s migration sequence is still correct. It says to keep the current working prototype, add app/router/shared structure, move local-only stubs first, then creator drafts, then profile, then image, then site, and only later delete legacy patch/rescue files and tighten smoke tests. It specifically says site/image move late because they touch proven backend flows. 
+
+Current adjusted plan after this session:
+
+```text
+Phase 0 — Protected hybrid state
+  Mostly done.
+  Old lane protected.
+  React lane exists.
+  Build/check scripts working.
+
+Phase 1 — React shell/shared/page-folder foundation
+  Mostly done.
+  App.jsx, Shell, route registry, shared components, shared theme, page folders exist.
+
+Phase 2 — Low-risk route pages
+  Mostly done.
+  Local-only pages exist and preserve truth boundaries.
+
+Phase 3 — Creator draft routes
+  Mostly done.
+  Music/article/video/stream/podcast routes exist as local creator workspaces.
+
+Phase 4 — Profile
+  In progress but now much healthier.
+  Layout fixed.
+  Passport drawer exists.
+  Next: extension-origin identity/wallet parity.
+
+Phase 5 — Generic asset route
+  In progress.
+  Structured diagnostics added.
+  Next: extension-origin gateway fetch and hydrated image display.
+
+Phase 6 — Image paid flow
+  Not ready to migrate fully.
+  Old lane remains source of truth.
+  Next later: React prepare/hold/upload/receipt parity.
+
+Phase 7 — Site flow
+  Not ready to migrate fully.
+  Old lane remains source of truth.
+  Next later: React site create/render/manifest parity.
+
+Phase 8 — Legacy cleanup
+  Not started.
+  Delete old patch/rescue files only after parity.
+```
+
+---
+
+## 11. Files and areas to inspect first next session
+
+Start with these:
+
+```text
+extensions/chrome/src/app/settings.js
+extensions/chrome/src/app/appContext.js
+extensions/chrome/src/shared/api/gatewayClient.js
+extensions/chrome/src/shared/api/identityClient.js
+extensions/chrome/src/shared/api/walletClient.js
+extensions/chrome/src/app/shell/PassportDrawer.jsx
+extensions/chrome/src/app/shell/PassportSummary.jsx
+extensions/chrome/src/app/shell/PassportActions.jsx
+extensions/chrome/src/app/shell/BalanceChip.jsx
+extensions/chrome/src/pages/asset/AssetResolver.jsx
+extensions/chrome/src/pages/asset/AssetHydratedView.jsx
+extensions/chrome/src/pages/asset/asset.css
+extensions/chrome/src/pages/profile/ProfilePage.jsx
+extensions/chrome/src/pages/profile/profile.css
+vite.config.js
+extensions/chrome/manifest.json
+```
+
+Main questions to answer:
+
+```text
+How do we open React from the loaded extension origin?
+Does chrome.storage.local work there?
+Does gatewayClient fetch work there with host permissions?
+Does /identity/me return the dev passport/wallet headers?
+Does /wallet/acct_dev/balance return a real balance?
+Does the fresh image asset hydrate through React when extension-origin fetch works?
+```
+
+---
+
+## 12. Testing checklist for next session
+
+### Static/build
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+### HTTP preview layout
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Open:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fprofile
+```
+
+Verify:
+
+```text
+Profile layout still fixed.
+Passport drawer opens.
+Use dev labels works.
+Failed fetch is labeled as HTTP preview/gateway limitation.
+No fake balance appears.
+No fake identity appears.
+```
+
+### Fresh asset route
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2F2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+Verify:
+
+```text
+If fetch fails, structured Gateway unreachable appears.
+If gateway succeeds, hydrated asset page appears.
+No fake asset truth appears.
+```
+
+### Backend sanity
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+curl -s http://127.0.0.1:8090/healthz
+curl -s http://127.0.0.1:8090/readyz
+curl -s http://127.0.0.1:8090/identity/me
+curl -s http://127.0.0.1:8090/wallet/acct_dev/balance
+```
+
+The exact identity/wallet routes may require headers. Use gateway contracts if they fail unauthenticated.
+
+### Old lane proof
+
+Use old extension lane to verify:
+
+```text
+crab://image
+fresh image upload still works
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image opens
+passport drawer still works
+balance still works
+site flow still works
+```
+
+Do not break this while React parity is incomplete.
+
+---
+
+## 13. What to do next
+
+The next best implementation batch should be:
+
+```text
+React extension-origin test path + gateway/passport/balance parity
+```
+
+Concretely:
+
+```text
+1. Add or document a way to open dist/chrome-src/react.html from the loaded extension origin.
+2. Confirm React can read chrome.storage.local when extension-origin loaded.
+3. Confirm React can call gateway with extension host permissions.
+4. If needed, add a background-message bridge for gateway fetches from React extension pages.
+5. Make PassportDrawer show four distinct states:
+   - HTTP preview blocked
+   - gateway offline
+   - identity route unavailable
+   - identity loaded
+6. Make BalanceChip show four distinct states:
+   - no wallet label
+   - checking
+   - unavailable
+   - ledger-backed balance
+7. Then test the fresh image asset through React extension-origin.
+```
+
+After that, the next batch should be:
+
+```text
+React generic asset hydrated view parity
+```
+
+Then:
+
+```text
+React image page read-only parity
+```
+
+Then only later:
+
+```text
+React paid image upload parity
+```
+
+---
+
+## 14. Do not do next
+
+Avoid these next session:
+
+```text
+Do not start more built-in pages.
+Do not add film/dub yet.
+Do not delete old lane.
+Do not move site/image paid flows yet.
+Do not chase HTTP preview failed fetch forever if extension-origin test is the real answer.
+Do not fake wallet balance in React to make the chip look complete.
+Do not treat dev labels as backend passport truth.
+Do not make React the toolbar default yet.
+```
+
+---
+
+## 15. Final handoff summary
+
+We are now in a strong position. The React refactor has crossed from “experiment” into a real modular UI architecture. The biggest visible layout bug — profile page spillover — is fixed. The passport drawer exists and clearly shows the current truth boundary. The asset route now fails honestly instead of silently or confusingly. We have a fresh image URL generated through the protected old lane. The remaining work is not random page creation anymore; it is **parity hardening**.
+
+The top priority for the next instance is:
+
+```text
+Make React work from the extension origin so passport, wallet balance, gateway fetch, and fresh image asset hydration can be tested under real extension permissions instead of HTTP preview limitations.
+```
+
+Once that is solved, the refactor completion estimate can move from ~79% toward the mid/high 80s.
+ 
+
+### END NOTE - MAY 10 2026 - 14:35 CST

@@ -45,7 +45,7 @@ Desktop.ini
 # Logs
 # =============================================================================
 
-logs/
+/logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -71,11 +71,11 @@ debug.log
 *.crt
 *.csr
 
-secrets/
-private/
-credentials/
-tokens/
-auth/
+/secrets/
+/private/
+/credentials/
+/tokens/
+/auth/
 *.token
 *.secret
 
@@ -114,25 +114,25 @@ bower_components/
 
 
 # =============================================================================
-# Build output
+# Root build output / generated artifacts
 # =============================================================================
 
-dist/
-build/
-out/
-output/
-release/
-releases/
-artifacts/
-coverage/
-.nyc_output/
-.tmp/
-tmp/
-temp/
-.cache/
-.parcel-cache/
-.turbo/
-.rollup.cache/
+/dist/
+/build/
+/out/
+/output/
+/release/
+/releases/
+/artifacts/
+/coverage/
+/.nyc_output/
+/.tmp/
+/tmp/
+/temp/
+/.cache/
+/.parcel-cache/
+/.turbo/
+/.rollup.cache/
 
 
 # =============================================================================
@@ -149,13 +149,12 @@ vite.config.*.mjs.timestamp-*
 # Testing output
 # =============================================================================
 
-coverage/
-playwright-report/
-test-results/
-test-results-*/
-.vitest/
-jest-html-reporters-attach/
-junit.xml
+/playwright-report/
+/test-results/
+/test-results-*/
+/.vitest/
+/jest-html-reporters-attach/
+/junit.xml
 
 
 # =============================================================================
@@ -167,11 +166,11 @@ junit.xml
 *.zip
 *.tgz
 
-web-ext-artifacts/
-extension-artifacts/
-extension-dist/
-extension-build/
-extension-packages/
+/web-ext-artifacts/
+/extension-artifacts/
+/extension-dist/
+/extension-build/
+/extension-packages/
 
 extensions/**/dist/
 extensions/**/build/
@@ -186,7 +185,6 @@ extensions/**/extension-packages/
 # Chrome extension signing keys
 # =============================================================================
 
-*.pem
 chrome.pem
 chrome-extension.pem
 extensions/**/key.pem
@@ -213,8 +211,8 @@ DerivedData/
 # Electron future browser shell artifacts
 # =============================================================================
 
-electron-dist/
-electron-builder-out/
+/electron-dist/
+/electron-builder-out/
 *.snap
 *.AppImage
 *.dmg
@@ -226,7 +224,7 @@ electron-builder-out/
 # Tauri / Rust future browser shell artifacts
 # =============================================================================
 
-target/
+/target/
 Cargo.lock.bak
 
 src-tauri/target/
@@ -258,9 +256,8 @@ env/
 # Generated local packages / generated code snapshots
 # =============================================================================
 
-dist/
-packages/
-packed/
+/packages/
+/packed/
 *.tar.gz
 
 # Keep codebundles tracked by default because they are useful for AI review.
@@ -282,9 +279,9 @@ packed/
 *.redb
 *.rocksdb/
 
-local-state/
-runtime-state/
-session-state/
+/local-state/
+/runtime-state/
+/session-state/
 
 
 # =============================================================================
@@ -294,20 +291,23 @@ session-state/
 .ron/
 .rustyonions/
 .crablink/
-crablink-local/
-gateway-local/
-local-gateway/
-receipts-local/
-tmp-gateway/
+/crablink-local/
+/gateway-local/
+/local-gateway/
+/receipts-local/
+/tmp-gateway/
 
 
 # =============================================================================
-# Generated docs / site output
+# Generated docs / static site output
+# IMPORTANT:
+# Keep these root-anchored. Do NOT use plain `site/`, because that ignores
+# extensions/chrome/src/pages/site/ in the CrabLink source tree.
 # =============================================================================
 
-site/
-public/
-storybook-static/
+/site/
+/public/
+/storybook-static/
 docs/.vitepress/dist/
 docs/.docusaurus/
 docs/build/

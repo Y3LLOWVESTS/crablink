@@ -3,6 +3,7 @@
  * RO:WHY — NEXT_LEVEL media-asset foundation; Concerns: DX/SEC; prepare .video UX without pretending backend publication exists.
  * RO:INTERACTS — page.html, page.js shell, chrome.storage.local, future svc-gateway /assets/video/prepare route.
  * RO:INVARIANTS — local draft first; gateway-only prepare attempt; no fake b3 CID; no fake video upload; no wallet mutation; no silent ROC spending.
+ * RO:TRUTH — No b3 CID, No ROC charge, No wallet mutation, and no backend publication claim from local drafts.
  * RO:METRICS — client correlation IDs are generated for prepare attempts.
  * RO:CONFIG — stores crablinkVideoDraftV1 metadata only; selected local video file bytes are not persisted.
  * RO:SECURITY — textContent/createElement only; no private keys; no direct internal service calls; no executable media metadata.

@@ -98,6 +98,84 @@ export class RonClient {
     });
   }
 
+  async claimPassportProfile(body = {}, options = {}) {
+    const passportSubject = String(
+      body.passport_subject || body.passportSubject || this.settings.passportSubject || ''
+    ).trim();
+
+    const requested = normalizeRequestedUsername(
+      body.requested_username ||
+        body.requestedUsername ||
+        body.requested_handle ||
+        body.requestedHandle ||
+        body.username ||
+        body.handle ||
+        this.settings.requestedUsername ||
+        this.settings.requestedHandle ||
+        this.settings.username ||
+        this.settings.handle ||
+        ''
+    );
+
+    if (!passportSubject) {
+      throw new RonClientError('Passport subject is required before claiming a profile.', {
+        route: '/identity/passport/profile/claim'
+      });
+    }
+
+    if (!requested) {
+      throw new RonClientError('@username is required before claiming a profile.', {
+        route: '/identity/passport/profile/claim'
+      });
+    }
+
+    const payload = {
+      passport_subject: passportSubject,
+      requested_username: requested.handle,
+      display_name: cleanProfileText(body.display_name || body.displayName, 64),
+      bio: cleanProfileText(body.bio, 240),
+      avatar_image: cleanProfileText(
+        body.avatar_image || body.avatarImage || body.avatar_crab_url || body.avatarCrabUrl,
+        96
+      )
+    };
+
+    return this.request('/identity/passport/profile/claim', {
+      method: 'POST',
+      body: payload,
+      label: 'Passport profile claim',
+      mutation: true,
+      idempotencyKey:
+        options.idempotencyKey ||
+        body.client_idempotency_key ||
+        body.clientIdempotencyKey ||
+        stableIdempotencyKey('profile-claim', passportSubject, requested.username)
+    });
+  }
+
+  async getPassportProfile(usernameOrHandle, options = {}) {
+    const requested = normalizeRequestedUsername(
+      usernameOrHandle ||
+        options.username ||
+        options.handle ||
+        this.settings.username ||
+        this.settings.handle ||
+        this.settings.requestedUsername ||
+        this.settings.requestedHandle ||
+        ''
+    );
+
+    if (!requested) {
+      throw new RonClientError('@username is required before reading a profile.', {
+        route: '/identity/passport/profile/:username'
+      });
+    }
+
+    return this.request(`/identity/passport/profile/${encodeURIComponent(requested.username)}`, {
+      label: 'Passport profile lookup'
+    });
+  }
+
   async getWalletBalance(account) {
     const walletAccount = String(account || this.settings.walletAccount || '').trim();
 
@@ -482,6 +560,11 @@ export class RonClient {
 
     return headers;
   }
+}
+
+function cleanProfileText(value, maxLength) {
+  const clean = String(value || '').trim();
+  return clean.length > maxLength ? clean.slice(0, maxLength) : clean;
 }
 
 function normalizeRequestedUsername(value) {

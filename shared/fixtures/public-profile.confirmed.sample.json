@@ -1,0 +1,21 @@
+{
+  "schema": "svc-passport.public-profile.v1",
+  "passport_subject": "passport:main:skinnycrabby",
+  "passport_kind": "main",
+  "username": "skinnycrabby",
+  "handle": "@skinnycrabby",
+  "username_status": "confirmed",
+  "display_name": "Skinny Crabby",
+  "bio": "Building the content-addressed creator web.",
+  "avatar_image": "crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image",
+  "profile_crab_url": "crab://@skinnycrabby",
+  "public_profile_cid": null,
+  "reputation_score": null,
+  "moderator_score": null,
+  "warnings": [
+    "public_profile_cid is not published yet",
+    "reputation_score is not computed yet",
+    "moderator_score is not computed yet"
+  ],
+  "updated_at": "2026-05-06T00:00:00Z"
+}

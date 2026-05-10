@@ -1,0 +1,14 @@
+/*
+ * RO:WHAT — Shared modal and drawer styles for CrabLink.
+ * RO:WHY — Replaces append-to-page manifest/debug panels with consistent overlays.
+ * RO:INTERACTS — Modal.jsx, ModalHost.jsx, manifest drawers.
+ * RO:INVARIANTS — modal content must be user-triggered and dismissible.
+ * RO:TEST — visual/manual modal smoke.
+ */
+
+.cl-modal {
+  border: 1px solid var(--cl-border);
+  border-radius: 18px;
+  background: var(--cl-card);
+}
+

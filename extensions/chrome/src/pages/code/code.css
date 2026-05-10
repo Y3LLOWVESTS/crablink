@@ -1,0 +1,339 @@
+/*
+ * RO:WHAT — Route-owned styling for the React crab://code local code primitive workspace.
+ * RO:WHY — Keeps code/facet-specific layout near its page owner while using shared CrabLink theme tokens.
+ * RO:INTERACTS — CodePage.jsx, CodeDraft.jsx, CodeFacet.jsx, FacetContractPreview.jsx, shared theme CSS.
+ * RO:INVARIANTS — CSS only; no backend truth; no execution behavior; no hardcoded product state.
+ * RO:TEST — visual/manual crab://code smoke in light and dark mode.
+ */
+
+.code-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.code-draft-card {
+  min-width: 0;
+}
+
+.code-draft-intro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.code-form-grid,
+.code-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 0.9rem;
+}
+
+.code-form-grid-compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.code-form-section {
+  display: grid;
+  gap: 0.8rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 22px;
+  background: var(--cl-surface);
+}
+
+[data-theme='dark'] .code-form-section {
+  background: #050505;
+}
+
+.code-form-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.code-form-section-head h3 {
+  margin: 0;
+  color: var(--cl-text);
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.code-builder-note,
+.code-facet-rule {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.8rem;
+  border: 1px dashed var(--cl-border);
+  border-radius: 16px;
+  background: var(--cl-card);
+  color: var(--cl-muted);
+  line-height: 1.45;
+}
+
+.code-builder-note strong,
+.code-facet-rule strong {
+  color: var(--cl-text);
+}
+
+.code-facet-rule div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.code-inline-dev {
+  margin-top: 1rem;
+}
+
+.code-actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cl-border);
+}
+
+.code-action-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+  color: var(--cl-muted);
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.code-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: flex-end;
+}
+
+.code-facet-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  align-content: start;
+}
+
+.code-facet-stats div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.72rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 16px;
+  background: var(--cl-card);
+}
+
+.code-facet-stats span {
+  color: var(--cl-muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.code-facet-stats strong {
+  color: var(--cl-text);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.code-preview {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.code-preview-hero {
+  display: flex;
+  gap: 0.75rem;
+  align-items: start;
+  justify-content: space-between;
+  padding: 0.9rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 20px;
+  background: var(--cl-surface);
+}
+
+[data-theme='dark'] .code-preview-hero {
+  background: #050505;
+}
+
+.code-preview-hero h3,
+.code-preview-hero p {
+  margin: 0;
+}
+
+.code-preview-hero h3 {
+  color: var(--cl-text);
+  font-size: 1.1rem;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+
+.code-preview-hero p {
+  color: var(--cl-muted);
+  line-height: 1.45;
+}
+
+.code-preview-owner {
+  margin-bottom: 0.25rem !important;
+  color: var(--cl-muted);
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.code-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.code-summary-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.code-summary-row {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.72rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 16px;
+  background: var(--cl-card);
+}
+
+.code-summary-row span {
+  color: var(--cl-muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.code-summary-row strong {
+  overflow: hidden;
+  color: var(--cl-text);
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-token-section {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.code-token-list,
+.code-linked-list,
+.code-toml-section,
+.code-safety-list {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 18px;
+  background: var(--cl-surface);
+}
+
+[data-theme='dark'] .code-token-list,
+[data-theme='dark'] .code-linked-list,
+[data-theme='dark'] .code-toml-section,
+[data-theme='dark'] .code-safety-list {
+  background: #050505;
+}
+
+.code-token-list h3,
+.code-linked-list h3,
+.code-toml-section h3,
+.code-safety-list h3 {
+  margin: 0;
+  color: var(--cl-text);
+  font-size: 0.95rem;
+}
+
+.code-token-list p,
+.code-linked-list p {
+  margin: 0;
+  color: var(--cl-muted);
+  line-height: 1.45;
+}
+
+.code-token-list div,
+.code-linked-list div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.code-token-list span,
+.code-linked-list span {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 999px;
+  background: var(--cl-card);
+  color: var(--cl-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.code-toml-preview {
+  max-width: 100%;
+  overflow: auto;
+  margin: 0;
+  padding: 0.85rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 16px;
+  background: var(--cl-card);
+  color: var(--cl-text);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  white-space: pre;
+}
+
+.code-safety-list ul {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--cl-muted);
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .code-form-grid,
+  .code-signal-grid,
+  .code-form-grid-compact,
+  .code-summary-list,
+  .code-token-section {
+    grid-template-columns: 1fr;
+  }
+
+  .code-preview-hero {
+    display: grid;
+  }
+
+  .code-actions {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .code-action-buttons {
+    justify-content: stretch;
+  }
+
+  .code-action-buttons .cl-button {
+    width: 100%;
+  }
+}

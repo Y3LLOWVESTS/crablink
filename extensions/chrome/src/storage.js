@@ -1,7 +1,7 @@
 /**
  * RO:WHAT — Stores CrabLink Chrome settings and safe identity/wallet/product display labels.
  * RO:WHY — App Integration; Concerns: DX/SEC/RES; keep browser state separate from backend truth.
- * RO:INTERACTS — popup.js, options.js, ronClient.js, chrome.storage.local.
+ * RO:INTERACTS — popup.js, options.js, ronClient.js, safe local storage adapter.
  * RO:INVARIANTS — no private keys; no seed phrases; no fake ROC truth; gateway-only labels.
  * RO:METRICS — none; UI displays last identity/balance/product timestamps.
  * RO:CONFIG — gatewayUrl, timeout, dev token, passport/wallet display labels.
@@ -52,8 +52,98 @@ export const DEFAULT_SETTINGS = Object.freeze({
 
 const DURABLE_KEYS = Object.keys(DEFAULT_SETTINGS);
 
+const FALLBACK_STORAGE_KEY = 'crablink.storage.v1';
+let memoryFallbackStorage = {};
+
+export function hasChromeLocalStorage() {
+  return Boolean(globalThis.chrome?.storage?.local?.get && globalThis.chrome?.storage?.local?.set);
+}
+
+export function storageBackendName() {
+  if (hasChromeLocalStorage()) {
+    return 'chrome.storage.local';
+  }
+
+  if (hasLocalStorage()) {
+    return 'window.localStorage';
+  }
+
+  return 'memory';
+}
+
+async function storageGet(keys) {
+  const safeKeys = Array.isArray(keys) ? keys : [keys].filter(Boolean);
+
+  if (hasChromeLocalStorage()) {
+    return chrome.storage.local.get(safeKeys);
+  }
+
+  const state = readFallbackState();
+
+  if (!safeKeys.length) {
+    return { ...state };
+  }
+
+  return Object.fromEntries(safeKeys.map((key) => [key, state[key]]));
+}
+
+async function storageSet(values) {
+  const safeValues = values && typeof values === 'object' ? values : {};
+
+  if (hasChromeLocalStorage()) {
+    await chrome.storage.local.set(safeValues);
+    return;
+  }
+
+  const next = {
+    ...readFallbackState(),
+    ...safeValues,
+  };
+
+  writeFallbackState(next);
+}
+
+function readFallbackState() {
+  if (!hasLocalStorage()) {
+    return { ...memoryFallbackStorage };
+  }
+
+  try {
+    const raw = globalThis.localStorage.getItem(FALLBACK_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (_error) {
+    return { ...memoryFallbackStorage };
+  }
+}
+
+function writeFallbackState(next) {
+  memoryFallbackStorage = {
+    ...next,
+  };
+
+  if (!hasLocalStorage()) {
+    return;
+  }
+
+  try {
+    globalThis.localStorage.setItem(FALLBACK_STORAGE_KEY, JSON.stringify(memoryFallbackStorage));
+  } catch (_error) {
+    // localStorage can be unavailable in strict extension/browser contexts. Memory fallback remains usable.
+  }
+}
+
+function hasLocalStorage() {
+  try {
+    return Boolean(globalThis.localStorage?.getItem && globalThis.localStorage?.setItem);
+  } catch (_error) {
+    return false;
+  }
+}
+
+
 export async function getSettings() {
-  const stored = await chrome.storage.local.get(DURABLE_KEYS);
+  const stored = await storageGet(DURABLE_KEYS);
   const merged = {
     ...DEFAULT_SETTINGS,
     ...stored
@@ -70,13 +160,13 @@ export async function saveSettings(next) {
     schemaVersion: SETTINGS_SCHEMA_VERSION
   });
 
-  await chrome.storage.local.set(merged);
+  await storageSet(merged);
   return merged;
 }
 
 export async function resetSettings() {
   const next = normalizeSettings(DEFAULT_SETTINGS);
-  await chrome.storage.local.set(next);
+  await storageSet(next);
   return next;
 }
 
@@ -87,7 +177,7 @@ export async function clearDevToken() {
     authToken: ''
   });
 
-  await chrome.storage.local.set(next);
+  await storageSet(next);
   return next;
 }
 
@@ -119,7 +209,7 @@ export async function clearIdentityState() {
     rocBalanceReason: ''
   });
 
-  await chrome.storage.local.set(next);
+  await storageSet(next);
   return next;
 }
 
@@ -130,7 +220,7 @@ export async function rememberLastCrabUrl(url) {
     lastCrabUrl: cleanString(url)
   });
 
-  await chrome.storage.local.set(next);
+  await storageSet(next);
   return next;
 }
 
@@ -150,7 +240,7 @@ export async function saveUsernameDraft(value) {
     usernameUpdatedAt: new Date().toISOString()
   });
 
-  await chrome.storage.local.set(next);
+  await storageSet(next);
   return next;
 }
 
@@ -184,7 +274,7 @@ export async function saveIdentityState(payload) {
     lastIdentityCheckAt: new Date().toISOString()
   });
 
-  await chrome.storage.local.set(next);
+  await storageSet(next);
   return next;
 }
 
@@ -202,7 +292,7 @@ export async function saveBalanceState(payload) {
     rocBalanceUpdatedAt: new Date().toISOString()
   });
 
-  await chrome.storage.local.set(next);
+  await storageSet(next);
   return next;
 }
 
@@ -225,7 +315,7 @@ export async function addRecentReceipt(receipt) {
     recentReceipts: receipts
   });
 
-  await chrome.storage.local.set(next);
+  await storageSet(next);
   return next;
 }
 
@@ -276,7 +366,7 @@ export async function rememberProductState(payload = {}) {
       crabUrl || assetCid || manifestCid || siteName || schema || current.lastProductSummary
   });
 
-  await chrome.storage.local.set(next);
+  await storageSet(next);
   return next;
 }
 

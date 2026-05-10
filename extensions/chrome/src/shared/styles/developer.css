@@ -1,0 +1,13 @@
+/*
+ * RO:WHAT — Developer-view styles for CrabLink.
+ * RO:WHY — Keeps JSON/contracts/diagnostics available without dominating Builder View.
+ * RO:INTERACTS — JsonPreview.jsx and Developer panels.
+ * RO:INVARIANTS — developer data must not claim fake backend truth.
+ * RO:TEST — visual/manual developer toggle smoke.
+ */
+
+.cl-json {
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+

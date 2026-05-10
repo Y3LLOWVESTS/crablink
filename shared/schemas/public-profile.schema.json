@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rustyonions.local/schemas/public-profile.schema.json",
+  "title": "RustyOnions Public Profile",
+  "description": "Gateway-returned public profile DTO consumed by CrabLink. This schema is for validation and UI expectations only; backend remains authoritative.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema",
+    "username",
+    "handle",
+    "username_status"
+  ],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "enum": [
+        "svc-passport.public-profile.v1",
+        "ron.passport.public-profile.v1",
+        "crablink.cached-public-profile.v1"
+      ]
+    },
+    "passport_subject": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "passport_kind": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "main",
+        "alt",
+        "anonymous",
+        "pseudonymous",
+        null
+      ]
+    },
+    "username": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]{2,31}$"
+    },
+    "handle": {
+      "type": "string",
+      "pattern": "^@[a-z0-9][a-z0-9_.-]{2,31}$"
+    },
+    "username_status": {
+      "type": "string",
+      "enum": [
+        "confirmed",
+        "requested",
+        "rejected",
+        "unavailable",
+        "backend_unknown",
+        "local_draft"
+      ]
+    },
+    "display_name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 96
+    },
+    "bio": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 512
+    },
+    "avatar_image": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^(crab://[0-9a-f]{64}\\.image)?$"
+    },
+    "profile_crab_url": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^(crab://@?[a-z0-9][a-z0-9_.-]{2,31})?$"
+    },
+    "public_profile_cid": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^(b3:[0-9a-f]{64})?$"
+    },
+    "reputation_score": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "moderator_score": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "updated_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

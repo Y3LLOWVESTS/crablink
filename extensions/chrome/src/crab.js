@@ -4,6 +4,7 @@
 const HASH_RE = /^[0-9a-fA-F]{64}$/;
 const B3_RE = /^b3:([0-9a-fA-F]{64})$/;
 const ASSET_KIND_RE = /^[a-z][a-z0-9_-]{0,31}$/;
+const USERNAME_RE = /^[a-z0-9][a-z0-9_.-]{2,31}$/;
 const CRAB_URL_PREFIX = 'crab://';
 const MAX_SITE_NAME_LEN = 128;
 
@@ -23,6 +24,36 @@ const KNOWN_ASSET_KINDS = new Set([
   'app',
   'file',
   'manifest'
+]);
+
+const RESERVED_PROFILE_NAMES = new Set([
+  'admin',
+  'api',
+  'app',
+  'article',
+  'asset',
+  'assets',
+  'b3',
+  'comment',
+  'crab',
+  'gateway',
+  'image',
+  'mail',
+  'manifest',
+  'mod',
+  'moderator',
+  'music',
+  'passport',
+  'post',
+  'profile',
+  'profiles',
+  'root',
+  'site',
+  'sites',
+  'support',
+  'sys',
+  'system',
+  'wallet'
 ]);
 
 export function normalizeCrabInput(input, options = {}) {
@@ -67,6 +98,11 @@ export function parseCrabUrl(value, defaultKind = 'image') {
     return makeAssetResult(asset.hash, asset.kind, 'crab-asset');
   }
 
+  const profile = parseProfileBody(body);
+  if (profile) {
+    return makeProfileResult(profile.username, profile.inputKind, raw);
+  }
+
   const siteName = normalizeSiteName(body);
   if (siteName) {
     return {
@@ -95,6 +131,15 @@ export function formatCrabAsset(hash, kind = 'image') {
   return `crab://${normalizeHash(hash)}.${normalizeAssetKind(kind)}`;
 }
 
+export function formatProfileCrabUrl(usernameOrHandle) {
+  const profile = normalizeProfileUsername(usernameOrHandle);
+  if (!profile.ok) {
+    throw new Error(profile.error || '@username is invalid.');
+  }
+
+  return `crab://${profile.handle}`;
+}
+
 export function normalizeHash(hash) {
   const value = String(hash || '').trim();
 
@@ -116,6 +161,81 @@ export function normalizeAssetKind(kind) {
   }
 
   return value;
+}
+
+export function normalizeProfileUsername(value) {
+  const username = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^crab:\/\//, '')
+    .replace(/^profile\//, '')
+    .replace(/\.profile$/, '')
+    .replace(/^@+/, '')
+    .replace(/\/+$/, '');
+
+  if (!username) {
+    return {
+      ok: false,
+      username: '',
+      handle: '',
+      url: '',
+      profilePageUrl: '',
+      error: ''
+    };
+  }
+
+  if (!USERNAME_RE.test(username)) {
+    return {
+      ok: false,
+      username: '',
+      handle: '',
+      url: '',
+      profilePageUrl: '',
+      error: '@username must be 3–32 lowercase characters and may use letters, numbers, underscore, hyphen, and dot.'
+    };
+  }
+
+  if (username.includes('..')) {
+    return {
+      ok: false,
+      username: '',
+      handle: '',
+      url: '',
+      profilePageUrl: '',
+      error: '@username cannot contain consecutive dots.'
+    };
+  }
+
+  if (username.endsWith('.') || username.endsWith('-') || username.endsWith('_')) {
+    return {
+      ok: false,
+      username: '',
+      handle: '',
+      url: '',
+      profilePageUrl: '',
+      error: '@username cannot end with dot, hyphen, or underscore.'
+    };
+  }
+
+  if (RESERVED_PROFILE_NAMES.has(username)) {
+    return {
+      ok: false,
+      username: '',
+      handle: '',
+      url: '',
+      profilePageUrl: '',
+      error: `@${username} is reserved.`
+    };
+  }
+
+  return {
+    ok: true,
+    username,
+    handle: `@${username}`,
+    url: `crab://@${username}`,
+    profilePageUrl: `crab://${username}.profile`,
+    error: ''
+  };
 }
 
 export function isKnownAssetKind(kind) {
@@ -168,6 +288,57 @@ function parseAssetBody(body) {
   };
 }
 
+function parseProfileBody(body) {
+  const clean = String(body || '')
+    .trim()
+    .replace(/^\/+/, '')
+    .replace(/\/+$/, '');
+
+  if (!clean) {
+    return null;
+  }
+
+  const lower = clean.toLowerCase();
+
+  if (lower.startsWith('@')) {
+    const parsed = normalizeProfileUsername(lower);
+    if (!parsed.ok) {
+      throw new Error(parsed.error || 'Invalid @username profile URL.');
+    }
+
+    return {
+      username: parsed.username,
+      inputKind: 'crab-profile-handle'
+    };
+  }
+
+  if (lower.startsWith('profile/')) {
+    const parsed = normalizeProfileUsername(lower.slice('profile/'.length));
+    if (!parsed.ok) {
+      throw new Error(parsed.error || 'Invalid profile username URL.');
+    }
+
+    return {
+      username: parsed.username,
+      inputKind: 'crab-profile-path'
+    };
+  }
+
+  if (lower.endsWith('.profile')) {
+    const parsed = normalizeProfileUsername(lower.slice(0, -'.profile'.length));
+    if (!parsed.ok) {
+      throw new Error(parsed.error || 'Invalid .profile URL.');
+    }
+
+    return {
+      username: parsed.username,
+      inputKind: 'crab-profile-page'
+    };
+  }
+
+  return null;
+}
+
 function makeAssetResult(hash, kind, inputKind) {
   const normalizedHash = normalizeHash(hash);
   const normalizedKind = normalizeAssetKind(kind);
@@ -179,7 +350,26 @@ function makeAssetResult(hash, kind, inputKind) {
     kind: normalizedKind,
     contentId: formatB3(normalizedHash),
     url: formatCrabAsset(normalizedHash, normalizedKind),
-    display: formatCrabAsset(normalizedHash, normalizedKind),
-    knownKind: isKnownAssetKind(normalizedKind)
+    display: formatCrabAsset(normalizedHash, normalizedKind)
+  };
+}
+
+function makeProfileResult(username, inputKind, rawUrl) {
+  const profile = normalizeProfileUsername(username);
+
+  if (!profile.ok) {
+    throw new Error(profile.error || 'Invalid @username profile URL.');
+  }
+
+  return {
+    type: 'profile',
+    inputKind,
+    username: profile.username,
+    handle: profile.handle,
+    name: profile.username,
+    url: profile.url,
+    profilePageUrl: profile.profilePageUrl,
+    requestedUrl: rawUrl,
+    display: profile.url
   };
 }

@@ -3,6 +3,7 @@
  * RO:WHY — NEXT_LEVEL live media foundation; Concerns: DX/SEC; prove streamer UX without pretending backend live-streaming exists.
  * RO:INTERACTS — page.html, page.js shell, chrome.storage.local, future svc-gateway /streams/prepare route.
  * RO:INVARIANTS — local draft first; gateway-only prepare attempt; no stream key generation; no broadcast; no fake b3 CID; no wallet mutation.
+ * RO:TRUTH — No b3 CID, No ROC charge, No wallet mutation, and no backend publication claim from local drafts.
  * RO:METRICS — client correlation IDs are generated for prepare attempts.
  * RO:CONFIG — stores crablinkStreamDraftV1 metadata only; local camera/screen preview streams are not persisted.
  * RO:SECURITY — textContent/createElement only; no private keys; no stream keys; no direct internal service calls; media preview requires user gesture.
@@ -834,7 +835,7 @@ function buildFutureManifest(section) {
       'ingest key issuance without exposing private wallet/passport keys',
       'stream manifest object and crab://<hash>.stream resolver',
       'live chat route and moderation policy',
-      'tip/payment route through svc-wallet only',
+      'tip/payment route through the internal wallet service only',
       'provider/relay availability metadata',
       'VOD archive plan after stream end'
     ],

@@ -1,0 +1,351 @@
+/*
+ * RO:WHAT — Route-owned styling for the React crab://game local game manifest workspace.
+ * RO:WHY — Keeps game-specific layout near its page owner while using shared CrabLink theme tokens.
+ * RO:INTERACTS — GamePage.jsx, GameDraft.jsx, GameAssets.jsx, shared theme CSS.
+ * RO:INVARIANTS — CSS only; no backend truth; no execution behavior; no hardcoded product state.
+ * RO:TEST — visual/manual crab://game smoke in light and dark mode.
+ */
+
+.game-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.game-draft-card {
+  min-width: 0;
+}
+
+.game-draft-intro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.game-form-grid,
+.game-signal-grid,
+.game-asset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 0.9rem;
+}
+
+.game-form-grid-compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.game-form-section {
+  display: grid;
+  gap: 0.8rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 22px;
+  background: var(--cl-surface);
+}
+
+[data-theme='dark'] .game-form-section {
+  background: #050505;
+}
+
+.game-form-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.game-form-section-head h3 {
+  margin: 0;
+  color: var(--cl-text);
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.game-builder-note {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.8rem;
+  border: 1px dashed var(--cl-border);
+  border-radius: 16px;
+  background: var(--cl-card);
+  color: var(--cl-muted);
+  line-height: 1.45;
+}
+
+.game-builder-note strong {
+  color: var(--cl-text);
+}
+
+.game-inline-dev {
+  margin-top: 1rem;
+}
+
+.game-actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cl-border);
+}
+
+.game-action-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+  color: var(--cl-muted);
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.game-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: flex-end;
+}
+
+.game-facet-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  align-content: start;
+}
+
+.game-facet-stats div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.72rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 16px;
+  background: var(--cl-card);
+}
+
+.game-facet-stats span {
+  color: var(--cl-muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.game-facet-stats strong {
+  color: var(--cl-text);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.game-preview {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.game-preview-hero {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: stretch;
+  padding: 0.85rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 20px;
+  background: var(--cl-surface);
+}
+
+[data-theme='dark'] .game-preview-hero {
+  background: #050505;
+}
+
+.game-preview-cover {
+  display: grid;
+  min-height: 116px;
+  place-items: center;
+  border: 1px dashed var(--cl-border);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 48%),
+    var(--cl-card);
+  color: var(--cl-muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-align: center;
+}
+
+[data-theme='dark'] .game-preview-cover {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.045), transparent 48%),
+    #050505;
+}
+
+.game-preview-copy {
+  display: grid;
+  gap: 0.35rem;
+  align-content: center;
+  min-width: 0;
+}
+
+.game-preview-copy p,
+.game-preview-copy h3,
+.game-preview-copy span {
+  margin: 0;
+}
+
+.game-preview-copy p {
+  color: var(--cl-muted);
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.game-preview-copy h3 {
+  color: var(--cl-text);
+  font-size: 1.15rem;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+
+.game-preview-copy span {
+  color: var(--cl-muted);
+  line-height: 1.45;
+}
+
+.game-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.game-summary-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.game-summary-row {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.72rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 16px;
+  background: var(--cl-card);
+}
+
+.game-summary-row span {
+  color: var(--cl-muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.game-summary-row strong {
+  overflow: hidden;
+  color: var(--cl-text);
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-safety-list,
+.game-asset-empty,
+.game-asset-group {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 18px;
+  background: var(--cl-surface);
+}
+
+[data-theme='dark'] .game-safety-list,
+[data-theme='dark'] .game-asset-empty,
+[data-theme='dark'] .game-asset-group {
+  background: #050505;
+}
+
+.game-safety-list h3,
+.game-asset-group h3 {
+  margin: 0;
+  color: var(--cl-text);
+  font-size: 0.95rem;
+}
+
+.game-safety-list ul {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--cl-muted);
+  line-height: 1.45;
+}
+
+.game-asset-empty p,
+.game-asset-empty span {
+  margin: 0;
+}
+
+.game-asset-empty p {
+  color: var(--cl-text);
+  font-weight: 850;
+}
+
+.game-asset-empty span {
+  color: var(--cl-muted);
+  line-height: 1.45;
+}
+
+.game-asset-preview {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.game-asset-preview.compact {
+  gap: 0.55rem;
+}
+
+.game-asset-group div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.game-asset-group span {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 999px;
+  background: var(--cl-card);
+  color: var(--cl-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .game-form-grid,
+  .game-signal-grid,
+  .game-asset-grid,
+  .game-form-grid-compact,
+  .game-summary-list {
+    grid-template-columns: 1fr;
+  }
+
+  .game-preview-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .game-actions {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .game-action-buttons {
+    justify-content: stretch;
+  }
+
+  .game-action-buttons .cl-button {
+    width: 100%;
+  }
+}

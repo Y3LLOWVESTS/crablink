@@ -1,0 +1,260 @@
+/*
+ * RO:WHAT — Shared form styles for CrabLink.
+ * RO:WHY — Keeps creator forms consistent across built-in pages.
+ * RO:INTERACTS — Field, TextInput, TextArea, SegmentedControl, route-local forms.
+ * RO:INVARIANTS — accessible labels, visible focus states, dark mode has no bright white input fallback.
+ * RO:TEST — visual/manual form smoke.
+ */
+
+:root {
+  --cl-form-bg: color-mix(in srgb, var(--cl-card, #ffffff) 84%, var(--cl-bg, #f5f4f1) 16%);
+  --cl-form-text: var(--cl-text, #111111);
+  --cl-form-muted: var(--cl-muted, #626262);
+  --cl-form-border: var(--cl-border, #d9d6cf);
+  --cl-form-placeholder: color-mix(in srgb, var(--cl-muted, #626262) 82%, transparent);
+  --cl-form-focus: color-mix(in srgb, var(--cl-text, #111111) 12%, transparent);
+  --cl-form-error: var(--cl-danger, #b42318);
+}
+
+[data-theme='dark'] {
+  --cl-form-bg: #050505;
+  --cl-form-text: #f4f4f4;
+  --cl-form-muted: #8a8a8a;
+  --cl-form-border: #2a2a2a;
+  --cl-form-placeholder: #8a8a8a;
+  --cl-form-focus: rgba(244, 244, 244, 0.12);
+  --cl-form-error: #ff8a80;
+}
+
+.cl-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.cl-field-inline {
+  grid-template-columns: minmax(120px, 0.32fr) minmax(0, 1fr);
+  align-items: start;
+  column-gap: 0.75rem;
+}
+
+.cl-field-label {
+  color: var(--cl-form-muted);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+}
+
+.cl-field-label em {
+  margin-left: 0.25rem;
+  color: var(--cl-form-error);
+  font-style: normal;
+}
+
+.cl-field-control {
+  display: grid;
+  min-width: 0;
+}
+
+.cl-field-help,
+.cl-field-error {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.cl-field-help {
+  color: var(--cl-form-muted);
+}
+
+.cl-field-error {
+  color: var(--cl-form-error);
+  font-weight: 750;
+}
+
+.cl-input,
+.cl-textarea,
+.cl-select,
+.cl-field input,
+.cl-field select,
+.cl-field textarea {
+  width: 100%;
+  border: 1px solid var(--cl-form-border);
+  border-radius: 14px;
+  background: var(--cl-form-bg);
+  color: var(--cl-form-text);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  box-shadow: none;
+}
+
+.cl-input,
+.cl-field input,
+.cl-field select {
+  min-height: 42px;
+  padding: 10px 12px;
+}
+
+.cl-input-sm {
+  min-height: 34px;
+  border-radius: 12px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.cl-input-lg {
+  min-height: 50px;
+  border-radius: 16px;
+  padding: 13px 14px;
+  font-size: 15px;
+}
+
+.cl-textarea,
+.cl-field textarea {
+  min-height: 110px;
+  padding: 11px 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.cl-textarea-sm {
+  min-height: 82px;
+  border-radius: 12px;
+  padding: 9px 10px;
+  font-size: 13px;
+}
+
+.cl-textarea-lg {
+  min-height: 150px;
+  border-radius: 16px;
+  padding: 13px 14px;
+  font-size: 15px;
+}
+
+.cl-input::placeholder,
+.cl-textarea::placeholder,
+.cl-field input::placeholder,
+.cl-field textarea::placeholder {
+  color: var(--cl-form-placeholder);
+  opacity: 1;
+}
+
+.cl-field select,
+.cl-select {
+  color-scheme: light;
+}
+
+[data-theme='dark'] .cl-field select,
+[data-theme='dark'] .cl-select {
+  color-scheme: dark;
+}
+
+.cl-field option,
+.cl-select option {
+  background: var(--cl-card, #ffffff);
+  color: var(--cl-form-text);
+}
+
+[data-theme='dark'] .cl-field option,
+[data-theme='dark'] .cl-select option {
+  background: #0b0b0b;
+  color: #f4f4f4;
+}
+
+.cl-input:focus,
+.cl-textarea:focus,
+.cl-select:focus,
+.cl-field input:focus,
+.cl-field select:focus,
+.cl-field textarea:focus {
+  border-color: var(--cl-accent, var(--cl-text, #111111));
+  box-shadow: 0 0 0 3px var(--cl-form-focus);
+}
+
+.cl-field.has-error .cl-input,
+.cl-field.has-error .cl-textarea,
+.cl-field.has-error .cl-select,
+.cl-field.has-error input,
+.cl-field.has-error select,
+.cl-field.has-error textarea {
+  border-color: var(--cl-form-error);
+}
+
+.cl-input:disabled,
+.cl-textarea:disabled,
+.cl-select:disabled,
+.cl-field input:disabled,
+.cl-field select:disabled,
+.cl-field textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.cl-segmented-control {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 999px;
+  background: var(--cl-form-bg);
+}
+
+.cl-segmented-control button {
+  min-height: 34px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 8px 13px;
+  background: transparent;
+  color: var(--cl-form-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cl-segmented-sm button {
+  min-height: 30px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+.cl-segmented-lg button {
+  min-height: 40px;
+  padding: 9px 16px;
+  font-size: 13px;
+}
+
+.cl-segmented-control button.is-active {
+  background: var(--cl-text, #111111);
+  color: var(--cl-bg, #ffffff);
+}
+
+[data-theme='dark'] .cl-segmented-control button.is-active {
+  background: #f4f4f4;
+  color: #000000;
+}
+
+.cl-segmented-control button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.cl-segmented-control button:focus-visible {
+  outline: 2px solid var(--cl-accent, var(--cl-text, #111111));
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .cl-field-inline {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-segmented-control {
+    width: 100%;
+    grid-auto-flow: initial;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  }
+}

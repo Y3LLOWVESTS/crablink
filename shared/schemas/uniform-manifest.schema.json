@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crablink.local/schemas/uniform-manifest.schema.json",
+  "title": "uniform-manifest.schema",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "schema": {
+      "type": "string"
+    }
+  }
+}

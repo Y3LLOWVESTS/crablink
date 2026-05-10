@@ -1,0 +1,128 @@
+/*
+ * RO:WHAT — Styles for the React-owned crab://article workspace.
+ * RO:WHY — CrabLink refactor; keeps article route polished while shared layout components carry common structure.
+ * RO:INTERACTS — ArticlePage.jsx, ArticleDraft.jsx, shared theme/form/card/layout styles, shell layout.
+ * RO:INVARIANTS — use CSS variables; local draft styling only; no hard-coded backend truth.
+ * RO:TEST — visual/manual checks in CrabLink full-tab browser in light and dark mode.
+ */
+
+.article-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.article-draft-card {
+  min-width: 0;
+}
+
+.article-draft-intro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.article-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 0.9rem;
+}
+
+.article-inline-dev {
+  margin-top: 1rem;
+}
+
+.article-actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cl-border);
+}
+
+.article-action-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+  color: var(--cl-muted);
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.article-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: flex-end;
+}
+
+.article-preview {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.article-preview-subtitle,
+.article-preview-summary,
+.article-preview-meta {
+  margin: 0;
+}
+
+.article-preview-subtitle {
+  color: var(--cl-text);
+  font-size: 1rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.article-preview-summary {
+  color: var(--cl-muted);
+  line-height: 1.55;
+}
+
+.article-preview-meta {
+  color: var(--cl-muted);
+  font-weight: 700;
+}
+
+.article-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.article-preview-body {
+  min-height: 300px;
+  max-height: 560px;
+  overflow: auto;
+  white-space: pre-wrap;
+  border: 1px solid var(--cl-border);
+  border-radius: 18px;
+  background: var(--cl-surface);
+  color: var(--cl-text);
+  padding: 0.9rem;
+  font: inherit;
+  line-height: 1.65;
+}
+
+[data-theme='dark'] .article-preview-body {
+  background: #050505;
+}
+
+@media (max-width: 760px) {
+  .article-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .article-actions {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .article-action-buttons {
+    justify-content: stretch;
+  }
+
+  .article-action-buttons .cl-button {
+    width: 100%;
+  }
+}

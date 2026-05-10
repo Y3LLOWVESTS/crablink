@@ -1,0 +1,468 @@
+/*
+ * RO:WHAT — Styles for the React-owned typed asset page.
+ * RO:WHY — Gives crab://<hash>.<kind> gateway hydration a professional protected-route layout.
+ * RO:INTERACTS — AssetPage.jsx, AssetResolver.jsx, AssetHydratedView.jsx, shared theme/card/layout styles.
+ * RO:INVARIANTS — CSS only; use shared theme tokens; no hard-coded backend truth.
+ * RO:TEST — visual/manual checks in light/dark mode with gateway online/offline.
+ */
+
+.asset-page {
+  display: grid;
+  gap: 1rem;
+
+  --asset-panel-bg: var(--cl-card, #ffffff);
+  --asset-soft-bg: color-mix(in srgb, var(--cl-card, #ffffff) 74%, var(--cl-bg, #f5f4f1) 26%);
+  --asset-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
+}
+
+[data-theme='dark'] .asset-page {
+  --asset-panel-bg: #0b0b0b;
+  --asset-soft-bg: #050505;
+  --asset-border-soft: #242424;
+}
+
+.asset-page-actions,
+.asset-copy-actions,
+.asset-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.asset-route-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(140px, 0.4fr);
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 22px;
+  background: var(--asset-panel-bg);
+  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.05));
+}
+
+.asset-route-card div,
+.asset-fact-grid div,
+.asset-policy-list div,
+.asset-problem-facts div {
+  min-width: 0;
+}
+
+.asset-route-card span,
+.asset-fact-grid span,
+.asset-error-facts span,
+.asset-policy-list dt,
+.asset-problem-facts span {
+  display: block;
+  margin-bottom: 0.28rem;
+  color: var(--cl-muted, #626262);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.asset-route-card strong,
+.asset-fact-grid strong,
+.asset-error-facts strong,
+.asset-policy-list dd,
+.asset-problem-facts strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--cl-text, #111111);
+  font-weight: 850;
+}
+
+.asset-route-card strong,
+.asset-fact-grid .is-monospace strong,
+.asset-problem-facts .is-monospace strong {
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    'Liberation Mono',
+    monospace;
+  font-size: 0.86rem;
+}
+
+.asset-hydrated-view {
+  display: grid;
+  gap: 1rem;
+}
+
+.asset-hydrated-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.asset-summary-card {
+  min-width: 0;
+}
+
+.asset-description {
+  margin: 0 0 1rem;
+  color: var(--cl-muted, #626262);
+  line-height: 1.58;
+}
+
+.asset-fact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.asset-fact-grid div {
+  padding: 0.82rem;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 16px;
+  background: var(--asset-soft-bg);
+}
+
+.asset-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.asset-side-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.asset-preview-card {
+  min-width: 0;
+}
+
+.asset-image-frame {
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.045), transparent 40%),
+    var(--asset-soft-bg);
+}
+
+.asset-image-frame img {
+  display: block;
+  max-width: 100%;
+  max-height: min(68vh, 720px);
+  object-fit: contain;
+}
+
+.asset-preview-card p {
+  margin: 0.75rem 0 0;
+  color: var(--cl-muted, #626262);
+  line-height: 1.5;
+}
+
+.asset-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.asset-attempt-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.asset-attempt-list div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.3rem 0.7rem;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 16px;
+  background: var(--asset-soft-bg);
+}
+
+.asset-attempt-list span {
+  grid-row: span 2;
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 999px;
+  padding: 0.28rem 0.5rem;
+  color: var(--cl-muted, #626262);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.asset-attempt-list .is-ok span {
+  border-color: color-mix(in srgb, var(--cl-success, #12805c) 55%, var(--cl-border, #d9d6cf));
+  color: var(--cl-success, #12805c);
+}
+
+.asset-attempt-list .is-error span {
+  border-color: color-mix(in srgb, var(--cl-danger, #b42318) 55%, var(--cl-border, #d9d6cf));
+  color: var(--cl-danger, #b42318);
+}
+
+.asset-attempt-list strong,
+.asset-attempt-list small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.asset-attempt-list strong {
+  color: var(--cl-text, #111111);
+}
+
+.asset-attempt-list small {
+  color: var(--cl-muted, #626262);
+}
+
+.asset-policy-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+}
+
+.asset-policy-list div {
+  padding: 0.8rem;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 16px;
+  background: var(--asset-soft-bg);
+}
+
+.asset-policy-list dd {
+  margin: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Asset problem taxonomy                                                      */
+/* -------------------------------------------------------------------------- */
+
+.asset-problem-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.asset-problem-card {
+  min-width: 0;
+}
+
+.asset-problem-card.asset-problem-warning {
+  border-color: color-mix(in srgb, var(--cl-warning, #b7791f) 44%, var(--cl-border, #d9d6cf));
+}
+
+.asset-problem-card.asset-problem-danger {
+  border-color: color-mix(in srgb, var(--cl-danger, #b42318) 48%, var(--cl-border, #d9d6cf));
+}
+
+.asset-problem-card.asset-problem-neutral {
+  border-color: var(--asset-border-soft);
+}
+
+.asset-problem-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+}
+
+.asset-problem-copy {
+  margin: 0;
+  color: var(--cl-muted, #626262);
+  line-height: 1.58;
+}
+
+.asset-problem-message {
+  margin: 0.85rem 0 0;
+  padding: 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--cl-danger, #b42318) 32%, var(--asset-border-soft));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--cl-danger, #b42318) 8%, transparent);
+  color: var(--cl-text, #111111);
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.asset-problem-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.asset-problem-facts div {
+  padding: 0.78rem;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 16px;
+  background: var(--asset-soft-bg);
+}
+
+.asset-problem-help {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 1rem;
+  padding: 0.86rem;
+  border: 1px solid color-mix(in srgb, var(--cl-info, #2563eb) 28%, var(--asset-border-soft));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--cl-info, #2563eb) 7%, transparent);
+}
+
+.asset-problem-help strong {
+  color: var(--cl-text, #111111);
+  font-weight: 900;
+}
+
+.asset-problem-help span {
+  color: var(--cl-muted, #626262);
+  line-height: 1.5;
+}
+
+.asset-problem-attempts div {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.asset-problem-attempts small:last-child {
+  grid-column: 2;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Shared loading/error support                                                */
+/* -------------------------------------------------------------------------- */
+
+.cl-loading-state {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: center;
+}
+
+.cl-loading-state h2 {
+  margin: 0;
+  color: var(--cl-text, #111111);
+  font-size: 1.25rem;
+  letter-spacing: -0.04em;
+}
+
+.cl-loading-state p {
+  margin: 0.35rem 0 0;
+  color: var(--cl-muted, #626262);
+  line-height: 1.5;
+}
+
+.cl-loading-state small {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--cl-muted, #626262);
+  overflow-wrap: anywhere;
+}
+
+.cl-loading-mark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 999px;
+  background: var(--asset-soft-bg);
+}
+
+.cl-loading-mark span {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border: 3px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-top-color: var(--cl-text, #111111);
+  border-radius: 999px;
+  animation: crablink-asset-spin 850ms linear infinite;
+}
+
+.cl-error-panel {
+  border-color: color-mix(in srgb, var(--cl-danger, #b42318) 38%, var(--cl-border, #d9d6cf));
+}
+
+.cl-error-message {
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--cl-danger, #b42318) 38%, var(--cl-border, #d9d6cf));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--cl-danger, #b42318) 8%, transparent);
+  color: var(--cl-text, #111111);
+  overflow-wrap: anywhere;
+}
+
+.cl-error-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0.85rem 0;
+}
+
+.cl-error-facts div {
+  min-width: 0;
+  padding: 0.7rem;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 14px;
+  background: var(--asset-soft-bg);
+}
+
+.cl-error-facts strong {
+  display: block;
+  color: var(--cl-text, #111111);
+  overflow-wrap: anywhere;
+}
+
+.cl-error-default-actions {
+  margin-top: 0.85rem;
+}
+
+@keyframes crablink-asset-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1050px) {
+  .asset-hydrated-grid,
+  .asset-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-side-panel {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .asset-problem-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 780px) {
+  .asset-route-card,
+  .asset-fact-grid,
+  .asset-side-panel,
+  .cl-error-facts,
+  .asset-problem-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-attempt-list div,
+  .asset-problem-attempts div {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-problem-attempts small:last-child {
+    grid-column: auto;
+  }
+
+  .asset-error-actions,
+  .asset-error-actions .cl-button {
+    width: 100%;
+  }
+}

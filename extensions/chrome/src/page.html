@@ -63,6 +63,15 @@
           >
             ↻
           </button>
+          <button
+            id="reactPreviewButton"
+            type="button"
+            class="secondary react-preview-button"
+            title="Open this route in the React refactor lane"
+            aria-label="Open React preview"
+          >
+            React
+          </button>
           <div id="topRocBalance" class="balance-chip" title="Current ROC balance" aria-live="polite">0 ROC</div>
           <button id="passportButton" type="button" class="secondary">Passport</button>
           <button
@@ -159,7 +168,10 @@
           <button type="button" data-open-crab="crab://image">crab://image</button>
           <button type="button" data-open-crab="crab://profile">crab://profile</button>
           <button type="button" data-open-crab="crab://music">crab://music</button>
+          <button type="button" data-open-crab="crab://lyrics">crab://lyrics</button>
           <button type="button" data-open-crab="crab://article">crab://article</button>
+          <button type="button" data-open-crab="crab://post">crab://post</button>
+          <button type="button" data-open-crab="crab://comment">crab://comment</button>
           <button type="button" data-open-crab="crab://video">crab://video</button>
           <button type="button" data-open-crab="crab://stream">crab://stream</button>
           <button type="button" data-open-crab="crab://podcast">crab://podcast</button>
@@ -364,21 +376,28 @@
     </div>
 
     <script type="module" src="./page.js"></script>
+    <script type="module" src="./page-react-preview.js"></script>
     <script type="module" src="./page-site-root-upload.js"></script>
     <script type="module" src="./page-product-preview.js"></script>
     <script type="module" src="./page-site-render-mode.js"></script>
     <script type="module" src="./page-site-creator-proof.js"></script>
+    <script type="module" src="./page-site-profile-linker.js"></script>
     <script type="module" src="./page-profile-home.js"></script>
     <script type="module" src="./page-profile-editor.js"></script>
+    <script type="module" src="./page-profile-gateway.js"></script>
     <script type="module" src="./page-profile-avatar.js"></script>
     <script type="module" src="./page-local-catalog.js"></script>
     <script type="module" src="./page-profile-polish.js"></script>
-    <script type="module" src="./page-local-route-mode.js"></script>
+    <script type="module" src="./page-music-draft.js"></script>
+    <script type="module" src="./page-music-rights.js"></script>
     <script type="module" src="./page-article-draft.js"></script>
     <script type="module" src="./page-video-draft.js"></script>
     <script type="module" src="./page-stream-draft.js"></script>
+    <script type="module" src="./page-stream-podcast-mode.js"></script>
     <script type="module" src="./page-podcast-draft.js"></script>
-    <script type="module" src="./page-local-route-mode.js"></script>
+    <script type="module" src="./page-social-stubs.js"></script>
+    <script type="module" src="./page-next-level-panels.js"></script>
+    <script type="module" src="./page-creator-route-guard.js"></script>
     <script type="module" src="./page-alt-vault.js"></script>
   </body>
 </html>

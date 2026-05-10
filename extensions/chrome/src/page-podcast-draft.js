@@ -3,6 +3,7 @@
  * RO:WHY — NEXT_LEVEL audio creator foundation; Concerns: DX/SEC; prove podcast UX for upload/live audio without pretending backend publishing exists.
  * RO:INTERACTS — page.html, page.js shell, chrome.storage.local, future svc-gateway /podcasts/prepare route.
  * RO:INVARIANTS — local draft first; gateway-only prepare attempt; no fake b3 CID; no fake audio upload; no stream key; no wallet mutation.
+ * RO:TRUTH — No b3 CID, No ROC charge, No wallet mutation, and no backend publication claim from local drafts.
  * RO:METRICS — client correlation IDs are generated for prepare attempts.
  * RO:CONFIG — stores crablinkPodcastDraftV1 metadata only; selected local audio file bytes and mic preview streams are not persisted.
  * RO:SECURITY — textContent/createElement only; no private keys; no stream keys; no direct internal service calls; mic preview requires user gesture.
@@ -921,7 +922,7 @@ function buildFutureManifest(section) {
       'show/feed manifest support',
       'RSS/export compatibility later',
       'comments/chat/moderation policy',
-      'tip/payment route through svc-wallet only',
+      'tip/payment route through the internal wallet service only',
       'VOD/archive and transcript plan'
     ],
     last_prepare_attempt: lastPrepareResponse,

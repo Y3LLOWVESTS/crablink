@@ -73,6 +73,46 @@
         },
         "source": {
           "type": "string"
+        },
+        "requested_username": {
+          "type": "string",
+          "pattern": "^$|^[a-z0-9][a-z0-9_.-]{2,31}$"
+        },
+        "requested_handle": {
+          "type": "string",
+          "pattern": "^$|^@[a-z0-9][a-z0-9_.-]{2,31}$"
+        },
+        "username": {
+          "type": "string",
+          "pattern": "^$|^[a-z0-9][a-z0-9_.-]{2,31}$"
+        },
+        "handle": {
+          "type": "string",
+          "pattern": "^$|^@[a-z0-9][a-z0-9_.-]{2,31}$"
+        },
+        "username_status": {
+          "type": "string",
+          "enum": [
+            "local_draft",
+            "requested",
+            "confirmed",
+            "rejected",
+            "unavailable",
+            "backend_unknown"
+          ]
+        },
+        "profile_crab_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "public_profile_cid": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^$|^b3:[0-9a-f]{64}$"
         }
       }
     },

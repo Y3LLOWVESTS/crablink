@@ -1,0 +1,259 @@
+/*
+ * RO:WHAT — Route-owned styling for the CrabLink React home smoke dashboard.
+ * RO:WHY — Keeps home/dashboard layout near its page owner while using shared CrabLink theme tokens.
+ * RO:INTERACTS — HomePage.jsx, HomeQuickActions.jsx, shared theme CSS.
+ * RO:INVARIANTS — CSS only; no backend truth; no route behavior; no hardcoded product success state.
+ * RO:TEST — visual/manual crab://home smoke in light and dark mode.
+ */
+
+.home-page {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+
+  --cl-home-panel-bg: var(--cl-card, #ffffff);
+  --cl-home-panel-soft-bg: var(--cl-surface, #fbfaf7);
+  --cl-home-input-bg: color-mix(in srgb, var(--cl-card, #ffffff) 84%, var(--cl-bg, #f5f4f1) 16%);
+  --cl-home-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
+}
+
+[data-theme='dark'] .home-page {
+  --cl-home-panel-bg: #0b0b0b;
+  --cl-home-panel-soft-bg: #050505;
+  --cl-home-input-bg: #050505;
+  --cl-home-border-soft: #242424;
+}
+
+.cl-home-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cl-home-status-card {
+  display: grid;
+  gap: 12px;
+  min-height: 172px;
+  padding: 18px;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.055), transparent 45%),
+    var(--cl-home-panel-bg);
+  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.06));
+}
+
+.cl-home-status-card div {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.cl-home-status-card strong {
+  color: var(--cl-text, #111111);
+  font-size: clamp(34px, 6vw, 60px);
+  line-height: 0.9;
+  letter-spacing: -0.07em;
+}
+
+.cl-home-status-card h2 {
+  margin: 0;
+  color: var(--cl-text, #111111);
+  font-size: 20px;
+  letter-spacing: -0.04em;
+}
+
+.cl-home-status-card p {
+  margin: 0;
+  color: var(--cl-muted, #626262);
+  line-height: 1.5;
+}
+
+.cl-home-actions {
+  display: grid;
+  gap: 14px;
+}
+
+.cl-home-actions-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: start;
+  padding: 18px;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 22px;
+  background: var(--cl-home-panel-bg);
+  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.06));
+}
+
+.cl-home-actions-head h2 {
+  margin: 2px 0 0;
+  color: var(--cl-text, #111111);
+  font-size: 28px;
+  letter-spacing: -0.05em;
+}
+
+.cl-home-actions-head p {
+  max-width: 880px;
+  margin: 8px 0 0;
+  color: var(--cl-muted, #626262);
+  line-height: 1.5;
+}
+
+.cl-home-actions-tools {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  min-width: 180px;
+}
+
+.cl-home-actions-tools span {
+  color: var(--cl-muted, #626262);
+  font-size: 12px;
+  text-align: right;
+}
+
+.cl-home-route-groups {
+  display: grid;
+  gap: 14px;
+}
+
+.cl-home-route-groups > .cl-card {
+  background: var(--cl-home-panel-bg);
+}
+
+.cl-home-group-copy {
+  margin: 0 0 14px;
+  color: var(--cl-muted, #626262);
+  line-height: 1.5;
+}
+
+.cl-home-route-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cl-home-route-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--cl-home-border-soft);
+  border-radius: 18px;
+  background: var(--cl-home-panel-soft-bg);
+}
+
+.cl-home-route-card.is-protected {
+  border-style: dashed;
+}
+
+.cl-home-route-card-head {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.cl-home-route-card h3 {
+  margin: 4px 0 0;
+  color: var(--cl-text, #111111);
+  font-size: 18px;
+  letter-spacing: -0.04em;
+}
+
+.cl-home-route-card p {
+  margin: 0;
+  color: var(--cl-muted, #626262);
+  line-height: 1.45;
+}
+
+.cl-home-route-kind,
+.cl-home-route-risk {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: var(--cl-muted, #626262);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.cl-home-route-risk {
+  background: var(--cl-home-input-bg);
+  text-transform: uppercase;
+}
+
+.cl-home-route-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cl-home-route-actions .cl-button {
+  min-height: 34px;
+}
+
+.cl-home-bottom-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cl-home-smoke-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding-left: 22px;
+  color: var(--cl-muted, #626262);
+  line-height: 1.45;
+}
+
+.cl-home-next-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.cl-home-next-list span {
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: var(--cl-home-panel-soft-bg);
+  color: var(--cl-muted, #626262);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.cl-scaffold-card {
+  width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .cl-home-hero-grid,
+  .cl-home-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-home-actions-head {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-home-actions-tools {
+    justify-items: stretch;
+  }
+}
+
+@media (max-width: 760px) {
+  .cl-home-route-list {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-home-route-card-head {
+    display: grid;
+  }
+}

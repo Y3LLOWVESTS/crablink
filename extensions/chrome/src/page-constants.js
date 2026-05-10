@@ -18,13 +18,35 @@ export const BUILT_IN_RON_PAGES = new Set([
   'image',
   'profile',
   'music',
+  'lyrics',
   'article',
+  'post',
+  'comment',
   'video',
   'stream',
-  'podcast'
+  'podcast',
+  'ad',
+  'algo',
+  'code',
+  'game'
 ]);
 
-export const LOCAL_CREATOR_PAGES = new Set(['article', 'video', 'stream', 'podcast']);
+export const LOCAL_CREATOR_PAGES = new Set([
+  'music',
+  'lyrics',
+  'article',
+  'post',
+  'comment',
+  'video',
+  'stream',
+  'podcast',
+  'ad',
+  'algo',
+  'code',
+  'game'
+]);
+
+export const FEATURE_GATED_BUILT_INS = new Set(['ad', 'algo', 'code', 'game']);
 
 export const HOME_PAGE_URL = 'crab://site';
 export const DEFAULT_HOLD_ESCROW_ACCOUNT = 'escrow_paid_write';

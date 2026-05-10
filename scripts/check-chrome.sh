@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # RO:WHAT — Local structural checker for the CrabLink Chrome extension.
-# RO:WHY — Catch missing files, bad JSON, broad permissions, unsafe extension patterns, and creator-route regression drift.
-# RO:INTERACTS — extensions/chrome, shared/schemas, shared/fixtures, smoke scripts.
+# RO:WHY — Catch missing files, bad JSON, broad permissions, unsafe extension patterns, and creator/profile-route regression drift.
+# RO:INTERACTS — extensions/chrome, shared/schemas, shared/fixtures, smoke scripts, green-gate scripts, codebundle script.
 # RO:INVARIANTS — minimal permissions; gateway-only; no broad host access; no old crab://b3/<hash> UX; no fake profile/wallet/alt/media truth.
 # RO:METRICS — none.
 # RO:CONFIG — none.
-# RO:SECURITY — blocks risky manifest permissions, fake wallet/profile/alt truth patterns, and route-controller regressions.
+# RO:SECURITY — blocks risky manifest permissions, fake wallet/profile/alt truth patterns, and direct internal-service calls.
 # RO:TEST — run from crablink repo root with scripts/check-chrome.sh.
 
 set -euo pipefail
@@ -36,6 +36,7 @@ required_files=(
   "$CHROME_DIR/src/page-site-creator-proof.js"
   "$CHROME_DIR/src/page-profile-home.js"
   "$CHROME_DIR/src/page-profile-editor.js"
+  "$CHROME_DIR/src/page-profile-gateway.js"
   "$CHROME_DIR/src/page-profile-avatar.js"
   "$CHROME_DIR/src/page-local-catalog.js"
   "$CHROME_DIR/src/page-profile-polish.js"
@@ -57,6 +58,7 @@ required_files=(
   "$SHARED_DIR/schemas/extension-settings.schema.json"
   "$SHARED_DIR/schemas/identity-me.schema.json"
   "$SHARED_DIR/schemas/passport-bootstrap.schema.json"
+  "$SHARED_DIR/schemas/public-profile.schema.json"
   "$SHARED_DIR/schemas/wallet-balance.schema.json"
   "$SHARED_DIR/fixtures/asset-page.sample.json"
   "$SHARED_DIR/fixtures/site-page.sample.json"
@@ -65,15 +67,18 @@ required_files=(
   "$SHARED_DIR/fixtures/identity-me.empty.sample.json"
   "$SHARED_DIR/fixtures/identity-me.ready.sample.json"
   "$SHARED_DIR/fixtures/passport-bootstrap.sample.json"
+  "$SHARED_DIR/fixtures/public-profile.confirmed.sample.json"
   "$SHARED_DIR/fixtures/wallet-balance.sample.json"
   "$ROOT/scripts/check-chrome.sh"
   "$ROOT/scripts/package-chrome.sh"
   "$ROOT/scripts/smoke-local-gateway.sh"
+  "$ROOT/scripts/smoke-profile-gateway.sh"
+  "$ROOT/scripts/smoke-first-run-profile.sh"
+  "$ROOT/scripts/green-gate-local.sh"
+  "$ROOT/scripts/make_codebundle.sh"
 )
 
 optional_files=(
-  "$ROOT/scripts/make_codebundle.sh"
-  "$ROOT/scripts/green-gate-local.sh"
   "$ROOT/scripts/smoke-site-create-local.sh"
 )
 
@@ -145,6 +150,10 @@ function loadAllJsonIn(folder) {
   }
 }
 
+function readIfExists(file) {
+  return fs.existsSync(file) ? readText(file) : '';
+}
+
 const manifest = loadJson(path.join(chrome, 'manifest.json'));
 
 if (manifest.manifest_version !== 3) fail('manifest_version must be 3');
@@ -194,6 +203,7 @@ for (const token of [
   './page-site-creator-proof.js',
   './page-profile-home.js',
   './page-profile-editor.js',
+  './page-profile-gateway.js',
   './page-profile-avatar.js',
   './page-local-catalog.js',
   './page-profile-polish.js',
@@ -348,7 +358,6 @@ for (const token of [
   '/o/b3:${hash}',
   'crab://<64hex>.image',
   'gateway-only',
-  'no backend profile publishing claim',
   'no wallet mutation',
   'No main passport linkage'
 ]) {
@@ -357,7 +366,12 @@ for (const token of [
 
 requireAnyIncludes(
   profileHomeSource,
-  ['backend profile publishing is not wired yet', 'Backend profile publishing is not wired yet'],
+  [
+    'backend profile publishing is not wired yet',
+    'Backend profile publishing is not wired yet',
+    'backend profile claim/read is handled by page-profile-gateway.js',
+    'Backend profile claim/read is handled by page-profile-gateway.js'
+  ],
   'page-profile-home.js backend profile publishing status text'
 );
 
@@ -400,6 +414,46 @@ for (const forbidden of [
   'fetch('
 ]) {
   forbidIncludes(profileEditorSource, forbidden, 'page-profile-editor.js');
+}
+
+const profileGatewaySource = readText(path.join(chrome, 'src', 'page-profile-gateway.js'));
+for (const token of [
+  'claimProfileThroughGateway',
+  'refreshProfileThroughGateway',
+  'claimPassportProfile',
+  'getPassportProfile',
+  'username_status',
+  'confirmed',
+  'Backend profile claim',
+  'data-crablink-claim-profile',
+  'data-crablink-refresh-profile',
+  'publicProfileCid',
+  'profileCrabUrl',
+  'gateway-only',
+  'no wallet mutation'
+]) {
+  requireIncludes(profileGatewaySource, token, 'page-profile-gateway.js');
+}
+
+for (const forbidden of [
+  'http://127.0.0.1:5307',
+  'http://localhost:5307',
+  '127.0.0.1:5307',
+  'localhost:5307',
+  'http://127.0.0.1:9090',
+  'http://localhost:9090',
+  '127.0.0.1:9090',
+  'localhost:9090',
+  '/v1/passport/profile',
+  '/v1/identity/passport/profile',
+  'walletPrivateKey',
+  'mainPrivateKey',
+  'seedPhrase',
+  'privateAltKey',
+  'client.publishProfile',
+  'publishProfile('
+]) {
+  forbidIncludes(profileGatewaySource, forbidden, 'page-profile-gateway.js');
 }
 
 const profileAvatarSource = readText(path.join(chrome, 'src', 'page-profile-avatar.js'));
@@ -560,6 +614,12 @@ for (const token of [
   'getReady',
   'getIdentity',
   'getWalletBalance',
+  'bootstrapPassport',
+  'claimPassportProfile',
+  'getPassportProfile',
+  '/identity/passport/profile/claim',
+  '/identity/passport/profile/',
+  'requested_username',
   'resolveCrab',
   'getB3Asset',
   'resolveSite',
@@ -567,9 +627,28 @@ for (const token of [
   'prepareSite',
   'createWalletHold',
   'createSite',
-  'x-ron-wallet-txid'
+  'x-ron-wallet-txid',
+  'Idempotency-Key',
+  'x-correlation-id',
+  'x-ron-passport',
+  'x-ron-wallet-account'
 ]) {
   requireIncludes(ronClient, token, 'ronClient.js');
+}
+
+for (const forbidden of [
+  'http://127.0.0.1:5307',
+  'http://localhost:5307',
+  '127.0.0.1:5307',
+  'localhost:5307',
+  'http://127.0.0.1:9090',
+  'http://localhost:9090',
+  '127.0.0.1:9090',
+  'localhost:9090',
+  '/v1/passport/profile',
+  '/v1/identity/passport/profile'
+]) {
+  forbidIncludes(ronClient, forbidden, 'ronClient.js');
 }
 
 const storage = readText(path.join(chrome, 'src', 'storage.js'));
@@ -580,6 +659,125 @@ for (const token of [
   'normalizeUsername'
 ]) {
   requireIncludes(storage, token, 'storage.js');
+}
+
+const options = readText(path.join(chrome, 'src', 'options.js'));
+for (const token of [
+  'createPassport',
+  'claimPublicProfile',
+  'refreshPublicProfileIfPossible',
+  'claimPassportProfile',
+  'getPassportProfile',
+  'username_status',
+  'confirmed',
+  'local_draft',
+  'backend_unknown',
+  'Profile service is temporarily unavailable',
+  'usernameStatus',
+  'profileCrabUrl',
+  'publicProfileCid'
+]) {
+  requireIncludes(options, token, 'options.js');
+}
+
+for (const forbidden of [
+  'walletPrivateKey',
+  'mainPrivateKey',
+  'seedPhrase',
+  'privateAltKey',
+  'publishProfile(',
+  'client.publishProfile',
+  'http://127.0.0.1:5307',
+  'http://localhost:5307',
+  '127.0.0.1:5307',
+  'localhost:5307',
+  'http://127.0.0.1:9090',
+  'http://localhost:9090',
+  '127.0.0.1:9090',
+  'localhost:9090'
+]) {
+  forbidIncludes(options, forbidden, 'options.js');
+}
+
+const publicProfileSchema = loadJson(path.join(shared, 'schemas', 'public-profile.schema.json'));
+if (publicProfileSchema.title !== 'RustyOnions Public Profile') {
+  fail('public-profile.schema.json title must be RustyOnions Public Profile');
+}
+
+for (const required of ['schema', 'username', 'handle', 'username_status']) {
+  if (!Array.isArray(publicProfileSchema.required) || !publicProfileSchema.required.includes(required)) {
+    fail(`public-profile.schema.json required missing ${required}`);
+  }
+}
+
+const publicProfileSchemaText = JSON.stringify(publicProfileSchema);
+requireIncludes(publicProfileSchemaText, 'svc-passport.public-profile.v1', 'public-profile.schema.json');
+requireIncludes(publicProfileSchemaText, 'crablink.cached-public-profile.v1', 'public-profile.schema.json');
+
+const publicProfileFixture = loadJson(path.join(shared, 'fixtures', 'public-profile.confirmed.sample.json'));
+if (publicProfileFixture.username_status !== 'confirmed') {
+  fail('public-profile.confirmed.sample.json must have username_status confirmed');
+}
+if (!String(publicProfileFixture.handle || '').startsWith('@')) {
+  fail('public-profile.confirmed.sample.json handle must start with @');
+}
+if (!String(publicProfileFixture.profile_crab_url || '').startsWith('crab://@')) {
+  fail('public-profile.confirmed.sample.json profile_crab_url must start with crab://@');
+}
+
+const smokeProfile = readText(path.join(root, 'scripts', 'smoke-profile-gateway.sh'));
+for (const token of [
+  '/identity/passport/profile/claim',
+  '/identity/passport/profile/',
+  'CRABLINK_SMOKE_PROFILE_USERNAME',
+  'CRABLINK_SMOKE_PROFILE_PASSPORT',
+  'username_status',
+  'confirmed',
+  'profile dependency preflight'
+]) {
+  requireIncludes(smokeProfile, token, 'smoke-profile-gateway.sh');
+}
+
+const smokeFirstRun = readText(path.join(root, 'scripts', 'smoke-first-run-profile.sh'));
+for (const token of [
+  '/identity/passport/bootstrap',
+  '/identity/passport/profile/claim',
+  '/identity/passport/profile/',
+  'CRABLINK_FIRST_RUN_USERNAME',
+  'CRABLINK_FIRST_RUN_PASSPORT',
+  'CRABLINK_FIRST_RUN_WALLET',
+  'CRABLINK_FIRST_RUN_AVATAR',
+  'desired_starting_balance_minor_units',
+  'username_status',
+  'confirmed',
+  'profile claim route remains authoritative',
+  'CrabLink first-run profile smoke passed'
+]) {
+  requireIncludes(smokeFirstRun, token, 'smoke-first-run-profile.sh');
+}
+
+const greenGate = readText(path.join(root, 'scripts', 'green-gate-local.sh'));
+for (const token of [
+  'CRABLINK_GREEN_RUN_PROFILE_CLAIM',
+  'CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE',
+  'scripts/smoke-profile-gateway.sh',
+  'scripts/smoke-first-run-profile.sh',
+  'Optional gateway profile claim/read smoke',
+  'Optional first-run passport + profile smoke',
+  'first-run profile'
+]) {
+  requireIncludes(greenGate, token, 'green-gate-local.sh');
+}
+
+const makeCodebundle = readText(path.join(root, 'scripts', 'make_codebundle.sh'));
+for (const token of [
+  'scripts/smoke-profile-gateway.sh',
+  'scripts/smoke-first-run-profile.sh',
+  'scripts/green-gate-local.sh',
+  'selected_scripts',
+  'Binary assets omitted'
+]) {
+  requireIncludes(makeCodebundle, token, 'make_codebundle.sh');
 }
 
 const allSourceFiles = [
@@ -595,6 +793,7 @@ const allSourceFiles = [
   'src/page-product-preview.js',
   'src/page-profile-home.js',
   'src/page-profile-editor.js',
+  'src/page-profile-gateway.js',
   'src/page-profile-avatar.js',
   'src/page-local-catalog.js',
   'src/page-profile-polish.js',
@@ -638,7 +837,17 @@ for (const forbidden of [
   'wallet_private_key',
   'walletPrivateKey',
   'mainPrivateKey',
-  'seedPhrase'
+  'seedPhrase',
+  'http://127.0.0.1:5307',
+  'http://localhost:5307',
+  '127.0.0.1:5307',
+  'localhost:5307',
+  'http://127.0.0.1:9090',
+  'http://localhost:9090',
+  '127.0.0.1:9090',
+  'localhost:9090',
+  '/v1/passport/profile',
+  '/v1/identity/passport/profile'
 ]) {
   forbidIncludes(allSources, forbidden, 'extension sources');
 }
@@ -674,6 +883,7 @@ node --check "$CHROME_DIR/src/page-workflow.js" >/dev/null
 node --check "$CHROME_DIR/src/page-product-preview.js" >/dev/null
 node --check "$CHROME_DIR/src/page-profile-home.js" >/dev/null
 node --check "$CHROME_DIR/src/page-profile-editor.js" >/dev/null
+node --check "$CHROME_DIR/src/page-profile-gateway.js" >/dev/null
 node --check "$CHROME_DIR/src/page-profile-avatar.js" >/dev/null
 node --check "$CHROME_DIR/src/page-local-catalog.js" >/dev/null
 node --check "$CHROME_DIR/src/page-profile-polish.js" >/dev/null
@@ -694,6 +904,10 @@ fi
 bash -n "$ROOT/scripts/check-chrome.sh" >/dev/null
 bash -n "$ROOT/scripts/package-chrome.sh" >/dev/null
 bash -n "$ROOT/scripts/smoke-local-gateway.sh" >/dev/null
+bash -n "$ROOT/scripts/smoke-profile-gateway.sh" >/dev/null
+bash -n "$ROOT/scripts/smoke-first-run-profile.sh" >/dev/null
+bash -n "$ROOT/scripts/green-gate-local.sh" >/dev/null
+bash -n "$ROOT/scripts/make_codebundle.sh" >/dev/null
 
 for file in "${optional_files[@]}"; do
   if [[ -f "$file" ]]; then

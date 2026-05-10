@@ -1,0 +1,287 @@
+/*
+ * RO:WHAT — Shared layout primitives for CrabLink.
+ * RO:WHY — Avoids repeated page-level layout boilerplate and supports reusable creator workspaces.
+ * RO:INTERACTS — shared components and pages.
+ * RO:INVARIANTS — pages stay responsive, route-owned, and theme-token based.
+ * RO:TEST — visual/manual route smoke.
+ */
+
+.cl-page {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+}
+
+.cl-page-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: start;
+}
+
+.cl-page-header h1 {
+  margin: 0;
+  color: var(--cl-text, #111111);
+  font-size: clamp(2rem, 4.6vw, 4.9rem);
+  line-height: 0.95;
+  letter-spacing: -0.07em;
+}
+
+.cl-page-copy {
+  max-width: 980px;
+  margin: 0.72rem 0 0;
+  color: var(--cl-muted, #626262);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.cl-page-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+}
+
+.cl-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.cl-creator-workspace {
+  gap: 1.1rem;
+}
+
+.cl-creator-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.cl-creator-principles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.cl-creator-principle-card .cl-card-body p {
+  margin: 0;
+  color: var(--cl-muted, #626262);
+  line-height: 1.55;
+}
+
+.cl-creator-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.42fr) minmax(300px, 0.58fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.cl-creator-main-column,
+.cl-creator-side-column {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+}
+
+.cl-creator-footer {
+  min-width: 0;
+}
+
+.cl-draft-stats-panel {
+  min-width: 0;
+}
+
+.cl-draft-completeness {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+.cl-draft-completeness > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.cl-draft-completeness strong {
+  color: var(--cl-text, #111111);
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+
+.cl-draft-completeness span {
+  color: var(--cl-muted, #626262);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.cl-draft-completeness-bar {
+  height: 9px;
+  overflow: hidden;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cl-surface, #f8f8f8) 76%, var(--cl-card, #ffffff));
+}
+
+.cl-draft-completeness-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--cl-text, #111111);
+}
+
+[data-theme='dark'] .cl-draft-completeness-bar span {
+  background: #f4f4f4;
+}
+
+.cl-draft-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.cl-draft-note-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.cl-manifest-preview-panel {
+  min-width: 0;
+}
+
+.cl-truth-boundary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: start;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--cl-card, #ffffff) 88%, var(--cl-bg, #f5f4f1));
+  padding: 1rem;
+  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.05));
+}
+
+[data-theme='dark'] .cl-truth-boundary {
+  background: #050505;
+}
+
+.cl-truth-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 999px;
+  padding: 0.24rem 0.62rem;
+  background: var(--cl-surface, #f8f8f8);
+  color: var(--cl-muted, #626262);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+[data-theme='dark'] .cl-truth-label {
+  background: #0b0b0b;
+}
+
+.cl-truth-boundary h2,
+.cl-truth-boundary p {
+  margin: 0;
+}
+
+.cl-truth-boundary h2 {
+  color: var(--cl-text, #111111);
+  font-size: 1.1rem;
+  letter-spacing: -0.03em;
+}
+
+.cl-truth-boundary p {
+  margin-top: 0.38rem;
+  color: var(--cl-muted, #626262);
+  line-height: 1.5;
+}
+
+.cl-truth-info {
+  border-color: color-mix(in srgb, var(--cl-accent, #111111) 20%, var(--cl-border, #d9d6cf));
+}
+
+.cl-truth-warning {
+  border-color: color-mix(in srgb, var(--cl-warning, #b7791f) 45%, var(--cl-border, #d9d6cf));
+}
+
+.cl-truth-danger {
+  border-color: color-mix(in srgb, var(--cl-danger, #b42318) 48%, var(--cl-border, #d9d6cf));
+}
+
+.cl-truth-success {
+  border-color: color-mix(in srgb, var(--cl-success, #12805c) 45%, var(--cl-border, #d9d6cf));
+}
+
+.cl-route-truth-panel {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.cl-route-truth-panel strong {
+  display: block;
+  margin-bottom: 0.42rem;
+  color: var(--cl-text, #111111);
+  font-size: 0.82rem;
+  font-weight: 950;
+}
+
+.cl-route-truth-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+}
+
+@media (max-width: 1120px) {
+  .cl-creator-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-creator-side-column {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .cl-page-header {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-page-actions {
+    justify-content: flex-start;
+  }
+
+  .cl-creator-principles,
+  .cl-creator-side-column {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .cl-draft-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-truth-boundary {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-truth-label {
+    justify-self: start;
+  }
+}

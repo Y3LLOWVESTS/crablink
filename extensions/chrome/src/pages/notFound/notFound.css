@@ -1,0 +1,11 @@
+/*
+ * RO:WHAT — Stylesheet scaffold for extensions/chrome/src/pages/notFound/notFound.css.
+ * RO:WHY — CrabLink refactor; page styles stay close to page owners and use shared tokens.
+ * RO:INTERACTS — shared/theme/themeTokens.css and page/component modules.
+ * RO:INVARIANTS — use CSS variables; avoid hard-coded colors unless intentionally local.
+ * RO:TEST — visual/manual checks in CrabLink full-tab browser.
+ */
+
+.cl-scaffold-card {
+  width: 100%;
+}

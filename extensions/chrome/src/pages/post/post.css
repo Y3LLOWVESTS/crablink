@@ -1,0 +1,111 @@
+/*
+ * RO:WHAT — Styles for the React-owned crab://post workspace.
+ * RO:WHY — CrabLink refactor; keeps post route polished while shared layout components carry common structure.
+ * RO:INTERACTS — PostPage.jsx, PostDraft.jsx, shared theme/form/card/layout styles, shell layout.
+ * RO:INVARIANTS — use CSS variables; local draft styling only; no hard-coded backend truth.
+ * RO:TEST — visual/manual checks in CrabLink full-tab browser in light and dark mode.
+ */
+
+.post-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.post-draft-card {
+  min-width: 0;
+}
+
+.post-draft-intro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.post-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 0.9rem;
+}
+
+.post-inline-dev {
+  margin-top: 1rem;
+}
+
+.post-actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cl-border);
+}
+
+.post-action-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+  color: var(--cl-muted);
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.post-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: flex-end;
+}
+
+.post-preview {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.post-preview-meta {
+  margin: 0;
+  color: var(--cl-muted);
+  font-weight: 700;
+}
+
+.post-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.post-preview-body {
+  min-height: 240px;
+  max-height: 520px;
+  overflow: auto;
+  white-space: pre-wrap;
+  border: 1px solid var(--cl-border);
+  border-radius: 18px;
+  background: var(--cl-surface);
+  color: var(--cl-text);
+  padding: 0.9rem;
+  font: inherit;
+  line-height: 1.6;
+}
+
+[data-theme='dark'] .post-preview-body {
+  background: #050505;
+}
+
+@media (max-width: 760px) {
+  .post-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .post-actions {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .post-action-buttons {
+    justify-content: stretch;
+  }
+
+  .post-action-buttons .cl-button {
+    width: 100%;
+  }
+}

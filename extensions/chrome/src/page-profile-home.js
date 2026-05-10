@@ -1,14 +1,15 @@
 /**
- * RO:WHAT — Renders CrabLink's local .profile page as a real profile-style surface.
- * RO:WHY — NEXT_LEVEL identity UX; Concerns: DX/SEC; make profiles feel like profiles while staying honest/local-only.
- * RO:INTERACTS — page.html, storage.js, page-profile-editor.js, configured svc-gateway raw object route.
- * RO:INVARIANTS — gateway-only; no wallet mutation; no backend profile publishing claim; no fake reputation/mod truth; no alt linkage.
- * RO:METRICS — none; client-side UX scaffold only.
+ * RO:WHAT — Renders CrabLink's local and gateway-read .profile pages as real profile-style surfaces.
+ * RO:WHY — NEXT_LEVEL identity UX; Concerns: DX/SEC; make profiles feel real while preserving backend truth boundaries.
+ * RO:INTERACTS — page.html, storage.js, page-profile-editor.js, ronClient.js, configured svc-gateway raw object and profile routes.
+ * RO:INVARIANTS — gateway-only; no wallet mutation; no fake reputation/mod truth; no alt linkage; public profile truth only from backend DTOs.
+ * RO:METRICS — sends x-correlation-id through RonClient for public profile reads; avatar preview is client-side only.
  * RO:CONFIG — reads safe local settings through storage.js and local profile draft through chrome.storage.local.
  * RO:SECURITY — textContent/createElement only; avatar accepts only crab://<64hex>.image and fetches only gateway /o/b3:<hash>.
- * RO:TEST — node --check; scripts/check-chrome.sh; manual crab://profile with local avatar draft.
+ * RO:TEST — node --check; scripts/check-chrome.sh; manual crab://profile, crab://@username, crab://profile/@username, crab://username.profile.
  */
 
+import { RonClient, RonClientError } from './ronClient.js';
 import { balanceSummary, getSettings } from './storage.js';
 
 const STYLE_ID = 'crablinkProfileHomeStyles';
@@ -16,6 +17,7 @@ const PROFILE_URL = 'crab://profile';
 const PROFILE_DRAFT_KEY = 'crablinkProfileDraftV1';
 const PROFILE_SECTION_ID = 'profileHomeSection';
 const PROFILE_VIEW_CLASS = 'crablink-profile-view-mode';
+const BACKEND_PROFILE_PUBLISHING_STATUS = 'backend profile publishing is not wired yet';
 
 let renderTimer = 0;
 let profileAvatarObjectUrl = '';
@@ -161,22 +163,17 @@ async function renderIdentityPage(parsed, { updateAddress = true } = {}) {
   const settings = await safeGetSettings();
   const profileDraft = await getProfileDraft();
   const route = enrichRoute(parsed, settings);
-  const payload = buildIdentityPayload(route, settings, profileDraft);
 
-  if (updateAddress) {
-    const input = document.getElementById('addressInput');
-    if (input) input.value = payload.url;
+  prepareProfileCanvas();
+
+  if (route.kind === 'profile' && route.shouldReadGatewayProfile) {
+    await renderGatewayProfilePage(route, settings, { updateAddress });
+    return;
   }
 
-  hidePanelsForIdentityRoute();
+  const payload = buildIdentityPayload(route, settings, profileDraft);
 
-  const pagePanel = document.getElementById('pagePanel');
-  if (!pagePanel) return;
-
-  pagePanel.classList.remove('hidden');
-
-  document.body.classList.remove('crablink-site-full-view-mode');
-  document.body.classList.add(PROFILE_VIEW_CLASS);
+  if (updateAddress) setAddress(payload.url);
 
   setDeveloperJson(payload);
 
@@ -187,6 +184,45 @@ async function renderIdentityPage(parsed, { updateAddress = true } = {}) {
   }
 
   setFooter(payload.footer_status);
+}
+
+function prepareProfileCanvas() {
+  hidePanelsForIdentityRoute();
+
+  const pagePanel = document.getElementById('pagePanel');
+  if (pagePanel) pagePanel.classList.remove('hidden');
+
+  document.body.classList.remove('crablink-site-full-view-mode');
+  document.body.classList.add(PROFILE_VIEW_CLASS);
+}
+
+async function renderGatewayProfilePage(route, settings, { updateAddress = true } = {}) {
+  const requestedHandle = normalizeHandle(route.handle || route.username || route.raw);
+  const username = stripAt(requestedHandle);
+  const requestedUrl = route.route_form === 'profile-page' ? `crab://${username}.profile` : `crab://${requestedHandle}`;
+
+  if (updateAddress) setAddress(requestedUrl);
+
+  const loadingPayload = buildGatewayProfileLoadingPayload(route, requestedHandle);
+  setDeveloperJson(loadingPayload);
+  renderProfileLoadingPage(loadingPayload);
+  setFooter(`Reading public profile ${requestedHandle || route.raw} through the gateway…`);
+
+  try {
+    const client = new RonClient(settings);
+    const response = await client.getPassportProfile(username || requestedHandle || route.raw);
+    const profile = normalizeGatewayProfileResponse(response, route, requestedHandle);
+    const payload = buildGatewayProfilePayload(route, profile, response);
+
+    setDeveloperJson(payload);
+    await renderPublicProfilePage(payload, settings);
+    setFooter(payload.footer_status);
+  } catch (error) {
+    const payload = buildGatewayProfileErrorPayload(route, requestedHandle, error);
+    setDeveloperJson(payload);
+    renderReservedIdentityPage(payload);
+    setFooter(payload.footer_status);
+  }
 }
 
 function cleanupIdentityPage() {
@@ -222,14 +258,62 @@ function hidePanelsForIdentityRoute() {
 async function renderLocalProfilePage(payload, settings) {
   const section = ensureProfileSection();
   clearElement(section);
-  section.className = 'content-section profile-home-section profile-page-shell';
+  section.className = 'content-section profile-home-section profile-page-shell profile-local-section';
 
-  const cover = buildProfileCover(payload);
-  const grid = buildProfileBodyGrid(payload);
-  const footer = buildProfileTruthFooter(payload);
+  const cover = buildProfileCover(payload, { source: 'local' });
+  const grid = buildProfileBodyGrid(payload, { source: 'local' });
+  const footer = buildProfileTruthFooter(payload, { source: 'local' });
 
   section.append(cover, grid, footer);
   await hydrateProfileAvatar(payload, settings);
+}
+
+async function renderPublicProfilePage(payload, settings) {
+  const section = ensureProfileSection();
+  clearElement(section);
+  section.className = 'content-section profile-home-section profile-page-shell profile-gateway-read-section';
+
+  const cover = buildProfileCover(payload, { source: 'gateway' });
+  const grid = buildProfileBodyGrid(payload, { source: 'gateway' });
+  const footer = buildProfileTruthFooter(payload, { source: 'gateway' });
+
+  section.append(cover, grid, footer);
+  await hydrateProfileAvatar(payload, settings);
+}
+
+function renderProfileLoadingPage(payload) {
+  revokeProfileAvatarObjectUrl();
+
+  const section = ensureProfileSection();
+  clearElement(section);
+  section.className = 'content-section profile-home-section profile-page-shell profile-gateway-read-section';
+
+  const cover = document.createElement('article');
+  cover.className = 'profile-cover-card reserved gateway-loading';
+
+  const top = document.createElement('div');
+  top.className = 'profile-cover-top';
+
+  const titleBlock = document.createElement('div');
+  const badge = document.createElement('span');
+  badge.className = 'profile-route-badge muted';
+  badge.textContent = payload.badge;
+
+  const title = document.createElement('h2');
+  title.textContent = payload.title;
+
+  const description = document.createElement('p');
+  description.textContent = payload.description;
+
+  titleBlock.append(badge, title, description);
+
+  const status = document.createElement('span');
+  status.className = payload.status_class;
+  status.textContent = payload.status_label;
+
+  top.append(titleBlock, status);
+  cover.append(top);
+  section.append(cover, buildProfileTruthFooter(payload, { source: 'loading' }));
 }
 
 function renderReservedIdentityPage(payload) {
@@ -237,7 +321,7 @@ function renderReservedIdentityPage(payload) {
 
   const section = ensureProfileSection();
   clearElement(section);
-  section.className = 'content-section profile-home-section profile-page-shell';
+  section.className = 'content-section profile-home-section profile-page-shell profile-reserved-section';
 
   const cover = document.createElement('article');
   cover.className = 'profile-cover-card reserved';
@@ -268,7 +352,7 @@ function renderReservedIdentityPage(payload) {
   const facts = document.createElement('div');
   facts.className = 'profile-detail-grid';
 
-  for (const [label, value] of payload.facts) {
+  for (const [label, value] of payload.facts || []) {
     facts.append(detailTile(label, value));
   }
 
@@ -277,11 +361,11 @@ function renderReservedIdentityPage(payload) {
   const cards = document.createElement('div');
   cards.className = 'profile-card-grid';
 
-  for (const card of payload.cards) {
+  for (const card of payload.cards || []) {
     cards.append(card);
   }
 
-  section.append(cover, cards, buildProfileTruthFooter(payload));
+  section.append(cover, cards, buildProfileTruthFooter(payload, { source: 'reserved' }));
 }
 
 function ensureProfileSection() {
@@ -308,11 +392,12 @@ function ensureProfileSection() {
   return section;
 }
 
-function buildProfileCover(payload) {
+function buildProfileCover(payload, options = {}) {
+  const source = options.source || 'local';
   const draft = payload.local_profile_draft || emptyProfileDraft();
 
   const cover = document.createElement('article');
-  cover.className = 'profile-cover-card';
+  cover.className = source === 'gateway' ? 'profile-cover-card backend-confirmed' : 'profile-cover-card';
 
   const top = document.createElement('div');
   top.className = 'profile-cover-top';
@@ -326,12 +411,12 @@ function buildProfileCover(payload) {
   const img = document.createElement('img');
   img.id = 'profileAvatarImage';
   img.className = 'profile-avatar-photo hidden';
-  img.alt = 'Profile avatar';
+  img.alt = `${payload.handle || 'Profile'} avatar`;
 
   const fallback = document.createElement('div');
   fallback.id = 'profileAvatarFallback';
   fallback.className = 'profile-avatar-fallback';
-  fallback.textContent = '🦀';
+  fallback.textContent = source === 'gateway' ? initialsFromName(payload.display_name, payload.handle) : '🦀';
 
   const state = document.createElement('span');
   state.id = 'profileAvatarState';
@@ -344,8 +429,8 @@ function buildProfileCover(payload) {
   identity.className = 'profile-cover-identity';
 
   const badge = document.createElement('span');
-  badge.className = 'profile-route-badge';
-  badge.textContent = 'local profile draft';
+  badge.className = source === 'gateway' ? 'profile-route-badge ok' : 'profile-route-badge';
+  badge.textContent = source === 'gateway' ? 'public profile' : 'local profile draft';
 
   const title = document.createElement('h2');
   title.textContent = payload.display_name || 'RON Profile';
@@ -356,10 +441,7 @@ function buildProfileCover(payload) {
 
   const statusLine = document.createElement('p');
   statusLine.className = 'profile-status-copy';
-  statusLine.textContent =
-    payload.handle_status === 'confirmed'
-      ? 'Backend-confirmed profile handle.'
-      : 'Local profile draft. Backend profile publishing and username confirmation are not wired yet.';
+  statusLine.textContent = profileStatusLine(payload, source);
 
   identity.append(badge, title, handle, statusLine);
   left.append(avatar, identity);
@@ -367,11 +449,14 @@ function buildProfileCover(payload) {
   const actions = document.createElement('div');
   actions.className = 'profile-cover-actions';
 
-  const edit = document.createElement('button');
-  edit.type = 'button';
-  edit.className = 'profile-edit-button';
-  edit.textContent = 'Edit Profile';
-  edit.setAttribute('data-crablink-edit-profile', '1');
+  if (source === 'local') {
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'profile-edit-button';
+    edit.textContent = 'Edit Profile';
+    edit.setAttribute('data-crablink-edit-profile', '1');
+    actions.append(edit);
+  }
 
   const copy = document.createElement('button');
   copy.type = 'button';
@@ -379,7 +464,13 @@ function buildProfileCover(payload) {
   copy.textContent = 'Copy Profile URL';
   copy.setAttribute('data-crablink-copy-profile-value', payload.profile_crab_url || payload.url);
 
-  actions.append(edit, copy);
+  const copyHandle = document.createElement('button');
+  copyHandle.type = 'button';
+  copyHandle.className = 'secondary profile-small-button';
+  copyHandle.textContent = 'Copy Handle';
+  copyHandle.setAttribute('data-crablink-copy-profile-value', payload.handle || '');
+
+  actions.append(copy, copyHandle);
   top.append(left, actions);
 
   const bio = document.createElement('section');
@@ -393,13 +484,13 @@ function buildProfileCover(payload) {
 
   const bioStatus = document.createElement('span');
   bioStatus.className = payload.handle_status === 'confirmed' ? 'profile-pill ok' : 'profile-pill pending';
-  bioStatus.textContent = payload.handle_status === 'confirmed' ? 'backend confirmed' : 'local / pending';
+  bioStatus.textContent = payload.handle_status === 'confirmed' ? 'backend confirmed' : source === 'gateway' ? payload.handle_status || 'backend read' : 'local / pending';
 
   bioHead.append(bioTitle, bioStatus);
 
   const bioCopy = document.createElement('p');
   bioCopy.className = draft.bio ? 'profile-bio-copy' : 'profile-bio-copy muted';
-  bioCopy.textContent = draft.bio || 'No profile bio saved yet. Click Edit Profile to add one.';
+  bioCopy.textContent = draft.bio || (source === 'local' ? 'No profile bio saved yet. Click Edit Profile to add one.' : 'No public bio returned by the gateway.');
 
   const tags = document.createElement('div');
   tags.className = 'profile-tag-row';
@@ -408,7 +499,7 @@ function buildProfileCover(payload) {
   if (tagValues.length === 0) {
     const emptyTag = document.createElement('span');
     emptyTag.className = 'profile-tag muted';
-    emptyTag.textContent = 'no tags yet';
+    emptyTag.textContent = source === 'local' ? 'no tags yet' : 'no public tags';
     tags.append(emptyTag);
   } else {
     for (const tag of tagValues) {
@@ -425,37 +516,51 @@ function buildProfileCover(payload) {
   stats.className = 'profile-stat-grid';
 
   stats.append(
-    statChip('ROC', stripRocUnit(payload.roc_balance) || '—', 'ledger-backed balance label'),
-    statChip('REP', '—%', 'not published yet'),
-    statChip('MOD', '—%', 'not published yet'),
-    statChip('Profile', draft.exists ? 'draft saved' : 'not created', 'local-only profile status')
+    statChip('ROC', source === 'local' ? stripRocUnit(payload.roc_balance) || '—' : '—', source === 'local' ? 'ledger-backed balance label' : 'not public'),
+    statChip('REP', scoreDisplay(payload.reputation_score), payload.reputation_help || 'not published yet'),
+    statChip('MOD', scoreDisplay(payload.moderator_score), payload.moderation_help || 'not published yet'),
+    statChip('Profile', source === 'gateway' ? payload.handle_status || 'backend read' : draft.exists ? 'draft saved' : 'not created', source === 'gateway' ? 'gateway profile status' : 'local-only profile status')
   );
 
   cover.append(top, bio, stats);
   return cover;
 }
 
-function buildProfileBodyGrid(payload) {
+function profileStatusLine(payload, source) {
+  if (source === 'gateway') {
+    if (payload.handle_status === 'confirmed') return 'Backend-confirmed public profile handle.';
+    return 'Public profile route read through the gateway. Confirmation depends on backend username_status.';
+  }
+
+  if (payload.handle_status === 'confirmed') return 'Backend-confirmed profile handle.';
+  return `Local profile draft. ${BACKEND_PROFILE_PUBLISHING_STATUS}.`;
+}
+
+function buildProfileBodyGrid(payload, options = {}) {
+  const source = options.source || 'local';
   const grid = document.createElement('div');
   grid.className = 'profile-card-grid';
 
-  grid.append(buildIdentityCard(payload), buildSsoCard(payload), buildAssetCard(payload));
+  grid.append(buildIdentityCard(payload, source), buildSsoCard(payload, source), buildAssetCard(payload, source));
   return grid;
 }
 
-function buildIdentityCard(payload) {
+function buildIdentityCard(payload, source = 'local') {
   const card = document.createElement('article');
   card.className = 'profile-info-card';
 
-  const head = cardHead('Identity', 'Passport labels and backend-derived wallet display.');
+  const head = cardHead(
+    source === 'gateway' ? 'Public identity' : 'Identity',
+    source === 'gateway' ? 'Backend-returned public profile fields only.' : 'Passport labels and backend-derived wallet display.'
+  );
 
   const details = document.createElement('div');
   details.className = 'profile-detail-grid compact';
 
   details.append(
-    detailTile('Passport', payload.passport_subject || 'not loaded'),
-    detailTile('Wallet', payload.wallet_account || 'not loaded'),
-    detailTile('Ledger', payload.ledger_status || 'not loaded'),
+    detailTile('Passport', payload.passport_subject || (source === 'gateway' ? 'not public' : 'not loaded')),
+    detailTile('Wallet', source === 'gateway' ? 'not public' : payload.wallet_account || 'not loaded'),
+    detailTile('Ledger', source === 'gateway' ? 'not public' : payload.ledger_status || 'not loaded'),
     detailTile('Profile route', payload.profile_crab_url || 'not published'),
     detailTile('Profile CID', payload.public_profile_cid || 'not published'),
     detailTile('Handle status', payload.handle_status || 'unknown')
@@ -465,21 +570,33 @@ function buildIdentityCard(payload) {
   return card;
 }
 
-function buildSsoCard(payload) {
+function buildSsoCard(payload, source = 'local') {
   const card = document.createElement('article');
   card.className = 'profile-info-card';
 
-  const head = cardHead('SSO direction', 'One profile for open-membership RustyOnions sites.');
+  const head = cardHead(
+    source === 'gateway' ? 'Public profile truth' : 'SSO direction',
+    source === 'gateway' ? 'This view stays read-only and does not infer private state.' : 'One profile for open-membership RustyOnions sites.'
+  );
 
   const list = document.createElement('ul');
   list.className = 'profile-clean-list';
 
-  for (const item of [
-    'A site may later allow RON Passport membership instead of per-site registration.',
-    'Wallet spending still requires explicit user confirmation.',
-    'Alt passports remain separate unless the user intentionally links them.',
-    'Reputation and moderator scores remain blank until backend truth exists.'
-  ]) {
+  const items = source === 'gateway'
+    ? [
+        'Public profile data came from svc-gateway.',
+        'Wallet spending authority is not exposed by a public profile.',
+        'Private main↔alt linkages are not shown or inferred.',
+        'Reputation and moderator scores remain blank unless backend truth includes them.'
+      ]
+    : [
+        'A site may later allow RON Passport membership instead of per-site registration.',
+        'Wallet spending still requires explicit user confirmation.',
+        'Alt passports remain separate unless the user intentionally links them.',
+        'Reputation and moderator scores remain blank until backend truth exists.'
+      ];
+
+  for (const item of items) {
     const li = document.createElement('li');
     li.textContent = item;
     list.append(li);
@@ -489,17 +606,23 @@ function buildSsoCard(payload) {
   return card;
 }
 
-function buildAssetCard(payload) {
+function buildAssetCard(payload, source = 'local') {
   const card = document.createElement('article');
   card.className = 'profile-info-card';
 
-  const head = cardHead('Profile actions', 'Local profile tools and next useful surfaces.');
+  const head = cardHead(
+    source === 'gateway' ? 'Public profile actions' : 'Profile actions',
+    source === 'gateway' ? 'Read-only actions for this backend profile.' : 'Local profile tools and next useful surfaces.'
+  );
 
   const actions = document.createElement('div');
   actions.className = 'profile-action-grid';
 
+  if (source === 'local') {
+    actions.append(actionButton('Edit Profile', () => openProfileEditor(payload)));
+  }
+
   actions.append(
-    actionButton('Edit Profile', () => openProfileEditor(payload)),
     actionButton('Open crab://site', () => submitCrabUrl('crab://site')),
     actionButton('Open crab://image', () => submitCrabUrl('crab://image')),
     actionButton('Open Image Page', () => openAvatarImage(payload), {
@@ -514,13 +637,16 @@ function buildAssetCard(payload) {
   const note = document.createElement('p');
   note.className = 'profile-card-note';
   note.textContent =
-    'Profile data here is local-only until RustyOnions publishes profile/passport manifests. The avatar preview reads image bytes through the configured gateway.';
+    source === 'gateway'
+      ? 'This public profile is read-only. CrabLink does not infer wallet, reputation, moderation, or private alt state from missing fields.'
+      : `Profile data here is local-only until RustyOnions publishes profile/passport manifests. ${BACKEND_PROFILE_PUBLISHING_STATUS}. The avatar preview reads image bytes through the configured gateway.`;
 
   card.append(head, actions, note);
   return card;
 }
 
-function buildProfileTruthFooter(payload) {
+function buildProfileTruthFooter(payload, options = {}) {
+  const source = options.source || 'local';
   const footer = document.createElement('div');
   footer.className = 'profile-truth-footer';
 
@@ -528,10 +654,15 @@ function buildProfileTruthFooter(payload) {
   title.textContent = 'Truth boundary';
 
   const copy = document.createElement('span');
-  copy.textContent =
-    payload.route_kind === 'profile'
-      ? 'This page may show local draft profile data, but it does not claim backend profile publication, username ownership, reputation, moderation, wallet authority, or private alt linkage.'
-      : 'This reserved route is display-only. CrabLink has not fetched or verified a backend manifest for it.';
+  if (source === 'gateway') {
+    copy.textContent =
+      'This page was loaded through svc-gateway as a read-only public profile. CrabLink does not infer wallet balance, spend authority, private alt mappings, private receipts, reputation, moderation, or profile ownership from local state.';
+  } else if (payload.route_kind === 'profile') {
+    copy.textContent =
+      `This page may show local draft profile data, but it does not claim backend profile publication, username ownership, reputation, moderation, wallet authority, or private alt linkage unless backend DTOs explicitly provide those fields. ${BACKEND_PROFILE_PUBLISHING_STATUS}.`;
+  } else {
+    copy.textContent = 'This reserved route is display-only. CrabLink has not fetched or verified a backend manifest for it.';
+  }
 
   footer.append(title, copy);
   return footer;
@@ -672,8 +803,12 @@ function buildProfilePayload(route, settings, profileDraft) {
     public_profile_cid: isLocal ? publicProfileCid : '',
     local_profile_match: isLocal,
     local_profile_draft: draft,
+    reputation_score: null,
+    moderator_score: null,
     reputation_summary: null,
     moderation_summary: null,
+    reputation_help: 'not computed yet',
+    moderation_help: 'not computed yet',
     warnings: profileWarnings(isLocal)
   };
 
@@ -682,8 +817,8 @@ function buildProfilePayload(route, settings, profileDraft) {
     badge: 'profile',
     title: payload.display_name,
     description: isLocal
-      ? 'Local SSO-style profile page. Backend profile publishing is not wired yet.'
-      : 'Reserved named .profile route. Backend profile publishing is not wired yet.',
+      ? `Local SSO-style profile page. ${BACKEND_PROFILE_PUBLISHING_STATUS}.`
+      : `Reserved named .profile route. ${BACKEND_PROFILE_PUBLISHING_STATUS}.`,
     status_class: isLocal
       ? payload.handle_status === 'confirmed'
         ? 'profile-pill ok'
@@ -696,9 +831,177 @@ function buildProfilePayload(route, settings, profileDraft) {
       : 'not resolved',
     footer_status: isLocal
       ? 'Loaded local crab://profile page.'
-      : `Reserved .profile route ${payload.url}; backend profile publishing is not wired yet.`,
+      : `Reserved .profile route ${payload.url}; ${BACKEND_PROFILE_PUBLISHING_STATUS}.`,
     facts: profileFacts(payload, isLocal),
     cards: []
+  };
+}
+
+function buildGatewayProfileLoadingPayload(route, requestedHandle) {
+  const handle = requestedHandle || normalizeHandle(route.handle) || '@username';
+
+  return {
+    schema: 'crablink.public-profile-loading.v1',
+    route_kind: 'profile',
+    url: `crab://${handle}`,
+    requested_url: route.raw,
+    handle,
+    handle_status: 'gateway_lookup',
+    display_name: displayNameFromHandle(handle),
+    profile_crab_url: `crab://${handle}`,
+    local_profile_match: false,
+    local_profile_draft: emptyProfileDraft(),
+    badge: 'profile',
+    title: `Loading ${handle}`,
+    description: 'CrabLink is reading this public profile through svc-gateway.',
+    status_class: 'profile-pill pending',
+    status_label: 'gateway lookup',
+    footer_status: `Reading public profile ${handle}…`,
+    facts: [],
+    cards: []
+  };
+}
+
+function buildGatewayProfilePayload(route, profile, response) {
+  const publicProfileCid = clean(
+    profile.public_profile_cid || profile.publicProfileCid || profile.profile_cid || profile.profileCid
+  );
+  const reputationScore = firstPresent(
+    profile.reputation_score,
+    profile.reputationScore,
+    profile.reputation_summary?.score,
+    profile.reputationSummary?.score
+  );
+  const moderatorScore = firstPresent(
+    profile.moderator_score,
+    profile.moderatorScore,
+    profile.moderation_score,
+    profile.moderationScore,
+    profile.moderation_summary?.score,
+    profile.moderationSummary?.score
+  );
+  const avatar = clean(
+    profile.avatar_image || profile.avatarImage || profile.avatar_crab_url || profile.avatarCrabUrl
+  ).toLowerCase();
+  const username = stripAt(profile.username || profile.handle || route.handle || route.username);
+  const handle = normalizeHandle(profile.handle || profile.username || username);
+  const status = clean(profile.username_status || profile.usernameStatus || profile.status) || 'backend_unknown';
+  const profileUrl = clean(profile.profile_crab_url || profile.profileCrabUrl) || `crab://${handle}`;
+  const displayName = clean(profile.display_name || profile.displayName) || displayNameFromHandle(handle);
+
+  return {
+    schema: 'crablink.public-profile-gateway-view.v1',
+    route_kind: 'profile',
+    url: profileUrl,
+    requested_url: route.raw,
+    gateway_response_schema: clean(response?.schema || response?.data?.schema),
+    backend_schema: clean(profile.schema),
+    correlation_id: clean(response?.correlationId),
+    handle,
+    username,
+    handle_status: status,
+    display_name: displayName,
+    passport_subject: clean(profile.passport_subject || profile.passportSubject),
+    wallet_account: '',
+    roc_balance: 'not public',
+    ledger_status: 'not public',
+    profile_crab_url: profileUrl,
+    public_profile_cid: publicProfileCid,
+    local_profile_match: false,
+    local_profile_draft: {
+      ...emptyProfileDraft(),
+      exists: true,
+      schema: 'crablink.gateway-public-profile.v1',
+      status,
+      handle,
+      displayName,
+      bio: clean(profile.bio),
+      avatarCrabUrl: avatar,
+      backendPublished: true,
+      publicProfileCid,
+      profileCrabUrl: profileUrl,
+      tags: normalizeProfileTags(profile.tags || profile.public_tags || profile.publicTags)
+    },
+    reputation_score: reputationScore,
+    moderator_score: moderatorScore,
+    reputation_summary: profile.reputation_summary || profile.reputationSummary || null,
+    moderation_summary: profile.moderation_summary || profile.moderationSummary || null,
+    reputation_help: isPresent(reputationScore) ? 'backend provided' : 'not computed yet',
+    moderation_help: isPresent(moderatorScore) ? 'backend provided' : 'not computed yet',
+    warnings: [
+      'This is a read-only public profile view loaded through the configured gateway.',
+      'CrabLink does not infer wallet balance, spend authority, private alt mappings, private receipts, or private permissions from this profile.',
+      'Reputation and moderator scores are shown only when backend fields are present.',
+      'A missing public_profile_cid means no b3 profile manifest has been published yet.'
+    ],
+    badge: 'profile',
+    title: displayName,
+    description: 'Read-only public profile loaded from RustyOnions backend truth.',
+    status_class: status === 'confirmed' ? 'profile-pill ok' : 'profile-pill pending',
+    status_label: status === 'confirmed' ? 'backend confirmed' : status,
+    footer_status: `Loaded public profile ${handle} through svc-gateway.`,
+    facts: [],
+    cards: []
+  };
+}
+
+function buildGatewayProfileErrorPayload(route, requestedHandle, error) {
+  const details = normalizeProfileRouteError(error);
+  const handle = requestedHandle || normalizeHandle(route.handle || route.username) || '@username';
+
+  return {
+    schema: 'crablink.public-profile-error.v1',
+    route_kind: 'profile',
+    url: `crab://${handle}`,
+    requested_url: route.raw,
+    handle,
+    handle_status: details.status,
+    display_name: displayNameFromHandle(handle),
+    passport_subject: '',
+    wallet_account: '',
+    roc_balance: 'not shown',
+    ledger_status: 'not shown',
+    profile_crab_url: '',
+    public_profile_cid: '',
+    local_profile_match: false,
+    local_profile_draft: emptyProfileDraft(),
+    reputation_score: null,
+    moderator_score: null,
+    reputation_summary: null,
+    moderation_summary: null,
+    reputation_help: 'not computed yet',
+    moderation_help: 'not computed yet',
+    warnings: [
+      details.message,
+      'CrabLink did not use stale local profile data as proof.',
+      'No wallet, reputation, moderator score, private alt mapping, or spend authority is inferred.'
+    ],
+    badge: 'profile',
+    title: `${handle} profile`,
+    description: details.message,
+    status_class: details.retryable ? 'profile-pill pending' : 'profile-pill muted',
+    status_label: details.status,
+    footer_status: details.footer,
+    facts: [
+      ['Crab URL', `crab://${handle}`],
+      ['Route', '/identity/passport/profile/:username'],
+      ['HTTP status', details.httpStatus || 'unknown'],
+      ['Backend code', details.code || 'unknown'],
+      ['Retryable', details.retryable ? 'yes' : 'no'],
+      ['Gateway path', 'svc-gateway only']
+    ],
+    cards: [
+      reservedRuleCard('Profile lookup result', [
+        details.message,
+        'If this is your username, claim it or refresh the public profile from CrabLink settings/profile.',
+        'If services restarted during development, in-memory profile claims may need to be recreated.'
+      ]),
+      reservedRuleCard('Truth boundary', [
+        'No confirmed username is displayed unless the backend returns username_status="confirmed".',
+        'No public profile CID is shown unless the backend returns one.',
+        'No reputation or moderation score is fabricated.'
+      ])
+    ]
   };
 }
 
@@ -919,7 +1222,7 @@ function parseIdentityRoute(value) {
   const lower = raw.toLowerCase();
 
   if (lower === 'profile' || lower === 'me' || lower === PROFILE_URL || lower === 'crab://me') {
-    return { kind: 'profile', raw, isGeneric: true, handle: '' };
+    return { kind: 'profile', raw, isGeneric: true, handle: '', username: '', route_form: 'local-profile' };
   }
 
   if (!lower.startsWith('crab://')) return null;
@@ -938,17 +1241,36 @@ function parseIdentityRoute(value) {
     };
   }
 
+  const profilePathMatch = /^profile\/@?([a-z0-9][a-z0-9._-]{1,31})$/.exec(lowerBody);
+  if (profilePathMatch) {
+    return profileRouteObject(raw, profilePathMatch[1], 'profile-path');
+  }
+
+  const directHandleMatch = /^@([a-z0-9][a-z0-9._-]{1,31})$/.exec(lowerBody);
+  if (directHandleMatch) {
+    return profileRouteObject(raw, directHandleMatch[1], 'profile-handle');
+  }
+
   const profileMatch = /^@?([a-z0-9][a-z0-9._-]{1,31})\.profile$/.exec(lowerBody);
   if (profileMatch) {
-    return {
-      kind: 'profile',
-      raw,
-      isGeneric: false,
-      handle: normalizeHandle(profileMatch[1])
-    };
+    return profileRouteObject(raw, profileMatch[1], 'profile-page');
   }
 
   return null;
+}
+
+function profileRouteObject(raw, username, routeForm) {
+  const handle = normalizeHandle(username);
+  if (!handle) return null;
+
+  return {
+    kind: 'profile',
+    raw,
+    isGeneric: false,
+    handle,
+    username: stripAt(handle),
+    route_form: routeForm
+  };
 }
 
 function currentIdentityRoute() {
@@ -961,9 +1283,12 @@ function currentIdentityRoute() {
 function enrichRoute(route, settings) {
   if (route.kind !== 'profile') return route;
 
+  const isLocalHandle = route.isGeneric || handleMatchesLocal(route.handle, settings);
+
   return {
     ...route,
-    isLocalHandle: route.isGeneric || handleMatchesLocal(route.handle, settings)
+    isLocalHandle,
+    shouldReadGatewayProfile: !route.isGeneric && !isLocalHandle
   };
 }
 
@@ -1008,7 +1333,7 @@ function profileRoute(settings) {
 function profileWarnings(isLocal) {
   if (!isLocal) {
     return [
-      'This named profile route is a local placeholder only.',
+      'This named profile route is a display placeholder unless gateway profile truth is returned.',
       'CrabLink has not resolved a backend profile manifest for this handle.',
       'No wallet, passport, reputation, moderation, or profile truth is inferred.'
     ];
@@ -1044,9 +1369,7 @@ function normalizeProfileDraft(value) {
   const draft = value && typeof value === 'object' && !Array.isArray(value) ? value : null;
   if (!draft) return emptyProfileDraft();
 
-  const tags = Array.isArray(draft.tags)
-    ? draft.tags.map((tag) => clean(tag).toLowerCase()).filter(Boolean).slice(0, 12)
-    : [];
+  const tags = normalizeProfileTags(draft.tags);
 
   return {
     exists: true,
@@ -1089,6 +1412,89 @@ function emptyProfileDraft() {
   };
 }
 
+function normalizeGatewayProfileResponse(response, route, requestedHandle) {
+  const candidate =
+    response?.profile ||
+    response?.public_profile ||
+    response?.publicProfile ||
+    response?.data?.profile ||
+    response?.data?.public_profile ||
+    response?.data?.publicProfile ||
+    response?.data ||
+    response;
+  const profile = candidate && typeof candidate === 'object' && !Array.isArray(candidate) ? candidate : {};
+  const handle = normalizeHandle(profile.handle || profile.username || requestedHandle || route.handle || route.username);
+
+  return {
+    ...profile,
+    username: stripAt(profile.username || handle),
+    handle
+  };
+}
+
+function normalizeProfileRouteError(error) {
+  const httpStatus = error?.status || error?.httpStatus || error?.details?.status || '';
+  const code = clean(error?.code || error?.details?.code || error?.body?.code || error?.reason);
+
+  if (httpStatus === 404 || code === 'profile_not_found') {
+    return errorInfo(
+      'profile_not_found',
+      httpStatus,
+      code || 'profile_not_found',
+      false,
+      'No public profile found for this username yet.',
+      'Profile not found yet. Claim or refresh your username.'
+    );
+  }
+
+  if (httpStatus === 409 || code === 'username_unavailable') {
+    return errorInfo(
+      'username_unavailable',
+      httpStatus,
+      code || 'username_unavailable',
+      false,
+      'That username is already taken or unavailable.',
+      'Username unavailable.'
+    );
+  }
+
+  if (httpStatus === 400 || code === 'reserved_username') {
+    return errorInfo(
+      'reserved_username',
+      httpStatus,
+      code || 'reserved_username',
+      false,
+      'That username is reserved by RustyOnions.',
+      'Username is reserved.'
+    );
+  }
+
+  if (httpStatus === 502 || code === 'upstream_unavailable' || code === 'passport_upstream') {
+    return errorInfo(
+      'profile_upstream_unavailable',
+      httpStatus,
+      code || 'upstream_unavailable',
+      true,
+      'Profile service is temporarily unavailable. Check that the RustyOnions dev stack is running.',
+      'Profile service is temporarily unavailable.'
+    );
+  }
+
+  const fallback = error instanceof RonClientError ? error.message : error?.message;
+  return errorInfo(
+    'backend_unknown',
+    httpStatus,
+    code || 'unknown',
+    false,
+    fallback || 'Could not read this public profile.',
+    fallback || 'Could not read this public profile.'
+  );
+}
+
+function errorInfo(status, httpStatus, code, retryable, message, footer) {
+  return { status, httpStatus, code, retryable, message, footer };
+}
+
 function parseImageCrabUrl(value) {
   const raw = clean(value).toLowerCase();
   const match = /^crab:\/\/([0-9a-f]{64})\.image$/.exec(raw);
@@ -1121,6 +1527,18 @@ function displayNameFromHandle(handle) {
     .join(' ');
 }
 
+function initialsFromName(name, handle) {
+  const source = clean(name) || clean(handle) || 'RON';
+  const parts = source
+    .replace(/^@+/, '')
+    .split(/[\s._-]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length >= 2) return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
+  return (parts[0] || 'RON').slice(0, 2).toUpperCase();
+}
+
 function normalizeHandle(value) {
   const raw = clean(value).replace(/^@+/, '').toLowerCase();
   if (!raw) return '';
@@ -1135,6 +1553,29 @@ function stripAt(value) {
 
 function stripRocUnit(value) {
   return clean(value).replace(/\s*ROC\s*$/i, '');
+}
+
+function normalizeProfileTags(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((tag) => clean(tag).replace(/^#+/, '').toLowerCase())
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function firstPresent(...values) {
+  for (const value of values) {
+    if (isPresent(value)) return value;
+  }
+  return null;
+}
+
+function isPresent(value) {
+  return value !== null && value !== undefined && clean(value) !== '';
+}
+
+function scoreDisplay(value) {
+  return isPresent(value) ? String(value) : '—%';
 }
 
 function shortError(value) {
@@ -1160,6 +1601,11 @@ function submitCrabUrl(url) {
   }
 
   form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+}
+
+function setAddress(url) {
+  const input = document.getElementById('addressInput');
+  if (input) input.value = url;
 }
 
 async function copyText(value, message) {
@@ -1232,6 +1678,10 @@ function installStyles() {
       padding: 0 !important;
     }
 
+    .profile-gateway-read-section #profileGatewayClaimCard {
+      display: none !important;
+    }
+
     .profile-cover-card,
     .profile-info-card,
     .profile-truth-footer {
@@ -1240,6 +1690,13 @@ function installStyles() {
         radial-gradient(circle at top left, rgba(34, 197, 94, 0.12), transparent 42%),
         linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(8, 17, 34, 0.94));
       box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+    }
+
+    .profile-cover-card.backend-confirmed {
+      border-color: rgba(59, 130, 246, 0.34);
+      background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.16), transparent 42%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(8, 17, 34, 0.96));
     }
 
     .profile-cover-card {
@@ -1299,7 +1756,9 @@ function installStyles() {
       border: 1px solid rgba(148, 163, 184, 0.22);
       border-radius: 30px;
       background: rgba(15, 23, 42, 0.62);
+      color: #f8fafc;
       font-size: 48px;
+      font-weight: 950;
       line-height: 1;
     }
 
@@ -1338,6 +1797,12 @@ function installStyles() {
       font-weight: 950;
       letter-spacing: 0.12em;
       text-transform: uppercase;
+    }
+
+    .profile-route-badge.ok {
+      border-color: rgba(59, 130, 246, 0.38);
+      background: rgba(30, 64, 175, 0.28);
+      color: #bfdbfe;
     }
 
     .profile-route-badge.muted {

@@ -126,9 +126,26 @@ const workflow = createWorkflowController({
   navigateTo: (url) => navigateTo(url)
 });
 
-async function load() {
-  settings = await getSettings();
+async function ensureClient({ reload = false } = {}) {
+  if (reload || !settings) {
+    settings = await getSettings();
+  }
+
+  if (reload || !client) {
+    client = new RonClient(settings);
+  }
+
+  return client;
+}
+
+function resetClientWithSettings(nextSettings) {
+  settings = nextSettings;
   client = new RonClient(settings);
+  return client;
+}
+
+async function load() {
+  await ensureClient({ reload: true });
   renderTopBarState();
   renderPassportDrawer();
 
@@ -145,6 +162,7 @@ async function load() {
 }
 
 async function navigateTo(input, options = {}) {
+  await ensureClient();
   const raw = normalizeStartupUrl(String(input || '').trim() || HOME_PAGE_URL);
   const parsed = parseBrowserInput(raw);
   const isLocalCreator = isLocalCreatorParsed(parsed);
@@ -259,6 +277,8 @@ function parseBrowserInput(input) {
 }
 
 async function resolveParsed(parsed) {
+  const activeClient = await ensureClient();
+
   if (parsed.type === 'builtin') {
     const pageName = String(parsed.name || '').toLowerCase();
 
@@ -266,11 +286,11 @@ async function resolveParsed(parsed) {
       return makeLocalCreatorRouteResponse(parsed);
     }
 
-    return client.resolveCrab(parsed.url);
+    return activeClient.resolveCrab(parsed.url);
   }
 
   if (parsed.type === 'asset') {
-    return client.getB3Asset(parsed.hash, parsed.kind);
+    return activeClient.getB3Asset(parsed.hash, parsed.kind);
   }
 
   if (parsed.type === 'site') {
@@ -290,23 +310,23 @@ async function resolveParsed(parsed) {
     }
 
     if (BUILT_IN_RON_PAGES.has(parsedName)) {
-      return client.resolveCrab(`crab://${parsedName}`);
+      return activeClient.resolveCrab(`crab://${parsedName}`);
     }
 
     const crabUrl = parsed.url || `crab://${parsed.name}`;
 
     try {
-      return await client.resolveCrab(crabUrl);
+      return await activeClient.resolveCrab(crabUrl);
     } catch (error) {
       if (shouldFallbackToDirectSiteRoute(error)) {
-        return client.resolveSite(parsed.name);
+        return activeClient.resolveSite(parsed.name);
       }
 
       throw error;
     }
   }
 
-  return client.resolveCrab(parsed.url);
+  return activeClient.resolveCrab(parsed.url);
 }
 
 function shouldFallbackToDirectSiteRoute(error) {
@@ -1077,28 +1097,22 @@ function renderTopBarState() {
 }
 
 function renderPassportDrawer() {
+  const current = settings || {};
   const usernameRow = ensureDrawerUsernameRow();
-  usernameRow.value.textContent = drawerUsernameHandle(settings);
-  usernameRow.status.textContent = drawerUsernameStatus(settings);
+  usernameRow.value.textContent = drawerUsernameHandle(current);
+  usernameRow.status.textContent = drawerUsernameStatus(current);
   styleDrawerUsernameRow(usernameRow);
 
-  els.drawerPassport.textContent = settings.passportSubject || 'not loaded';
-  els.drawerGateway.textContent = settings.gatewayUrl || '—';
-  els.drawerWallet.textContent = settings.walletAccount || 'not linked';
-  els.drawerRoc.textContent = settings.rocBalanceDisplay || 'unknown';
-  els.drawerLedger.textContent = settings.rocLedgerBacked ? 'ledger-backed' : 'display-only';
+  els.drawerPassport.textContent = current.passportSubject || 'not loaded';
+  els.drawerGateway.textContent = current.gatewayUrl || '—';
+  els.drawerWallet.textContent = current.walletAccount || 'not linked';
+  els.drawerRoc.textContent = drawerRocDisplay(current);
+  els.drawerLedger.textContent = current.rocLedgerBacked ? 'ledger-backed' : 'display-only';
 
   reorderDrawerIdentityRows(usernameRow.row);
 
-  if (settings.passportSubject) {
-    const userText = drawerUsernameHandle(settings);
-    const userStatus = drawerUsernameStatus(settings);
-    const userSummary =
-      userText && userText !== 'not requested'
-        ? `${userText} (${userStatus})`
-        : 'no username requested';
-
-    els.drawerMessage.textContent = `${identitySummary(settings)} — ${userSummary} — ${balanceSummary(settings)}`;
+  if (current.passportSubject) {
+    els.drawerMessage.textContent = drawerStatusLine(current);
   } else {
     els.drawerMessage.textContent = 'No passport loaded yet.';
   }
@@ -1248,6 +1262,62 @@ function drawerUsernameStatus(nextSettings) {
   return 'none';
 }
 
+function drawerRocDisplay(nextSettings) {
+  const direct = String(nextSettings?.rocBalanceDisplay || '').trim();
+  if (direct) {
+    return direct;
+  }
+
+  const minor = String(nextSettings?.rocBalanceMinorUnits || '').trim();
+  if (minor) {
+    const n = Number(minor);
+    return Number.isFinite(n) ? `${Math.trunc(n).toLocaleString('en-US')} ROC` : minor;
+  }
+
+  const grant = String(nextSettings?.lastStarterGrantAmountMinorUnits || '').trim();
+  if (nextSettings?.lastStarterGrantIssued && grant) {
+    const n = Number(grant);
+    return Number.isFinite(n) ? `${Math.trunc(n).toLocaleString('en-US')} ROC` : grant;
+  }
+
+  return '—';
+}
+
+function drawerStatusLine(nextSettings) {
+  const identityText = safeSummaryText(identitySummary(nextSettings), 'Passport loaded.');
+  const balanceText = safeSummaryText(balanceSummary(nextSettings), 'Balance not loaded.');
+  const userText = drawerUsernameHandle(nextSettings);
+  const userStatus = drawerUsernameStatus(nextSettings);
+  const userSummary =
+    userText && userText !== 'not requested'
+      ? `${userText} (${userStatus})`
+      : 'no username requested';
+
+  return `${identityText} — ${userSummary} — ${balanceText}`;
+}
+
+function safeSummaryText(value, fallback) {
+  if (typeof value === 'string') {
+    return value.trim() || fallback;
+  }
+
+  if (!value || typeof value !== 'object') {
+    return fallback;
+  }
+
+  for (const key of ['summary', 'label', 'display', 'usernameLabel']) {
+    if (typeof value[key] === 'string' && value[key].trim()) {
+      return value[key].trim();
+    }
+  }
+
+  if (typeof value.account === 'string' && value.account.trim()) {
+    return `Wallet ${value.account.trim()}`;
+  }
+
+  return fallback;
+}
+
 function cleanUsernameHandle(value) {
   const raw = String(value || '').trim().toLowerCase();
 
@@ -1269,8 +1339,9 @@ function cleanUsernameHandle(value) {
 async function checkNodeFromDrawer() {
   try {
     setBusy(true);
-    await client.getHealth();
-    await client.getReady();
+    const activeClient = await ensureClient();
+    await activeClient.getHealth();
+    await activeClient.getReady();
     els.drawerMessage.textContent = 'Gateway is online and ready.';
     showFooter('Gateway is online and ready.');
   } catch (error) {
@@ -1284,16 +1355,16 @@ async function checkNodeFromDrawer() {
 async function refreshIdentityFromDrawer() {
   try {
     setBusy(true);
-    const response = await client.getIdentity();
-    settings = await saveIdentityState(response.data);
-    client = new RonClient(settings);
+    const activeClient = await ensureClient();
+    const response = await activeClient.getIdentity();
+    resetClientWithSettings(await saveIdentityState(response.data));
 
     let balanceWarning = '';
     if (hasWallet(settings)) {
       try {
-        const balance = await client.getWalletBalance(settings.walletAccount);
-        settings = await saveBalanceState(balance.data);
-        client = new RonClient(settings);
+        const activeClientForBalance = await ensureClient();
+        const balance = await activeClientForBalance.getWalletBalance(settings.walletAccount);
+        resetClientWithSettings(await saveBalanceState(balance.data));
       } catch (balanceError) {
         balanceWarning = ` Balance refresh failed; kept cached balance. ${formatError(balanceError)}`;
       }
@@ -1326,13 +1397,15 @@ async function refreshBalanceFromDrawer() {
 }
 
 async function refreshBalanceAfterMutation() {
+  await ensureClient();
+
   if (!hasWallet(settings)) {
     return;
   }
 
-  const response = await client.getWalletBalance(settings.walletAccount);
-  settings = await saveBalanceState(response.data);
-  client = new RonClient(settings);
+  const activeClient = await ensureClient();
+  const response = await activeClient.getWalletBalance(settings.walletAccount);
+  resetClientWithSettings(await saveBalanceState(response.data));
   renderPassportDrawer();
 }
 
@@ -1467,7 +1540,12 @@ els.closePassportButton.addEventListener('click', () => {
 });
 
 els.settingsButton.addEventListener('click', () => {
-  chrome.runtime.openOptionsPage();
+  if (globalThis.chrome?.runtime?.openOptionsPage) {
+    chrome.runtime.openOptionsPage();
+    return;
+  }
+
+  showFooter('Options page is only available in the loaded Chrome extension context.');
 });
 
 els.drawerCheckNodeButton.addEventListener('click', checkNodeFromDrawer);

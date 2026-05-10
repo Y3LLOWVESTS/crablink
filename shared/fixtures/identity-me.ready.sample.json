@@ -5,7 +5,12 @@
     "kind": "main",
     "display_name": "Local Dev Passport",
     "created_at": null,
-    "source": "request_header"
+    "source": "request_header",
+    "requested_username": "skinnycrabby",
+    "requested_handle": "@skinnycrabby",
+    "username_status": "requested",
+    "profile_crab_url": null,
+    "public_profile_cid": null
   },
   "wallet": {
     "account": "acct_dev",

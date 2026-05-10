@@ -3,6 +3,7 @@
  * RO:WHY — NEXT_LEVEL text-asset foundation; Concerns: DX/SEC; prepare the .article UX without pretending backend publication exists.
  * RO:INTERACTS — page.html, page.js built-in page renderer, chrome.storage.local, svc-gateway future article prepare route.
  * RO:INVARIANTS — local draft first; gateway-only prepare attempt; no fake b3 CID; no fake article upload; no wallet mutation; no silent ROC spending.
+ * RO:TRUTH — No b3 CID, No ROC charge, No wallet mutation, and no backend publication claim from local drafts.
  * RO:METRICS — backend correlation IDs are generated for prepare attempts.
  * RO:CONFIG — stores crablinkArticleDraftV1 in chrome.storage.local; reads gateway/passport/wallet labels from local settings.
  * RO:SECURITY — textContent/createElement only; no private keys; no direct internal service calls; no executable article body.
@@ -824,9 +825,24 @@ function statChip(label, value) {
   return chip;
 }
 
+function readCurrentCrabUrl() {
+  const addressValue = clean(document.getElementById('addressInput')?.value || '');
+  if (addressValue) return addressValue;
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return clean(params.get('url') || params.get('crab') || '');
+  } catch {
+    return '';
+  }
+}
+
 function isArticlePage() {
-  const url = clean(document.getElementById('addressInput')?.value || '').toLowerCase();
-  if (url === 'crab://article') return true;
+  const url = readCurrentCrabUrl().toLowerCase();
+
+  if (url.startsWith('crab://')) {
+    return url === 'crab://article';
+  }
 
   const payload = readPayload();
   if (!payload) return false;
@@ -845,7 +861,7 @@ function isArticlePage() {
 function routeFingerprint() {
   const payload = readPayload();
   return JSON.stringify({
-    url: clean(document.getElementById('addressInput')?.value || ''),
+    url: readCurrentCrabUrl(),
     schema: payload?.schema || '',
     slug: payload?.slug || payload?.page || payload?.kind || payload?.name || payload?.page_kind || ''
   });

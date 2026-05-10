@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crablink.local/schemas/rendition-group.schema.json",
+  "title": "rendition-group.schema",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "schema": {
+      "type": "string"
+    }
+  }
+}

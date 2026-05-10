@@ -1,0 +1,233 @@
+/*
+ * RO:WHAT — Styles for the React-owned crab://video workspace.
+ * RO:WHY — CrabLink refactor; keeps video route polish local while shared layout components carry common structure.
+ * RO:INTERACTS — VideoPage.jsx, VideoDraft.jsx, shared theme/form/card/layout styles, shell layout.
+ * RO:INVARIANTS — use CSS variables; local draft styling only; no hard-coded backend truth.
+ * RO:TEST — visual/manual checks in CrabLink full-tab browser in light and dark mode.
+ */
+
+.video-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.video-draft-card {
+  min-width: 0;
+}
+
+.video-draft-intro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.video-form-grid,
+.video-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 0.9rem;
+}
+
+.video-form-section {
+  display: grid;
+  gap: 0.8rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 22px;
+  background: var(--cl-surface);
+}
+
+[data-theme='dark'] .video-form-section {
+  background: #050505;
+}
+
+.video-form-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.video-form-section-head h3 {
+  margin: 0;
+  color: var(--cl-text);
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.video-inline-dev {
+  margin-top: 1rem;
+}
+
+.video-actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cl-border);
+}
+
+.video-action-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+  color: var(--cl-muted);
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.video-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: flex-end;
+}
+
+.video-preview {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.video-preview-frame {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+  border: 1px solid var(--cl-border);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 48%),
+    var(--cl-surface);
+  color: var(--cl-muted);
+  font-weight: 850;
+  text-align: center;
+}
+
+[data-theme='dark'] .video-preview-frame {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.045), transparent 48%),
+    #050505;
+}
+
+.video-preview-meta,
+.video-preview-description {
+  margin: 0;
+}
+
+.video-preview-meta {
+  color: var(--cl-muted);
+  font-weight: 750;
+}
+
+.video-preview-description {
+  color: var(--cl-text);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.video-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.video-preview-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.video-preview-fact {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 16px;
+  background: var(--cl-card);
+}
+
+.video-preview-fact span {
+  color: var(--cl-muted);
+  font-size: 0.76rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.video-preview-fact strong {
+  overflow: hidden;
+  color: var(--cl-text);
+  font-size: 0.92rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.video-reference-list {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 18px;
+  background: var(--cl-surface);
+}
+
+[data-theme='dark'] .video-reference-list {
+  background: #050505;
+}
+
+.video-reference-list h3,
+.video-reference-list p {
+  margin: 0;
+}
+
+.video-reference-list h3 {
+  color: var(--cl-text);
+  font-size: 0.95rem;
+}
+
+.video-reference-list p {
+  color: var(--cl-muted);
+  line-height: 1.45;
+}
+
+.video-reference-list div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.video-reference-list span {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 999px;
+  background: var(--cl-card);
+  color: var(--cl-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .video-form-grid,
+  .video-reference-grid,
+  .video-preview-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .video-actions {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .video-action-buttons {
+    justify-content: stretch;
+  }
+
+  .video-action-buttons .cl-button {
+    width: 100%;
+  }
+}

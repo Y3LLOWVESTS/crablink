@@ -1,0 +1,323 @@
+/*
+ * RO:WHAT — Styles for the React-owned crab://image workspace.
+ * RO:WHY — Replaces scaffold styling with a polished local image creator workspace.
+ * RO:INTERACTS — ImagePage.jsx, ImageCreate.jsx, ImagePreview.jsx, ImageRenditions.jsx, ImageManifest.jsx.
+ * RO:INVARIANTS — use shared theme tokens; no backend-truth styling that implies publication.
+ * RO:TEST — visual/manual checks in light and dark mode through React HTTP preview.
+ */
+
+.image-page {
+  display: grid;
+  gap: 1rem;
+
+  --image-panel-bg: var(--cl-card, #ffffff);
+  --image-soft-bg: color-mix(in srgb, var(--cl-card, #ffffff) 74%, var(--cl-bg, #f5f4f1) 26%);
+  --image-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
+}
+
+[data-theme='dark'] .image-page {
+  --image-panel-bg: #0b0b0b;
+  --image-soft-bg: #050505;
+  --image-border-soft: #242424;
+}
+
+.image-create-card,
+.image-preview-card,
+.image-renditions-card,
+.image-manifest-card {
+  min-width: 0;
+}
+
+.image-draft-intro,
+.image-preview-badges,
+.image-manifest-actions,
+.image-side-badges,
+.image-action-buttons,
+.image-file-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.image-draft-intro {
+  margin-bottom: 1rem;
+}
+
+.image-file-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--image-border-soft);
+  border-radius: 20px;
+  background: var(--image-soft-bg);
+}
+
+.image-file-picker span,
+.image-manifest-summary span,
+.image-preview-meta span,
+.image-side-facts span,
+.image-section-list span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.image-file-picker strong,
+.image-manifest-summary strong,
+.image-preview-meta strong,
+.image-side-facts strong,
+.image-section-list strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--cl-text, #111111);
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.image-file-picker small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--cl-muted, #626262);
+}
+
+.image-file-button {
+  position: relative;
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cl-border, #d9d6cf);
+  border-radius: 999px;
+  background: var(--cl-text, #111111);
+  color: var(--cl-bg, #ffffff);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 900;
+  padding: 0 0.9rem;
+}
+
+.image-file-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.image-form-grid,
+.image-policy-grid,
+.image-rendition-grid,
+.image-manifest-summary,
+.image-preview-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.image-policy-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--image-border-soft);
+  border-radius: 18px;
+  background: var(--image-soft-bg);
+}
+
+.image-actions strong {
+  display: block;
+  color: var(--cl-text, #111111);
+  font-size: 1rem;
+}
+
+.image-actions span {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--cl-muted, #626262);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.image-preview-frame {
+  display: grid;
+  min-height: 320px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--image-border-soft);
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.045), transparent 42%),
+    var(--image-soft-bg);
+}
+
+.image-preview-frame.has-image {
+  min-height: 420px;
+}
+
+.image-preview-frame img {
+  display: block;
+  max-width: 100%;
+  max-height: min(70vh, 760px);
+  object-fit: contain;
+}
+
+.image-preview-empty {
+  display: grid;
+  gap: 0.35rem;
+  place-items: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.image-preview-empty strong {
+  color: var(--cl-text, #111111);
+  font-size: 1.1rem;
+}
+
+.image-preview-empty span,
+.image-preview-note,
+.image-section-copy {
+  color: var(--cl-muted, #626262);
+  line-height: 1.55;
+}
+
+.image-preview-meta {
+  margin-top: 1rem;
+}
+
+.image-preview-meta div,
+.image-manifest-summary div,
+.image-side-facts div {
+  min-width: 0;
+  padding: 0.82rem;
+  border: 1px solid var(--image-border-soft);
+  border-radius: 16px;
+  background: var(--image-soft-bg);
+}
+
+.image-rendition-explainer {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--image-border-soft);
+  border-radius: 18px;
+  background: var(--image-soft-bg);
+}
+
+.image-rendition-explainer strong {
+  color: var(--cl-text, #111111);
+}
+
+.image-rendition-explainer span {
+  color: var(--cl-muted, #626262);
+  line-height: 1.55;
+}
+
+.image-manifest-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.image-manifest-summary {
+  margin-bottom: 1rem;
+}
+
+.image-section-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.image-section-list article {
+  padding: 0.9rem;
+  border: 1px solid var(--image-border-soft);
+  border-radius: 18px;
+  background: var(--image-soft-bg);
+}
+
+.image-section-list strong {
+  font-size: 0.95rem;
+}
+
+.image-section-list span {
+  margin-top: 0.4rem;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.55;
+}
+
+.image-side-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.image-side-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.image-completeness {
+  height: 9px;
+  overflow: hidden;
+  margin: 1rem 0;
+  border-radius: 999px;
+  background: var(--image-soft-bg);
+}
+
+.image-completeness span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--cl-text, #111111);
+}
+
+.image-side-facts {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.image-side-badges {
+  margin-top: 1rem;
+}
+
+@media (max-width: 1000px) {
+  .image-policy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .image-file-picker,
+  .image-form-grid,
+  .image-policy-grid,
+  .image-rendition-grid,
+  .image-manifest-summary,
+  .image-preview-meta,
+  .image-side-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .image-file-actions,
+  .image-action-buttons {
+    width: 100%;
+  }
+
+  .image-file-actions .cl-button,
+  .image-action-buttons .cl-button,
+  .image-file-button {
+    width: 100%;
+  }
+}
