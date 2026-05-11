@@ -1,16 +1,42 @@
 /**
- * RO:WHAT — Gateway-only site client for React CrabLink site views.
- * RO:WHY — Preserves proven site prepare/create/open flow behind one client boundary while React migrates safely.
- * RO:INTERACTS — gatewayClient, SitePage, SiteRender, SiteManifestDrawer, SiteCreatorProof.
- * RO:INVARIANTS — no fake site pointer; no direct index/storage calls; no silent ROC spend; paid mutation remains disabled here.
+ * RO:WHAT — Gateway-only site client for React CrabLink named-site views.
+ * RO:WHY — Moves `omnigate.site-page.v1` into read-only React site parity without crossing service boundaries.
+ * RO:INTERACTS — gatewayClient, SitePage, SiteRender, SiteManifestDrawer, SiteCreatorProof, crabUrl helpers.
+ * RO:INVARIANTS — no fake site pointer; no direct index/storage/wallet/ledger calls; no silent ROC spend; no site mutation here.
  * RO:METRICS — gateway client supplies x-correlation-id for backend trace correlation.
- * RO:CONFIG — configured GatewayClient base URL and timeout.
- * RO:SECURITY — read-only resolve/render only in this React batch; no wallet/ledger/storage/index bypass.
- * RO:TEST — React crab://site and crab://<site_name> smoke; legacy site create/open smoke remains protected.
+ * RO:CONFIG — configured GatewayClient base URL, timeout, passport, wallet, bearer token.
+ * RO:SECURITY — read-only resolve/render only; untrusted root bytes are rendered only by sandboxed callers.
+ * RO:TEST — React crab://<site_name> smoke; legacy site create/open smoke remains protected.
  */
+
+import {
+  crabImageUrlToCid,
+  makeCrabSiteUrl,
+  normalizeB3Cid,
+  normalizeSiteName,
+  parseTypedAssetBody,
+} from '../utils/crabUrl.js';
+
+const ROOT_ROUTE_KEYS = Object.freeze(['/', 'index', 'index.html', '/index.html']);
 
 export function createSiteClient(gateway) {
   return new SiteClient(gateway);
+}
+
+export class SiteResolveError extends Error {
+  constructor(message, details = {}) {
+    super(String(message || 'Site resolution failed.'));
+    this.name = 'SiteResolveError';
+    this.reason = details.reason || 'site_resolve_failed';
+    this.status = Number(details.status || 0);
+    this.retryable = Boolean(details.retryable);
+    this.target = details.target || null;
+    this.attempts = Array.isArray(details.attempts) ? details.attempts : [];
+    this.primaryError = details.primaryError || null;
+    this.fallbackError = details.fallbackError || null;
+    this.data = details.data || null;
+    this.correlationId = String(details.correlationId || correlationFromAttempts(this.attempts) || '');
+  }
 }
 
 export class SiteClient {
@@ -18,24 +44,28 @@ export class SiteClient {
     this.gateway = gateway || null;
   }
 
+  get ready() {
+    return Boolean(this.gateway);
+  }
+
   async resolveSite(siteNameOrUrl) {
     const target = normalizeSiteTarget(siteNameOrUrl);
 
     if (!this.gateway) {
-      throw new Error('Site resolution requires the configured gateway client.');
+      throw new SiteResolveError('Site resolution requires the configured gateway client.', {
+        reason: 'missing_gateway_client',
+        retryable: false,
+        target,
+      });
     }
 
     const attempts = [];
+    let primaryError = null;
 
     try {
       const response = await this.gateway.resolveCrab(target.crabUrl);
-      attempts.push({
-        method: 'GET',
-        route: '/crab/resolve',
-        ok: true,
-        status: response.status,
-        correlationId: response.correlationId,
-      });
+      attempts.push(successAttempt('/crab/resolve', response));
+      validateSiteResponse(response?.data, response);
 
       return buildResolvedSite({
         target,
@@ -45,56 +75,66 @@ export class SiteClient {
         attempts,
       });
     } catch (error) {
+      primaryError = error;
       attempts.push(errorAttempt('/crab/resolve', error));
+    }
 
-      try {
-        const response = await this.gateway.request(`/sites/${encodeURIComponent(target.siteName)}`, {
-          label: 'Site lookup',
-        });
+    try {
+      const route = `/sites/${encodeURIComponent(target.siteName)}`;
+      const response = await this.gateway.request(route, {
+        label: 'Site lookup',
+      });
 
-        attempts.push({
-          method: 'GET',
-          route: `/sites/${target.siteName}`,
-          ok: true,
-          status: response.status,
-          correlationId: response.correlationId,
-        });
+      attempts.push(successAttempt(route, response));
+      validateSiteResponse(response?.data, response);
 
-        return buildResolvedSite({
+      return buildResolvedSite({
+        target,
+        response,
+        data: response.data,
+        source: 'site_lookup',
+        attempts,
+      });
+    } catch (fallbackError) {
+      attempts.push(errorAttempt(`/sites/${target.siteName}`, fallbackError));
+
+      throw new SiteResolveError(
+        fallbackError?.message ||
+          primaryError?.message ||
+          `Unable to resolve ${target.crabUrl} through the configured gateway.`,
+        {
+          reason: reasonForFailure(primaryError, fallbackError),
+          status: bestStatus(attempts, fallbackError, primaryError),
+          retryable: Boolean(
+            fallbackError?.retryable ||
+              primaryError?.retryable ||
+              attempts.some((attempt) => attempt.retryable),
+          ),
           target,
-          response,
-          data: response.data,
-          source: 'site_lookup',
           attempts,
-        });
-      } catch (fallbackError) {
-        attempts.push(errorAttempt(`/sites/${target.siteName}`, fallbackError));
-
-        const finalError = new Error(
-          fallbackError?.message ||
-            error?.message ||
-            `Unable to resolve ${target.crabUrl} through the configured gateway.`,
-        );
-
-        finalError.name = 'SiteResolveError';
-        finalError.target = target;
-        finalError.attempts = attempts;
-        finalError.primaryError = error;
-        finalError.fallbackError = fallbackError;
-        throw finalError;
-      }
+          primaryError,
+          fallbackError,
+          data: fallbackError?.data || primaryError?.data || null,
+        },
+      );
     }
   }
 
   async fetchRootDocument(rootDocumentCid) {
-    const cid = normalizeCid(rootDocumentCid);
+    const cid = normalizeSiteCid(rootDocumentCid);
 
     if (!cid) {
-      throw new Error('Root document fetch requires a b3:<hash> content ID.');
+      throw new SiteResolveError('Root document fetch requires a b3:<hash> content ID.', {
+        reason: 'invalid_root_document_cid',
+        retryable: false,
+      });
     }
 
     if (!this.gateway) {
-      throw new Error('Root document fetch requires the configured gateway client.');
+      throw new SiteResolveError('Root document fetch requires the configured gateway client.', {
+        reason: 'missing_gateway_client',
+        retryable: false,
+      });
     }
 
     return this.gateway.request(`/o/${cid}`, {
@@ -105,63 +145,133 @@ export class SiteClient {
       },
     });
   }
+
+  rootDocumentUrl(rootDocumentCid) {
+    const cid = normalizeSiteCid(rootDocumentCid);
+
+    if (!cid || !this.gateway?.url) {
+      return '';
+    }
+
+    return this.gateway.url(`/o/${cid}`);
+  }
+
+  objectUrlFromCid(cid) {
+    return this.rootDocumentUrl(cid);
+  }
+
+  objectUrlFromCrabImage(crabUrl) {
+    const cid = crabImageUrlToCid(crabUrl);
+    return cid ? this.rootDocumentUrl(cid) : '';
+  }
 }
 
 export function normalizeSiteTarget(value) {
   const raw = String(value || '').trim();
-  const body = raw.startsWith('crab://') ? raw.slice('crab://'.length) : raw;
-  const clean = body.split(/[?#]/)[0].replace(/^\/+/, '').trim();
-  const siteName = clean || 'site';
+  const siteName = normalizeSiteName(raw) || normalizeSiteName(raw.replace(/^crab:\/\//i, ''));
+
+  if (!siteName) {
+    throw new SiteResolveError('Named site routes require a safe crab://<site_name> pointer.', {
+      reason: 'invalid_site_name',
+      retryable: false,
+      target: {
+        siteName: '',
+        crabUrl: raw,
+      },
+    });
+  }
 
   return Object.freeze({
     siteName,
-    crabUrl: `crab://${siteName}`,
+    crabUrl: makeCrabSiteUrl(siteName),
   });
 }
 
 export function summarizeSiteData(data, target = {}) {
-  const object = data && typeof data === 'object' ? data : {};
-  const manifest = firstObject(object.manifest, object.site_manifest, object.page?.manifest, object.site?.manifest);
-  const links = firstObject(object.links, manifest.links, object.site?.links);
-  const owner = firstObject(object.owner, object.creator, manifest.owner, manifest.creator, object.site?.owner);
-  const economics = firstObject(object.economics, manifest.economics, object.payout, manifest.payout);
-  const routeMap = firstObject(object.route_map, object.routeMap, manifest.route_map, manifest.routeMap);
-  const assetMap = firstObject(object.asset_map, object.assetMap, manifest.asset_map, manifest.assetMap);
-  const receipts = firstArray(object.receipts, manifest.receipts, object.wallet_receipts, object.proofs);
+  const object = firstObject(data);
+  const page = firstObject(object.page, object.site_page, object.result);
+  const site = firstObject(object.site, page.site);
+  const manifest = firstObject(
+    object.manifest,
+    object.site_manifest,
+    page.manifest,
+    site.manifest,
+  );
+  const metadata = firstObject(
+    object.metadata,
+    object.meta,
+    page.metadata,
+    site.metadata,
+    manifest.metadata,
+    manifest.meta,
+  );
+  const links = firstObject(object.links, page.links, site.links, manifest.links);
+  const owner = firstObject(object.owner, object.creator, page.owner, site.owner, manifest.owner, manifest.creator);
+  const payout = firstObject(object.payout, object.economics, page.payout, site.payout, manifest.payout, manifest.economics);
+  const routeMap = shallowObject(firstObject(object.route_map, object.routeMap, page.route_map, site.route_map, manifest.route_map, manifest.routeMap));
+  const assetMap = shallowObject(firstObject(object.asset_map, object.assetMap, page.asset_map, site.asset_map, manifest.asset_map, manifest.assetMap));
+  const rootDocument = firstObject(object.root_document, object.rootDocument, page.root_document, site.root_document, manifest.root_document, manifest.rootDocument);
+  const storage = firstObject(object.storage, page.storage, site.storage, manifest.storage);
+  const warnings = firstArray(object.warnings, page.warnings, manifest.warnings);
+  const receipts = firstArray(object.receipts, page.receipts, manifest.receipts, object.wallet_receipts, object.proofs);
 
   const siteName = stringValue(
     object.site_name,
     object.siteName,
     object.name,
+    page.site_name,
+    site.site_name,
+    site.name,
+    metadata.site_name,
     manifest.site_name,
     manifest.name,
     target.siteName,
     '',
   );
 
-  const rootDocumentCid = normalizeCid(
-    stringValue(
-      object.root_document_cid,
-      object.rootDocumentCid,
-      object.root_cid,
-      object.rootCid,
-      manifest.root_document_cid,
-      manifest.rootDocumentCid,
-      manifest.root_cid,
-      manifest.rootCid,
-      routeMap['/'],
-      routeMap.index,
-      '',
-    ),
+  const rootDocumentCid = firstCid(
+    object.root_document_cid,
+    object.rootDocumentCid,
+    object.root_cid,
+    object.rootCid,
+    rootDocument.cid,
+    rootDocument.content_id,
+    rootDocument.contentId,
+    rootDocument.b3,
+    page.root_document_cid,
+    site.root_document_cid,
+    manifest.root_document_cid,
+    manifest.rootDocumentCid,
+    manifest.root_cid,
+    manifest.rootCid,
+    storage.root_document_cid,
+    rootFromMap(routeMap),
+    rootFromMap(assetMap),
   );
 
-  return {
-    schema: stringValue(object.schema, manifest.schema, ''),
+  const manifestCid = firstCid(
+    object.manifest_cid,
+    object.manifestCid,
+    page.manifest_cid,
+    site.manifest_cid,
+    manifest.manifest_cid,
+    manifest.manifestCid,
+    manifest.cid,
+    manifest.content_id,
+    links.manifest_raw,
+    links.manifestRaw,
+  );
+
+  return Object.freeze({
+    schema: stringValue(object.schema, object.type, page.schema, manifest.schema, ''),
     siteName,
-    crabUrl: stringValue(links.crab, object.crab_url, object.crabUrl, target.crabUrl, siteName ? `crab://${siteName}` : ''),
-    title: stringValue(object.title, manifest.title, object.site?.title, siteName || 'Untitled site'),
-    description: stringValue(object.description, manifest.description, object.site?.description, ''),
+    crabUrl: stringValue(links.crab, object.crab_url, object.crabUrl, page.crab_url, target.crabUrl, siteName ? `crab://${siteName}` : ''),
+    resolvePath: stringValue(links.resolve, object.resolve, page.resolve, ''),
+    title: stringValue(metadata.title, object.title, page.title, site.title, manifest.title, siteName || 'Untitled site'),
+    description: stringValue(metadata.description, object.description, page.description, site.description, manifest.description, ''),
+    tags: parseTags(metadata.tags || object.tags || page.tags || manifest.tags),
     ownerPassport: stringValue(
+      owner.passport_subject,
       owner.passport,
       owner.owner_passport_subject,
       owner.ownerPassport,
@@ -170,22 +280,50 @@ export function summarizeSiteData(data, target = {}) {
       '',
     ),
     ownerWallet: stringValue(
-      owner.wallet,
       owner.wallet_account,
+      owner.wallet,
       owner.walletAccount,
-      economics.payout_account,
       object.owner_wallet,
+      object.wallet_account,
+      manifest.wallet_account,
       '',
     ),
-    payoutMode: stringValue(economics.mode, economics.payout_mode, economics.default_action, object.payout_mode, ''),
-    manifestCid: normalizeCid(stringValue(object.manifest_cid, object.manifestCid, manifest.cid, '')),
+    payoutMode: stringValue(payout.default_action, payout.mode, payout.payout_mode, object.payout_mode, ''),
+    payoutRecipient: stringValue(payout.recipient_account, payout.payout_account, payout.wallet_account, ''),
+    manifestCid,
+    manifestStatus: stringValue(manifest.status, object.manifest_status, page.manifest_status, ''),
     rootDocumentCid,
     routeMap,
     assetMap,
     receipts,
-    hydrationStatus: stringValue(object.hydration_status, object.hydrationStatus, manifest.hydration_status, ''),
-    status: stringValue(object.status, manifest.status, ''),
-  };
+    warnings,
+    hydrationStatus: stringValue(
+      object.hydration_status,
+      object.hydrationStatus,
+      manifest.hydration_status,
+      manifest.hydrationStatus,
+      '',
+    ),
+    status: stringValue(object.status, page.status, site.status, manifest.status, ''),
+    createdAt: stringValue(object.created_at, object.createdAt, manifest.created_at, ''),
+    updatedAt: stringValue(object.updated_at, object.updatedAt, manifest.updated_at, ''),
+  });
+}
+
+export function normalizeSiteCid(value) {
+  return cidFromAny(value);
+}
+
+function validateSiteResponse(data, response) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new SiteResolveError('Gateway returned a malformed site response instead of a site JSON object.', {
+      reason: 'malformed_site_response',
+      status: Number(response?.status || 0),
+      retryable: false,
+      data: data ?? null,
+      correlationId: String(response?.correlationId || ''),
+    });
+  }
 }
 
 function buildResolvedSite({ target, response, data, source, attempts }) {
@@ -194,7 +332,7 @@ function buildResolvedSite({ target, response, data, source, attempts }) {
     source,
     target,
     response: Object.freeze({
-      status: response?.status || 0,
+      status: Number(response?.status || 0),
       route: response?.route || '',
       correlationId: response?.correlationId || '',
     }),
@@ -203,6 +341,19 @@ function buildResolvedSite({ target, response, data, source, attempts }) {
     attempts: Object.freeze(attempts.map((attempt) => Object.freeze({ ...attempt }))),
     resolvedAt: new Date().toISOString(),
   });
+}
+
+function successAttempt(route, response) {
+  return {
+    method: 'GET',
+    route,
+    ok: true,
+    status: Number(response?.status || 0),
+    reason: 'ok',
+    message: 'Gateway returned a site response.',
+    correlationId: String(response?.correlationId || ''),
+    retryable: false,
+  };
 }
 
 function errorAttempt(route, error) {
@@ -218,15 +369,25 @@ function errorAttempt(route, error) {
   };
 }
 
-function normalizeCid(value) {
-  const clean = String(value || '').trim().toLowerCase();
-  const hash = clean.startsWith('b3:') ? clean.slice(3) : clean;
+function reasonForFailure(primaryError, fallbackError) {
+  return String(
+    fallbackError?.reason ||
+      primaryError?.reason ||
+      fallbackError?.name ||
+      primaryError?.name ||
+      'site_resolve_failed',
+  );
+}
 
-  if (/^[0-9a-f]{64}$/.test(hash)) {
-    return `b3:${hash}`;
-  }
+function bestStatus(attempts, fallbackError, primaryError) {
+  const reversed = [...attempts].reverse();
+  const attempt = reversed.find((item) => item.status);
+  return Number(attempt?.status || fallbackError?.status || primaryError?.status || 0);
+}
 
-  return '';
+function correlationFromAttempts(attempts) {
+  const reversed = [...(attempts || [])].reverse();
+  return String(reversed.find((attempt) => attempt.correlationId)?.correlationId || '');
 }
 
 function firstObject(...values) {
@@ -237,6 +398,14 @@ function firstObject(...values) {
   }
 
   return {};
+}
+
+function shallowObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.freeze({ ...value });
 }
 
 function firstArray(...values) {
@@ -259,4 +428,64 @@ function stringValue(...values) {
   }
 
   return '';
+}
+
+function firstCid(...values) {
+  for (const value of values) {
+    const cid = cidFromAny(value);
+
+    if (cid) {
+      return cid;
+    }
+  }
+
+  return '';
+}
+
+function rootFromMap(map) {
+  for (const key of ROOT_ROUTE_KEYS) {
+    const value = map?.[key];
+    const cid = cidFromAny(value);
+
+    if (cid) {
+      return cid;
+    }
+  }
+
+  return '';
+}
+
+function cidFromAny(value) {
+  const raw = String(value || '').trim();
+
+  if (!raw) {
+    return '';
+  }
+
+  const typed = parseTypedAssetBody(raw);
+  if (typed?.cid) {
+    return typed.cid;
+  }
+
+  const withoutGatewayPath = raw
+    .replace(/^https?:\/\/[^/]+\/o\//i, '')
+    .replace(/^https?:\/\/[^/]+\/b3\//i, '')
+    .replace(/^\/o\//i, '')
+    .replace(/^\/b3\//i, '')
+    .replace(/[?#].*$/, '')
+    .replace(/\.[a-z][a-z0-9_-]{0,31}$/i, '');
+
+  return normalizeB3Cid(withoutGatewayPath);
+}
+
+function parseTags(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 24);
+  }
+
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 24);
 }

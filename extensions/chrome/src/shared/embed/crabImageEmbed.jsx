@@ -1,20 +1,42 @@
 /**
- * RO:WHAT — React scaffold component for extensions/chrome/src/shared/embed/crabImageEmbed.jsx.
- * RO:WHY — CrabLink refactor; gives this UI surface a single clear owner.
- * RO:INTERACTS — App shell, route registry, shared components, and page-local CSS.
- * RO:INVARIANTS — no fake backend truth; no silent ROC spend; no direct internal-service calls.
- * RO:METRICS — none yet.
- * RO:CONFIG — app context/settings when wired.
- * RO:SECURITY — render trusted UI only; untrusted crab content belongs in sandboxed surfaces.
- * RO:TEST — component and route smoke tests once implemented.
+ * RO:WHAT — Trusted React preview card for crab://<hash>.image references.
+ * RO:WHY — Gives React pages a reusable image embed component while iframe/site HTML uses embedRegistry.
+ * RO:INTERACTS — future asset pages, site manifest preview, profile/avatar preview, image rendition views.
+ * RO:INVARIANTS — displays backend/gateway-derived URLs only; does not mint CIDs or claim ownership.
+ * RO:METRICS — none.
+ * RO:CONFIG — src, rawUrl, title, caption props.
+ * RO:SECURITY — no arbitrary HTML; image-only rendering; no extension authority.
+ * RO:TEST — npm run build; visual smoke when wired into a route.
  */
 
-export default function CrabImageEmbed() {
+export default function CrabImageEmbed({
+  src = '',
+  crabUrl = '',
+  title = 'CrabLink image',
+  caption = '',
+  alt = '',
+}) {
+  const safeTitle = title || 'CrabLink image';
+  const safeAlt = alt || safeTitle;
+
+  if (!src) {
+    return (
+      <section className="cl-card cl-scaffold-card" role="note">
+        <p className="cl-eyebrow">Image Embed</p>
+        <h1>Image unavailable</h1>
+        <p>{crabUrl || 'No gateway-backed image URL was provided.'}</p>
+      </section>
+    );
+  }
+
   return (
-    <section className="cl-card cl-scaffold-card">
-      <p className="cl-eyebrow">Scaffold</p>
-      <h1>CrabImageEmbed</h1>
-      <p>extensions/chrome/src/shared/embed/crabImageEmbed.jsx</p>
-    </section>
+    <figure className="cl-crab-image-embed">
+      <img src={src} alt={safeAlt} loading="lazy" decoding="async" referrerPolicy="no-referrer" />
+      <figcaption>
+        <strong>{safeTitle}</strong>
+        {caption && <span>{caption}</span>}
+        {crabUrl && <small>{crabUrl}</small>}
+      </figcaption>
+    </figure>
   );
 }

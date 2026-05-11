@@ -1,12 +1,12 @@
 /**
- * RO:WHAT — Local image metadata and file-selection form for crab://image.
- * RO:WHY — Gives image route a real React workspace while deferring paid upload parity.
- * RO:INTERACTS — ImagePage.jsx, imageDraftModel.js, shared form/card/button components.
- * RO:INVARIANTS — selected file preview is local only; no b3 CID; no manifest CID; no wallet mutation.
+ * RO:WHAT — Image metadata and file-selection form for crab://image.
+ * RO:WHY — Gives image route a real React workspace feeding the explicit prepare/hold/upload publish panel.
+ * RO:INTERACTS — ImagePage.jsx, ImagePublishFlow.jsx, imageDraftModel.js, shared form/card/button components.
+ * RO:INVARIANTS — selected file preview is local until explicit upload; no fake b3 CID; no fake manifest CID; no silent wallet mutation.
  * RO:METRICS — none.
  * RO:CONFIG — app settings can prefill display-only identity hints.
- * RO:SECURITY — never uploads the selected file; no private keys or seed phrases.
- * RO:TEST — manual crab://image builder/developer route smoke.
+ * RO:SECURITY — file selection alone never uploads; publish panel performs explicit paid actions only.
+ * RO:TEST — manual crab://image builder/developer/publish route smoke.
  */
 
 import Badge from '../../shared/components/Badge.jsx';
@@ -49,9 +49,16 @@ export default function ImageCreate({
     onFileSelected(file);
   }
 
+  function scrollToPublishPanel() {
+    document.querySelector('.image-publish-card')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }
+
   return (
     <Card
-      eyebrow="Local builder"
+      eyebrow="Builder"
       title="Image asset draft"
       className="image-create-card"
       actions={
@@ -65,10 +72,10 @@ export default function ImageCreate({
       }
     >
       <div className="image-draft-intro">
-        <Badge tone="warning">Local only</Badge>
+        <Badge tone="info">Draft metadata</Badge>
         <Badge tone="neutral">crab://image</Badge>
-        <Badge tone="neutral">No backend upload</Badge>
-        <Badge tone="neutral">No ROC hold</Badge>
+        <Badge tone="warning">No upload until publish step</Badge>
+        <Badge tone="neutral">No silent ROC hold</Badge>
       </div>
 
       <section className="image-file-picker" aria-label="Local image file picker">
@@ -78,7 +85,7 @@ export default function ImageCreate({
           <small>
             {fileFacts
               ? `${fileFacts.type || 'unknown type'} · ${formatBytes(fileFacts.size)}`
-              : 'Choose a local image to preview. This does not upload anything.'}
+              : 'Choose a local image to preview and feed the explicit publish flow below.'}
           </small>
         </div>
 
@@ -99,7 +106,7 @@ export default function ImageCreate({
       </section>
 
       <div className="image-form-grid">
-        <Field label="Title" help="Human-facing image title. Backend truth comes later.">
+        <Field label="Title" help="Human-facing image title. Backend truth comes from publish response later.">
           <TextInput
             value={draft.title}
             onChange={updateField('title')}
@@ -146,7 +153,7 @@ export default function ImageCreate({
           </select>
         </Field>
 
-        <Field label="Expected MIME type" help="Used for draft planning; gateway/storage decides real content type later.">
+        <Field label="Expected MIME type" help="Used for draft planning; selected file type is used for upload.">
           <TextInput
             value={draft.expectedMimeType}
             onChange={updateField('expectedMimeType')}
@@ -292,8 +299,8 @@ export default function ImageCreate({
           <Button variant="secondary" onClick={clearDraft}>
             Clear draft
           </Button>
-          <Button variant="primary" disabled title="Paid image upload stays in the protected legacy lane for now.">
-            Prepare paid upload later
+          <Button variant="primary" onClick={scrollToPublishPanel}>
+            Continue to Publish
           </Button>
         </div>
       </div>

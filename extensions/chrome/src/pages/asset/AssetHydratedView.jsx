@@ -9,8 +9,9 @@
  * RO:TEST — known-good image asset smoke plus malformed/offline gateway smoke.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Badge from '../../shared/components/Badge.jsx';
+import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
 import CopyButton from '../../shared/components/CopyButton.jsx';
 import JsonPreview from '../../shared/components/JsonPreview.jsx';
@@ -19,8 +20,60 @@ import TruthBoundary from '../../shared/components/TruthBoundary.jsx';
 
 export default function AssetHydratedView({ route, result, assetClient }) {
   const [imagePreviewOk, setImagePreviewOk] = useState(true);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [failedPreviewSources, setFailedPreviewSources] = useState([]);
+
   const summary = useMemo(() => summarizeAsset(result, route), [result, route]);
-  const previewUrl = summary.kind === 'image' ? assetClient.gatewayB3Url(summary.hash, summary.kind) : '';
+
+  const previewSources = useMemo(() => {
+    if (summary.kind !== 'image' || !summary.hash || !assetClient?.previewSources) {
+      return [];
+    }
+
+    try {
+      return assetClient.previewSources(summary.hash, summary.kind);
+    } catch (_error) {
+      return [];
+    }
+  }, [assetClient, summary.hash, summary.kind]);
+
+  const previewSource = previewSources[previewIndex] || null;
+
+  useEffect(() => {
+    setImagePreviewOk(true);
+    setPreviewIndex(0);
+    setFailedPreviewSources([]);
+  }, [summary.hash, summary.kind, summary.crabUrl]);
+
+  function handlePreviewError() {
+    const failed = previewSource
+      ? {
+          key: previewSource.key,
+          label: previewSource.label,
+          url: previewSource.url,
+          failedAt: new Date().toISOString(),
+        }
+      : null;
+
+    if (failed) {
+      setFailedPreviewSources((items) => [...items, failed]);
+    }
+
+    if (previewIndex < previewSources.length - 1) {
+      setPreviewIndex((value) => value + 1);
+      return;
+    }
+
+    setImagePreviewOk(false);
+  }
+
+  function openPreviewSource() {
+    if (!previewSource?.url) {
+      return;
+    }
+
+    window.open(previewSource.url, '_blank', 'noopener,noreferrer');
+  }
 
   return (
     <section className="asset-hydrated-view">
@@ -78,19 +131,65 @@ export default function AssetHydratedView({ route, result, assetClient }) {
         </aside>
       </section>
 
-      {previewUrl && imagePreviewOk && (
-        <Card eyebrow="Preview" title="Gateway image preview" className="asset-preview-card">
-          <div className="asset-image-frame">
-            <img
-              src={previewUrl}
-              alt={summary.title || `${summary.kindLabel} preview`}
-              onError={() => setImagePreviewOk(false)}
-            />
-          </div>
-          <p>
-            Preview source is the configured gateway route for this typed asset. If the gateway
-            returns JSON instead of image bytes, the preview hides itself and the DTO remains visible.
-          </p>
+      {summary.kind === 'image' && (
+        <Card
+          eyebrow="Preview"
+          title={imagePreviewOk && previewSource ? 'Gateway image preview' : 'Image preview unavailable'}
+          className="asset-preview-card"
+          actions={
+            <div className="asset-copy-actions">
+              {previewSource?.url && <CopyButton text={previewSource.url} label="Copy preview URL" />}
+              {previewSource?.url && (
+                <Button variant="secondary" size="sm" onClick={openPreviewSource}>
+                  Open raw
+                </Button>
+              )}
+            </div>
+          }
+        >
+          {imagePreviewOk && previewSource ? (
+            <>
+              <div className="asset-preview-source-strip" aria-label="Preview source">
+                <Badge tone="success">trying</Badge>
+                <span>{previewSource.label}</span>
+                <code>{previewSource.url}</code>
+              </div>
+
+              <div className="asset-image-frame">
+                <img
+                  src={previewSource.url}
+                  alt={summary.title || `${summary.kindLabel} preview`}
+                  onError={handlePreviewError}
+                />
+              </div>
+
+              <p>
+                React tries the gateway raw object route first, then falls back to the typed b3 route.
+                If both routes return JSON or unavailable bytes, the DTO still remains visible below.
+              </p>
+            </>
+          ) : (
+            <div className="asset-preview-unavailable">
+              <strong>No renderable image bytes were returned to the browser preview.</strong>
+              <p>
+                The asset page still resolved through the gateway. This usually means the local stack
+                returned JSON for the typed route, the raw object route is unavailable, or the current
+                dev database no longer contains the bytes for this CID.
+              </p>
+            </div>
+          )}
+
+          {failedPreviewSources.length > 0 && (
+            <div className="asset-preview-fallbacks" aria-label="Failed preview sources">
+              <strong>Preview fallback history</strong>
+              {failedPreviewSources.map((source) => (
+                <div key={`${source.key}-${source.failedAt}`}>
+                  <span>{source.label}</span>
+                  <code>{source.url}</code>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       )}
 
@@ -149,6 +248,8 @@ export default function AssetHydratedView({ route, result, assetClient }) {
             page_owner: 'extensions/chrome/src/pages/asset/AssetPage.jsx',
             target: result?.target || null,
             response: result?.response || null,
+            preview_sources: previewSources,
+            failed_preview_sources: failedPreviewSources,
             attempts: result?.attempts || [],
           }}
         />
@@ -169,37 +270,102 @@ function Fact({ label, value, monospace = false }) {
 function summarizeAsset(result, route) {
   const data = result?.data;
   const object = data && typeof data === 'object' ? data : {};
-  const manifest = firstObject(object.manifest, object.asset_manifest, object.page?.manifest);
-  const metadata = firstObject(object.metadata, manifest.metadata, object.asset?.metadata);
-  const ownership = firstObject(object.ownership, manifest.ownership, object.asset?.ownership);
-  const economics = firstObject(object.economics, manifest.economics, object.payout, manifest.payout);
-  const provider = firstObject(object.provider, object.storage, manifest.provider, manifest.storage);
-  const policy = firstObject(object.policy, manifest.policy, object.access_policy, manifest.access_policy);
-  const receipts = firstArray(object.receipts, manifest.receipts, object.wallet_receipts, object.proofs);
+  const page = firstObject(object.page, object.asset_page, object.view);
+  const asset = firstObject(object.asset, object.object, page.asset);
+  const manifest = firstObject(
+    object.manifest,
+    object.asset_manifest,
+    object.assetManifest,
+    page.manifest,
+    asset.manifest,
+  );
+  const metadata = firstObject(object.metadata, page.metadata, asset.metadata, manifest.metadata);
+  const ownership = firstObject(object.ownership, page.ownership, asset.ownership, manifest.ownership);
+  const economics = firstObject(
+    object.economics,
+    page.economics,
+    asset.economics,
+    manifest.economics,
+    object.payout,
+    manifest.payout,
+  );
+  const provider = firstObject(
+    object.provider,
+    object.storage,
+    page.provider,
+    page.storage,
+    asset.provider,
+    asset.storage,
+    manifest.provider,
+    manifest.storage,
+  );
+  const policy = firstObject(
+    object.policy,
+    page.policy,
+    asset.policy,
+    manifest.policy,
+    object.access_policy,
+    manifest.access_policy,
+  );
+  const receipts = firstArray(
+    object.receipts,
+    page.receipts,
+    asset.receipts,
+    manifest.receipts,
+    object.wallet_receipts,
+    object.proofs,
+  );
 
   const target = result?.target || route?.params || {};
   const kind = stringValue(
     object.kind,
     object.asset_kind,
     object.assetKind,
+    page.kind,
+    page.asset_kind,
+    asset.kind,
+    asset.asset_kind,
     manifest.kind,
     manifest.asset_kind,
     target.assetKind,
     'asset',
   ).toLowerCase();
 
-  const hash = stringValue(
-    object.hash,
-    object.b3,
-    object.digest,
-    target.hash,
-    '',
-  ).replace(/^b3:/i, '');
+  const hash = normalizeHash(
+    stringValue(
+      object.hash,
+      object.b3,
+      object.digest,
+      object.asset_cid,
+      object.assetCid,
+      object.cid,
+      object.content_id,
+      object.contentId,
+      page.hash,
+      page.asset_cid,
+      page.cid,
+      asset.hash,
+      asset.cid,
+      asset.content_id,
+      manifest.hash,
+      manifest.cid,
+      manifest.content_id,
+      target.hash,
+      '',
+    ),
+  );
 
   const cid = stringValue(
     object.cid,
     object.content_id,
     object.contentId,
+    object.asset_cid,
+    object.assetCid,
+    page.cid,
+    page.content_id,
+    page.asset_cid,
+    asset.cid,
+    asset.content_id,
     manifest.cid,
     manifest.content_id,
     target.cid,
@@ -207,38 +373,61 @@ function summarizeAsset(result, route) {
   );
 
   return {
-    title: stringValue(object.title, metadata.title, manifest.title, object.asset?.title, ''),
+    title: stringValue(object.title, page.title, metadata.title, manifest.title, asset.title, ''),
     description: stringValue(
       object.description,
+      page.description,
       metadata.description,
       manifest.description,
-      object.asset?.description,
+      asset.description,
       '',
     ),
     kind,
     kindLabel: labelFromKind(kind),
     hash,
     cid,
-    crabUrl: stringValue(target.assetUrl, route?.normalizedInput, hash ? `crab://${hash}.${kind}` : ''),
+    crabUrl: stringValue(
+      target.assetUrl,
+      object.crab_url,
+      object.crabUrl,
+      page.crab_url,
+      page.crabUrl,
+      route?.normalizedInput,
+      hash ? `crab://${hash}.${kind}` : '',
+    ),
     owner: stringValue(
       ownership.owner,
       ownership.passport,
       ownership.owner_passport_subject,
+      ownership.ownerPassportSubject,
       object.owner,
       object.owner_passport_subject,
+      object.ownerPassportSubject,
+      page.owner,
+      asset.owner,
       '',
     ),
     payout: stringValue(
       economics.payout,
       economics.payout_account,
+      economics.payoutAccount,
       economics.creator_payout_account,
+      economics.creatorPayoutAccount,
       object.payout_account,
+      object.payoutAccount,
       '',
     ),
-    provider: stringValue(provider.provider, provider.node, provider.storage_provider, object.provider, ''),
+    provider: stringValue(
+      provider.provider,
+      provider.node,
+      provider.storage_provider,
+      provider.storageProvider,
+      object.provider,
+      '',
+    ),
     accessPolicy: summarizePolicy(policy.access || policy.access_policy || object.access_policy),
     rightsPolicy: summarizePolicy(policy.rights || policy.rights_policy || object.rights_policy),
-    tags: normalizeTags(object.tags || metadata.tags || manifest.tags),
+    tags: normalizeTags(object.tags || page.tags || asset.tags || metadata.tags || manifest.tags),
     status: Number(result?.response?.status || 0),
     correlationId: stringValue(result?.response?.correlationId, ''),
     attempts: Array.isArray(result?.attempts) ? result.attempts : [],
@@ -276,6 +465,14 @@ function stringValue(...values) {
   }
 
   return '';
+}
+
+function normalizeHash(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  const withoutPrefix = raw.replace(/^b3:/i, '');
+  const match = withoutPrefix.match(/[0-9a-f]{64}/i);
+
+  return match ? match[0].toLowerCase() : '';
 }
 
 function normalizeTags(value) {

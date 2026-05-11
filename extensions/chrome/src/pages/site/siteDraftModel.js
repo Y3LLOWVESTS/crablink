@@ -9,6 +9,8 @@
  * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://site route smoke.
  */
 
+import { DEFAULT_SITE_TEMPLATE } from './siteTemplates.js';
+
 export const SITE_VIEW_OPTIONS = Object.freeze([
   { value: 'builder', label: 'Builder' },
   { value: 'developer', label: 'Developer' },
@@ -45,23 +47,23 @@ export const SITE_PAYOUT_OPTIONS = Object.freeze([
 
 export const DEFAULT_SITE_DRAFT = Object.freeze({
   siteName: 'my-crab-site',
-  title: '',
-  description: '',
+  title: DEFAULT_SITE_TEMPLATE.patch.title,
+  description: DEFAULT_SITE_TEMPLATE.patch.description,
   creatorDisplay: '',
   ownerPassport: '',
   ownerWallet: '',
   rootDocumentCid: '',
-  rootHtml: `<main>
-  <h1>Welcome to my CrabLink site</h1>
-  <p>This is a local static preview. Real site creation still requires gateway-backed prepare, wallet hold, and create.</p>
-  <crab-image src="crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image" alt="Example image reference"></crab-image>
-</main>`,
-  routeMapJson: '{\n  "/": "local-root-draft"\n}',
-  assetMapJson: '{\n  "hero": "crab://<64 lowercase hex>.image"\n}',
-  tags: 'site, creator',
+  rootHtml: DEFAULT_SITE_TEMPLATE.buildHtml({
+    title: DEFAULT_SITE_TEMPLATE.patch.title,
+    description: DEFAULT_SITE_TEMPLATE.patch.description,
+    creatorDisplay: 'CrabLink Creator',
+  }),
+  routeMapJson: DEFAULT_SITE_TEMPLATE.patch.routeMapJson,
+  assetMapJson: DEFAULT_SITE_TEMPLATE.patch.assetMapJson,
+  tags: DEFAULT_SITE_TEMPLATE.patch.tags,
   hostingMode: 'local_draft_only',
   accessMode: 'public_preview',
-  renderPolicy: 'static_html_no_scripts',
+  renderPolicy: DEFAULT_SITE_TEMPLATE.patch.renderPolicy,
   payoutMode: 'creator_wallet_future',
   moderationPolicy: 'site_owner_policy_future',
   provenanceNote: '',

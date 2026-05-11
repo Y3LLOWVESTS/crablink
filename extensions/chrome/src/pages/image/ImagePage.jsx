@@ -1,12 +1,12 @@
 /**
- * RO:WHAT — Route owner for the React crab://image local image workspace.
- * RO:WHY — CrabLink refactor; replaces scaffold UI while preserving protected legacy paid image flow.
- * RO:INTERACTS — ImageCreate, ImagePreview, ImageRenditions, ImageManifest, useCreatorDraft, CreatorWorkspaceLayout.
- * RO:INVARIANTS — local draft only; no fake b3 CID; no fake manifest CID; no silent ROC spend; no backend upload here.
- * RO:METRICS — none; future upload/prepare flow must use gateway client correlation IDs.
- * RO:CONFIG — app settings can provide display-only passport/wallet hints.
- * RO:SECURITY — trusted UI only; selected local image preview stays local; no direct internal-service calls.
- * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://image route smoke.
+ * RO:WHAT — Route owner for the React crab://image workspace and explicit paid image publishing flow.
+ * RO:WHY — CrabLink refactor; moves image publish parity into React while preserving protected legacy lane behavior.
+ * RO:INTERACTS — ImageCreate, ImagePreview, ImagePublishFlow, ImageRenditions, ImageManifest, useCreatorDraft.
+ * RO:INVARIANTS — no fake b3 CID; no fake manifest CID; no silent ROC spend; mutations require explicit user actions.
+ * RO:METRICS — prepare/hold/upload use gateway correlation IDs through shared API clients.
+ * RO:CONFIG — app settings provide passport/wallet/gateway labels.
+ * RO:SECURITY — selected image is local until explicit upload; no direct internal-service calls.
+ * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://image prepare/hold/upload route smoke.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -15,6 +15,7 @@ import RouteTruthPanel from '../../shared/components/RouteTruthPanel.jsx';
 import useCreatorDraft from '../../shared/hooks/useCreatorDraft.js';
 import ImageCreate from './ImageCreate.jsx';
 import ImagePreview from './ImagePreview.jsx';
+import ImagePublishFlow from './ImagePublishFlow.jsx';
 import ImageRenditions from './ImageRenditions.jsx';
 import ImageManifest, { ImageSidePanel } from './ImageManifest.jsx';
 import {
@@ -37,9 +38,9 @@ const PRINCIPLES = Object.freeze([
       'Original, desktop, mobile, thumbnail, cover, poster, and avatar variants should each be independently b3-addressed and cross-linked in manifests.',
   },
   {
-    title: 'Paid upload remains protected',
+    title: 'Publishing is explicit',
     copy:
-      'This React workspace does not replace the proven paid image upload path yet. It prepares UI parity first without touching wallet, ledger, storage, or index mutation.',
+      'React now separates prepare, wallet hold, and raw image upload into visible clicks. It never silently spends ROC or invents receipts.',
   },
 ]);
 
@@ -106,11 +107,12 @@ export default function ImagePage({ app, route }) {
     <CreatorWorkspaceLayout
       eyebrow="crab://image"
       title="Image Workspace"
-      copy="Draft image asset metadata, local preview, rendition relationships, rights, access, and future paid-upload manifest fields without claiming backend publication."
+      copy="Draft image asset metadata, preview local bytes, prepare a paid upload, create an explicit ROC hold, and submit the image through svc-gateway."
       badges={[
         { label: 'React lane', tone: 'neutral' },
-        { label: 'Local draft', tone: 'warning' },
-        { label: 'No paid upload yet', tone: 'neutral' },
+        { label: 'Image draft', tone: 'info' },
+        { label: 'Explicit ROC hold', tone: 'warning' },
+        { label: 'Gateway upload', tone: 'success' },
       ]}
       principles={PRINCIPLES}
       side={<ImageSidePanel draftState={draftState} fileFacts={fileFacts} />}
@@ -118,14 +120,25 @@ export default function ImagePage({ app, route }) {
     >
       <RouteTruthPanel
         routeKind="image"
-        tone="warning"
+        tone="info"
         title="Image route truth boundary"
+        copy="This route can now prepare a paid image upload, create an explicit wallet hold, and submit raw image bytes through the configured gateway. Backend b3 CIDs, manifests, receipts, and index pointers must still come from the gateway response."
         allowed={[
           'local file preview',
           'manifest draft',
-          'rendition planning',
-          'copy JSON',
-          'builder/developer view',
+          'prepare /assets/image/prepare',
+          'explicit /wallet/hold',
+          'paid /assets/image upload',
+          'returned crab URL display',
+          'wallet refresh after mutation',
+        ]}
+        blocked={[
+          'no silent ROC spend',
+          'no fake b3 CID',
+          'no fake manifest CID',
+          'no fake receipt',
+          'no direct storage/index/ledger call',
+          'no private-key custody',
         ]}
       />
 
@@ -139,6 +152,13 @@ export default function ImagePage({ app, route }) {
       <ImagePreview
         draftState={draftState}
         previewUrl={previewUrl}
+        fileFacts={fileFacts}
+      />
+
+      <ImagePublishFlow
+        app={app}
+        draftState={draftState}
+        selectedFile={selectedFile}
         fileFacts={fileFacts}
       />
 

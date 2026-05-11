@@ -41,15 +41,9 @@ export default function SitePage({ app, route }) {
     [app, route],
   );
 
-  const buildStats = useCallback(
-    (draft) => statsForSiteDraft(draft, app),
-    [app],
-  );
+  const buildStats = useCallback((draft) => statsForSiteDraft(draft, app), [app]);
 
-  const getCompleteness = useCallback(
-    (draft) => getSiteCompleteness(draft, app),
-    [app],
-  );
+  const getCompleteness = useCallback((draft) => getSiteCompleteness(draft, app), [app]);
 
   const draftState = useCreatorDraft({
     initialDraft: {
@@ -68,11 +62,11 @@ export default function SitePage({ app, route }) {
         <PageHeader
           eyebrow="Named site"
           title={`crab://${siteName}`}
-          copy="Resolve and preview a named CrabLink site through the configured gateway. This page is read-only in the React lane."
+          copy="Resolve a named CrabLink site through the gateway, show the hydrated manifest proof, fetch the root document bytes, and render the page inside a scriptless sandbox."
           meta={
             <>
               <Badge tone="info">gateway read</Badge>
-              <Badge tone="neutral">sandbox preview</Badge>
+              <Badge tone="success">root preview</Badge>
               <Badge tone="neutral">no mutation</Badge>
             </>
           }
@@ -92,13 +86,14 @@ export default function SitePage({ app, route }) {
           routeKind="site"
           tone="info"
           title="Named site truth boundary"
-          copy="Named sites in this React route are read-only gateway views. Site creation, wallet hold, receipt capture, and index writes remain in the protected legacy/proven flow until parity is intentionally wired."
+          copy="This React route is now a read-only named-site renderer. It can resolve the site DTO, display backend-returned proof fields, fetch the root document through the gateway, and render static content in a sandbox. Creation and paid mutation remain protected."
           allowed={[
             'gateway resolve',
             'manifest display',
             'root document fetch',
             'sandbox preview',
-            'copy fields',
+            'crab-image static preview',
+            'copy proof fields',
           ]}
           blocked={[
             'no site creation',
@@ -133,7 +128,7 @@ export default function SitePage({ app, route }) {
             <Button variant="secondary" onClick={draftState.clearDraft}>
               Clear draft
             </Button>
-            <Button variant="primary" disabled title="Paid site launch remains protected until React parity is ready.">
+            <Button variant="primary" disabled title="Paid site launch remains protected until React mutation parity is ready.">
               Launch site later
             </Button>
           </div>
@@ -150,6 +145,7 @@ export default function SitePage({ app, route }) {
           'route map planning',
           'asset map planning',
           'creator proof preview',
+          'static crab-image preview',
         ]}
         blocked={[
           'no /sites/prepare mutation',
@@ -207,6 +203,7 @@ export default function SitePage({ app, route }) {
                   parsed_at: route?.parsedAt || '',
                   page_owner: 'extensions/chrome/src/pages/site/SitePage.jsx',
                   mode: 'local_site_workspace',
+                  named_site_renderer_ready: true,
                 }}
               />
             </Card>

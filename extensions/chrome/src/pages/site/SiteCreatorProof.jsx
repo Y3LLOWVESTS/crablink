@@ -31,7 +31,10 @@ export default function SiteCreatorProof({ app, draftState = null, resolvedSite 
     app?.settings?.walletAccount ||
     'not returned';
 
+  const payoutRecipient = summary.payoutRecipient || ownerWallet;
   const siteName = summary.siteName || draft.siteName || 'site draft';
+  const receipts = Array.isArray(summary.receipts) ? summary.receipts : [];
+  const isGateway = Boolean(resolvedSite);
 
   return (
     <Card eyebrow="Creator proof" title="Site creator boundary" className="site-creator-card">
@@ -41,14 +44,22 @@ export default function SiteCreatorProof({ app, draftState = null, resolvedSite 
           <strong>{summary.crabUrl || `crab://${siteName}`}</strong>
         </div>
 
-        <Badge tone={resolvedSite ? 'info' : 'warning'}>
-          {source}
-        </Badge>
+        <Badge tone={isGateway ? 'info' : 'warning'}>{source}</Badge>
       </div>
 
       <div className="site-creator-stats">
-        <StatChip label="Owner" value={ownerPassport === 'not returned' ? 'unknown' : 'hint'} help={ownerPassport} />
-        <StatChip label="Wallet" value={ownerWallet === 'not returned' ? 'unknown' : 'hint'} help={ownerWallet} />
+        <StatChip
+          label="Owner"
+          value={ownerPassport === 'not returned' ? 'unknown' : isGateway ? 'verified field' : 'local hint'}
+          help={ownerPassport}
+          tone={isGateway && ownerPassport !== 'not returned' ? 'success' : 'neutral'}
+        />
+        <StatChip
+          label="Wallet"
+          value={ownerWallet === 'not returned' ? 'unknown' : isGateway ? 'verified field' : 'local hint'}
+          help={ownerWallet}
+          tone={isGateway && ownerWallet !== 'not returned' ? 'success' : 'neutral'}
+        />
         <StatChip label="REP" value="not confirmed" help="Future backend reputation summary" />
         <StatChip label="MOD" value="not confirmed" help="Future moderation summary" />
       </div>
@@ -56,13 +67,15 @@ export default function SiteCreatorProof({ app, draftState = null, resolvedSite 
       <div className="site-creator-facts">
         <Fact label="Owner passport" value={ownerPassport} />
         <Fact label="Owner wallet" value={ownerWallet} />
-        <Fact label="Payout mode" value={labelFromSnake(summary.payoutMode || draft.payoutMode || 'not returned')} />
-        <Fact label="Receipts" value={summary.receipts?.length ? `${summary.receipts.length} returned` : 'none returned'} />
+        <Fact label="Payout action" value={labelFromSnake(summary.payoutMode || draft.payoutMode || 'not returned')} />
+        <Fact label="Payout recipient" value={payoutRecipient || 'not returned'} />
+        <Fact label="Receipts" value={receipts.length ? `${receipts.length} returned` : 'none returned'} />
+        <Fact label="Source" value={isGateway ? resolvedSite?.source || 'gateway' : 'local draft'} />
       </div>
 
       <p className="site-panel-note">
-        Creator, payout, reputation, moderation, and receipt fields are only trusted when
-        returned by the gateway. Local hints are not backend proof.
+        Creator, payout, reputation, moderation, and receipt fields are only trusted when returned by the gateway.
+        Local hints are not backend proof, and this panel never has wallet authority.
       </p>
     </Card>
   );

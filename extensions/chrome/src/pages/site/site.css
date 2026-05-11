@@ -3,7 +3,7 @@
  * RO:WHY — Gives site builder/render/proof flows a polished safe layout consistent with CrabLink light/dark theme.
  * RO:INTERACTS — SitePage, SiteCreate, SiteRender, SiteManifestDrawer, SiteCreatorProof, SiteRootUpload.
  * RO:INVARIANTS — use shared theme tokens; no styling that implies backend launch when local-only.
- * RO:TEST — visual/manual checks in light/dark mode through React HTTP preview.
+ * RO:TEST — visual/manual checks in light/dark mode through extension-origin React.
  */
 
 .site-page {
@@ -144,6 +144,99 @@
   cursor: pointer;
 }
 
+.site-template-panel {
+  display: grid;
+  gap: 1rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 8% 8%, color-mix(in srgb, var(--cl-success, #12805c) 12%, transparent), transparent 34%),
+    var(--site-soft-bg);
+}
+
+.site-template-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.site-template-header span,
+.site-template-card span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 0.7rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.site-template-header strong,
+.site-template-card strong {
+  display: block;
+  margin-top: 0.24rem;
+  color: var(--cl-text, #111111);
+  font-weight: 950;
+}
+
+.site-template-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.site-template-controls select {
+  min-height: 36px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 999px;
+  background: var(--site-panel-bg);
+  color: var(--cl-text, #111111);
+  font-weight: 850;
+  padding: 0 0.8rem;
+}
+
+.site-template-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.site-template-card {
+  display: grid;
+  gap: 0.35rem;
+  min-height: 132px;
+  padding: 1rem;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 20px;
+  background: var(--site-panel-bg);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.site-template-card:hover,
+.site-template-card.is-selected {
+  border-color: color-mix(in srgb, var(--cl-success, #12805c) 58%, var(--site-border-soft));
+  transform: translateY(-1px);
+}
+
+.site-template-card.is-selected {
+  background: color-mix(in srgb, var(--cl-success, #12805c) 9%, var(--site-panel-bg));
+}
+
+.site-template-card small {
+  color: var(--cl-muted, #626262);
+  line-height: 1.4;
+}
+
 .site-root-guard {
   display: grid;
   gap: 0.25rem;
@@ -173,6 +266,14 @@
 
 .site-root-guard.is-success {
   border-color: color-mix(in srgb, var(--cl-success, #12805c) 48%, var(--site-border-soft));
+}
+
+.site-root-guard.is-info {
+  border-color: color-mix(in srgb, var(--cl-accent, #111111) 32%, var(--site-border-soft));
+}
+
+.site-root-actions.lower {
+  margin: 0.75rem 0 1rem;
 }
 
 .site-root-stats div,
@@ -225,7 +326,7 @@
 
 .site-preview-frame {
   width: 100%;
-  min-height: 520px;
+  min-height: 620px;
   border: 1px solid var(--site-border-soft);
   border-radius: 24px;
   background: #ffffff;
@@ -284,7 +385,8 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .site-policy-grid {
+  .site-policy-grid,
+  .site-template-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -299,20 +401,29 @@
   .site-creator-stats,
   .site-creator-facts,
   .site-side-stats,
-  .site-workspace-side {
+  .site-workspace-side,
+  .site-template-grid {
     grid-template-columns: 1fr;
   }
 
-  .site-create-footer {
+  .site-create-footer,
+  .site-template-header {
     display: grid;
   }
 
+  .site-template-controls,
   .site-disabled-action,
   .site-file-button {
     width: 100%;
   }
 
+  .site-template-controls select,
+  .site-template-controls .cl-button,
+  .site-root-actions.lower .cl-button {
+    width: 100%;
+  }
+
   .site-preview-frame {
-    min-height: 420px;
+    min-height: 460px;
   }
 }

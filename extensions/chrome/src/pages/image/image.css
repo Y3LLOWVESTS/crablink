@@ -1,9 +1,9 @@
 /*
  * RO:WHAT — Styles for the React-owned crab://image workspace.
- * RO:WHY — Replaces scaffold styling with a polished local image creator workspace.
- * RO:INTERACTS — ImagePage.jsx, ImageCreate.jsx, ImagePreview.jsx, ImageRenditions.jsx, ImageManifest.jsx.
- * RO:INVARIANTS — use shared theme tokens; no backend-truth styling that implies publication.
- * RO:TEST — visual/manual checks in light and dark mode through React HTTP preview.
+ * RO:WHY — Replaces scaffold styling with a polished image creator and explicit publish workflow.
+ * RO:INTERACTS — ImagePage.jsx, ImageCreate.jsx, ImagePublishFlow.jsx, ImagePreview.jsx, ImageRenditions.jsx, ImageManifest.jsx.
+ * RO:INVARIANTS — use shared theme tokens; do not imply backend truth until gateway responses are displayed.
+ * RO:TEST — visual/manual checks in light and dark mode through extension-origin React.
  */
 
 .image-page {
@@ -23,6 +23,7 @@
 
 .image-create-card,
 .image-preview-card,
+.image-publish-card,
 .image-renditions-card,
 .image-manifest-card {
   min-width: 0;
@@ -30,6 +31,8 @@
 
 .image-draft-intro,
 .image-preview-badges,
+.image-publish-badges,
+.image-publish-actions,
 .image-manifest-actions,
 .image-side-badges,
 .image-action-buttons,
@@ -59,7 +62,8 @@
 .image-manifest-summary span,
 .image-preview-meta span,
 .image-side-facts span,
-.image-section-list span {
+.image-section-list span,
+.image-publish-fact span {
   display: block;
   color: var(--cl-muted, #626262);
   font-size: 0.72rem;
@@ -72,12 +76,19 @@
 .image-manifest-summary strong,
 .image-preview-meta strong,
 .image-side-facts strong,
-.image-section-list strong {
+.image-section-list strong,
+.image-publish-fact strong {
   display: block;
   margin-top: 0.2rem;
   color: var(--cl-text, #111111);
   font-weight: 850;
   overflow-wrap: anywhere;
+}
+
+.image-publish-fact .is-monospace {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .image-file-picker small {
@@ -113,7 +124,10 @@
 .image-policy-grid,
 .image-rendition-grid,
 .image-manifest-summary,
-.image-preview-meta {
+.image-preview-meta,
+.image-publish-grid,
+.image-publish-controls,
+.image-upload-success {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.85rem;
@@ -188,7 +202,8 @@
 
 .image-preview-empty span,
 .image-preview-note,
-.image-section-copy {
+.image-section-copy,
+.image-publish-step p {
   color: var(--cl-muted, #626262);
   line-height: 1.55;
 }
@@ -199,12 +214,75 @@
 
 .image-preview-meta div,
 .image-manifest-summary div,
-.image-side-facts div {
+.image-side-facts div,
+.image-publish-fact {
   min-width: 0;
   padding: 0.82rem;
   border: 1px solid var(--image-border-soft);
   border-radius: 16px;
   background: var(--image-soft-bg);
+}
+
+.image-publish-card .image-section-copy {
+  margin-bottom: 1rem;
+}
+
+.image-publish-warning {
+  display: grid;
+  gap: 0.25rem;
+  margin: 1rem 0;
+  padding: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--cl-warning, #d97706) 50%, var(--image-border-soft));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--cl-warning, #d97706) 11%, var(--image-soft-bg));
+}
+
+.image-publish-warning strong {
+  color: var(--cl-text, #111111);
+}
+
+.image-publish-warning span {
+  color: var(--cl-muted, #626262);
+  line-height: 1.45;
+}
+
+.image-publish-step {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--image-border-soft);
+  border-radius: 22px;
+  background: var(--image-soft-bg);
+}
+
+.image-publish-step header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.image-publish-step h3 {
+  margin: 0.1rem 0 0;
+  color: var(--cl-text, #111111);
+  font-size: 1.1rem;
+}
+
+.image-publish-actions {
+  align-items: center;
+}
+
+.image-publish-actions .cl-button {
+  min-width: max-content;
+}
+
+.image-publish-controls {
+  grid-template-columns: minmax(0, 1fr) 160px;
+}
+
+.image-upload-success {
+  margin-top: 0.25rem;
 }
 
 .image-rendition-explainer {
@@ -306,18 +384,27 @@
   .image-rendition-grid,
   .image-manifest-summary,
   .image-preview-meta,
-  .image-side-stats {
+  .image-side-stats,
+  .image-publish-grid,
+  .image-publish-controls,
+  .image-upload-success {
     grid-template-columns: 1fr;
   }
 
   .image-file-actions,
-  .image-action-buttons {
+  .image-action-buttons,
+  .image-publish-actions {
     width: 100%;
   }
 
   .image-file-actions .cl-button,
   .image-action-buttons .cl-button,
+  .image-publish-actions .cl-button,
   .image-file-button {
     width: 100%;
+  }
+
+  .image-publish-step header {
+    display: grid;
   }
 }

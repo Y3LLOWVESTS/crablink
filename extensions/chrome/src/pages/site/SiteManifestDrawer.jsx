@@ -22,6 +22,8 @@ export default function SiteManifestDrawer({ draftState = null, resolvedSite = n
   const manifest = isResolved ? resolvedSite?.data : draftState?.manifest;
   const summary = isResolved ? resolvedSite?.summary : draftState?.manifest?.site;
   const manifestJson = safeJson(manifest);
+  const receipts = isResolved ? resolvedSite?.summary?.receipts || [] : [];
+  const warnings = isResolved ? resolvedSite?.summary?.warnings || [] : [];
 
   return (
     <Card
@@ -41,11 +43,24 @@ export default function SiteManifestDrawer({ draftState = null, resolvedSite = n
       }
     >
       <div className="site-manifest-summary">
-        <Fact label="Name" value={summary?.name || resolvedSite?.summary?.siteName || 'not returned'} />
+        <Fact label="Name" value={summary?.name || summary?.siteName || resolvedSite?.summary?.siteName || 'not returned'} />
         <Fact label="Title" value={summary?.title || resolvedSite?.summary?.title || 'not returned'} />
-        <Fact label="Manifest CID" value={resolvedSite?.summary?.manifestCid || 'not returned'} />
-        <Fact label="Root CID" value={resolvedSite?.summary?.rootDocumentCid || draftState?.manifest?.root_document?.cid_hint || 'not returned'} />
+        <Fact label="Manifest CID" value={resolvedSite?.summary?.manifestCid || 'not returned'} monospace />
+        <Fact
+          label="Root CID"
+          value={resolvedSite?.summary?.rootDocumentCid || draftState?.manifest?.root_document?.cid_hint || 'not returned'}
+          monospace
+        />
+        {isResolved && <Fact label="Receipts" value={String(receipts.length)} />}
+        {isResolved && <Fact label="Warnings" value={String(warnings.length)} />}
       </div>
+
+      {isResolved && (receipts.length > 0 || warnings.length > 0) && (
+        <div className="site-preview-badges" aria-label="Site proof badges">
+          {receipts.length > 0 && <Badge tone="success">{receipts.length} receipt(s)</Badge>}
+          {warnings.length > 0 && <Badge tone="warning">{warnings.length} warning(s)</Badge>}
+        </div>
+      )}
 
       {open && (
         <JsonPreview
@@ -58,11 +73,11 @@ export default function SiteManifestDrawer({ draftState = null, resolvedSite = n
   );
 }
 
-function Fact({ label, value }) {
+function Fact({ label, value, monospace = false }) {
   return (
     <div>
       <span>{label}</span>
-      <strong>{value || 'n/a'}</strong>
+      <strong className={monospace ? 'is-monospace' : ''}>{value || 'n/a'}</strong>
     </div>
   );
 }

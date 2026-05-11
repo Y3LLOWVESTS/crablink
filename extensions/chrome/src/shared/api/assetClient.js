@@ -1,12 +1,12 @@
 /**
- * RO:WHAT — Asset API client for React CrabLink typed b3/crab asset views.
- * RO:WHY — Centralizes asset resolve/hydration calls through svc-gateway while protected legacy paid flows remain untouched.
- * RO:INTERACTS — gatewayClient, AssetPage, AssetResolver, AssetHydratedView.
+ * RO:WHAT — Asset API client for React CrabLink typed b3/crab asset views and explicit image publishing.
+ * RO:WHY — Centralizes asset resolve, prepare, and upload calls through svc-gateway while preserving explicit ROC-gated actions.
+ * RO:INTERACTS — gatewayClient, AssetPage, AssetResolver, AssetHydratedView, ImagePublishFlow.
  * RO:INVARIANTS — no fake b3 CIDs; no fake receipts; no direct storage/index/omnigate/wallet calls; no silent ROC spend.
  * RO:METRICS — gateway client supplies x-correlation-id for backend trace correlation.
- * RO:CONFIG — configured gateway client base URL and timeout.
- * RO:SECURITY — gateway-only reads; paid/mutating asset flows remain explicit future work.
- * RO:TEST — React route smoke with crab://<hash>.image and b3:<hash>.
+ * RO:CONFIG — configured gateway client base URL, passport, wallet, timeout, and bearer token.
+ * RO:SECURITY — mutating upload requires caller-supplied paid hold proof; raw image body is sent only to svc-gateway.
+ * RO:TEST — React route smoke with crab://<hash>.image, b3:<hash>, and crab://image prepare/hold/upload.
  */
 
 const HEX_64_RE = /^[0-9a-f]{64}$/;
@@ -56,15 +56,7 @@ export class AssetClient {
       });
     }
 
-    if (!this.gateway) {
-      throw new AssetResolveError('Asset resolution requires the configured gateway client.', {
-        problemCode: 'gateway_unconfigured',
-        reason: 'missing_gateway_client',
-        retryable: false,
-        target,
-        attempts: [],
-      });
-    }
+    this.assertGateway('Asset resolution');
 
     const attempts = [];
     let primaryError = null;
@@ -120,6 +112,62 @@ export class AssetClient {
     }
   }
 
+  async prepareImageAsset(payload = {}, options = {}) {
+    this.assertGateway('Image prepare');
+
+    const body = normalizeImagePreparePayload(payload);
+    const idempotencyKey = String(
+      options.idempotencyKey ||
+        body.client_idempotency_key ||
+        stableClientKey('image-prepare', body.title, body.bytes, body.content_type),
+    ).trim();
+
+    return this.gateway.request('/assets/image/prepare', {
+      method: 'POST',
+      body,
+      label: 'Image prepare',
+      headers: {
+        'idempotency-key': idempotencyKey,
+      },
+    });
+  }
+
+  async uploadImageAsset({
+    file,
+    title = '',
+    description = '',
+    tags = [],
+    paidProof = null,
+    idempotencyKey = '',
+  } = {}) {
+    this.assertGateway('Image upload');
+
+    if (!isBlobLike(file)) {
+      throw assetMutationError('Image upload requires the selected File/Blob bytes.', 'missing_image_file');
+    }
+
+    const proof = normalizePaidProof(paidProof);
+    const idem = String(
+      idempotencyKey ||
+        proof.idem ||
+        stableClientKey('image-upload', file.name, file.size, proof.txid),
+    ).trim();
+
+    return this.gateway.request('/assets/image', {
+      method: 'POST',
+      body: file,
+      label: 'Image upload',
+      headers: imageUploadHeaders({
+        file,
+        title,
+        description,
+        tags,
+        paidProof: proof,
+        idempotencyKey: idem,
+      }),
+    });
+  }
+
   gatewayB3Url(hash, assetKind = 'image') {
     const target = normalizeAssetTarget({
       hash,
@@ -131,6 +179,55 @@ export class AssetClient {
     }
 
     return this.gateway.url(`/b3/${target.hash}.${target.assetKind}`);
+  }
+
+  gatewayObjectUrl(hash, assetKind = 'image') {
+    const target = normalizeAssetTarget({
+      hash,
+      assetKind,
+    });
+
+    if (!this.gateway?.url) {
+      return '';
+    }
+
+    return this.gateway.url(`/o/${target.cid}`);
+  }
+
+  previewSources(hash, assetKind = 'image') {
+    const target = normalizeAssetTarget({
+      hash,
+      assetKind,
+    });
+
+    const sources = [
+      {
+        key: 'raw-object',
+        label: 'Raw object bytes',
+        description: 'Gateway raw object route, used for the real image preview when the object exists.',
+        url: this.gatewayObjectUrl(target.hash, target.assetKind),
+      },
+      {
+        key: 'typed-b3',
+        label: 'Typed b3 route',
+        description: 'Typed asset route fallback. Some stacks return JSON here, so this may not render as an image.',
+        url: this.gatewayB3Url(target.hash, target.assetKind),
+      },
+    ].filter((source) => source.url);
+
+    return Object.freeze(sources.map((source) => Object.freeze(source)));
+  }
+
+  assertGateway(label = 'Asset request') {
+    if (!this.gateway || typeof this.gateway.request !== 'function') {
+      throw new AssetResolveError(`${label} requires the configured gateway client.`, {
+        problemCode: 'gateway_unconfigured',
+        reason: 'missing_gateway_client',
+        retryable: false,
+        target: null,
+        attempts: [],
+      });
+    }
   }
 }
 
@@ -220,6 +317,114 @@ export function normalizeAssetResolveProblem(error) {
     ),
     data: error?.data || error?.fallbackError?.data || error?.primaryError?.data || null,
   };
+}
+
+export function normalizeImagePreparePayload(payload = {}) {
+  const bytes = positiveInteger(payload.bytes);
+  const contentType = stringValue(payload.content_type, payload.contentType, 'image/png');
+  const title = stringValue(payload.title);
+  const description = stringValue(payload.description);
+  const tags = normalizeTags(payload.tags);
+
+  if (!bytes) {
+    throw assetMutationError('Image prepare requires a positive byte count.', 'missing_image_bytes');
+  }
+
+  return stripUndefined({
+    bytes,
+    payer_account: stringValue(payload.payer_account, payload.payerAccount),
+    owner_passport_subject: stringValue(
+      payload.owner_passport_subject,
+      payload.ownerPassportSubject,
+      payload.owner_passport,
+    ),
+    content_type: contentType,
+    title: title || undefined,
+    description: description || undefined,
+    tags,
+    client_idempotency_key: stringValue(
+      payload.client_idempotency_key,
+      payload.clientIdempotencyKey,
+      stableClientKey('image-prepare', title, bytes, contentType),
+    ),
+  });
+}
+
+export function normalizePaidProof(value = {}) {
+  const proof = value && typeof value === 'object' ? value : {};
+
+  const normalized = {
+    txid: stringValue(proof.txid, proof.tx_id, proof.hold_id, proof.id),
+    receipt_hash: stringValue(proof.receipt_hash, proof.receiptHash, proof.hash),
+    from: stringValue(proof.from, proof.payer, proof.payer_account),
+    to: stringValue(proof.to, proof.escrow, proof.escrow_account),
+    amount_minor: stringValue(proof.amount_minor, proof.amountMinor, proof.estimate_minor),
+    asset: stringValue(proof.asset, 'roc').toLowerCase(),
+    op: stringValue(proof.op, 'hold').toLowerCase(),
+    idem: stringValue(proof.idem, proof.idempotency_key, proof.idempotencyKey),
+  };
+
+  if (
+    !normalized.txid ||
+    !normalized.receipt_hash ||
+    !normalized.from ||
+    !normalized.to ||
+    !/^[0-9]+$/.test(normalized.amount_minor) ||
+    normalized.amount_minor === '0'
+  ) {
+    throw assetMutationError(
+      'Image upload requires a wallet hold proof with txid, receipt_hash, payer, escrow, and positive amount.',
+      'missing_paid_hold_proof',
+    );
+  }
+
+  return Object.freeze(normalized);
+}
+
+export function extractImageAssetUrl(data = {}) {
+  const object = data && typeof data === 'object' ? data : {};
+
+  return stringValue(
+    object.crab_url,
+    object.crabUrl,
+    object.asset_crab_url,
+    object.assetCrabUrl,
+    object.links?.crab,
+    object.asset?.crab_url,
+    object.asset?.crabUrl,
+    object.result?.crab_url,
+    object.result?.crabUrl,
+  );
+}
+
+export function extractImageAssetCid(data = {}) {
+  const object = data && typeof data === 'object' ? data : {};
+
+  return stringValue(
+    object.asset_cid,
+    object.assetCid,
+    object.cid,
+    object.asset?.cid,
+    object.asset?.asset_cid,
+    object.result?.asset_cid,
+  );
+}
+
+function imageUploadHeaders({ file, title, description, tags, paidProof, idempotencyKey }) {
+  return stripUndefined({
+    'Content-Type': stringValue(file?.type, 'image/png'),
+    'idempotency-key': idempotencyKey,
+    'x-ron-paid-op': paidProof.op || 'hold',
+    'x-ron-paid-asset': paidProof.asset || 'roc',
+    'x-ron-paid-estimate-minor': paidProof.amount_minor,
+    'x-ron-wallet-txid': paidProof.txid,
+    'x-ron-wallet-receipt-hash': paidProof.receipt_hash,
+    'x-ron-wallet-from': paidProof.from,
+    'x-ron-wallet-to': paidProof.to,
+    'x-ron-asset-title': stringValue(title),
+    'x-ron-asset-description': stringValue(description),
+    'x-ron-asset-tags': normalizeTags(tags).join(','),
+  });
 }
 
 function validateAssetPageResponse(data, context) {
@@ -517,4 +722,75 @@ function targetError(message, details = {}) {
   error.reason = details.reason || error.problemCode;
   error.retryable = false;
   return error;
+}
+
+function assetMutationError(message, reason) {
+  const error = new Error(String(message || 'Asset mutation failed.'));
+  error.name = 'AssetMutationError';
+  error.reason = reason || 'asset_mutation_failed';
+  error.status = 0;
+  error.retryable = false;
+  return error;
+}
+
+function isBlobLike(value) {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      typeof value.size === 'number' &&
+      typeof value.type === 'string' &&
+      (typeof Blob === 'undefined' || value instanceof Blob),
+  );
+}
+
+function positiveInteger(value) {
+  const n = Number(value);
+
+  if (!Number.isSafeInteger(n) || n <= 0) {
+    return 0;
+  }
+
+  return n;
+}
+
+function normalizeTags(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 24);
+  }
+
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 24);
+}
+
+function stringValue(...values) {
+  for (const value of values) {
+    const safe = String(value ?? '').trim();
+
+    if (safe) {
+      return safe;
+    }
+  }
+
+  return '';
+}
+
+function stripUndefined(value) {
+  return Object.fromEntries(
+    Object.entries(value || {}).filter(([, child]) => child !== undefined && child !== null && child !== ''),
+  );
+}
+
+function stableClientKey(...parts) {
+  const clean = parts
+    .map((part) => String(part ?? '').trim())
+    .filter(Boolean)
+    .join(':')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-zA-Z0-9:_./-]+/g, '-')
+    .slice(0, 180);
+
+  return `crablink-react:${clean || Date.now()}`;
 }

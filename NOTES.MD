@@ -40045,3 +40045,2064 @@ Once that is solved, the refactor completion estimate can move from ~79% toward 
  
 
 ### END NOTE - MAY 10 2026 - 14:35 CST
+
+
+
+### BEGIN NOTE - MAY 10 2026 - 16:35 CST
+
+# Carryover Notes — CrabLink React Refactor, 2026-05-10
+
+## 0. Completion estimate
+
+My current hard-gate estimate for the **CrabLink Chrome / React frontend refactor** is:
+
+```text
+≈ 70–72% complete
+```
+
+This is not an estimate for all RustyOnions, all WEB3/ROC work, or the future Tauri/mobile app. It is specifically for the **CrabLink Chrome extension refactor from the old patch-heavy lane to the new React/Vite route-owned lane**.
+
+The estimate moved up because we proved three major things in this session:
+
+```text
+React extension-origin lane works ✅
+Passport + wallet + ledger-backed ROC balance work in React ✅
+Known-good crab://<hash>.image asset route resolves, hydrates manifest, and previews raw image bytes ✅
+```
+
+I am not raising the estimate higher yet because the old lane still owns the highest-risk proven product flows:
+
+```text
+paid image prepare → wallet hold → upload → receipt
+site prepare → create → resolve → render
+real profile/passport identity without dev-label bootstrap
+full named-site render parity
+legacy page-* deletion
+```
+
+A reasonable breakdown now:
+
+```text
+React shell / route registry / shared structure:        90–92%
+Theme / header ad slot / topbar UX:                    85–90%
+Local creator draft pages:                             80–88%
+Passport drawer / balance chip React parity:           78–85%
+Extension-origin packaging/testing:                    75–82%
+Typed image asset read parity:                         80–88%
+Generic typed asset parity beyond image:               50–60%
+Named-site React read/render parity:                   45–55%
+Profile real backend identity parity:                  55–65%
+React paid image upload parity:                        35–45%
+React site create/launch parity:                       40–50%
+Legacy cleanup / old page-* deletion:                  20–30%
+Production replacement readiness:                      62–68%
+Overall React refactor:                                ~70–72%
+```
+
+The codebundle confirms the project is now truly hybrid: it contains the old `page.html/page.js/page-*` lane, the new `react.html` lane, React app/shell files, route folders, shared API clients, shared components, shared manifest/theme/util layers, and packaging/check scripts. 
+
+---
+
+## 1. Current strategic checkpoint
+
+CrabLink is in a **protected hybrid refactor state**.
+
+There are two lanes:
+
+```text
+Legacy/protected lane:
+extensions/chrome/src/page.html
+extensions/chrome/src/page.js
+extensions/chrome/src/page-*.js
+extensions/chrome/src/page.css
+extensions/chrome/src/storage.js
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/crab.js
+```
+
+```text
+React/refactor lane:
+extensions/chrome/src/react.html
+extensions/chrome/src/app/main.jsx
+extensions/chrome/src/app/
+extensions/chrome/src/app/shell/
+extensions/chrome/src/pages/
+extensions/chrome/src/shared/
+```
+
+The **legacy lane remains protected** because it already proved the live product flows. The **React lane is the destination architecture** and is now being tested both through local HTTP preview and through the real `chrome-extension://` origin.
+
+The refactor north star remains:
+
+```text
+One route = one page owner.
+React + Vite owns the full-tab CrabLink app shell.
+Plain MV3 JavaScript remains appropriate for background/content/popup/options glue.
+No more broad late DOM patching.
+No more MutationObserver rescue architecture.
+No fake backend truth.
+No fake b3 CIDs.
+No fake manifest CIDs.
+No fake receipts.
+No silent ROC spend.
+No direct internal service calls from CrabLink.
+No arbitrary crab:// code execution.
+```
+
+The refactor TODO explicitly frames the target as React + Vite for the full-tab UI, plain MV3 JS for extension glue, page folders per built-in route, shared shell/theme/ad/manifest systems, and no more late DOM patching. 
+
+---
+
+## 2. Architectural rules to preserve
+
+These are the rules the next instance must keep front and center.
+
+```text
+CrabLink is a thin browser client.
+CrabLink calls public svc-gateway routes only.
+CrabLink does not call svc-wallet directly.
+CrabLink does not call svc-storage directly.
+CrabLink does not call svc-index directly.
+CrabLink does not call omnigate directly.
+CrabLink does not call ron-ledger directly.
+All wallet mutation must stay explicit and backend-mediated.
+All paid actions require explicit user confirmation.
+All displayed backend truth must come from the gateway response or local settings clearly labeled as local/dev.
+```
+
+For untrusted content and future `.code` primitives, preserve the sandbox-first design:
+
+```text
+React renders trusted CrabLink UI.
+Untrusted crab content renders inside a sandbox boundary.
+Executable code requires a facet contract.
+facet.toml is the permission contract.
+svc-sandbox is the execution cage.
+ron-policy is the judge.
+CrabLink is renderer/launcher, not unsafe executor.
+```
+
+The refactor blueprint explicitly warns against injecting arbitrary `crab://site` HTML/JS into the privileged extension DOM, and recommends a trusted shell plus sandboxed renderer/code surfaces. 
+
+---
+
+## 3. What was accomplished before this latest session
+
+Before the newest batch, the React refactor had already established a serious structure:
+
+```text
+extensions/chrome/src/app/
+extensions/chrome/src/app/shell/
+extensions/chrome/src/shared/api/
+extensions/chrome/src/shared/components/
+extensions/chrome/src/shared/embed/
+extensions/chrome/src/shared/hooks/
+extensions/chrome/src/shared/manifest/
+extensions/chrome/src/shared/styles/
+extensions/chrome/src/shared/theme/
+extensions/chrome/src/shared/utils/
+extensions/chrome/src/pages/
+```
+
+Important already-present React route folders include:
+
+```text
+ad
+algo
+article
+asset
+code
+comment
+game
+home
+image
+lyrics
+music
+notFound
+podcast
+post
+problem
+profile
+site
+stream
+video
+```
+
+The old notes correctly captured that the original prototype had succeeded but had become patch-heavy, and that the long-term fix is folder-based page ownership with one route owning one page lifecycle. 
+
+Already completed before the final asset parity proof:
+
+```text
+React shell exists.
+React route registry exists.
+React topbar/address/nav exists.
+Theme system exists.
+Header ad slot exists.
+Passport chip exists.
+Balance chip exists.
+Passport drawer exists.
+Toast/modal support exists.
+Shared components exist.
+Shared manifest helpers exist.
+Shared API clients exist.
+Local-only creator workspaces exist.
+Light theme is now clean/off-white.
+Dark theme is true black rather than blue.
+```
+
+---
+
+## 4. What we accomplished in this latest session
+
+### 4.1 Fixed extension-origin React testing
+
+We discovered that opening React through the Chrome omnibox was confusing because Chrome requires `crab` + Tab and sometimes treated `reactprofile` like a normal search/site string. We then confirmed the better direct path:
+
+```text
+chrome-extension://<EXTENSION_ID>/react.html?url=<encoded crab URL>
+```
+
+The current extension ID used during this session was:
+
+```text
+hoimlidjdmbkminaejimgaebfjjpfepn
+```
+
+Working direct URLs were:
+
+```text
+chrome-extension://hoimlidjdmbkminaejimgaebfjjpfepn/react.html?url=crab%3A%2F%2Fprofile
+chrome-extension://hoimlidjdmbkminaejimgaebfjjpfepn/react.html?url=crab%3A%2F%2Fsite
+chrome-extension://hoimlidjdmbkminaejimgaebfjjpfepn/react.html?url=crab%3A%2F%2F2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+The direct extension-origin path matters because it tests:
+
+```text
+chrome.storage.local access
+extension host permissions
+real packaged react.html
+real packaged Vite assets
+gateway calls from extension origin
+passport/wallet state hydration
+```
+
+### 4.2 Fixed packaging/staging problems
+
+We had an extension load failure because the staged folder did not include manifest-required icons:
+
+```text
+assets/icons/icon16.png
+assets/icons/icon32.png
+assets/icons/icon48.png
+assets/icons/icon128.png
+```
+
+We fixed `scripts/package-chrome.sh` so the staging extension includes:
+
+```text
+manifest.json
+src/
+assets/icons/
+react.html at extension root
+page.html at extension root
+Vite assets
+legacy protected source files
+```
+
+Important packaging truth:
+
+```text
+Load unpacked from:
+_dist path_
+/Users/mymac/Desktop/crablink/dist/chrome-extension-staging
+```
+
+Do not load the raw source folder when testing extension-origin React unless we deliberately choose to.
+
+### 4.3 Kept the old lane protected and added a React bridge button
+
+We confirmed that the Chrome extension toolbar/default still opens the old/protected lane:
+
+```text
+extensions/chrome/src/page.html
+```
+
+This is intentional. We do **not** flip the toolbar/default entry to React yet.
+
+To make testing easier, we added a visible **React** button in the old lane topbar. It opens the current route in:
+
+```text
+react.html?url=<encoded current crab route>
+```
+
+The current codebundle includes `page-react-preview.js`, whose header states that it opens the current route in the React lane without backend calls, wallet mutation, fake receipts/balances/profile truth, or changing the old protected path. 
+
+### 4.4 Proved React extension-origin gateway state
+
+React extension-origin lane now shows:
+
+```text
+Gateway online ✅
+Chrome extension origin ✅
+Configured gateway: http://127.0.0.1:8090 ✅
+```
+
+Earlier, HTTP preview mode could show an honest “HTTP test mode” boundary because it cannot read real extension storage. Extension-origin React now reads extension storage correctly.
+
+### 4.5 Proved React passport drawer + wallet balance flow
+
+We added/improved:
+
+```text
+extensions/chrome/src/app/appContext.js
+extensions/chrome/src/app/shell/PassportDrawer.jsx
+extensions/chrome/src/app/shell/PassportActions.jsx
+extensions/chrome/src/app/shell/PassportSummary.jsx
+extensions/chrome/src/app/shell/BalanceChip.jsx
+```
+
+The React drawer now supports the honest “Use dev labels” bootstrap when no local passport/wallet labels are configured.
+
+The user clicked **Use dev labels**, which set:
+
+```text
+passportSubject: passport:main:dev
+walletAccount: acct_dev
+```
+
+Then React was able to refresh wallet balance through the gateway.
+
+The screenshot proved:
+
+```text
+Passport chip: passport:main:dev ✅
+Wallet account: acct_dev ✅
+ROC chip: 1751 ✅
+Ledger status: Ledger-backed ✅
+Wallet refresh route: /wallet/acct_dev/balance ✅
+Extension origin: Chrome extension origin ✅
+```
+
+Important truth boundary:
+
+```text
+Use dev labels does not create a passport.
+Use dev labels does not mint ROC.
+Use dev labels does not fake backend identity.
+Use dev labels only sets local labels so gateway wallet/profile routes can be tested.
+The 1751 ROC / ledger-backed status came from gateway wallet response.
+```
+
+### 4.6 Proved typed image asset React read parity
+
+This was the biggest product milestone in the session.
+
+We updated/improved:
+
+```text
+extensions/chrome/src/shared/api/assetClient.js
+extensions/chrome/src/pages/asset/AssetHydratedView.jsx
+extensions/chrome/src/pages/asset/asset.css
+```
+
+The React route:
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+successfully:
+
+```text
+opened from React extension-origin lane ✅
+resolved through gateway ✅
+hydrated backend asset manifest ✅
+showed HTTP 200 ✅
+showed kind=image ✅
+showed receipt count ✅
+showed CID/content ID ✅
+showed gateway correlation data ✅
+rendered raw image byte preview ✅
+kept Developer JSON tucked below ✅
+```
+
+The preview path now tries the gateway raw object route first:
+
+```text
+/o/b3:<hash>
+```
+
+Then it falls back to typed b3 route:
+
+```text
+/b3/<hash>.image
+```
+
+This was the correct design because some typed routes return JSON DTOs instead of raw image bytes.
+
+### 4.7 Confirmed known-good test asset
+
+The current known-good image asset is:
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+It should remain the main React typed-image smoke target until the local dev database is reset again.
+
+Older known-good asset from prior proof:
+
+```text
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+Keep both around in notes, but prefer `2e24...2058.image` because it was proven fresh in this latest React route.
+
+---
+
+## 5. Current working test workflows
+
+### 5.1 Full build/check/package gate
+
+Run this after every batch:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+```
+
+When making a new codebundle:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/make_codebundle.sh
+```
+
+If a batch edits specific files, also use `node --check` where applicable, for example:
+
+```bash
+node --check extensions/chrome/src/page-react-preview.js
+```
+
+For JSX, `node --check` may not always be appropriate; rely on Vite/check scripts for React/JSX.
+
+### 5.2 Reload extension-origin test
+
+After packaging:
+
+```text
+chrome://extensions
+```
+
+Then reload CrabLink or remove/re-load unpacked from:
+
+```text
+/Users/mymac/Desktop/crablink/dist/chrome-extension-staging
+```
+
+Open the old lane normally, then use the **React** button.
+
+### 5.3 Direct extension-origin React URL test
+
+Current extension ID from this session:
+
+```text
+hoimlidjdmbkminaejimgaebfjjpfepn
+```
+
+Profile:
+
+```text
+chrome-extension://hoimlidjdmbkminaejimgaebfjjpfepn/react.html?url=crab%3A%2F%2Fprofile
+```
+
+Home/dashboard:
+
+```text
+chrome-extension://hoimlidjdmbkminaejimgaebfjjpfepn/react.html?url=crab%3A%2F%2Fhome
+```
+
+Known-good image:
+
+```text
+chrome-extension://hoimlidjdmbkminaejimgaebfjjpfepn/react.html?url=crab%3A%2F%2F2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+If the extension ID changes after reloading or reinstalling, copy the new ID from `chrome://extensions`.
+
+### 5.4 HTTP preview test
+
+Always include this in future React-lane instructions:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Keep that terminal open.
+
+Then test:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fprofile
+```
+
+Known-good image:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2F2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+Important distinction:
+
+```text
+HTTP preview mode:
+- good for layout/routes/theme
+- may not read chrome.storage.local
+- may hit CORS/origin limitations
+
+extension-origin mode:
+- required for real extension storage/passport/wallet parity
+- required for packaged React proof
+```
+
+---
+
+## 6. Current known-good state to preserve
+
+These are currently good and should not regress:
+
+```text
+React shell renders.
+Theme is clean in light mode.
+Dark mode is black, not blue.
+Topbar is usable.
+Header ad slot displays.
+Gateway chip shows online.
+Passport drawer opens.
+Use dev labels works.
+Wallet refresh works.
+ROC chip shows 1751 for acct_dev.
+Ledger-backed status appears.
+React known-good image route resolves.
+React known-good image route previews raw bytes.
+Old protected lane still opens by default.
+Old lane has React preview button.
+Packaging staging loads successfully.
+```
+
+Current proven route set:
+
+```text
+crab://home
+crab://profile
+crab://site
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+The codebundle also shows the route folders and components for site/profile/image/asset and all local creator routes already exist, which means the next work should be parity wiring rather than creating more scaffolding. 
+
+---
+
+## 7. Remaining work for the refactor
+
+### 7.1 Named-site React read/render parity
+
+This should be the next major batch.
+
+Goal:
+
+```text
+crab://<site_name>
+→ React route recognizes named site
+→ calls gateway /crab/resolve?url=crab://<site_name>
+→ hydrates site manifest
+→ identifies root document CID
+→ fetches root document safely
+→ renders in a sandboxed/controlled surface
+→ shows manifest drawer cleanly
+→ shows creator proof / payout / route map data if returned
+```
+
+Important: do not inject arbitrary site HTML into the privileged React DOM. Use a controlled rendering surface or sandbox boundary consistent with the refactor security model.
+
+Files likely involved:
+
+```text
+extensions/chrome/src/shared/api/siteClient.js
+extensions/chrome/src/pages/site/SitePage.jsx
+extensions/chrome/src/pages/site/SiteRender.jsx
+extensions/chrome/src/pages/site/SiteManifestDrawer.jsx
+extensions/chrome/src/pages/site/SiteCreatorProof.jsx
+extensions/chrome/src/pages/site/site.css
+extensions/chrome/src/shared/embed/sandboxFrame.js
+extensions/chrome/src/shared/embed/safeHtml.js
+```
+
+Acceptance gate:
+
+```text
+A named site resolves and renders safely in React without breaking old lane.
+```
+
+### 7.2 React image paid upload parity
+
+Currently React can display/read a typed image asset. It does **not** yet fully replace the old paid image upload flow.
+
+Remaining image flow:
+
+```text
+select image file
+build prepare request
+POST /assets/image/prepare
+show price/estimate
+explicit wallet hold
+POST /wallet/hold through gateway route only if exposed/proper
+submit raw bytes to /assets/image with required paid proof headers
+show receipt
+open returned crab://<hash>.image
+```
+
+Do not silently spend ROC. Do not auto-hold. Do not fake receipt hashes.
+
+Old paid upload header contract to preserve from previous debugging:
+
+```text
+x-ron-paid-op: hold
+x-ron-paid-asset: roc
+x-ron-paid-estimate-minor: <amount>
+x-ron-wallet-txid: <txid>
+x-ron-wallet-receipt-hash: <hash>
+x-ron-wallet-from: <payer acct>
+x-ron-wallet-to: <escrow acct>
+idempotency-key: <key>
+x-ron-passport: <passport label>
+x-ron-wallet-account: <account label>
+```
+
+### 7.3 React site create/launch parity
+
+The React site workspace currently behaves like a local draft/safe preview route. It must eventually support real backend parity:
+
+```text
+site draft
+root document CID validation
+route map / asset map
+creator proof
+POST /sites/prepare
+explicit hold if required
+POST /sites
+resolve returned site
+open crab://<site_name>
+render safely
+```
+
+Important guardrail:
+
+```text
+Do not allow image CID to be accidentally used as site root document CID.
+Do not claim backend launch until /sites actually returns success.
+Do not invent index pointer.
+```
+
+### 7.4 Profile/passport real identity parity
+
+React currently uses local dev labels successfully:
+
+```text
+passport:main:dev
+acct_dev
+```
+
+But real profile/passport parity still needs:
+
+```text
+real /identity/me DTO mapping
+main passport display
+@username display
+profile manifest pointer
+public profile asset catalogue
+alts / anonymous passports
+permissions: main can create sites, anonymous alts cannot create sites
+wallet-linked passport permissions
+REP/MOD display when backend returns real values
+```
+
+Do not claim confirmed username or identity unless the gateway response proves it.
+
+### 7.5 Generic typed asset pages beyond image
+
+The React typed asset route now works for `.image` well. It needs broader typed support later:
+
+```text
+.music
+.song
+.lyrics
+.video
+.article
+.post
+.comment
+.film
+.dub
+.ad
+.code
+.game
+```
+
+Important type rules from project memory:
+
+```text
+All image-like assets use .image.
+Album covers, thumbnails, film posters, ad creatives, profile banners, video thumbnails, etc. are .image assets referenced by other manifests.
+Lyrics are separate .lyrics assets linked from music/song manifests.
+Dubs/subtitles/scripts are separate .dub assets linked from film/video manifests.
+Renditions are independent b3 assets cross-linked through manifests.
+```
+
+### 7.6 Mobile/responsive pass
+
+After Chrome parity is closer, React should get a mobile compatibility pass:
+
+```text
+390px phone width
+768px tablet width
+desktop width
+touch-friendly buttons
+drawer behavior
+site render surface behavior
+asset preview behavior
+manifest/dev JSON panels
+topbar wrapping
+ad slot behavior
+```
+
+This will also help future Tauri desktop/mobile work.
+
+### 7.7 Platform adapter cleanup
+
+Before Tauri or mobile, direct Chrome assumptions should be isolated:
+
+```text
+storage adapter
+navigation adapter
+gateway adapter
+extension runtime adapter
+clipboard/share adapter
+future Tauri adapter
+future mobile adapter
+```
+
+### 7.8 Legacy cleanup
+
+Do not delete old lane yet.
+
+Delete old `page-*` modules only after parity is proven for:
+
+```text
+profile/passport
+known-good typed image read
+paid image upload
+named site read/render
+site create/launch
+settings
+theme
+extension packaging
+smoke scripts
+```
+
+---
+
+## 8. Regression watchlist
+
+Fail or stop a batch if any of these happen:
+
+```text
+Old extension default path breaks.
+Old paid image flow breaks.
+Old site create/open flow breaks.
+React route claims backend publication for local-only drafts.
+React route claims fake b3 CID.
+React route claims fake manifest CID.
+React route claims fake receipt.
+React silently spends ROC.
+React directly calls svc-wallet, svc-storage, svc-index, omnigate, or ron-ledger.
+Extension permissions broaden unexpectedly.
+crab://video resolves through /sites/video.
+crab://stream resolves through /sites/stream.
+crab://podcast resolves through /sites/podcast.
+crab://article stays visible on crab://video.
+video stays visible on crab://stream.
+stream stays visible on crab://podcast.
+site render iframe remains stuck after leaving a named site.
+page-local-route-mode.js returns.
+page.html imports page-local-route-mode.js.
+React preview button disappears from old lane before default path is switched.
+HTTP preview instructions omit the python server step.
+```
+
+The earlier carryover notes already listed a similar regression watchlist, including failures around `page-local-route-mode.js`, bad route sticking, local drafts claiming backend truth, broad permissions, and direct internal service calls. 
+
+---
+
+## 9. Recommended next batches, in order
+
+### Batch 1 — Named-site React read/render parity
+
+This is the strongest next move because typed image read parity is now proven.
+
+Work target:
+
+```text
+crab://<site_name> React read parity
+```
+
+Acceptance gates:
+
+```text
+named site resolves through gateway
+manifest displays
+root document CID displays
+root document fetch path is clear
+site content renders in controlled/sandboxed surface
+developer JSON remains available but not dominant
+old lane remains protected
+```
+
+### Batch 2 — Profile real identity parity
+
+Work target:
+
+```text
+React profile page reads real /identity/me response and maps it cleanly
+```
+
+Acceptance gates:
+
+```text
+no fake confirmed username
+local labels remain visibly local
+real gateway-confirmed fields are clearly marked
+profile page layout remains stable
+passport drawer and profile page agree
+```
+
+### Batch 3 — Paid image upload React parity
+
+Work target:
+
+```text
+React image route can prepare → hold → upload → receipt
+```
+
+Acceptance gates:
+
+```text
+explicit prepare
+explicit hold confirmation
+explicit submit
+required paid headers included
+returned crab:// URL opens in React typed asset page
+old lane still works
+```
+
+### Batch 4 — Site create/launch React parity
+
+Work target:
+
+```text
+React site workspace can prepare/create a named site
+```
+
+Acceptance gates:
+
+```text
+root document CID validation
+no image-CID-as-site-root mistake
+prepare response clear
+create response clear
+returned site resolves
+safe render surface
+```
+
+### Batch 5 — Guardrails/check scripts/docs
+
+Add checks for:
+
+```text
+no page-local-route-mode.js
+no fake backend truth strings
+no direct internal service URLs in React clients
+React preview bridge exists
+package staging includes icons/react.html/assets
+asset route smoke fixtures remain available
+```
+
+### Batch 6 — Broader typed asset polish
+
+Expand beyond `.image`:
+
+```text
+.music
+.video
+.article
+.post
+.comment
+.lyrics
+```
+
+But keep paid flows and backend claims honest.
+
+---
+
+## 10. Suggested next-session prompt
+
+Use this at the start of the next instance:
+
+```text
+We are continuing the CrabLink React refactor.
+
+Current state:
+- CrabLink is in protected hybrid mode.
+- Old page.html/page.js/page-* lane remains the default extension path and protects proven paid image/site/profile/passport flows.
+- React lane runs through react.html and can be opened from the old lane with the React button.
+- React extension-origin testing works from dist/chrome-extension-staging.
+- Use dev labels in React sets passport:main:dev and acct_dev.
+- Gateway is online from React.
+- Wallet refresh works from React and shows ledger-backed ROC balance around 1751 for acct_dev.
+- Known-good React typed image route works:
+  crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+- That route resolves through gateway, hydrates the asset manifest, shows receipt count, and previews raw image bytes.
+- Build/check/package commands have been the standard green gate:
+  scripts/check-react-lane.sh
+  scripts/check-chrome.sh
+  scripts/package-chrome.sh
+- Always include the HTTP preview server step:
+  cd /Users/mymac/Desktop/crablink/dist/chrome-src
+  python3 -m http.server 4173 --bind 127.0.0.1
+- Next recommended batch: named-site React read/render parity.
+- Preserve all invariants: gateway-only, no fake b3, no fake receipt, no silent ROC spend, no direct internal service calls, no arbitrary crab:// code execution, old lane protected.
+
+Please review CODEBUNDLE_CHROME_EXTENSION.md, CRABLINK_REFACTOR.MD, and REFACTOR_TODO.MD, then provide the next big batch of full paste-ready files.
+```
+
+---
+
+## 11. Bottom-line handoff
+
+The refactor has crossed a major threshold. It is no longer just “React scaffold.” It is now a working React extension-origin browser lane with:
+
+```text
+gateway online
+passport drawer
+wallet balance
+ledger-backed ROC display
+typed image asset route
+manifest hydration
+raw image preview
+old lane protection
+```
+
+The next instance should not create more broad scaffolding. It should move **one protected backend-backed route at a time** into React parity, starting with **named-site read/render parity**, then profile identity, then paid image upload, then site creation.
+
+
+### END NOTE - MAY 10 2026 - 16:35 CST
+
+
+### BEGIN NOTE - MAY 11 2026 - 11:15 CST
+
+# Carryover Notes — CrabLink React Refactor, 2026-05-11
+
+## 0. Executive checkpoint
+
+CrabLink is now in a **protected hybrid refactor state**. The old `page.html/page.js/page-*` lane still exists and still protects the working extension/product path, while the React/Vite lane has become the active destination architecture for the full-tab CrabLink browser UI. The newest uploaded codebundle confirms the repo now contains both the legacy `page-*` files and the new React architecture: `src/app`, `src/app/shell`, `src/pages/*`, `src/shared/api`, `src/shared/components`, `src/shared/embed`, `src/shared/manifest`, `src/shared/theme`, and `src/shared/utils`. 
+
+The active refactor north star remains: **React + Vite for the full-tab CrabLink app, plain MV3 JavaScript for Chrome glue, one route = one page owner, shared shell/theme/ad/manifest/sandbox systems, no fake backend truth, no silent ROC spend, and no direct calls to internal RustyOnions services.** The uploaded `REFACTOR_TODO.MD` still states that React + Vite is the preferred full-tab UI direction while `background`, `content`, `popup`, and `options` remain plain MV3 JavaScript. 
+
+## 1. Estimated completion rate
+
+My current estimate for the **CrabLink frontend React refactor track** is:
+
+```text
+82–85% complete
+```
+
+This estimate is for the CrabLink Chrome extension / React refactor, not the whole RustyOnions ecosystem.
+
+Why it is now above the earlier ~74% estimate:
+
+```text
+- React shell exists.
+- React app context exists.
+- Route registry exists.
+- Shared topbar/address/nav/theme/ad/passport/ROC/modal/toast structure exists.
+- Most built-in route folders exist.
+- Local creator routes have been moved into route-owned React pages.
+- Site route now has local workspace, templates, root guard, named-site gateway read mode, and safe sandbox rendering.
+- Image route now has React-side prepare → hold → upload flow scaffolding.
+- Shared safe-render/sandbox/embed modules are no longer just placeholders.
+```
+
+Why it is not 90%+ yet:
+
+```text
+- React image publishing reached prepare/hold UI, but the wallet hold path recently failed in live use and needs debugging.
+- React site create/publish parity is intentionally not wired yet; site mutation remains protected.
+- React profile still needs full polished parity and backend truth handling.
+- Generic typed asset pages need more real-world testing.
+- The old lane is still required as a fallback/protection path.
+- Smoke/check scripts should be tightened around the React lane before deleting legacy patch files.
+```
+
+## 2. Current product proof state
+
+The strongest proven product loop remains:
+
+```text
+CrabLink
+→ svc-gateway
+→ wallet hold / paid storage path
+→ b3 content ID
+→ manifest/index pointer
+→ crab:// typed URL
+→ hydrated page rendered in CrabLink
+```
+
+Known current image asset URL to reuse:
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+Older known-good asset URL still useful for regression checks:
+
+```text
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+New named site created from the old extension path and confirmed to load through React:
+
+```text
+crab://anewsite2
+```
+
+Important interpretation: `crab://anewsite2` proves React named-site read/render can hydrate and preview a backend-created site. The old “gross” root design is not a React bug; it is the immutable root HTML that was stored when the site was created. Future React site templates should improve newly created roots, but existing b3-backed root documents stay immutable.
+
+## 3. What was accomplished recently
+
+### 3.1 React lane is now the real architecture path
+
+The codebase now has a full React/Vite app structure with route-owned pages and shared components. The target tree in the refactor todo describes the intended layout: `app/`, `shared/api`, `shared/components`, `shared/embed`, `shared/manifest`, `shared/theme`, `shared/utils`, `pages/*`, and `legacy/`. 
+
+The architectural doctrine is now concrete:
+
+```text
+Shell owns:
+- topbar
+- address bar
+- browser navigation
+- gateway status
+- passport drawer
+- ROC chip
+- header ad slot
+- modal host
+- toast host
+- theme
+
+Pages own:
+- their route content
+- route-local draft state
+- local manifest model
+- local preview
+- route-specific proof panels
+- route-specific CSS
+```
+
+### 3.2 Site route moved much closer to real React parity
+
+`crab://site` now has a proper React route-owned workspace with:
+
+```text
+extensions/chrome/src/pages/site/SitePage.jsx
+extensions/chrome/src/pages/site/SiteCreate.jsx
+extensions/chrome/src/pages/site/SiteRender.jsx
+extensions/chrome/src/pages/site/SiteRootUpload.jsx
+extensions/chrome/src/pages/site/SiteManifestDrawer.jsx
+extensions/chrome/src/pages/site/SiteCreatorProof.jsx
+extensions/chrome/src/pages/site/siteDraftModel.js
+extensions/chrome/src/pages/site/siteTemplates.js
+extensions/chrome/src/pages/site/site.css
+```
+
+The named-site mode is read-only and gateway-backed. It explicitly allows gateway resolve, manifest display, root document fetch, sandbox preview, and copy fields, while blocking site creation, `/sites` mutation, wallet mutation, fake receipts, direct storage/index calls, and script execution in preview. 
+
+The local site workspace now has:
+
+```text
+- title/description/site name draft
+- owner passport/wallet hints
+- route map JSON
+- asset map JSON
+- root HTML editor
+- HTML import
+- polished template insertion
+- local manifest draft
+- creator proof panel
+- safe iframe preview
+- Developer diagnostics
+- explicit no-backend/no-wallet/no-receipt truth badges
+```
+
+### 3.3 Site templates were added
+
+`siteTemplates.js` now provides polished starter roots instead of the old rough demo page. The templates include:
+
+```text
+Creator Landing
+Image Showcase
+Minimal Article
+```
+
+They are intentionally local template starters only. They do not mint b3 CIDs, do not create sites, and do not mutate wallet/ROC. The templates use the known-good image URL as an example `crab://...image` reference and demonstrate the correct “site references assets, site does not copy asset bytes” model. 
+
+`SiteRootUpload.jsx` now exposes a template picker with **Insert Template**, HTML import, root guard, and root byte stats. It makes clear that local root HTML is only a preview and that real launch must store the root document through the backend and return a backend-verified root document CID. 
+
+### 3.4 Safe renderer / sandbox layer was upgraded
+
+The latest uploaded codebundle includes the new shared safe-rendering path:
+
+```text
+extensions/chrome/src/shared/embed/embedRegistry.js
+extensions/chrome/src/shared/embed/safeHtml.js
+extensions/chrome/src/shared/embed/sandboxFrame.js
+extensions/chrome/src/shared/embed/crabImageEmbed.jsx
+extensions/chrome/src/pages/site/SiteRender.jsx
+```
+
+`safeHtml.js` is now a real safe HTML builder. It marks input as untrusted, renders safe declarative embeds, strips active or risky HTML features, wraps the result into a sandboxed document, and returns a policy summary for diagnostics. It strips scripts, event handlers, javascript/data/vbscript URLs, forms, iframes, objects, embeds, unsafe `base`, refresh meta, and risky inline style patterns.  
+
+`embedRegistry.js` now supports `<crab-image>` as the first active safe embed and feature-gates future tags like `<crab-video>`, `<crab-audio>`, `<crab-article>`, `<crab-post>`, and `<crab-comment>`. Unsupported or unresolved embeds fail closed with visible warning blocks rather than silently executing or disappearing.  
+
+This is a big architectural milestone because CrabLink is now moving toward the intended model:
+
+```text
+React shell = trusted UI
+crab content = untrusted/sandboxed preview
+safe embeds = declarative renderer-owned primitives
+future executable code = facet contract + sandbox + policy
+```
+
+### 3.5 React image publish flow exists but needs debugging
+
+`ImagePublishFlow.jsx` now models the explicit React image publish sequence:
+
+```text
+prepare
+→ wallet hold
+→ paid image upload
+```
+
+The file states the correct invariants: no silent ROC spend, hold requires click/confirm, upload requires backend hold proof, no direct storage/index/ledger calls, raw image bytes only go to the configured gateway, and no private keys/seed phrases/local ledger truth are involved. 
+
+Recent live user test result:
+
+```text
+crab://image React flow:
+- prepare step appeared to work
+- wallet balance refreshed to a ledger-backed display
+- ROC chip showed 1676 ROC
+- hold step failed
+- no new image URL was produced
+```
+
+That means React image publishing is close, but the next session should debug the hold step before claiming React image publish parity.
+
+Likely areas to inspect:
+
+```text
+extensions/chrome/src/pages/image/ImagePublishFlow.jsx
+extensions/chrome/src/shared/api/walletClient.js
+extensions/chrome/src/shared/api/assetClient.js
+extensions/chrome/src/shared/api/gatewayClient.js
+extensions/chrome/src/app/appContext.js
+```
+
+Likely failure categories:
+
+```text
+- wrong hold route shape
+- wrong gateway path prefix
+- stale nonce / duplicate nonce
+- wrong idempotency key shape
+- missing Authorization / x-ron-passport / x-ron-wallet-account
+- mismatch between wallet account shown in UI and account used in hold body
+- wallet hold response normalization not matching backend DTO
+- React extension-origin context not using the same settings as old lane
+```
+
+## 4. Current active architecture
+
+### 4.1 Protected old lane
+
+Keep this lane intact until React parity is proven:
+
+```text
+extensions/chrome/src/page.html
+extensions/chrome/src/page.js
+extensions/chrome/src/page-*.js
+extensions/chrome/src/page.css
+extensions/chrome/src/ronClient.js
+extensions/chrome/src/storage.js
+extensions/chrome/src/crab.js
+```
+
+It is still valuable because it has proven flows for:
+
+```text
+- paid image upload
+- site creation
+- profile/passport display
+- named site creation and opening
+- typed image asset loading
+```
+
+Do not delete old files yet.
+
+Do not “clean up” old files unless something breaks.
+
+### 4.2 React lane
+
+Primary React files:
+
+```text
+extensions/chrome/src/react.html
+extensions/chrome/src/app/main.jsx
+extensions/chrome/src/app/App.jsx
+extensions/chrome/src/app/appContext.js
+extensions/chrome/src/app/appState.js
+extensions/chrome/src/app/router.js
+extensions/chrome/src/app/routeRegistry.js
+extensions/chrome/src/app/settings.js
+extensions/chrome/src/app/shell/*
+extensions/chrome/src/pages/*
+extensions/chrome/src/shared/*
+```
+
+The current route folders include:
+
+```text
+home
+site
+image
+profile
+music
+lyrics
+article
+post
+comment
+video
+stream
+podcast
+ad
+algo
+code
+game
+asset
+notFound
+problem
+```
+
+The current shared systems include:
+
+```text
+shared/api
+shared/components
+shared/embed
+shared/hooks
+shared/manifest
+shared/styles
+shared/theme
+shared/utils
+```
+
+The codebundle confirms these folders and page owners exist. 
+
+## 5. Current route-by-route status
+
+### `crab://home`
+
+Status:
+
+```text
+React route exists.
+Useful for quick nav / start page.
+Not the main risk.
+```
+
+Next:
+
+```text
+Keep simple.
+Add only small polish if needed.
+```
+
+### `crab://site`
+
+Status:
+
+```text
+High progress.
+Local workspace exists.
+Named site read/preview works.
+Template insertion exists.
+Safe sandbox preview exists.
+Gateway-resolved named site mode exists.
+Creation/mutation intentionally blocked in React.
+```
+
+Known proof:
+
+```text
+crab://anewsite2 resolved and previewed in React.
+```
+
+Next:
+
+```text
+Keep read mode stable.
+Do not wire paid create until image hold and site create contracts are fully understood.
+Eventually implement React /sites/prepare → wallet hold → /sites create parity.
+```
+
+### `crab://image`
+
+Status:
+
+```text
+High progress, but not fully green.
+React route exists.
+Prepare/hold/upload UI exists.
+Prepare appears usable.
+Hold recently failed.
+No new image URL from React publish yet.
+```
+
+Next:
+
+```text
+Top priority bug: fix React wallet hold step.
+Do not claim React image publish parity until prepare → hold → upload → crab URL is proven.
+```
+
+### `crab://profile`
+
+Status:
+
+```text
+React page exists.
+Passport drawer exists.
+Profile route/panels exist.
+Old profile path remains important.
+```
+
+Known issue:
+
+```text
+React passport/balance/profile parity has lagged old extension path.
+```
+
+Next:
+
+```text
+After image hold fix, revisit profile layout + backend truth.
+Need avoid repeating old profile layout cut-off regressions.
+```
+
+### `crab://music`
+
+Status:
+
+```text
+React route exists.
+Draft/rights/linked assets structure exists.
+Should preserve lyrics as separate linked .lyrics asset.
+```
+
+Next:
+
+```text
+Mostly polish / shared manifest consolidation.
+No backend publication claims.
+```
+
+### `crab://lyrics`
+
+Status:
+
+```text
+React route exists.
+Local-only draft.
+Separate lyrics asset concept preserved.
+```
+
+Next:
+
+```text
+Polish only unless backend routes arrive.
+```
+
+### `crab://article`
+
+Status:
+
+```text
+React route exists.
+Local-only draft.
+Long-form article model present.
+```
+
+Next:
+
+```text
+Could become first future backend text primitive after post/comment.
+```
+
+### `crab://post`
+
+Status:
+
+```text
+React route exists.
+Local-only draft.
+No backend publication.
+```
+
+Next:
+
+```text
+Good candidate for future backend DTO/parser scaffold because text primitive is simpler than media.
+```
+
+### `crab://comment`
+
+Status:
+
+```text
+React route exists.
+Local-only draft.
+No moderation truth, no backend thread state.
+```
+
+Next:
+
+```text
+Keep truth boundary strong.
+Future backend should handle parent reference/thread/site policy strictly.
+```
+
+### `crab://video`
+
+Status:
+
+```text
+React route exists.
+Video draft and renditions structure exists.
+Still future/backend-gated.
+```
+
+Next:
+
+```text
+Keep local-only.
+Use rendition rules: original/desktop/mobile/low-bandwidth/audio-only/poster/dubs are separate b3-addressed objects when real.
+```
+
+### `crab://stream`
+
+Status:
+
+```text
+React route exists.
+Stream draft exists.
+Stream + podcast mode exists.
+No real stream session.
+No ingest keys.
+No chat.
+No tips.
+```
+
+Next:
+
+```text
+Keep feature-gated.
+Do not claim live stream backend support.
+```
+
+### `crab://podcast`
+
+Status:
+
+```text
+React route exists.
+Podcast draft exists.
+Local-only.
+```
+
+Next:
+
+```text
+Keep linked cover image and audio model consistent with uniform manifest.
+```
+
+### `crab://ad`
+
+Status:
+
+```text
+React route exists.
+Ad campaign draft and creative preview exist.
+Header Ad Space slot exists in shell.
+```
+
+Next:
+
+```text
+Keep ad system clearly labeled, one header slot, privacy-preserving, no third-party scripts.
+```
+
+### `crab://algo`
+
+Status:
+
+```text
+React route exists.
+Algorithm draft/transparency exists.
+```
+
+Next:
+
+```text
+Keep inspectability/transparency focus.
+Executable algorithms must follow code/facet/sandbox policy later.
+```
+
+### `crab://code`
+
+Status:
+
+```text
+React route exists.
+Facet contract panels exist.
+```
+
+Critical invariant:
+
+```text
+crab://<hash>.code must never mean download and execute arbitrary code.
+```
+
+Model to preserve:
+
+```text
+b3hash.code = address
+facet.toml = contract
+svc-sandbox = cage
+ron-policy = judge
+CrabLink = renderer/launcher, not unsafe executor
+```
+
+### `crab://game`
+
+Status:
+
+```text
+React route exists.
+Game draft/assets structure exists.
+```
+
+Next:
+
+```text
+Keep runtime/sandbox/asset-bundle/access/save policy as future-gated.
+```
+
+### Typed asset route: `crab://<64hex>.<kind>`
+
+Status:
+
+```text
+Generic asset route exists.
+Needs more real-world testing.
+Image typed route is the highest priority.
+```
+
+Next:
+
+```text
+Test known image asset URLs in React extension-origin mode.
+Ensure asset page shows hydrated gateway truth, preview, manifest, ownership/payout if returned, and no fake fields.
+```
+
+## 6. Refactor invariants to preserve
+
+These are non-negotiable:
+
+```text
+- Gateway-only browser boundary.
+- No direct calls to svc-wallet, svc-storage, svc-index, omnigate, or ron-ledger from CrabLink.
+- No silent ROC spend.
+- No fake receipts.
+- No fake b3 CIDs.
+- No fake manifest CIDs.
+- No local balance truth.
+- No local ownership truth.
+- No private keys or seed phrases in the extension.
+- No broad Chrome permissions.
+- No arbitrary script execution from crab:// site content.
+- Untrusted crab content renders inside sandboxed surfaces.
+- Existing b3-backed content is immutable.
+- Names are human pointers; b3 hashes are canonical.
+- Public asset URL format remains crab://<64 lowercase hex>.<kind>.
+```
+
+The current extension docs still define the browser client as thin, gateway-only, not a wallet, not a ledger, not a storage node, and not a RustyOnions service. The docs also explicitly forbid direct internal service calls and direct wallet/ledger mutation. 
+
+## 7. Known testing modes
+
+### 7.1 Extension-origin React mode
+
+This is now the more important test path because the old extension includes a **React** button / route into `react.html`.
+
+Use this for real gateway/passport/wallet tests:
+
+```text
+chrome-extension://<extension-id>/react.html?url=crab%3A%2F%2Fimage
+chrome-extension://<extension-id>/react.html?url=crab%3A%2F%2Fsite
+chrome-extension://<extension-id>/react.html?url=crab%3A%2F%2Fanewsite2
+```
+
+Why this matters:
+
+```text
+- It runs in the extension origin.
+- It can access extension storage.
+- It is closer to real packaged behavior.
+- It should avoid some HTTP-preview CORS/storage limits.
+```
+
+### 7.2 Local HTTP React preview mode
+
+Still useful for quick visual checks after `npm run build`, but not the source of truth for wallet/passport behavior:
+
+```bash
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Then test:
+
+```text
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fsite
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fimage
+http://127.0.0.1:4173/react.html?url=crab%3A%2F%2Fanewsite2
+```
+
+Important carryover rule:
+
+```text
+HTTP preview is good for UI.
+Extension-origin React is better for real wallet/passport/gateway testing.
+```
+
+## 8. Start-of-next-session command gate
+
+Start the next session by running:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then reload:
+
+```text
+chrome://extensions
+→ CrabLink Extension for Chrome
+→ Reload
+```
+
+Then test in extension-origin React:
+
+```text
+crab://site
+crab://anewsite2
+crab://image
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+crab://profile
+```
+
+Then test the old lane separately:
+
+```text
+Click the extension toolbar icon normally.
+Confirm old site/image/profile flows still open.
+Confirm old paid site/image path still works or at least has not regressed.
+```
+
+## 9. Immediate next technical priorities
+
+### Priority 1 — Fix React image wallet hold
+
+The next session should begin with the React `crab://image` hold failure.
+
+Target files:
+
+```text
+extensions/chrome/src/pages/image/ImagePublishFlow.jsx
+extensions/chrome/src/shared/api/walletClient.js
+extensions/chrome/src/shared/api/assetClient.js
+extensions/chrome/src/shared/api/gatewayClient.js
+extensions/chrome/src/app/appContext.js
+extensions/chrome/src/storage.js
+```
+
+Debug checklist:
+
+```text
+1. Confirm React extension-origin settings have:
+   gatewayUrl = http://127.0.0.1:8090
+   passportSubject = passport:main:dev
+   walletAccount = acct_dev
+   authToken = dev, if required by current stack
+
+2. Confirm /wallet/acct_dev/balance works from React refresh.
+
+3. Inspect hold request JSON:
+   from
+   to
+   asset
+   amount_minor
+   nonce
+   memo / idempotency fields
+
+4. Inspect hold headers:
+   Authorization
+   x-ron-passport
+   x-ron-wallet-account
+   x-correlation-id
+   Idempotency-Key
+   Content-Type
+
+5. Confirm route path:
+   /wallet/hold or whatever gateway currently exposes.
+
+6. Confirm nonce behavior:
+   stale nonce may cause idempotency/duplicate failure.
+   If backend returns expected next nonce, surface it clearly.
+
+7. Confirm hold response normalization:
+   txid
+   receipt_hash
+   from
+   to
+   amount_minor
+   asset
+   status
+   reason/problem JSON
+
+8. Confirm upload receives normalized paid proof:
+   x-ron-paid-op
+   x-ron-paid-asset
+   x-ron-paid-estimate-minor
+   x-ron-wallet-txid
+   x-ron-wallet-receipt-hash
+   x-ron-wallet-from
+   x-ron-wallet-to
+```
+
+Do not move on to site publish parity until this is fixed.
+
+### Priority 2 — Verify safe site renderer with real named site
+
+Test:
+
+```text
+crab://anewsite2
+```
+
+Expected:
+
+```text
+- gateway resolve panel loads
+- manifest proof panel loads
+- root document fetch status is visible
+- sandbox preview loads
+- Developer diagnostics include safe_renderer and sandbox_policy
+- scripts are stripped
+- <crab-image> references attempt safe rendering
+- future tags show feature-gated/blocked notices
+```
+
+If `<crab-image>` does not resolve, inspect:
+
+```text
+extensions/chrome/src/shared/api/siteClient.js
+extensions/chrome/src/shared/embed/embedRegistry.js
+extensions/chrome/src/shared/embed/safeHtml.js
+extensions/chrome/src/pages/site/SiteRender.jsx
+```
+
+### Priority 3 — Confirm site templates work
+
+Test:
+
+```text
+crab://site
+→ Insert Template
+→ Creator Landing
+→ Image Showcase
+→ Minimal Article
+```
+
+Expected:
+
+```text
+- root HTML changes
+- sandbox preview changes
+- local manifest updates
+- root guard remains honest
+- no backend launch claim
+- no wallet mutation
+- no fake root CID
+```
+
+### Priority 4 — Tighten smoke/check scripts around new React guarantees
+
+Add or later enforce checks for:
+
+```text
+- safeHtml.js exists and exports buildSandboxedSiteHtml
+- embedRegistry.js has scaffold=false and EMBED_REGISTRY_VERSION
+- sandboxFrame.js does not default to allow-scripts / allow-same-origin
+- SiteRender uses buildSandboxedSiteHtml
+- SiteRender iframe uses getSiteIframeSandboxProps
+- ImagePublishFlow contains explicit hold flow and no silent auto-hold
+- no direct svc-wallet/storage/index/ledger URLs in React route files
+```
+
+### Priority 5 — Continue only after green
+
+Once Priority 1–4 are green, next route-level improvements should be:
+
+```text
+- polish generic asset page
+- finish profile page parity / layout
+- improve image asset hydrated view
+- then wire React site publish parity
+```
+
+## 10. Regression watchlist
+
+Fail the next batch if any of these happen:
+
+```text
+- old toolbar extension path stops opening
+- old paid image/site path breaks
+- React route causes blank white screen
+- React route leaks previous route content
+- page-local-route-mode.js returns
+- page.html imports page-local-route-mode.js
+- crab://video falls through to /sites/video
+- crab://stream falls through to /sites/stream
+- crab://podcast falls through to /sites/podcast
+- crab://article stays visible after navigating to video/stream/podcast
+- Developer JSON claims backend publication for local drafts
+- local draft claims b3 CID assignment
+- local draft claims ROC charge
+- local draft claims wallet mutation
+- extension adds broad Chrome permissions
+- browser calls svc-wallet/storage/index/ledger directly
+- sandbox iframe gains allow-scripts without a reviewed facet/sandbox policy
+- crab://<hash>.code executes arbitrary code
+```
+
+The uploaded docs repeatedly identify old patch modules like `page-creator-route-guard.js`, `page-lifecycle-settler.js`, `page-next-level-panels.js`, `page-music-rights.js`, `page-stream-podcast-mode.js`, and `page-social-stubs.js` as migration targets that should be absorbed into route-owned pages or shared components rather than preserved as long-term architecture. 
+
+## 11. Backend/product work still future
+
+CrabLink frontend can model these, but backend truth still remains future for many primitives:
+
+```text
+- real profile publishing
+- @username reservation/claiming
+- real reputation score
+- real moderator score
+- post/comment/article routes
+- lyrics route
+- music/song route
+- video route
+- stream route
+- podcast route
+- ad campaign route
+- algo registry route
+- code primitive/facet route
+- game manifest route
+- film/dub routes later
+- rendition-group DTOs
+- manifest version/history DTOs
+- uniform manifest DTOs
+- paid content views
+- paid site/app access
+- creator payout splits
+- ad payout splits
+- capability/policy gates
+```
+
+Backend invariants to preserve when those routes arrive:
+
+```text
+- ROC remains internal first.
+- No ROX/Solana/external settlement yet.
+- svc-wallet remains the normal mutation front-door.
+- ron-ledger remains durable economic truth.
+- ron-accounting remains transient usage/metering.
+- svc-rewarder plans rewards but does not mutate ledger directly.
+- storage stores bytes by content ID only.
+- gateway/omnigate coordinate but do not directly mutate ledger.
+- integer minor units only.
+- deterministic receipts.
+- deterministic errors.
+- policy/capability gates fail closed.
+```
+
+## 12. Canonical product rules to carry forward
+
+### b3 / crab URL rule
+
+```text
+Internal content ID:
+b3:<64 lowercase hex>
+
+Public typed asset URL:
+crab://<64 lowercase hex>.<kind>
+```
+
+Do not regress to:
+
+```text
+crab://b3/<hash>.<kind>
+```
+
+### Image rule
+
+All image-like assets are `.image` assets:
+
+```text
+album covers
+video thumbnails
+film posters
+game covers
+profile avatars
+article hero images
+post images
+ad creative images
+site logos
+```
+
+They should be referenced by other manifests, not copied into those asset types.
+
+### Rendition rule
+
+Every separate rendition is its own b3-addressed object:
+
+```text
+original
+desktop
+mobile
+thumbnail
+poster
+low-bandwidth
+audio-only
+caption/dub track
+```
+
+Manifests describe cross-links; bytes remain immutable.
+
+### Lyrics/dub rule
+
+Lyrics and dubs are separate assets:
+
+```text
+crab://<hash>.lyrics
+crab://<hash>.dub
+```
+
+They are linked from music/film/video manifests rather than embedded as untracked text.
+
+### Code/facet rule
+
+```text
+b3hash.code is the address.
+facet.toml is the contract.
+svc-sandbox is the cage.
+ron-policy is the judge.
+CrabLink is renderer/launcher, not unsafe executor.
+```
+
+## 13. Suggested next-session opening prompt
+
+```text
+We are continuing the CrabLink React refactor.
+
+Use the latest CODEBUNDLE_CHROME_EXTENSION.md, CRABLINK_REFACTOR.MD, and REFACTOR_TODO.MD.
+
+Current state:
+- Protected hybrid refactor.
+- Old page.html/page.js/page-* lane still protects proven site/image/profile/passport/paid flows.
+- React/Vite lane is the destination architecture.
+- React has shell/topbar/address/nav/theme/header Ad Space/passport drawer/ROC chip/modal/toast.
+- React has route-owned pages for site/image/profile/music/lyrics/article/post/comment/video/stream/podcast/ad/algo/code/game/asset.
+- React site route now has local workspace, polished site templates, named-site gateway read mode, safeHtml/embedRegistry/sandboxFrame-based sandbox preview.
+- React image route has prepare → wallet hold → upload UI, but live test failed at wallet hold, so this is top priority.
+- Known test image URL:
+  crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+- Known named site:
+  crab://anewsite2
+
+Start by running:
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+
+Then reload the Chrome extension and debug React crab://image wallet hold from extension-origin React.
+```
+
+## 14. Bottom line
+
+The refactor is in a strong state. The biggest recent milestone is that React is no longer just local drafts and pretty pages: it now has real architecture for safe site rendering, template-based site roots, named-site gateway read mode, and an explicit image publish flow. The most important next move is not adding more pages; it is making the React protected flows actually prove parity.
+
+Next session should focus on:
+
+```text
+1. Run green gate.
+2. Reload extension.
+3. Test extension-origin React.
+4. Fix React image wallet hold.
+5. Verify safe site renderer against crab://anewsite2.
+6. Verify site templates.
+7. Tighten smoke/check guardrails.
+8. Only then continue route polish or site publish parity.
+```
+
+
+### END NOTE - MAY 11 2026 - 11:15 CST
