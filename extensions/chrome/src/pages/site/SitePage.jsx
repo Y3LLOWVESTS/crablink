@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — Route owner for crab://site and named crab://<site_name> views.
- * RO:WHY — Migrates site UI into React while preserving old-lane paid site launch behavior.
- * RO:INTERACTS — SiteCreate, SiteRender, SiteManifestDrawer, SiteCreatorProof, SiteRootUpload, siteClient.
- * RO:INVARIANTS — no silent ROC spend; no fake site creation; named sites resolve through gateway only; unsafe site HTML stays sandboxed.
- * RO:METRICS — gateway resolve/fetch calls carry correlation IDs through GatewayClient.
+ * RO:WHY — Migrates site UI into React while preserving paid launch safety and gateway-only boundaries.
+ * RO:INTERACTS — SiteCreate, SiteLaunchFlow, SiteRender, SiteManifestDrawer, SiteCreatorProof, SiteRootUpload.
+ * RO:INVARIANTS — no silent ROC spend; launch stores root HTML through gateway; unsafe site HTML stays sandboxed.
+ * RO:METRICS — gateway resolve/fetch/mutation calls carry correlation IDs through GatewayClient.
  * RO:CONFIG — app settings can supply display-only passport/wallet hints.
  * RO:SECURITY — no direct storage/index/wallet/ledger calls; no scripts in preview iframe.
- * RO:TEST — crab://site local builder smoke; crab://<site_name> read-only resolve smoke.
+ * RO:TEST — crab://site builder + root store launch smoke; crab://<site_name> resolve smoke.
  */
 
 import { useCallback } from 'react';
@@ -20,6 +20,7 @@ import StatChip from '../../shared/components/StatChip.jsx';
 import useCreatorDraft from '../../shared/hooks/useCreatorDraft.js';
 import SiteCreate from './SiteCreate.jsx';
 import SiteCreatorProof from './SiteCreatorProof.jsx';
+import SiteLaunchFlow from './SiteLaunchFlow.jsx';
 import SiteManifestDrawer from './SiteManifestDrawer.jsx';
 import SiteRender from './SiteRender.jsx';
 import SiteRootUpload from './SiteRootUpload.jsx';
@@ -86,7 +87,7 @@ export default function SitePage({ app, route }) {
           routeKind="site"
           tone="info"
           title="Named site truth boundary"
-          copy="This React route is now a read-only named-site renderer. It can resolve the site DTO, display backend-returned proof fields, fetch the root document through the gateway, and render static content in a sandbox. Creation and paid mutation remain protected."
+          copy="This React route is a read-only named-site renderer. It can resolve the site DTO, display backend-returned proof fields, fetch the root document through the gateway, and render static content in a sandbox."
           allowed={[
             'gateway resolve',
             'manifest display',
@@ -96,9 +97,8 @@ export default function SitePage({ app, route }) {
             'copy proof fields',
           ]}
           blocked={[
-            'no site creation',
-            'no /sites mutation',
-            'no wallet mutation',
+            'no site creation from named view',
+            'no wallet mutation from named view',
             'no fake receipt',
             'no direct storage/index call',
             'no script execution in preview',
@@ -115,11 +115,12 @@ export default function SitePage({ app, route }) {
       <PageHeader
         eyebrow="crab://site"
         title="Site Workspace"
-        copy="Draft a CrabLink site manifest, root document, route map, asset references, creator proof, and safe preview without claiming backend launch."
+        copy="Draft a CrabLink site manifest, root document, route map, asset references, creator proof, safe preview, and explicit gateway launch flow."
         meta={
           <>
             <Badge tone="warning">local draft</Badge>
-            <Badge tone="neutral">no paid launch yet</Badge>
+            <Badge tone="info">paid launch v1</Badge>
+            <Badge tone="success">root auto-fill</Badge>
             <Badge tone="neutral">safe preview</Badge>
           </>
         }
@@ -128,8 +129,8 @@ export default function SitePage({ app, route }) {
             <Button variant="secondary" onClick={draftState.clearDraft}>
               Clear draft
             </Button>
-            <Button variant="primary" disabled title="Paid site launch remains protected until React mutation parity is ready.">
-              Launch site later
+            <Button variant="primary" onClick={() => document.getElementById('site-launch-flow')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })}>
+              Launch flow
             </Button>
           </div>
         }
@@ -137,8 +138,9 @@ export default function SitePage({ app, route }) {
 
       <RouteTruthPanel
         routeKind="site"
-        tone="warning"
+        tone="info"
         title="Site route truth boundary"
+        copy="React can now prepare a site launch, request an explicit wallet hold, store the root HTML through gateway /paid/o, auto-fill the returned b3 root CID, and submit /sites with backend hold proof."
         allowed={[
           'local root HTML preview',
           'manifest draft',
@@ -146,14 +148,19 @@ export default function SitePage({ app, route }) {
           'asset map planning',
           'creator proof preview',
           'static crab-image preview',
+          '/sites/prepare through gateway',
+          'explicit /wallet/hold through gateway',
+          '/paid/o root HTML storage through gateway',
+          '/sites create through gateway with proof',
         ]}
         blocked={[
-          'no /sites/prepare mutation',
-          'no /sites create mutation',
-          'no wallet hold',
-          'no receipt',
-          'no index pointer',
-          'no backend publication claim',
+          'no direct storage call',
+          'no direct index call',
+          'no direct ledger call',
+          'no fake root document CID',
+          'no fake receipt',
+          'no silent ROC spend',
+          'no backend publication claim before /sites succeeds',
         ]}
       />
 
@@ -162,6 +169,9 @@ export default function SitePage({ app, route }) {
           <SiteCreate app={app} draftState={draftState} />
           <SiteRootUpload draftState={draftState} />
           <SiteRender app={app} route={route} draftState={draftState} mode="draft" />
+          <div id="site-launch-flow">
+            <SiteLaunchFlow app={app} route={route} draftState={draftState} />
+          </div>
           <SiteManifestDrawer draftState={draftState} />
         </main>
 
@@ -175,9 +185,9 @@ export default function SitePage({ app, route }) {
               <StatChip label="Assets" value={draftState.stats.assetCount} help="Parsed asset map entries" />
               <StatChip
                 label="Root"
-                value={draftState.stats.rootGuard?.ok ? 'ready' : 'needs work'}
+                value={draftState.stats.hasRootCidHint ? 'stored' : 'local only'}
                 help={draftState.stats.rootGuard?.reason || ''}
-                tone={draftState.stats.rootGuard?.ok ? 'success' : 'warning'}
+                tone={draftState.stats.hasRootCidHint ? 'success' : 'warning'}
               />
             </div>
 
@@ -186,9 +196,10 @@ export default function SitePage({ app, route }) {
             </div>
 
             <div className="site-side-badges">
-              <Badge tone="warning">backend false</Badge>
-              <Badge tone="neutral">wallet false</Badge>
-              <Badge tone="neutral">receipt false</Badge>
+              <Badge tone="info">prepare wired</Badge>
+              <Badge tone="info">hold wired</Badge>
+              <Badge tone="success">root store wired</Badge>
+              <Badge tone="info">create wired</Badge>
             </div>
           </Card>
 
@@ -204,6 +215,8 @@ export default function SitePage({ app, route }) {
                   page_owner: 'extensions/chrome/src/pages/site/SitePage.jsx',
                   mode: 'local_site_workspace',
                   named_site_renderer_ready: true,
+                  launch_flow_ready: true,
+                  root_html_auto_store_ready: true,
                 }}
               />
             </Card>

@@ -32,6 +32,7 @@ export default function AltVault({ draftState }) {
       <ul className="profile-alt-list">
         <li>Main passports can create sites and public identity surfaces later.</li>
         <li>Anonymous alts can browse, comment, and interact without exposing the main identity by default.</li>
+        <li>Anonymous alts should not create sites unless a future policy explicitly grants that ability.</li>
         <li>This page does not generate alt IDs or reveal main↔alt mappings.</li>
         <li>Do not promise private alt withdrawal or unlinkability until a real backend protocol exists.</li>
       </ul>

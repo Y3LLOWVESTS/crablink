@@ -10,6 +10,7 @@
  */
 
 import { useCallback } from 'react';
+import Badge from '../../shared/components/Badge.jsx';
 import Card from '../../shared/components/Card.jsx';
 import CopyButton from '../../shared/components/CopyButton.jsx';
 import JsonPreview from '../../shared/components/JsonPreview.jsx';
@@ -34,15 +35,9 @@ export default function ProfilePage({ app, route }) {
     [app, route],
   );
 
-  const buildStats = useCallback(
-    (draft) => statsForProfileDraft(draft, app),
-    [app],
-  );
+  const buildStats = useCallback((draft) => statsForProfileDraft(draft, app), [app]);
 
-  const getCompleteness = useCallback(
-    (draft) => getProfileCompleteness(draft, app),
-    [app],
-  );
+  const getCompleteness = useCallback((draft) => getProfileCompleteness(draft, app), [app]);
 
   const draftState = useCreatorDraft({
     initialDraft: {
@@ -64,12 +59,7 @@ export default function ProfilePage({ app, route }) {
 
   return (
     <section className="cl-page profile-page">
-      <ProfileHome
-        app={app}
-        route={route}
-        draftState={draftState}
-        onEdit={scrollToEditor}
-      />
+      <ProfileHome app={app} route={route} draftState={draftState} onEdit={scrollToEditor} />
 
       <TruthBoundary
         tone="warning"
@@ -77,10 +67,9 @@ export default function ProfilePage({ app, route }) {
         copy="This React profile route is a local identity/profile draft. It does not claim backend profile publication, a reserved username, real reputation, real moderator score, public discovery, or public main↔alt linkage."
       />
 
-      <section className="profile-workspace-grid" aria-label="Profile workspace">
-        <main className="profile-workspace-main">
+      <section className="profile-dashboard-grid" aria-label="Profile workspace">
+        <main className="profile-main-column">
           <ProfileEditor app={app} draftState={draftState} />
-
           <ProfileAssets draftState={draftState} />
 
           <Card
@@ -89,13 +78,31 @@ export default function ProfilePage({ app, route }) {
             className="profile-manifest-card"
             actions={<CopyButton text={draftState.manifestJson} label="Copy manifest JSON" />}
           >
-            <JsonPreview label="Profile manifest JSON" data={draftState.manifest} initiallyOpen />
+            <div className="profile-dev-intro">
+              <Badge tone="warning">local only</Badge>
+              <Badge tone="neutral">not a profile CID</Badge>
+              <Badge tone="neutral">not backend published</Badge>
+            </div>
+
+            <JsonPreview
+              label="Profile manifest JSON"
+              data={draftState.manifest}
+              initiallyOpen={draftState.viewMode === 'developer'}
+            />
           </Card>
         </main>
 
-        <aside className="profile-workspace-side" aria-label="Profile identity and privacy panels">
+        <aside className="profile-side-column" aria-label="Profile identity and privacy panels">
           <ProfileGateway app={app} route={route} draftState={draftState} />
           <AltVault draftState={draftState} />
+
+          <Card eyebrow="Rules" title="Identity permissions" className="profile-rules-card">
+            <ul className="profile-rule-list">
+              <li>Main RON Passport identity is the future site-creation authority.</li>
+              <li>Anonymous alts are for browsing/commenting unless policy later grants more.</li>
+              <li>Profile, REP, MOD, and @username truth must come from gateway-backed services.</li>
+            </ul>
+          </Card>
         </aside>
       </section>
     </section>

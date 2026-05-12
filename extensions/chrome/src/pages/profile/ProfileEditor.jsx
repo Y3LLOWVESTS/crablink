@@ -25,15 +25,7 @@ import {
 } from './profileDraftModel.js';
 
 export default function ProfileEditor({ app, draftState }) {
-  const {
-    draft,
-    updateDraft,
-    clearDraft,
-    viewMode,
-    setViewMode,
-    manifest,
-    completeness,
-  } = draftState;
+  const { draft, updateDraft, clearDraft, viewMode, setViewMode, manifest, completeness } = draftState;
 
   function updateField(key) {
     return (event) => updateDraft(key, event.target.value);
@@ -180,11 +172,7 @@ export default function ProfileEditor({ app, draftState }) {
             </Field>
 
             <Field label="Profile tags">
-              <TextInput
-                value={draft.tags}
-                onChange={updateField('tags')}
-                placeholder="creator, crablink"
-              />
+              <TextInput value={draft.tags} onChange={updateField('tags')} placeholder="creator, crablink" />
             </Field>
 
             <Field label="Profile status">

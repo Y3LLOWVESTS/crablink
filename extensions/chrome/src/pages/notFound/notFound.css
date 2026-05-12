@@ -1,11 +1,207 @@
 /*
- * RO:WHAT — Stylesheet scaffold for extensions/chrome/src/pages/notFound/notFound.css.
- * RO:WHY — CrabLink refactor; page styles stay close to page owners and use shared tokens.
- * RO:INTERACTS — shared/theme/themeTokens.css and page/component modules.
- * RO:INVARIANTS — use CSS variables; avoid hard-coded colors unless intentionally local.
- * RO:TEST — visual/manual checks in CrabLink full-tab browser.
+ * RO:WHAT — Styles for the React-owned CrabLink not-found route.
+ * RO:WHY — Keeps malformed/unsupported route failures clear, professional, and route-owned.
+ * RO:INTERACTS — NotFoundPage.jsx, shared theme/card/form/button components.
+ * RO:INVARIANTS — CSS only; no backend truth; no hidden route behavior.
+ * RO:TEST — visual/manual malformed-route smoke in light and dark mode.
  */
 
-.cl-scaffold-card {
-  width: 100%;
+.not-found-page {
+  display: grid;
+  gap: 1rem;
+  width: min(1500px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+
+  --nf-panel-bg: var(--cl-card, #ffffff);
+  --nf-soft-bg: color-mix(in srgb, var(--cl-card, #ffffff) 76%, var(--cl-bg, #f5f4f1) 24%);
+  --nf-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
+  --nf-warning-border: color-mix(in srgb, var(--cl-warning, #a15c00) 40%, var(--nf-border-soft));
+  --nf-success-border: color-mix(in srgb, var(--cl-success, #12805c) 38%, var(--nf-border-soft));
+}
+
+[data-theme='dark'] .not-found-page {
+  --nf-panel-bg: #0b0b0b;
+  --nf-soft-bg: #050505;
+  --nf-border-soft: #242424;
+}
+
+.not-found-page *,
+.not-found-page *::before,
+.not-found-page *::after {
+  box-sizing: border-box;
+}
+
+.not-found-page .cl-card,
+.not-found-page .cl-card-head,
+.not-found-page .cl-card-body,
+.not-found-page .cl-card-actions,
+.not-found-page .cl-json-preview,
+.not-found-page .cl-json,
+.not-found-page code {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.not-found-actions,
+.not-found-route-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.not-found-hero-grid,
+.not-found-bottom-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.72fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.not-found-input-box {
+  min-width: 0;
+  margin-bottom: 0.7rem;
+  padding: 0.85rem;
+  border: 1px solid var(--nf-border-soft);
+  border-radius: 16px;
+  background: var(--nf-soft-bg);
+}
+
+.not-found-input-box span,
+.not-found-route-card span,
+.not-found-shapes span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.not-found-input-box strong,
+.not-found-route-card strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--cl-text, #111111);
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.not-found-error {
+  margin: 0.85rem 0 0;
+  padding: 0.85rem;
+  border: 1px solid var(--nf-warning-border);
+  border-radius: 16px;
+  background: var(--nf-soft-bg);
+  color: var(--cl-muted, #626262);
+  line-height: 1.5;
+}
+
+.not-found-shapes {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.not-found-shapes li {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.8rem;
+  border: 1px solid var(--nf-border-soft);
+  border-radius: 16px;
+  background: var(--nf-soft-bg);
+}
+
+.not-found-shapes code,
+.not-found-example-list code {
+  display: block;
+  color: var(--cl-text, #111111);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.not-found-route-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.not-found-route-card {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid var(--nf-border-soft);
+  border-radius: 18px;
+  background: var(--nf-soft-bg);
+}
+
+.not-found-route-card.is-success {
+  border-color: var(--nf-success-border);
+}
+
+.not-found-route-card.is-warning {
+  border-color: var(--nf-warning-border);
+}
+
+.not-found-route-card p {
+  margin: 0;
+  color: var(--cl-muted, #626262);
+  line-height: 1.45;
+}
+
+.not-found-example-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.not-found-example-list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--nf-border-soft);
+  border-radius: 16px;
+  background: var(--nf-soft-bg);
+}
+
+.not-found-example-list > div > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1240px) {
+  .not-found-route-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .not-found-hero-grid,
+  .not-found-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .not-found-route-grid,
+  .not-found-example-list > div {
+    grid-template-columns: 1fr;
+  }
+
+  .not-found-actions,
+  .not-found-actions .cl-button,
+  .not-found-route-actions,
+  .not-found-route-actions .cl-button,
+  .not-found-example-list > div > div,
+  .not-found-example-list > div > div .cl-button {
+    width: 100%;
+  }
 }

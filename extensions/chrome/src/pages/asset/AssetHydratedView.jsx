@@ -18,10 +18,11 @@ import JsonPreview from '../../shared/components/JsonPreview.jsx';
 import StatChip from '../../shared/components/StatChip.jsx';
 import TruthBoundary from '../../shared/components/TruthBoundary.jsx';
 
-export default function AssetHydratedView({ route, result, assetClient }) {
+export default function AssetHydratedView({ route, result, assetClient, resolverState }) {
   const [imagePreviewOk, setImagePreviewOk] = useState(true);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [failedPreviewSources, setFailedPreviewSources] = useState([]);
+  const [developerOpen, setDeveloperOpen] = useState(false);
 
   const summary = useMemo(() => summarizeAsset(result, route), [result, route]);
 
@@ -77,7 +78,7 @@ export default function AssetHydratedView({ route, result, assetClient }) {
 
   return (
     <section className="asset-hydrated-view">
-      <section className="asset-hydrated-grid">
+      <section className="asset-overview-grid">
         <Card
           eyebrow="Resolved asset"
           title={summary.title || `${summary.kindLabel} asset`}
@@ -90,15 +91,25 @@ export default function AssetHydratedView({ route, result, assetClient }) {
           }
         >
           <p className="asset-description">
-            {summary.description || 'The gateway returned this typed asset response without a public description field.'}
+            {summary.description ||
+              'The gateway returned this typed asset response without a public description field.'}
           </p>
+
+          <div className="asset-status-row">
+            <Badge tone="success">resolved</Badge>
+            <Badge tone="neutral">source · {result?.source || 'gateway'}</Badge>
+            <Badge tone="neutral">HTTP · {summary.status || 'n/a'}</Badge>
+            <Badge tone={summary.receiptCount > 0 ? 'success' : 'neutral'}>
+              receipts · {summary.receiptCount}
+            </Badge>
+          </div>
 
           <div className="asset-fact-grid">
             <Fact label="Kind" value={summary.kind} />
             <Fact label="CID" value={summary.cid} monospace />
             <Fact label="Owner" value={summary.owner || 'Not returned'} />
             <Fact label="Payout" value={summary.payout || 'Not returned'} />
-            <Fact label="Source" value={result?.source || 'gateway'} />
+            <Fact label="Manifest" value={summary.manifestCid || 'Not returned'} monospace />
             <Fact label="Correlation" value={summary.correlationId || 'n/a'} monospace />
           </div>
 
@@ -113,75 +124,50 @@ export default function AssetHydratedView({ route, result, assetClient }) {
           )}
         </Card>
 
-        <aside className="asset-side-panel" aria-label="Asset backend status">
-          <StatChip
-            label="HTTP"
-            value={summary.status || 'n/a'}
-            help="Gateway response status"
-            tone={summary.status >= 200 && summary.status < 300 ? 'success' : 'neutral'}
-          />
-          <StatChip label="Kind" value={summary.kind} help="Typed crab suffix" tone="info" />
-          <StatChip label="Attempts" value={summary.attempts.length} help="Gateway resolve path count" />
-          <StatChip
-            label="Receipts"
-            value={summary.receiptCount}
-            help="Backend-returned receipt-like entries"
-            tone={summary.receiptCount > 0 ? 'success' : 'neutral'}
-          />
+        <aside className="asset-side-panel" aria-label="Asset summary stats">
+          <StatChip label="Kind" value={summary.kind} tone="info" />
+          <StatChip label="Status" value={summary.status || 'OK'} tone="success" />
+          <StatChip label="Receipts" value={summary.receiptCount} tone={summary.receiptCount > 0 ? 'success' : 'neutral'} />
+          <StatChip label="Attempts" value={summary.attempts.length} tone="neutral" />
         </aside>
       </section>
 
       {summary.kind === 'image' && (
-        <Card
-          eyebrow="Preview"
-          title={imagePreviewOk && previewSource ? 'Gateway image preview' : 'Image preview unavailable'}
-          className="asset-preview-card"
-          actions={
-            <div className="asset-copy-actions">
-              {previewSource?.url && <CopyButton text={previewSource.url} label="Copy preview URL" />}
-              {previewSource?.url && (
-                <Button variant="secondary" size="sm" onClick={openPreviewSource}>
-                  Open raw
-                </Button>
-              )}
+        <Card eyebrow="Preview" title="Image preview" className="asset-preview-card">
+          {previewSource && imagePreviewOk ? (
+            <div className="asset-image-preview-shell">
+              <img
+                src={previewSource.url}
+                alt={summary.title || summary.crabUrl || 'CrabLink image asset'}
+                onError={handlePreviewError}
+              />
             </div>
-          }
-        >
-          {imagePreviewOk && previewSource ? (
-            <>
-              <div className="asset-preview-source-strip" aria-label="Preview source">
-                <Badge tone="success">trying</Badge>
-                <span>{previewSource.label}</span>
-                <code>{previewSource.url}</code>
-              </div>
-
-              <div className="asset-image-frame">
-                <img
-                  src={previewSource.url}
-                  alt={summary.title || `${summary.kindLabel} preview`}
-                  onError={handlePreviewError}
-                />
-              </div>
-
-              <p>
-                React tries the gateway raw object route first, then falls back to the typed b3 route.
-                If both routes return JSON or unavailable bytes, the DTO still remains visible below.
-              </p>
-            </>
           ) : (
-            <div className="asset-preview-unavailable">
-              <strong>No renderable image bytes were returned to the browser preview.</strong>
-              <p>
-                The asset page still resolved through the gateway. This usually means the local stack
-                returned JSON for the typed route, the raw object route is unavailable, or the current
-                dev database no longer contains the bytes for this CID.
-              </p>
+            <div className="asset-preview-empty">
+              <strong>Image bytes were not previewable from the gateway.</strong>
+              <span>
+                The asset may not exist in the current local stack, or the typed route may return JSON instead of raw image bytes.
+              </span>
             </div>
           )}
 
+          <div className="asset-preview-source-strip" aria-label="Image preview source">
+            <div>
+              <span>Current source</span>
+              <strong>{previewSource?.label || 'No source'}</strong>
+            </div>
+            <div>
+              <span>Source URL</span>
+              <strong>{previewSource?.url || 'n/a'}</strong>
+            </div>
+            <Button variant="secondary" onClick={openPreviewSource} disabled={!previewSource?.url}>
+              Open source
+            </Button>
+          </div>
+
           {failedPreviewSources.length > 0 && (
-            <div className="asset-preview-fallbacks" aria-label="Failed preview sources">
-              <strong>Preview fallback history</strong>
+            <div className="asset-preview-fallbacks">
+              <strong>Fallbacks attempted</strong>
               {failedPreviewSources.map((source) => (
                 <div key={`${source.key}-${source.failedAt}`}>
                   <span>{source.label}</span>
@@ -193,30 +179,9 @@ export default function AssetHydratedView({ route, result, assetClient }) {
         </Card>
       )}
 
-      <TruthBoundary
-        tone={summary.receiptCount > 0 ? 'success' : 'info'}
-        title="What this page proves"
-        copy="This page proves only that the configured gateway returned a response for this typed asset route. Any ownership, payout, provider, or receipt facts shown here must be present in that response."
-      />
-
-      <section className="asset-detail-grid" aria-label="Asset detail panels">
-        <Card eyebrow="Attempts" title="Gateway path">
-          <div className="asset-attempt-list">
-            {summary.attempts.map((attempt, index) => (
-              <div key={`${attempt.route}-${index}`} className={attempt.ok ? 'is-ok' : 'is-error'}>
-                <span>{attempt.ok ? 'ok' : 'fail'}</span>
-                <strong>{attempt.route}</strong>
-                <small>
-                  {attempt.status ? `HTTP ${attempt.status}` : attempt.reason || 'no status'}
-                  {attempt.correlationId ? ` · ${attempt.correlationId}` : ''}
-                </small>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card eyebrow="Policy surface" title="Returned access / rights">
-          <dl className="asset-policy-list">
+      <section className="asset-detail-grid" aria-label="Asset details">
+        <Card eyebrow="Manifest" title="Manifest / DTO summary">
+          <div className="asset-policy-list">
             <div>
               <dt>Access policy</dt>
               <dd>{summary.accessPolicy || 'Not returned'}</dd>
@@ -226,204 +191,195 @@ export default function AssetHydratedView({ route, result, assetClient }) {
               <dd>{summary.rightsPolicy || 'Not returned'}</dd>
             </div>
             <div>
-              <dt>Provider</dt>
+              <dt>Storage provider</dt>
               <dd>{summary.provider || 'Not returned'}</dd>
             </div>
-          </dl>
+            <div>
+              <dt>Version</dt>
+              <dd>{summary.version || 'Not returned'}</dd>
+            </div>
+          </div>
+
+          <TruthBoundary
+            tone="info"
+            title="Hydration truth"
+            copy="Every field in this panel is derived from the gateway response or the parsed route. Missing fields stay missing instead of being fabricated by CrabLink."
+          />
+        </Card>
+
+        <Card
+          eyebrow="Diagnostics"
+          title="Gateway attempts"
+          actions={
+            <Button variant="ghost" onClick={() => setDeveloperOpen((value) => !value)}>
+              {developerOpen ? 'Hide JSON' : 'Show JSON'}
+            </Button>
+          }
+        >
+          <div className="asset-attempt-list">
+            {summary.attempts.length > 0 ? (
+              summary.attempts.map((attempt, index) => (
+                <div key={`${attempt.route || 'attempt'}-${index}`} className={attempt.ok ? 'is-ok' : 'is-error'}>
+                  <span>{attempt.ok ? 'ok' : 'fail'}</span>
+                  <strong>{attempt.route || 'unknown route'}</strong>
+                  <small>
+                    {attempt.status ? `HTTP ${attempt.status}` : attempt.reason || 'no status'}
+                    {attempt.correlationId ? ` · ${attempt.correlationId}` : ''}
+                  </small>
+                </div>
+              ))
+            ) : (
+              <p className="asset-muted">No attempt list was returned by the asset client.</p>
+            )}
+          </div>
+
+          <div className="asset-resolved-timing">
+            <Fact label="Started" value={resolverState?.startedAt || 'n/a'} />
+            <Fact label="Finished" value={resolverState?.finishedAt || result?.resolvedAt || 'n/a'} />
+          </div>
+
+          {developerOpen && (
+            <JsonPreview
+              label="Gateway asset response"
+              data={{
+                route,
+                summary,
+                result,
+              }}
+              initiallyOpen
+            />
+          )}
         </Card>
       </section>
-
-      <Card eyebrow="Developer" title="Hydrated gateway payload">
-        <JsonPreview label="Asset response JSON" data={result?.data ?? null} initiallyOpen />
-      </Card>
-
-      <Card eyebrow="Developer" title="Route debug">
-        <JsonPreview
-          label="Asset route debug"
-          data={{
-            route_kind: route?.kind || '',
-            requested_url: route?.rawInput || '',
-            normalized_url: route?.normalizedInput || '',
-            parsed_at: route?.parsedAt || '',
-            page_owner: 'extensions/chrome/src/pages/asset/AssetPage.jsx',
-            target: result?.target || null,
-            response: result?.response || null,
-            preview_sources: previewSources,
-            failed_preview_sources: failedPreviewSources,
-            attempts: result?.attempts || [],
-          }}
-        />
-      </Card>
     </section>
   );
 }
 
 function Fact({ label, value, monospace = false }) {
   return (
-    <div className={monospace ? 'is-monospace' : ''}>
+    <div className={monospace ? 'is-mono' : ''}>
       <span>{label}</span>
-      <strong>{value || 'n/a'}</strong>
+      <strong>{value}</strong>
     </div>
   );
 }
 
 function summarizeAsset(result, route) {
-  const data = result?.data;
-  const object = data && typeof data === 'object' ? data : {};
-  const page = firstObject(object.page, object.asset_page, object.view);
-  const asset = firstObject(object.asset, object.object, page.asset);
-  const manifest = firstObject(
-    object.manifest,
-    object.asset_manifest,
-    object.assetManifest,
-    page.manifest,
-    asset.manifest,
+  const data = firstObject(result?.data);
+  const page = firstObject(data.page, data.asset_page, data.assetPage);
+  const object = firstObject(data.object, data.asset, data.content, page.object, page.asset);
+  const asset = firstObject(data.asset, page.asset, object.asset);
+  const manifest = firstObject(data.manifest, page.manifest, object.manifest, asset.manifest);
+  const metadata = firstObject(data.metadata, page.metadata, asset.metadata, manifest.metadata);
+  const ownership = firstObject(
+    data.ownership,
+    page.ownership,
+    asset.ownership,
+    manifest.ownership,
+    object.ownership,
   );
-  const metadata = firstObject(object.metadata, page.metadata, asset.metadata, manifest.metadata);
-  const ownership = firstObject(object.ownership, page.ownership, asset.ownership, manifest.ownership);
-  const economics = firstObject(
-    object.economics,
-    page.economics,
-    asset.economics,
-    manifest.economics,
-    object.payout,
+  const payout = firstObject(
+    data.payout,
+    data.payouts,
+    page.payout,
+    asset.payout,
     manifest.payout,
+    ownership.payout,
   );
-  const provider = firstObject(
-    object.provider,
-    object.storage,
-    page.provider,
-    page.storage,
-    asset.provider,
-    asset.storage,
-    manifest.provider,
-    manifest.storage,
-  );
-  const policy = firstObject(
-    object.policy,
-    page.policy,
-    asset.policy,
-    manifest.policy,
-    object.access_policy,
-    manifest.access_policy,
-  );
-  const receipts = firstArray(
-    object.receipts,
-    page.receipts,
-    asset.receipts,
-    manifest.receipts,
-    object.wallet_receipts,
-    object.proofs,
-  );
+  const storage = firstObject(data.storage, page.storage, asset.storage, manifest.storage, object.storage);
+  const policy = firstObject(data.policy, page.policy, asset.policy, manifest.policy);
+  const receipts = firstArray(data.receipts, page.receipts, asset.receipts, manifest.receipts, object.receipts);
 
-  const target = result?.target || route?.params || {};
-  const kind = stringValue(
-    object.kind,
-    object.asset_kind,
-    object.assetKind,
-    page.kind,
-    page.asset_kind,
-    asset.kind,
-    asset.asset_kind,
-    manifest.kind,
-    manifest.asset_kind,
-    target.assetKind,
-    'asset',
-  ).toLowerCase();
-
-  const hash = normalizeHash(
-    stringValue(
-      object.hash,
-      object.b3,
-      object.digest,
-      object.asset_cid,
-      object.assetCid,
-      object.cid,
-      object.content_id,
-      object.contentId,
-      page.hash,
-      page.asset_cid,
-      page.cid,
-      asset.hash,
-      asset.cid,
-      asset.content_id,
-      manifest.hash,
-      manifest.cid,
-      manifest.content_id,
-      target.hash,
-      '',
-    ),
-  );
-
+  const target = firstObject(result?.target, route?.params);
+  const kind = stringValue(target.assetKind, object.kind, asset.kind, page.kind, data.kind, 'asset').toLowerCase();
+  const hash = normalizeHash(target.hash || object.hash || asset.hash || data.hash || manifest.hash);
   const cid = stringValue(
+    target.cid,
     object.cid,
     object.content_id,
     object.contentId,
-    object.asset_cid,
-    object.assetCid,
-    page.cid,
-    page.content_id,
-    page.asset_cid,
+    object.b3,
     asset.cid,
     asset.content_id,
-    manifest.cid,
+    asset.contentId,
+    data.cid,
+    data.content_id,
     manifest.content_id,
-    target.cid,
+    manifest.cid,
     hash ? `b3:${hash}` : '',
   );
 
   return {
-    title: stringValue(object.title, page.title, metadata.title, manifest.title, asset.title, ''),
-    description: stringValue(
-      object.description,
-      page.description,
-      metadata.description,
-      manifest.description,
-      asset.description,
-      '',
-    ),
     kind,
     kindLabel: labelFromKind(kind),
-    hash,
+    hash: hash || normalizeHash(cid),
     cid,
     crabUrl: stringValue(
       target.assetUrl,
-      object.crab_url,
-      object.crabUrl,
+      route?.normalizedInput,
+      data.crab_url,
+      data.crabUrl,
       page.crab_url,
       page.crabUrl,
-      route?.normalizedInput,
+      asset.crab_url,
+      asset.crabUrl,
       hash ? `crab://${hash}.${kind}` : '',
     ),
+    title: stringValue(
+      metadata.title,
+      manifest.title,
+      asset.title,
+      page.title,
+      data.title,
+      object.title,
+    ),
+    description: stringValue(
+      metadata.description,
+      manifest.description,
+      asset.description,
+      page.description,
+      data.description,
+      object.description,
+    ),
     owner: stringValue(
-      ownership.owner,
-      ownership.passport,
+      ownership.owner_username,
+      ownership.ownerUsername,
       ownership.owner_passport_subject,
       ownership.ownerPassportSubject,
-      object.owner,
-      object.owner_passport_subject,
-      object.ownerPassportSubject,
-      page.owner,
+      ownership.owner,
+      data.owner,
       asset.owner,
-      '',
     ),
     payout: stringValue(
-      economics.payout,
-      economics.payout_account,
-      economics.payoutAccount,
-      economics.creator_payout_account,
-      economics.creatorPayoutAccount,
-      object.payout_account,
-      object.payoutAccount,
-      '',
+      payout.account,
+      payout.payout_account,
+      payout.payoutAccount,
+      ownership.payout_account,
+      ownership.payoutAccount,
+    ),
+    manifestCid: stringValue(
+      manifest.cid,
+      manifest.manifest_cid,
+      manifest.manifestCid,
+      data.manifest_cid,
+      data.manifestCid,
+      page.manifest_cid,
+      page.manifestCid,
     ),
     provider: stringValue(
-      provider.provider,
-      provider.node,
-      provider.storage_provider,
-      provider.storageProvider,
+      storage.provider,
+      storage.provider_id,
+      storage.providerId,
+      storage.node,
+      storage.storage_provider,
       object.provider,
-      '',
+    ),
+    version: stringValue(
+      manifest.version,
+      manifest.manifest_version,
+      manifest.manifestVersion,
+      data.version,
+      page.version,
     ),
     accessPolicy: summarizePolicy(policy.access || policy.access_policy || object.access_policy),
     rightsPolicy: summarizePolicy(policy.rights || policy.rights_policy || object.rights_policy),
@@ -482,7 +438,7 @@ function normalizeTags(value) {
 
   return String(value || '')
     .split(',')
-    .map((item) => item.trim())
+    .map((item) => item.trim().replace(/^#/, ''))
     .filter(Boolean)
     .slice(0, 16);
 }

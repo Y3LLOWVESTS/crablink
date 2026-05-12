@@ -9,12 +9,16 @@
  * RO:TEST — avatar URL field with crab://<64hex>.image.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { imageHashFromCrabUrl, isCrabImageUrl } from './profileDraftModel.js';
 
 export default function ProfileAvatar({ app, draft, size = 'normal' }) {
   const [failed, setFailed] = useState(false);
   const avatarUrl = draft?.avatarCrabUrl || '';
+
+  useEffect(() => {
+    setFailed(false);
+  }, [avatarUrl]);
 
   const previewUrl = useMemo(() => {
     const hash = imageHashFromCrabUrl(avatarUrl);
@@ -35,17 +39,19 @@ export default function ProfileAvatar({ app, draft, size = 'normal' }) {
 
   return (
     <div className={`profile-avatar profile-avatar-${size}`}>
-      {canPreview ? (
-        <img
-          src={previewUrl}
-          alt={`${draft?.displayName || 'Profile'} avatar`}
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        <div className="profile-avatar-placeholder" aria-label="Profile avatar placeholder">
-          {initials}
-        </div>
-      )}
+      <div className="profile-avatar-frame">
+        {canPreview ? (
+          <img
+            src={previewUrl}
+            alt={`${draft?.displayName || 'Profile'} avatar`}
+            onError={() => setFailed(true)}
+          />
+        ) : (
+          <div className="profile-avatar-placeholder" aria-label="Profile avatar placeholder">
+            {initials}
+          </div>
+        )}
+      </div>
 
       <span className="profile-avatar-status">
         {isCrabImageUrl(avatarUrl)

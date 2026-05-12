@@ -1,29 +1,39 @@
 /**
  * RO:WHAT — Local root HTML editor/importer/template picker for the React crab://site workspace.
- * RO:WHY — Models site root document handling and replaces rough demo roots with polished templates.
- * RO:INTERACTS — SiteCreate, SiteRender, siteDraftModel root guard, siteTemplates.
- * RO:INVARIANTS — local root only; no storage put; no fake root CID; no image CID as site root.
+ * RO:WHY — Restores polished site template cards while keeping backend root CID auto-fill support.
+ * RO:INTERACTS — SiteCreate, SiteRender, SiteLaunchFlow, siteDraftModel root guard, siteTemplates.
+ * RO:INVARIANTS — local editor only; storage happens in SiteLaunchFlow after explicit hold; no fake root CID; no image CID as site root.
  * RO:METRICS — none.
  * RO:CONFIG — draft rootHtml and rootDocumentCid fields.
  * RO:SECURITY — selected HTML is previewed in sandbox; scripts are stripped in preview.
- * RO:TEST — manual local HTML paste/file import/template insert smoke.
+ * RO:TEST — manual local HTML paste/file import/template insert/store launch smoke.
  */
 
 import { useState } from 'react';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
+import CopyButton from '../../shared/components/CopyButton.jsx';
 import Field from '../../shared/components/Field.jsx';
 import TextArea from '../../shared/components/TextArea.jsx';
+import TextInput from '../../shared/components/TextInput.jsx';
 import { SITE_TEMPLATES, buildSiteTemplatePatch } from './siteTemplates.js';
 
 export default function SiteRootUpload({ draftState }) {
   const { draft, updateDraft, replaceDraft, stats } = draftState;
   const [selectedTemplateId, setSelectedTemplateId] = useState(SITE_TEMPLATES[0]?.id || '');
-  const rootGuard = stats.rootGuard || { ok: false, level: 'warning', reason: 'Root document not checked.' };
+  const rootGuard = stats.rootGuard || {
+    ok: false,
+    level: 'warning',
+    reason: 'Root document not checked.',
+  };
 
   function updateRootHtml(event) {
     updateDraft('rootHtml', event.target.value);
+  }
+
+  function updateRootCid(event) {
+    updateDraft('rootDocumentCid', event.target.value);
   }
 
   function handleFileChange(event) {
@@ -47,8 +57,17 @@ export default function SiteRootUpload({ draftState }) {
     replaceDraft(nextDraft);
   }
 
+  function selectTemplate(templateId) {
+    setSelectedTemplateId(templateId);
+    applyTemplate(templateId);
+  }
+
   function clearRootHtml() {
     updateDraft('rootHtml', '');
+  }
+
+  function clearRootCid() {
+    updateDraft('rootDocumentCid', '');
   }
 
   return (
@@ -73,15 +92,15 @@ export default function SiteRootUpload({ draftState }) {
       }
     >
       <p className="site-section-copy">
-        This root HTML is only a local preview. Real launch must store the root document
-        through the backend flow and return a backend-verified root document CID.
+        Write or import the root HTML here. In the Launch Flow, after Prepare Site and Confirm ROC Hold,
+        click Store Root HTML. The backend b3 CID will auto-fill below.
       </p>
 
       <section className="site-template-panel" aria-label="Site root templates">
         <div className="site-template-header">
           <div>
             <span>Template starter</span>
-            <strong>Choose a cleaner root page</strong>
+            <strong>Choose a polished root page</strong>
           </div>
 
           <div className="site-template-controls">
@@ -109,10 +128,7 @@ export default function SiteRootUpload({ draftState }) {
               key={template.id}
               type="button"
               className={`site-template-card ${template.id === selectedTemplateId ? 'is-selected' : ''}`}
-              onClick={() => {
-                setSelectedTemplateId(template.id);
-                applyTemplate(template.id);
-              }}
+              onClick={() => selectTemplate(template.id)}
             >
               <span>{template.tone}</span>
               <strong>{template.name}</strong>
@@ -127,11 +143,26 @@ export default function SiteRootUpload({ draftState }) {
         <span>{rootGuard.reason}</span>
       </div>
 
-      <Field label="Root HTML" help="Scripts will not execute in the React preview. Future facet/code routes need a separate security model.">
+      <Field
+        label="Root HTML"
+        help="Scripts will not execute in the React preview. Future facet/code routes need a separate security model."
+      >
         <TextArea
           value={draft.rootHtml}
           onChange={updateRootHtml}
           rows={12}
+          spellCheck={false}
+        />
+      </Field>
+
+      <Field
+        label="Backend root document CID"
+        help="This should auto-fill after Store Root HTML succeeds. Manual paste remains a developer fallback."
+      >
+        <TextInput
+          value={draft.rootDocumentCid || ''}
+          onChange={updateRootCid}
+          placeholder="b3:<64 lowercase hex>"
           spellCheck={false}
         />
       </Field>
@@ -143,6 +174,10 @@ export default function SiteRootUpload({ draftState }) {
         <Button variant="ghost" onClick={clearRootHtml}>
           Clear Root HTML
         </Button>
+        <Button variant="ghost" onClick={clearRootCid} disabled={!draft.rootDocumentCid}>
+          Clear Root CID
+        </Button>
+        <CopyButton text={draft.rootDocumentCid || ''} label="Copy Root CID" disabled={!draft.rootDocumentCid} />
       </div>
 
       <div className="site-root-stats">
@@ -151,12 +186,24 @@ export default function SiteRootUpload({ draftState }) {
           <strong>{formatBytes(stats.rootHtmlBytes || 0)}</strong>
         </div>
         <div>
-          <span>Root CID hint</span>
-          <strong>{stats.hasRootCidHint ? 'present' : 'none'}</strong>
+          <span>Root CID</span>
+          <strong>{stats.hasRootCidHint ? 'auto-filled / present' : 'not stored yet'}</strong>
+        </div>
+        <div>
+          <span>Next step</span>
+          <strong>{stats.hasRootCidHint ? 'Create Site' : 'Store Root HTML'}</strong>
+        </div>
+        <div>
+          <span>Template</span>
+          <strong>{selectedTemplateName(selectedTemplateId)}</strong>
         </div>
       </div>
     </Card>
   );
+}
+
+function selectedTemplateName(selectedTemplateId) {
+  return SITE_TEMPLATES.find((template) => template.id === selectedTemplateId)?.name || 'Template';
 }
 
 function formatBytes(value) {

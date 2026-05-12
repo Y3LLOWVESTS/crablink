@@ -1,20 +1,24 @@
 /*
- * RO:WHAT — Route-owned styling for the CrabLink React home smoke dashboard.
+ * RO:WHAT — Route-owned styling for the CrabLink React home command center.
  * RO:WHY — Keeps home/dashboard layout near its page owner while using shared CrabLink theme tokens.
  * RO:INTERACTS — HomePage.jsx, HomeQuickActions.jsx, shared theme CSS.
- * RO:INVARIANTS — CSS only; no backend truth; no route behavior; no hardcoded product success state.
+ * RO:INVARIANTS — CSS only; no backend truth; no route behavior; proof labels remain display-only.
  * RO:TEST — visual/manual crab://home smoke in light and dark mode.
  */
 
 .home-page {
   display: grid;
   gap: 18px;
-  width: 100%;
+  width: min(1500px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: auto;
 
   --cl-home-panel-bg: var(--cl-card, #ffffff);
   --cl-home-panel-soft-bg: var(--cl-surface, #fbfaf7);
   --cl-home-input-bg: color-mix(in srgb, var(--cl-card, #ffffff) 84%, var(--cl-bg, #f5f4f1) 16%);
   --cl-home-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
+  --cl-home-proof-bg: color-mix(in srgb, var(--cl-card, #ffffff) 88%, var(--cl-bg, #f5f4f1) 12%);
 }
 
 [data-theme='dark'] .home-page {
@@ -22,6 +26,22 @@
   --cl-home-panel-soft-bg: #050505;
   --cl-home-input-bg: #050505;
   --cl-home-border-soft: #242424;
+  --cl-home-proof-bg: #080808;
+}
+
+.home-page *,
+.home-page *::before,
+.home-page *::after {
+  box-sizing: border-box;
+}
+
+.home-page .cl-card,
+.home-page .cl-card-head,
+.home-page .cl-card-body,
+.home-page .cl-card-actions,
+.home-page code {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .cl-home-hero-grid {
@@ -38,15 +58,28 @@
   border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
   border-radius: 22px;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.055), transparent 45%),
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-text, #111111) 5%, transparent), transparent 45%),
     var(--cl-home-panel-bg);
   box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.06));
+}
+
+.cl-home-status-card.is-success {
+  border-color: color-mix(in srgb, var(--cl-success, #12805c) 38%, var(--cl-border, #d9d6cf));
+}
+
+.cl-home-status-card.is-info {
+  border-color: color-mix(in srgb, var(--cl-info, #2a6fbb) 30%, var(--cl-border, #d9d6cf));
+}
+
+.cl-home-status-card.is-warning {
+  border-color: color-mix(in srgb, var(--cl-warning, #a15c00) 35%, var(--cl-border, #d9d6cf));
 }
 
 .cl-home-status-card div {
   display: flex;
   gap: 12px;
   align-items: baseline;
+  min-width: 0;
 }
 
 .cl-home-status-card strong {
@@ -61,13 +94,134 @@
   color: var(--cl-text, #111111);
   font-size: 20px;
   letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
 }
 
-.cl-home-status-card p {
+.cl-home-status-card p,
+.cl-home-muted {
   margin: 0;
   color: var(--cl-muted, #626262);
   line-height: 1.5;
 }
+
+/* Proof cards */
+
+.cl-home-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cl-home-proof-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--cl-home-border-soft);
+  border-radius: 20px;
+  background: var(--cl-home-proof-bg);
+}
+
+.cl-home-proof-card.is-success {
+  border-color: color-mix(in srgb, var(--cl-success, #12805c) 38%, var(--cl-home-border-soft));
+}
+
+.cl-home-proof-card.is-info {
+  border-color: color-mix(in srgb, var(--cl-info, #2a6fbb) 30%, var(--cl-home-border-soft));
+}
+
+.cl-home-proof-card.is-warning {
+  border-color: color-mix(in srgb, var(--cl-warning, #a15c00) 35%, var(--cl-home-border-soft));
+}
+
+.cl-home-proof-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.cl-home-proof-head span,
+.cl-home-context-row span,
+.cl-home-route-proof span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cl-home-proof-head strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--cl-text, #111111);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.cl-home-proof-card p {
+  margin: 0;
+  color: var(--cl-muted, #626262);
+  line-height: 1.45;
+}
+
+.cl-home-proof-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.cl-home-inline-link {
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 999px;
+  background: var(--cl-home-panel-bg);
+  color: var(--cl-text, #111111);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  min-height: 32px;
+  padding: 0 12px;
+}
+
+.cl-home-inline-link:hover {
+  transform: translateY(-1px);
+}
+
+/* Context */
+
+.cl-home-context-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.55fr);
+  gap: 14px;
+}
+
+.cl-home-context-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cl-home-context-row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--cl-home-border-soft);
+  border-radius: 14px;
+  background: var(--cl-home-panel-soft-bg);
+}
+
+.cl-home-context-row strong {
+  color: var(--cl-text, #111111);
+  overflow-wrap: anywhere;
+}
+
+/* Quick actions */
 
 .cl-home-actions {
   display: grid;
@@ -79,6 +233,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 18px;
   align-items: start;
+  min-width: 0;
   padding: 18px;
   border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
   border-radius: 22px;
@@ -94,7 +249,7 @@
 }
 
 .cl-home-actions-head p {
-  max-width: 880px;
+  max-width: 900px;
   margin: 8px 0 0;
   color: var(--cl-muted, #626262);
   line-height: 1.5;
@@ -137,13 +292,18 @@
 .cl-home-route-card {
   display: grid;
   gap: 12px;
+  min-width: 0;
   padding: 14px;
   border: 1px solid var(--cl-home-border-soft);
   border-radius: 18px;
   background: var(--cl-home-panel-soft-bg);
 }
 
-.cl-home-route-card.is-protected {
+.cl-home-route-card.is-proven {
+  border-color: color-mix(in srgb, var(--cl-success, #12805c) 38%, var(--cl-home-border-soft));
+}
+
+.cl-home-route-card.is-local {
   border-style: dashed;
 }
 
@@ -152,6 +312,11 @@
   gap: 12px;
   align-items: start;
   justify-content: space-between;
+  min-width: 0;
+}
+
+.cl-home-route-card-head > div {
+  min-width: 0;
 }
 
 .cl-home-route-card h3 {
@@ -171,7 +336,9 @@
 .cl-home-route-risk {
   display: inline-flex;
   width: fit-content;
+  max-width: 100%;
   align-items: center;
+  overflow-wrap: anywhere;
   border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
   border-radius: 999px;
   padding: 5px 8px;
@@ -179,12 +346,29 @@
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.02em;
-  white-space: nowrap;
 }
 
 .cl-home-route-risk {
+  flex: 0 0 auto;
   background: var(--cl-home-input-bg);
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cl-home-route-proof {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--cl-home-border-soft);
+  border-radius: 14px;
+  background: var(--cl-home-panel-bg);
+}
+
+.cl-home-route-proof code {
+  display: block;
+  color: var(--cl-text, #111111);
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .cl-home-route-actions {
@@ -196,6 +380,8 @@
 .cl-home-route-actions .cl-button {
   min-height: 34px;
 }
+
+/* Bottom panels */
 
 .cl-home-bottom-grid {
   display: grid;
@@ -233,8 +419,10 @@
   width: 100%;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1180px) {
   .cl-home-hero-grid,
+  .cl-home-proof-grid,
+  .cl-home-context-grid,
   .cl-home-bottom-grid {
     grid-template-columns: 1fr;
   }
@@ -253,7 +441,19 @@
     grid-template-columns: 1fr;
   }
 
-  .cl-home-route-card-head {
+  .cl-home-route-card-head,
+  .cl-home-proof-head,
+  .cl-home-context-row {
     display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .cl-home-proof-actions {
+    justify-content: flex-start;
+  }
+
+  .cl-home-actions-tools .cl-button,
+  .cl-home-route-actions .cl-button {
+    width: 100%;
   }
 }

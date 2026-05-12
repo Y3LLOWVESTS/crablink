@@ -1,7 +1,7 @@
 /**
  * RO:WHAT — Gateway resolver for typed CrabLink asset routes.
- * RO:WHY — Moves crab://<hash>.<kind> from scaffold to protected read-only backend hydration.
- * RO:INTERACTS — assetClient, gatewayClient, AssetHydratedView, LoadingState, ErrorPanel.
+ * RO:WHY — Turns crab://<hash>.<kind> into protected read-only backend hydration with explicit diagnostics.
+ * RO:INTERACTS — assetClient, gatewayClient, AssetHydratedView, LoadingState, Card/Badge/JsonPreview.
  * RO:INVARIANTS — gateway-only; read-only; no fake b3/manifest/receipt truth; no wallet mutation.
  * RO:METRICS — records returned gateway correlation IDs in visible route facts.
  * RO:CONFIG — app.clients.gateway settings.
@@ -25,20 +25,27 @@ import AssetHydratedView from './AssetHydratedView.jsx';
 export default function AssetResolver({ route, app }) {
   const gateway = app?.clients?.gateway || app?.gateway || null;
   const assetClient = useMemo(() => createAssetClient(gateway), [gateway]);
+
   const [state, setState] = useState({
     status: 'idle',
     result: null,
     error: null,
+    startedAt: '',
+    finishedAt: '',
   });
 
   useEffect(() => {
     let alive = true;
 
     async function run() {
+      const startedAt = new Date().toISOString();
+
       setState({
         status: 'loading',
         result: null,
         error: null,
+        startedAt,
+        finishedAt: '',
       });
 
       try {
@@ -52,6 +59,8 @@ export default function AssetResolver({ route, app }) {
           status: 'resolved',
           result,
           error: null,
+          startedAt,
+          finishedAt: new Date().toISOString(),
         });
       } catch (error) {
         if (!alive) {
@@ -62,6 +71,8 @@ export default function AssetResolver({ route, app }) {
           status: 'error',
           result: null,
           error,
+          startedAt,
+          finishedAt: new Date().toISOString(),
         });
       }
     }
@@ -75,22 +86,32 @@ export default function AssetResolver({ route, app }) {
 
   if (state.status === 'loading' || state.status === 'idle') {
     return (
-      <LoadingState
-        title="Resolving asset"
-        copy="CrabLink is asking the configured gateway for this typed crab asset."
-        detail={route?.normalizedInput || ''}
-      />
+      <section className="asset-resolver-loading">
+        <LoadingState
+          title="Resolving asset"
+          copy="CrabLink is asking the configured gateway for this typed crab asset."
+          detail={route?.normalizedInput || ''}
+        />
+      </section>
     );
   }
 
   if (state.status === 'error') {
-    return <AssetResolveProblem error={state.error} app={app} route={route} />;
+    return <AssetResolveProblem error={state.error} app={app} route={route} state={state} />;
   }
 
-  return <AssetHydratedView route={route} app={app} result={state.result} assetClient={assetClient} />;
+  return (
+    <AssetHydratedView
+      route={route}
+      app={app}
+      result={state.result}
+      assetClient={assetClient}
+      resolverState={state}
+    />
+  );
 }
 
-function AssetResolveProblem({ error, app, route }) {
+function AssetResolveProblem({ error, app, route, state }) {
   const problem = normalizeAssetResolveProblem(error);
   const problemJson = JSON.stringify(problem, null, 2);
   const tone = toneForProblem(problem.problemCode);
@@ -130,10 +151,10 @@ function AssetResolveProblem({ error, app, route }) {
         <section className="asset-problem-facts" aria-label="Asset problem facts">
           <ProblemFact label="Reason" value={problem.reason || problem.problemCode} />
           <ProblemFact label="HTTP" value={problem.status ? String(problem.status) : 'n/a'} />
-          <ProblemFact label="Correlation" value={problem.correlationId || 'n/a'} />
+          <ProblemFact label="Correlation" value={problem.correlationId || 'n/a'} monospace />
           <ProblemFact label="Kind" value={problem.target?.assetKind || route?.params?.assetKind || 'n/a'} />
           <ProblemFact label="CID" value={problem.target?.cid || route?.params?.cid || 'n/a'} monospace />
-          <ProblemFact label="Gateway path count" value={String(problem.attempts.length || 0)} />
+          <ProblemFact label="Started" value={state?.startedAt || 'n/a'} />
         </section>
 
         <div className="asset-problem-help">
@@ -160,8 +181,8 @@ function AssetResolveProblem({ error, app, route }) {
         </Card>
       )}
 
-      <Card eyebrow="Developer" title="Structured asset problem">
-        <JsonPreview label="Asset resolve problem JSON" data={problem} initiallyOpen />
+      <Card eyebrow="Developer" title="Problem payload">
+        <JsonPreview label="Asset resolve problem" data={problem} initiallyOpen />
       </Card>
     </section>
   );
@@ -169,29 +190,27 @@ function AssetResolveProblem({ error, app, route }) {
 
 function ProblemFact({ label, value, monospace = false }) {
   return (
-    <div className={monospace ? 'is-monospace' : ''}>
+    <div className={monospace ? 'is-mono' : ''}>
       <span>{label}</span>
-      <strong>{value || 'n/a'}</strong>
+      <strong>{value}</strong>
     </div>
   );
 }
 
 function toneForProblem(problemCode) {
-  if (problemCode === 'asset_not_found' || problemCode === 'unsupported_kind') {
+  const code = String(problemCode || '').toLowerCase();
+
+  if (code.includes('gateway') || code.includes('network') || code.includes('timeout')) {
     return 'warning';
   }
 
-  if (problemCode === 'policy_denied') {
-    return 'danger';
-  }
-
-  if (problemCode === 'gateway_unreachable' || problemCode === 'gateway_upstream_unavailable') {
+  if (code.includes('not_found') || code.includes('missing')) {
     return 'warning';
   }
 
-  if (problemCode === 'malformed_response' || problemCode === 'invalid_asset_hash') {
+  if (code.includes('invalid') || code.includes('unsupported') || code.includes('malformed')) {
     return 'danger';
   }
 
-  return 'neutral';
+  return 'danger';
 }
