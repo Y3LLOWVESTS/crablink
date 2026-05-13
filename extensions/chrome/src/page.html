@@ -2,402 +2,74 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>CrabLink Browser</title>
+    <title>CrabLink compatibility redirect</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="./page.css" />
+    <!--
+      RO:WHAT — Compatibility redirect from the retired vanilla lane to the React-primary CrabLink browser.
+      RO:WHY — Keeps old page.html URLs from white-screening while removing the old active vanilla app.
+      RO:INTERACTS — react.html, background.js, popup.js, package-chrome.sh.
+      RO:INVARIANTS — no wallet calls; no backend calls; no fake state; redirect only.
+      RO:SECURITY — no untrusted content rendering; no extension privilege handoff.
+    -->
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: #0a0a0a;
+        color: #f7f7f7;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+      }
+
+      main {
+        width: min(520px, calc(100vw - 32px));
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 22px;
+        padding: 24px;
+        background: rgba(255, 255, 255, 0.06);
+        box-shadow: 0 20px 80px rgba(0, 0, 0, 0.45);
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 22px;
+      }
+
+      p {
+        margin: 0;
+        color: #cfcfcf;
+        line-height: 1.5;
+      }
+    </style>
   </head>
 
   <body>
-    <div class="app-shell">
-      <header class="browser-topbar">
-        <div class="brand">
-          <img class="brand-logo" src="../assets/icons/logo.png" alt="CrabLink logo" />
-          <div>
-            <h1>CrabLink</h1>
-            <p>RustyOnions browser tab</p>
-          </div>
-        </div>
+    <main>
+      <h1>Opening CrabLink React…</h1>
+      <p>The old vanilla browser lane has been retired. This compatibility page redirects to the React browser.</p>
+    </main>
 
-        <nav class="navigation-actions" aria-label="CrabLink page navigation">
-          <button
-            id="backButton"
-            type="button"
-            class="secondary icon-button nav-icon-button"
-            title="Back"
-            aria-label="Back"
-          >
-            ←
-          </button>
-          <button
-            id="forwardButton"
-            type="button"
-            class="secondary icon-button nav-icon-button"
-            title="Forward"
-            aria-label="Forward"
-          >
-            →
-          </button>
-          <button
-            id="homeButton"
-            type="button"
-            class="secondary icon-button nav-icon-button"
-            title="Home"
-            aria-label="Home"
-          >
-            ⌂
-          </button>
-        </nav>
+    <script type="module">
+      const params = new URLSearchParams(window.location.search);
+      const target = params.get("url") || "crab://site";
+      const safeTarget = String(target || "crab://site").trim() || "crab://site";
 
-        <form id="addressForm" class="address-form">
-          <input id="addressInput" type="text" spellcheck="false" autocomplete="off" placeholder="crab://site" />
-          <button id="goButton" type="submit">Go</button>
-        </form>
+      const reactUrl =
+        typeof chrome !== "undefined" && chrome.runtime?.getURL
+          ? chrome.runtime.getURL("react.html")
+          : new URL("./react.html", window.location.href).href;
 
-        <div class="top-actions">
-          <button
-            id="refreshButton"
-            type="button"
-            class="secondary icon-button topbar-icon-button refresh-icon-button"
-            title="Refresh"
-            aria-label="Refresh"
-          >
-            ↻
-          </button>
-          <button
-            id="reactPreviewButton"
-            type="button"
-            class="secondary react-preview-button"
-            title="Open this route in the React refactor lane"
-            aria-label="Open React preview"
-          >
-            React
-          </button>
-          <div id="topRocBalance" class="balance-chip" title="Current ROC balance" aria-live="polite">0 ROC</div>
-          <button id="passportButton" type="button" class="secondary">Passport</button>
-          <button
-            id="settingsButton"
-            type="button"
-            class="secondary icon-button topbar-icon-button settings-icon-button"
-            title="Settings"
-            aria-label="Settings"
-          >
-            ⚙
-          </button>
-        </div>
-      </header>
+      const next = new URL(reactUrl);
+      next.searchParams.set("url", safeTarget);
 
-      <main class="browser-main">
-        <aside id="passportDrawer" class="passport-drawer hidden">
-          <div class="drawer-head">
-            <div>
-              <h2>RON Passport</h2>
-              <p>Gateway-backed identity and wallet labels.</p>
-            </div>
-            <button id="closePassportButton" type="button" class="icon-button">×</button>
-          </div>
-
-          <div class="drawer-grid">
-            <div><span>Passport</span><strong id="drawerPassport">—</strong></div>
-            <div><span>Gateway</span><strong id="drawerGateway">—</strong></div>
-            <div><span>Wallet</span><strong id="drawerWallet">—</strong></div>
-            <div hidden aria-hidden="true"><span>ROC</span><strong id="drawerRoc">—</strong></div>
-            <div><span>Ledger</span><strong id="drawerLedger">—</strong></div>
-          </div>
-
-          <section id="passportUserCatalogPanel" class="passport-user-catalog-panel" aria-label="Passport user controls">
-            <div class="passport-catalog-stat-row">
-              <article class="passport-catalog-stat-box" title="Current ROC balance from local wallet/balance state.">
-                <span>ROC:</span>
-                <strong id="passportCatalogRoc">—</strong>
-              </article>
-              <article
-                class="passport-catalog-stat-box"
-                title="Reputation score is not backend-published yet unless settings or DTO data provides it."
-              >
-                <span>REP:</span>
-                <strong id="passportCatalogRep">—</strong>
-              </article>
-              <article
-                class="passport-catalog-stat-box"
-                title="Moderator score is not backend-published yet unless settings or DTO data provides it."
-              >
-                <span>MOD:</span>
-                <strong id="passportCatalogMod">—</strong>
-              </article>
-            </div>
-
-            <div class="passport-catalog-action-row">
-              <button
-                id="passportCatalogProfileButton"
-                type="button"
-                class="secondary passport-catalog-action-button"
-                data-crablink-open-profile="1"
-              >
-                Profile
-              </button>
-              <button
-                id="passportCatalogSitesButton"
-                type="button"
-                class="secondary passport-catalog-action-button"
-                data-crablink-open-catalog="sites"
-              >
-                My Sites
-              </button>
-              <button
-                id="passportCatalogAssetsButton"
-                type="button"
-                class="secondary passport-catalog-action-button"
-                data-crablink-open-catalog="assets"
-              >
-                My Assets
-              </button>
-            </div>
-          </section>
-
-          <div class="drawer-actions">
-            <button id="drawerCheckNodeButton" type="button">Check Node</button>
-            <button id="drawerRefreshIdentityButton" type="button" class="secondary">Check Passport</button>
-            <button id="drawerRefreshBalanceButton" type="button" class="secondary">Refresh Balance</button>
-          </div>
-
-          <div id="drawerMessage" class="drawer-message"></div>
-        </aside>
-
-        <section class="quick-nav">
-          <button type="button" data-open-crab="crab://site">crab://site</button>
-          <button type="button" data-open-crab="crab://image">crab://image</button>
-          <button type="button" data-open-crab="crab://profile">crab://profile</button>
-          <button type="button" data-open-crab="crab://music">crab://music</button>
-          <button type="button" data-open-crab="crab://lyrics">crab://lyrics</button>
-          <button type="button" data-open-crab="crab://article">crab://article</button>
-          <button type="button" data-open-crab="crab://post">crab://post</button>
-          <button type="button" data-open-crab="crab://comment">crab://comment</button>
-          <button type="button" data-open-crab="crab://video">crab://video</button>
-          <button type="button" data-open-crab="crab://stream">crab://stream</button>
-          <button type="button" data-open-crab="crab://podcast">crab://podcast</button>
-        </section>
-
-        <section id="loadingPanel" class="state-panel hidden">
-          <div class="spinner"></div>
-          <h2>Loading CrabLink page…</h2>
-          <p id="loadingText">Resolving through your local RustyOnions gateway.</p>
-        </section>
-
-        <section id="errorPanel" class="state-panel error-panel hidden">
-          <h2>Unable to load page</h2>
-          <p id="errorText">Unknown error.</p>
-          <button id="retryButton" type="button">Retry</button>
-        </section>
-
-        <section id="pagePanel" class="page-panel hidden">
-          <div class="page-hero">
-            <div>
-              <span id="pageBadge" class="badge badge-muted">page</span>
-              <h2 id="pageTitle">CrabLink Page</h2>
-              <p id="pageDescription"></p>
-            </div>
-
-            <div class="hero-actions">
-              <button id="copyUrlButton" type="button" class="secondary">Copy URL</button>
-              <button id="copyJsonButton" type="button" class="secondary">Copy JSON</button>
-            </div>
-          </div>
-
-          <div id="pageFacts" class="fact-grid"></div>
-
-          <section id="sitePageSection" class="content-section site-page-section hidden">
-            <div class="section-head">
-              <div>
-                <h3 id="productPageSectionTitle">Site Page</h3>
-                <p id="productPageSectionDescription">
-                  Manifest-backed site metadata, ownership, payout routing, and reference graph.
-                </p>
-              </div>
-              <span id="productPageSectionBadge" class="draft-safe-badge">read-only</span>
-            </div>
-
-            <div id="sitePageCards" class="site-card-grid"></div>
-          </section>
-
-          <section id="workflowSection" class="content-section workflow-section hidden">
-            <div class="section-head">
-              <div>
-                <h3 id="workflowTitle">Request Draft</h3>
-                <p id="workflowDescription">Build a local request preview from this backend route contract.</p>
-              </div>
-              <span class="draft-safe-badge">explicit confirmation</span>
-            </div>
-
-            <form id="workflowForm" class="workflow-form">
-              <div id="workflowFields" class="workflow-fields"></div>
-
-              <div class="workflow-actions">
-                <button id="buildDraftButton" type="submit">Build Request Preview</button>
-                <button id="sendPrepareButton" type="button" class="prepare-button" disabled>
-                  Send Prepare Request
-                </button>
-                <button id="clearDraftButton" type="button" class="secondary">Clear Draft</button>
-                <button id="copyDraftButton" type="button" class="secondary" disabled>Copy Draft JSON</button>
-                <button id="copyPrepareButton" type="button" class="secondary" disabled>Copy Prepare JSON</button>
-              </div>
-            </form>
-
-            <div id="draftNotice" class="draft-notice">
-              Prepare requests are non-mutating preflight calls. CrabLink only enables paid actions after
-              explicit user confirmation. Wallet truth remains in RustyOnions, not in the extension.
-            </div>
-
-            <section id="prepareSummary" class="prepare-summary hidden">
-              <div class="summary-head">
-                <div>
-                  <span id="prepareStatusBadge" class="badge badge-muted">prepare</span>
-                  <h4 id="prepareSummaryTitle">Prepare Summary</h4>
-                </div>
-                <p id="prepareSummaryDescription">Human-readable summary of the prepare response.</p>
-              </div>
-
-              <div id="prepareSummaryCards" class="summary-grid"></div>
-
-              <div id="prepareNextSteps" class="next-steps hidden">
-                <h5>Next gated steps</h5>
-                <ol id="prepareNextStepsList"></ol>
-              </div>
-            </section>
-
-            <section id="holdSection" class="hold-summary hidden">
-              <div class="summary-head">
-                <div>
-                  <span id="holdStatusBadge" class="badge badge-muted">hold</span>
-                  <h4 id="holdSummaryTitle">Wallet Hold</h4>
-                </div>
-                <p id="holdSummaryDescription">Create an explicit ROC hold before upload/create.</p>
-              </div>
-
-              <div class="workflow-fields">
-                <div class="workflow-field">
-                  <label for="holdEscrowAccount">Escrow account</label>
-                  <input id="holdEscrowAccount" type="text" value="escrow_paid_write" autocomplete="off" />
-                  <p class="workflow-help">Destination account for the temporary ROC hold.</p>
-                </div>
-
-                <div class="workflow-field">
-                  <label for="holdNonce">Wallet nonce</label>
-                  <input id="holdNonce" type="text" value="1" inputmode="numeric" autocomplete="off" />
-                  <p class="workflow-help">Nonce/idempotency safety for svc-wallet mutation.</p>
-                </div>
-              </div>
-
-              <div id="holdSummaryCards" class="summary-grid"></div>
-
-              <div class="workflow-actions">
-                <button id="confirmHoldButton" type="button" class="danger-button" disabled>Confirm ROC Hold</button>
-                <button id="copyHoldButton" type="button" class="secondary" disabled>Copy Hold JSON</button>
-              </div>
-
-              <pre id="holdPreview" class="workflow-preview">No wallet hold requested yet.</pre>
-            </section>
-
-            <section id="submitSection" class="submit-summary hidden">
-              <div class="summary-head">
-                <div>
-                  <span id="submitStatusBadge" class="badge badge-muted">submit</span>
-                  <h4 id="submitSummaryTitle">Submit</h4>
-                </div>
-                <p id="submitSummaryDescription">
-                  Submit the paid product action after the explicit wallet hold succeeds.
-                </p>
-              </div>
-
-              <div id="submitSummaryCards" class="summary-grid"></div>
-
-              <div class="workflow-actions">
-                <button id="submitProductButton" type="button" class="prepare-button" disabled>Submit Product</button>
-                <button id="copySubmitButton" type="button" class="secondary" disabled>Copy Submit JSON</button>
-                <button id="openReturnedPageButton" type="button" class="secondary" disabled>Open Returned Page</button>
-                <button id="copyReturnedUrlButton" type="button" class="secondary" disabled>Copy crab:// URL</button>
-              </div>
-
-              <pre id="submitPreview" class="workflow-preview">No submit response yet.</pre>
-            </section>
-
-            <div class="preview-grid">
-              <div>
-                <h4>Request Preview</h4>
-                <pre id="workflowPreview" class="workflow-preview">No request draft built yet.</pre>
-              </div>
-              <div>
-                <h4>Prepare Response</h4>
-                <pre id="preparePreview" class="workflow-preview">No prepare response yet.</pre>
-              </div>
-            </div>
-          </section>
-
-          <section id="actionsSection" class="content-section hidden">
-            <div class="section-head">
-              <div>
-                <h3>Available Actions</h3>
-                <p>Displayed from backend route contracts. Mutating actions require explicit confirmation in CrabLink.</p>
-              </div>
-            </div>
-            <div id="actionsList" class="card-grid"></div>
-          </section>
-
-          <section id="fieldsSection" class="content-section hidden">
-            <div class="section-head">
-              <div>
-                <h3>Details</h3>
-                <p>Structured fields from the gateway response.</p>
-              </div>
-            </div>
-            <div id="fieldsList" class="field-grid"></div>
-          </section>
-
-          <section id="warningsSection" class="content-section hidden">
-            <div class="section-head">
-              <div>
-                <h3>Warnings</h3>
-                <p>Safety and route-contract notes.</p>
-              </div>
-            </div>
-            <ul id="warningsList" class="warning-list"></ul>
-          </section>
-
-          <details id="developerDetails" class="developer-details">
-            <summary>Developer JSON</summary>
-            <pre id="developerJson">{}</pre>
-          </details>
-        </section>
-      </main>
-
-      <footer class="browser-footer">
-        <span id="footerStatus">Ready.</span>
-        <span id="footerGateway">Gateway: —</span>
-      </footer>
-    </div>
-
-    <script type="module" src="./page.js"></script>
-    <script type="module" src="./page-react-preview.js"></script>
-    <script type="module" src="./page-site-root-upload.js"></script>
-    <script type="module" src="./page-product-preview.js"></script>
-    <script type="module" src="./page-site-render-mode.js"></script>
-    <script type="module" src="./page-site-creator-proof.js"></script>
-    <script type="module" src="./page-site-profile-linker.js"></script>
-    <script type="module" src="./page-profile-home.js"></script>
-    <script type="module" src="./page-profile-editor.js"></script>
-    <script type="module" src="./page-profile-gateway.js"></script>
-    <script type="module" src="./page-profile-avatar.js"></script>
-    <script type="module" src="./page-local-catalog.js"></script>
-    <script type="module" src="./page-profile-polish.js"></script>
-    <script type="module" src="./page-music-draft.js"></script>
-    <script type="module" src="./page-music-rights.js"></script>
-    <script type="module" src="./page-article-draft.js"></script>
-    <script type="module" src="./page-video-draft.js"></script>
-    <script type="module" src="./page-stream-draft.js"></script>
-    <script type="module" src="./page-stream-podcast-mode.js"></script>
-    <script type="module" src="./page-podcast-draft.js"></script>
-    <script type="module" src="./page-social-stubs.js"></script>
-    <script type="module" src="./page-next-level-panels.js"></script>
-    <script type="module" src="./page-creator-route-guard.js"></script>
-    <script type="module" src="./page-alt-vault.js"></script>
+      window.location.replace(next.href);
+    </script>
   </body>
 </html>

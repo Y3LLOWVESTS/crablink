@@ -648,13 +648,13 @@ export default function ImagePublishFlow({
         <JsonPreview
           label="Hold request/result"
           data={{
-            ui_preview_request: holdRequest
+            uiPreviewRequest: holdRequest
               ? {
                   schema: 'crablink.wallet-hold-preview.v1',
                   ...holdRequest,
                 }
               : null,
-            strict_api_request_sent_to_wallet: holdApiRequest,
+            strictWalletApiRequest: holdApiRequest,
             result: summarizeResult(holdState),
             nonce_recovery: holdState.nonceRecovery || null,
             paid_proof_ready: Boolean(paidProof),
@@ -989,7 +989,7 @@ function summarizeResult(state) {
     correlation_id: state.response?.correlationId || state.error?.correlationId || '',
     nonce_recovery: state.nonceRecovery || null,
     request: state.request || null,
-    strict_api_request: state.apiRequest || null,
+    strictApiRequest: state.apiRequest || null,
     error: state.error
       ? {
           name: state.error.name || 'Error',
@@ -997,7 +997,7 @@ function summarizeResult(state) {
           reason: state.error.reason || '',
           status: state.error.status || 0,
           data: firstObject(state.error.data, state.error.response?.data),
-          api_request: state.error.apiRequest || null,
+          walletApiRequest: state.error.apiRequest || null,
         }
       : null,
     data: state.data || null,

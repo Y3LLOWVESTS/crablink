@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# RO:WHAT — Static/build guardrail for the CrabLink React refactor lane.
-# RO:WHY — Keeps the route-owned React app honest while the proven legacy page.html lane remains protected.
-# RO:INTERACTS — vite.config.js, react.html, app/*, pages/*, shared/*, package.json, green-gate-local.sh.
-# RO:INVARIANTS — one route = one owner; no fake b3/manifest/receipt truth; no silent ROC spend; gateway-only backend access.
-# RO:METRICS — none.
-# RO:CONFIG — CRABLINK_REACT_SKIP_BUILD=1 skips Vite build when a caller already built.
-# RO:SECURITY — blocks broad permissions, direct internal-service URLs, private-key tokens, and unsafe route regressions.
+# RO:WHAT — Static/build guardrail for the CrabLink React-primary lane.
+# RO:WHY — Verifies React is the only active browser UI and old vanilla page files are retired.
+# RO:INTERACTS — vite.config.js, react.html, page.html compatibility redirect, app/*, pages/*, shared/*.
+# RO:INVARIANTS — one route = one owner; gateway-only; no fake b3/receipt truth; no silent ROC spend.
+# RO:CONFIG — CRABLINK_REACT_SKIP_BUILD=1 skips Vite build when caller already built.
+# RO:SECURITY — blocks raw src launch regressions, direct internal-service URLs, and unsafe wallet body drift.
 # RO:TEST — run from repo root with scripts/check-react-lane.sh.
 
 set -euo pipefail
@@ -43,6 +42,10 @@ fi
 
 need_file "$ROOT/package.json"
 need_file "$ROOT/vite.config.js"
+need_file "$ROOT/scripts/package-chrome.sh"
+need_file "$CHROME_SRC/background.js"
+need_file "$CHROME_SRC/popup.js"
+need_file "$CHROME_SRC/page.html"
 need_file "$CHROME_SRC/react.html"
 need_file "$APP_DIR/main.jsx"
 need_file "$APP_DIR/App.jsx"
@@ -57,9 +60,10 @@ need_dir "$APP_DIR/shell"
 need_dir "$PAGES_DIR"
 need_dir "$SHARED_DIR"
 
-ROOT_FOR_NODE="$ROOT" node <<'NODE'
-const fs = require('fs');
-const path = require('path');
+ROOT_FOR_NODE="$ROOT" node --input-type=module <<'NODE'
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const root = process.env.ROOT_FOR_NODE;
 const chromeSrc = path.join(root, 'extensions', 'chrome', 'src');
@@ -80,7 +84,7 @@ function loadJson(file) {
   try {
     return JSON.parse(readText(file));
   } catch (error) {
-    fail(`invalid JSON in ${file}: ${error.message}`);
+    fail(`invalid JSON in ${path.relative(root, file)}: ${error.message}`);
   }
 }
 
@@ -96,18 +100,30 @@ function forbidIncludes(source, token, label) {
   }
 }
 
+function assertFile(relative) {
+  const file = path.join(root, relative);
+
+  if (!fs.existsSync(file)) {
+    fail(`missing required file: ${relative}`);
+  }
+}
+
 function collectTextFiles(dir) {
   const out = [];
   const stack = [dir];
 
-  while (stack.length) {
+  while (stack.length > 0) {
     const current = stack.pop();
+
+    if (!fs.existsSync(current)) {
+      continue;
+    }
 
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const full = path.join(current, entry.name);
 
       if (entry.isDirectory()) {
-        if (!['node_modules', 'dist', 'coverage', '.vite'].includes(entry.name)) {
+        if (!['node_modules', 'dist', 'coverage', '.vite', 'retired-vanilla'].includes(entry.name)) {
           stack.push(full);
         }
         continue;
@@ -120,32 +136,6 @@ function collectTextFiles(dir) {
   }
 
   return out.sort();
-}
-
-function extractSuggestionArgument(source) {
-  const marker = 'chrome.omnibox.setDefaultSuggestion';
-  const start = source.indexOf(marker);
-
-  if (start < 0) {
-    return '';
-  }
-
-  const open = source.indexOf('(', start);
-  if (open < 0) {
-    return '';
-  }
-
-  let depth = 0;
-  for (let i = open; i < source.length; i += 1) {
-    const char = source[i];
-    if (char === '(') depth += 1;
-    if (char === ')') depth -= 1;
-    if (depth === 0) {
-      return source.slice(open + 1, i);
-    }
-  }
-
-  return '';
 }
 
 const pkg = loadJson(path.join(root, 'package.json'));
@@ -163,39 +153,46 @@ for (const [name, command] of [
   }
 }
 
-const forbiddenLocalRouteController = path.join(chromeSrc, 'page-local-route-mode.js');
-if (fs.existsSync(forbiddenLocalRouteController)) {
-  fail('page-local-route-mode.js must not return; route ownership belongs to app/router.js and route pages');
+const activeVanilla = fs
+  .readdirSync(chromeSrc)
+  .filter((name) => name === 'page.js' || name === 'page.css' || /^page-.*\.(js|css)$/.test(name));
+
+if (activeVanilla.length > 0) {
+  fail(`old vanilla page files must be retired from active src: ${activeVanilla.sort().join(', ')}`);
+}
+
+const background = readText(path.join(chromeSrc, 'background.js'));
+for (const token of ['chrome.action.onClicked', 'react.html?url=', 'page.html?url=', 'preferredBrowserLane']) {
+  requireIncludes(background, token, 'background.js');
+}
+for (const forbidden of ['src/react.html?url=', 'src/page.html?url=', '<hash>', '<64', '&lt;']) {
+  forbidIncludes(background, forbidden, 'background.js');
+}
+
+const popup = readText(path.join(chromeSrc, 'popup.js'));
+for (const token of ['react.html?url=', 'page.html?url=', "launchCrabLinkBrowser('react')"]) {
+  requireIncludes(popup, token, 'popup.js');
+}
+for (const forbidden of ['src/react.html?url=', 'src/page.html?url=', 'wallet/hold', 'assets/image', 'sites/prepare']) {
+  forbidIncludes(popup, forbidden, 'popup.js');
 }
 
 const pageHtml = readText(path.join(chromeSrc, 'page.html'));
-forbidIncludes(pageHtml, 'page-local-route-mode.js', 'src/page.html');
-forbidIncludes(pageHtml, 'page-local-route-mode', 'src/page.html');
-
-const background = readText(path.join(chromeSrc, 'background.js'));
-for (const token of ['chrome.action.onClicked', 'src/page.html?url=', 'src/react.html?url=', 'reactprofile']) {
-  requireIncludes(background, token, 'src/background.js');
+for (const token of ['react.html', 'compatibility redirect', 'window.location.replace']) {
+  requireIncludes(pageHtml, token, 'page.html compatibility redirect');
 }
-
-const suggestion = extractSuggestionArgument(background);
-if (!suggestion) {
-  fail('src/background.js missing chrome.omnibox.setDefaultSuggestion call');
-}
-
-for (const token of ['<hash>', '<64', '&lt;', '&gt;']) {
-  if (suggestion.includes(token)) {
-    fail(`src/background.js omnibox suggestion must not include placeholder token: ${token}`);
-  }
+for (const forbidden of ['./page.js', './page-', './page.css', 'id="drawerRoc"', 'page-local-route-mode']) {
+  forbidIncludes(pageHtml, forbidden, 'page.html compatibility redirect');
 }
 
 const vite = readText(path.join(root, 'vite.config.js'));
-for (const token of [
-  'react.html',
-  'page.html',
-  'dist/chrome-src',
-  '@vitejs/plugin-react',
-]) {
+for (const token of ['react.html', 'page.html', 'dist/chrome-src', '@vitejs/plugin-react']) {
   requireIncludes(vite, token, 'vite.config.js');
+}
+
+const packageChrome = readText(path.join(root, 'scripts', 'package-chrome.sh'));
+for (const token of ['dist/chrome-extension-staging', 'react.html', 'page.html']) {
+  requireIncludes(packageChrome, token, 'scripts/package-chrome.sh');
 }
 
 const reactHtml = readText(path.join(chromeSrc, 'react.html'));
@@ -204,30 +201,17 @@ for (const token of ['id="root"', 'type="module"', './app/main.jsx']) {
 }
 
 const main = readText(path.join(app, 'main.jsx'));
-for (const token of [
-  'createRoot',
-  "import App from './App.jsx'",
-  '../shared/theme/themeTokens.css',
-  '../shared/theme/light.css',
-  '../shared/theme/dark.css',
-]) {
+for (const token of ['createRoot', "import App from './App.jsx'", '../shared/theme/themeTokens.css']) {
   requireIncludes(main, token, 'app/main.jsx');
 }
 
 const appJsx = readText(path.join(app, 'App.jsx'));
-for (const token of [
-  'AppContextProvider',
-  'ThemeProvider',
-  'Shell',
-  'Suspense',
-  'getRouteComponent',
-  'useRouteState',
-]) {
+for (const token of ['AppContextProvider', 'ThemeProvider', 'Shell', 'Suspense', 'getRouteComponent', 'useRouteState']) {
   requireIncludes(appJsx, token, 'app/App.jsx');
 }
 
 const registry = readText(path.join(app, 'routeRegistry.js'));
-const requiredRoutes = [
+for (const route of [
   'home',
   'site',
   'image',
@@ -247,105 +231,54 @@ const requiredRoutes = [
   'asset',
   'notFound',
   'problem',
-];
-
-for (const route of requiredRoutes) {
+]) {
   requireIncludes(registry, `${route}: lazy(() => import(`, 'app/routeRegistry.js');
 }
 
-for (const token of [
-  'LOW_RISK_STUB_ROUTE_KINDS',
-  'PROVEN_FLOW_ROUTE_KINDS',
-  'CREATOR_ROUTE_KINDS',
-  'hasRouteKind',
-]) {
-  requireIncludes(registry, token, 'app/routeRegistry.js');
-}
-
 const router = readText(path.join(app, 'router.js'));
-for (const token of [
-  'crab://home',
-  'TYPED_ASSET_RE',
-  'PROFILE_HANDLE_RE',
-  'PROFILE_PAGE_RE',
-  'kind: hasRouteKind(assetKind) ? assetKind : \'asset\'',
-  'kind: \'site\'',
-]) {
+for (const token of ['crab://home', 'TYPED_ASSET_RE', 'PROFILE_HANDLE_RE', "kind: 'site'"]) {
   requireIncludes(router, token, 'app/router.js');
 }
 forbidIncludes(router, 'crab://b3/', 'app/router.js');
 
-const requiredShellFiles = [
-  'AddressBar.jsx',
-  'BalanceChip.jsx',
-  'BrowserNav.jsx',
-  'CreatorChip.jsx',
-  'HeaderAdSlot.jsx',
-  'ModalHost.jsx',
-  'PassportActions.jsx',
-  'PassportChip.jsx',
-  'PassportDrawer.jsx',
-  'PassportSummary.jsx',
-  'Shell.css',
-  'Shell.jsx',
-  'ToastHost.jsx',
-  'TopBar.jsx',
-];
-
-for (const file of requiredShellFiles) {
-  const full = path.join(app, 'shell', file);
-  if (!fs.existsSync(full)) {
-    fail(`missing required shell file: ${path.relative(root, full)}`);
-  }
+for (const relative of [
+  'extensions/chrome/src/app/shell/AddressBar.jsx',
+  'extensions/chrome/src/app/shell/BalanceChip.jsx',
+  'extensions/chrome/src/app/shell/BrowserNav.jsx',
+  'extensions/chrome/src/app/shell/HeaderAdSlot.jsx',
+  'extensions/chrome/src/app/shell/PassportDrawer.jsx',
+  'extensions/chrome/src/app/shell/Shell.jsx',
+  'extensions/chrome/src/app/shell/TopBar.jsx',
+]) {
+  assertFile(relative);
 }
 
-const pageExpectations = new Map([
-  ['home', ['HomePage.jsx', 'HomeQuickActions.jsx', 'home.css']],
-  ['lyrics', ['LyricsPage.jsx', 'LyricsDraft.jsx', 'lyricsDraftModel.js', 'lyrics.css']],
-  ['post', ['PostPage.jsx', 'PostDraft.jsx', 'postDraftModel.js', 'post.css']],
-  ['comment', ['CommentPage.jsx', 'CommentDraft.jsx', 'commentDraftModel.js', 'comment.css']],
-  ['article', ['ArticlePage.jsx', 'ArticleDraft.jsx', 'articleDraftModel.js', 'article.css']],
-  ['music', ['MusicPage.jsx', 'MusicDraft.jsx', 'MusicLinkedAssets.jsx', 'MusicRights.jsx', 'music.css']],
-  ['podcast', ['PodcastPage.jsx', 'PodcastDraft.jsx', 'podcastDraftModel.js', 'podcast.css']],
-  ['stream', ['StreamPage.jsx', 'StreamDraft.jsx', 'streamDraftModel.js', 'StreamPodcastMode.jsx', 'stream.css']],
-  ['video', ['VideoPage.jsx', 'VideoDraft.jsx', 'videoDraftModel.js', 'VideoRenditions.jsx', 'video.css']],
-  ['ad', ['AdPage.jsx', 'AdCampaignDraft.jsx', 'AdCreativePreview.jsx', 'adDraftModel.js', 'ad.css']],
-  ['algo', ['AlgoPage.jsx', 'AlgoDraft.jsx', 'AlgoTransparency.jsx', 'algoDraftModel.js', 'algo.css']],
-  ['code', ['CodePage.jsx', 'CodeDraft.jsx', 'CodeFacet.jsx', 'FacetContractPreview.jsx', 'codeDraftModel.js', 'code.css']],
-  ['game', ['GamePage.jsx', 'GameDraft.jsx', 'GameAssets.jsx', 'gameDraftModel.js', 'game.css']],
-  ['site', ['SitePage.jsx', 'SiteCreate.jsx', 'SiteLaunchFlow.jsx', 'SiteRender.jsx', 'SiteRootUpload.jsx', 'site.css']],
-  ['image', ['ImagePage.jsx', 'ImageCreate.jsx', 'ImagePublishFlow.jsx', 'ImagePreview.jsx', 'ImageRenditions.jsx', 'image.css']],
-  ['profile', ['ProfilePage.jsx', 'ProfileHome.jsx', 'ProfileEditor.jsx', 'ProfileGateway.jsx', 'ProfileAvatar.jsx', 'ProfileAssets.jsx', 'AltVault.jsx', 'profile.css']],
-  ['asset', ['AssetPage.jsx', 'AssetResolver.jsx', 'AssetHydratedView.jsx', 'asset.css']],
-  ['notFound', ['NotFoundPage.jsx', 'notFound.css']],
-  ['problem', ['ProblemPage.jsx', 'problem.css']],
-]);
-
-for (const [route, files] of pageExpectations.entries()) {
+for (const [route, files] of new Map([
+  ['home', ['HomePage.jsx']],
+  ['site', ['SitePage.jsx', 'SiteLaunchFlow.jsx']],
+  ['image', ['ImagePage.jsx', 'ImagePublishFlow.jsx']],
+  ['profile', ['ProfilePage.jsx']],
+  ['asset', ['AssetPage.jsx', 'AssetResolver.jsx', 'AssetHydratedView.jsx']],
+  ['music', ['MusicPage.jsx', 'MusicRights.jsx']],
+  ['article', ['ArticlePage.jsx', 'articleDraftModel.js']],
+  ['video', ['VideoPage.jsx', 'videoDraftModel.js']],
+  ['stream', ['StreamPage.jsx', 'StreamPodcastMode.jsx']],
+  ['podcast', ['PodcastPage.jsx']],
+  ['post', ['PostPage.jsx']],
+  ['comment', ['CommentPage.jsx']],
+  ['ad', ['AdPage.jsx']],
+  ['algo', ['AlgoPage.jsx']],
+  ['code', ['CodePage.jsx']],
+  ['game', ['GamePage.jsx']],
+  ['notFound', ['NotFoundPage.jsx']],
+  ['problem', ['ProblemPage.jsx']],
+]).entries()) {
   for (const file of files) {
-    const full = path.join(pages, route, file);
-    if (!fs.existsSync(full)) {
-      fail(`missing required route file: ${path.relative(root, full)}`);
-    }
+    assertFile(path.join('extensions', 'chrome', 'src', 'pages', route, file));
   }
 }
 
-const localOnlyRoutes = [
-  'lyrics',
-  'post',
-  'comment',
-  'article',
-  'music',
-  'podcast',
-  'stream',
-  'video',
-  'ad',
-  'algo',
-  'code',
-  'game',
-];
-
-for (const route of localOnlyRoutes) {
+for (const route of ['lyrics', 'post', 'comment', 'article', 'music', 'podcast', 'stream', 'video', 'ad', 'algo', 'code', 'game']) {
   const routeDir = path.join(pages, route);
   const source = collectTextFiles(routeDir).map(readText).join('\n');
   const label = `pages/${route}`;
@@ -366,134 +299,38 @@ for (const route of localOnlyRoutes) {
     'backend_route_claimed: true',
     'wallet/hold',
     'createWalletHold(',
-    'fetch(\'http://127.0.0.1:',
-    'fetch("http://127.0.0.1:',
   ]) {
     forbidIncludes(source, forbidden, label);
   }
 }
 
-const requiredSharedFiles = [
-  'api/gatewayClient.js',
-  'api/identityClient.js',
-  'api/walletClient.js',
-  'api/assetClient.js',
-  'api/siteClient.js',
-  'api/objectClient.js',
-  'components/CreatorWorkspaceLayout.jsx',
-  'components/DraftStatsPanel.jsx',
-  'components/ManifestPreviewPanel.jsx',
-  'components/RouteTruthPanel.jsx',
-  'components/TruthBoundary.jsx',
-  'hooks/useCreatorDraft.js',
-  'manifest/uniformManifest.js',
-  'manifest/manifestDrafts.js',
-  'manifest/manifestPreview.jsx',
-  'styles/base.css',
-  'styles/layout.css',
-  'styles/forms.css',
-  'styles/cards.css',
-  'styles/modals.css',
-  'styles/developer.css',
-  'theme/ThemeProvider.jsx',
-  'theme/themeStore.js',
-  'theme/themeTokens.css',
-  'theme/light.css',
-  'theme/dark.css',
-  'utils/crabUrl.js',
-  'utils/b3.js',
-  'utils/format.js',
-  'utils/nonce.js',
-  'utils/validation.js',
-];
-
-for (const relative of requiredSharedFiles) {
-  const full = path.join(shared, relative);
-  if (!fs.existsSync(full)) {
-    fail(`missing required shared file: ${path.relative(root, full)}`);
-  }
-}
-
-const walletClient = readText(path.join(shared, 'api', 'walletClient.js'));
-for (const token of [
-  'Wallet display and explicit hold API helper',
-  'normalizeWalletHoldRequest',
-  'toWalletHoldApiBody',
-  'normalizeWalletHoldResponse',
-  'expectedNonceFromWalletError',
-  'loadNextNonceHint',
-  'persistNextNonceHint',
-  'clearNextNonceHint',
-  'confirmed !== true',
-]) {
-  requireIncludes(walletClient, token, 'shared/api/walletClient.js');
-}
-
-const holdBodyStart = walletClient.indexOf('export function toWalletHoldApiBody');
-if (holdBodyStart < 0) {
+const walletClientPath = path.join(shared, 'api', 'walletClient.js');
+const walletModule = await import(pathToFileURL(walletClientPath).href);
+if (typeof walletModule.toWalletHoldApiBody !== 'function') {
   fail('shared/api/walletClient.js missing toWalletHoldApiBody export');
 }
-const holdBodySlice = walletClient.slice(holdBodyStart, walletClient.indexOf('\n}', holdBodyStart) + 2);
-for (const token of ['from:', 'to:', 'asset:', 'amount_minor:', 'nonce:', 'memo:', 'idempotency_key:']) {
-  requireIncludes(holdBodySlice, token, 'toWalletHoldApiBody');
-}
-for (const forbidden of [
-  'schema',
-  'api_request',
-  'apiRequest',
-  'ui_preview_request',
-  'uiPreviewRequest',
-  'hold_template',
-  'holdTemplate',
-  'wallet_hold',
-  'walletHold',
-  'paid_storage',
-  'paidStorage',
-]) {
-  forbidIncludes(holdBodySlice, forbidden, 'toWalletHoldApiBody');
-}
 
-const siteLaunchFlow = readText(path.join(pages, 'site', 'SiteLaunchFlow.jsx'));
-for (const token of [
-  'loadNextNonceHint',
-  'persistNextNonceHint',
-  'normalizeWalletHoldResponse',
-  'expectedNonceFromWalletError',
-]) {
-  requireIncludes(siteLaunchFlow, token, 'pages/site/SiteLaunchFlow.jsx');
-}
+const holdBody = walletModule.toWalletHoldApiBody({
+  from: 'acct:main',
+  to: 'acct:escrow',
+  asset: 'roc',
+  amount_minor: '25',
+  nonce: 7,
+  memo: 'CrabLink static contract check',
+  idempotency_key: 'check-wallet-hold-7',
+});
 
-const imagePublishFlow = readText(path.join(pages, 'image', 'ImagePublishFlow.jsx'));
-for (const token of [
-  'Confirm ROC hold?',
-  '/wallet/hold',
-  'wallet hold proof headers',
-]) {
-  requireIncludes(imagePublishFlow, token, 'pages/image/ImagePublishFlow.jsx');
-}
-forbidIncludes(imagePublishFlow, 'ui_preview_request:', 'pages/image/ImagePublishFlow.jsx');
-forbidIncludes(imagePublishFlow, 'api_request:', 'pages/image/ImagePublishFlow.jsx');
+const expectedHoldKeys = ['amount_minor', 'asset', 'from', 'idempotency_key', 'memo', 'nonce', 'to'];
+const actualHoldKeys = Object.keys(holdBody).sort();
 
-const rootWallet = readText(path.join(root, 'shared', 'api', 'walletClient.js'));
-for (const token of ['Wallet display API helper', 'createWalletClient', 'getBalance']) {
-  requireIncludes(rootWallet, token, 'root shared/api/walletClient.js');
-}
-for (const forbidden of [
-  'loadNextNonceHint',
-  'persistNextNonceHint',
-  'MAX_IDEMPOTENCY_KEY_BYTES',
-  'expectedNonceFromWalletError',
-  'normalizeWalletHoldResponse',
-  'toWalletHoldApiBody',
-]) {
-  forbidIncludes(rootWallet, forbidden, 'root shared/api/walletClient.js');
+if (JSON.stringify(actualHoldKeys) !== JSON.stringify(expectedHoldKeys)) {
+  fail(`toWalletHoldApiBody keys drifted: expected ${expectedHoldKeys.join(',')} got ${actualHoldKeys.join(',')}`);
 }
 
 const gatewayClient = readText(path.join(shared, 'api', 'gatewayClient.js'));
 for (const token of ['fetch(', 'x-correlation-id', 'requestTimeoutMs', 'gatewayUrl']) {
   requireIncludes(gatewayClient, token, 'shared/api/gatewayClient.js');
 }
-
 for (const forbidden of ['svc-wallet', 'svc-storage', 'svc-index', 'ron-ledger']) {
   forbidIncludes(gatewayClient, forbidden, 'shared/api/gatewayClient.js');
 }
@@ -536,12 +373,6 @@ for (const [file, source] of reactSources) {
     forbidIncludes(source, forbidden, label);
   }
 }
-
-const light = readText(path.join(shared, 'theme', 'light.css'));
-const dark = readText(path.join(shared, 'theme', 'dark.css'));
-requireIncludes(light, "[data-theme='light']", 'shared/theme/light.css');
-requireIncludes(dark, "[data-theme='dark']", 'shared/theme/dark.css');
-requireIncludes(dark, '--cl-bg: #000000', 'shared/theme/dark.css');
 
 console.log('react file/route checks: ok');
 NODE

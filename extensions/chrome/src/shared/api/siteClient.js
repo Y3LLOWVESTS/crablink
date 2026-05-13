@@ -194,7 +194,6 @@ export class SiteClient {
       headers['x-ron-paid-op'] = proof.op || 'hold';
       headers['x-ron-paid-asset'] = proof.asset || 'roc';
       headers['x-ron-paid-estimate-minor'] = proof.amount_minor;
-      headers['x-ron-wallet-hold-txid'] = proof.txid;
       headers['x-ron-wallet-txid'] = proof.txid;
       headers['x-ron-wallet-receipt-hash'] = proof.receipt_hash;
       headers['x-ron-wallet-from'] = proof.from;

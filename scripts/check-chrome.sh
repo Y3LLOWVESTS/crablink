@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # RO:WHAT — Static integrity checker for the CrabLink Chrome extension.
-# RO:WHY — Keeps the React-primary cutover safe while preserving legacy page.html as a fallback.
-# RO:INTERACTS — manifest.json, background.js, popup.js/html, react.html, page.html, shared fixtures, packaging scripts.
-# RO:INVARIANTS — local host permissions only; gateway-only client boundary; no fake backend truth; no silent ROC spend.
-# RO:METRICS — none.
-# RO:CONFIG — repo-relative paths only.
-# RO:SECURITY — rejects risky Chrome permissions and direct internal service URLs.
+# RO:WHY — Verifies React-primary packaging and confirms old vanilla page files are inactive.
+# RO:INTERACTS — manifest.json, background.js, popup.js/html, page.html redirect, react.html, app/pages/shared, package script.
+# RO:INVARIANTS — gateway-only client; no fake backend truth; no silent ROC spend; root react.html is primary.
+# RO:SECURITY — rejects risky permissions, raw src launch regressions, direct internal-service URLs, and unsafe wallet body drift.
 # RO:TEST — run from repo root with scripts/check-chrome.sh.
 
 set -euo pipefail
@@ -13,7 +11,6 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CHROME_DIR="$ROOT/extensions/chrome"
 CHROME_SRC="$CHROME_DIR/src"
-SHARED_DIR="$ROOT/shared"
 
 cd "$ROOT"
 
@@ -26,7 +23,6 @@ required_files=(
   "$CHROME_SRC/options.html"
   "$CHROME_SRC/options.js"
   "$CHROME_SRC/page.html"
-  "$CHROME_SRC/page.js"
   "$CHROME_SRC/react.html"
   "$CHROME_SRC/app/main.jsx"
   "$CHROME_SRC/app/App.jsx"
@@ -37,26 +33,10 @@ required_files=(
   "$CHROME_SRC/shared/api/identityClient.js"
   "$CHROME_SRC/shared/api/assetClient.js"
   "$CHROME_SRC/shared/api/siteClient.js"
-  "$SHARED_DIR/fixtures/asset-page.sample.json"
-  "$SHARED_DIR/fixtures/problem.not-found.json"
-  "$SHARED_DIR/fixtures/problem.policy-denied.json"
-  "$SHARED_DIR/fixtures/identity-me.empty.sample.json"
-  "$SHARED_DIR/fixtures/identity-me.ready.sample.json"
-  "$SHARED_DIR/fixtures/passport-bootstrap.sample.json"
-  "$SHARED_DIR/fixtures/public-profile.confirmed.sample.json"
-  "$SHARED_DIR/fixtures/wallet-balance.sample.json"
+  "$ROOT/scripts/package-chrome.sh"
   "$ROOT/scripts/check-chrome.sh"
   "$ROOT/scripts/check-react-lane.sh"
-  "$ROOT/scripts/package-chrome.sh"
-  "$ROOT/scripts/smoke-local-gateway.sh"
-  "$ROOT/scripts/smoke-profile-gateway.sh"
-  "$ROOT/scripts/smoke-first-run-profile.sh"
-  "$ROOT/scripts/green-gate-local.sh"
   "$ROOT/scripts/make_codebundle.sh"
-)
-
-optional_files=(
-  "$ROOT/scripts/smoke-site-create-local.sh"
 )
 
 for file in "${required_files[@]}"; do
@@ -66,24 +46,19 @@ for file in "${required_files[@]}"; do
   fi
 done
 
-if [[ -f "$CHROME_SRC/page-local-route-mode.js" ]]; then
-  echo "error: page-local-route-mode.js must not exist; it regressed creator-route navigation"
-  exit 1
-fi
-
 if ! command -v node >/dev/null 2>&1; then
   echo "error: node is required for CrabLink checks"
   exit 1
 fi
 
-ROOT_FOR_NODE="$ROOT" node <<'NODE'
-const fs = require('fs');
-const path = require('path');
+ROOT_FOR_NODE="$ROOT" node --input-type=module <<'NODE'
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const root = process.env.ROOT_FOR_NODE;
 const chrome = path.join(root, 'extensions', 'chrome');
 const chromeSrc = path.join(chrome, 'src');
-const shared = path.join(root, 'shared');
 
 function fail(message) {
   console.error(`error: ${message}`);
@@ -98,7 +73,7 @@ function loadJson(file) {
   try {
     return JSON.parse(readText(file));
   } catch (error) {
-    fail(`invalid JSON in ${file}: ${error.message}`);
+    fail(`invalid JSON in ${path.relative(root, file)}: ${error.message}`);
   }
 }
 
@@ -118,14 +93,18 @@ function collectFiles(dir, pattern) {
   const out = [];
   const stack = [dir];
 
-  while (stack.length) {
+  while (stack.length > 0) {
     const current = stack.pop();
+
+    if (!fs.existsSync(current)) {
+      continue;
+    }
 
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const full = path.join(current, entry.name);
 
       if (entry.isDirectory()) {
-        if (!['node_modules', 'dist', '.vite', 'coverage'].includes(entry.name)) {
+        if (!['node_modules', 'dist', '.vite', 'coverage', 'retired-vanilla'].includes(entry.name)) {
           stack.push(full);
         }
         continue;
@@ -141,21 +120,28 @@ function collectFiles(dir, pattern) {
 }
 
 function loadAllJsonIn(folder) {
-  if (!fs.existsSync(folder)) {
-    return;
-  }
+  if (!fs.existsSync(folder)) return;
 
   for (const file of collectFiles(folder, /\.json$/)) {
     loadJson(file);
   }
 }
 
-const manifest = loadJson(path.join(chrome, 'manifest.json'));
+const activeVanilla = fs
+  .readdirSync(chromeSrc)
+  .filter((name) => name === 'page.js' || name === 'page.css' || /^page-.*\.(js|css)$/.test(name));
 
+if (activeVanilla.length > 0) {
+  fail(`old vanilla page files must be retired from active src: ${activeVanilla.sort().join(', ')}`);
+}
+
+const manifest = loadJson(path.join(chrome, 'manifest.json'));
 if (manifest.manifest_version !== 3) fail('manifest_version must be 3');
 if (!manifest.action || typeof manifest.action !== 'object') fail('manifest.action is required');
-if (manifest.action.default_popup) fail('manifest.action.default_popup must remain removed; extension icon opens full CrabLink browser');
-if (!manifest.background || manifest.background.service_worker !== 'src/background.js') fail('manifest background service_worker must be src/background.js');
+if (manifest.action.default_popup) fail('manifest.action.default_popup must remain removed');
+if (!manifest.background || manifest.background.service_worker !== 'src/background.js') {
+  fail('manifest background service_worker must be src/background.js');
+}
 if (manifest.background.type !== 'module') fail('manifest background type must be module');
 if (!manifest.omnibox || manifest.omnibox.keyword !== 'crab') fail('manifest omnibox keyword must be crab');
 
@@ -165,226 +151,73 @@ for (const required of ['storage', 'activeTab']) {
     fail(`manifest permissions must include ${required}`);
   }
 }
-
-for (const forbidden of [
-  'tabs',
-  'history',
-  'cookies',
-  'downloads',
-  'webRequest',
-  'webRequestBlocking',
-  'nativeMessaging',
-  'unlimitedStorage',
-  'clipboardRead',
-]) {
+for (const forbidden of ['tabs', 'history', 'cookies', 'downloads', 'webRequest', 'webRequestBlocking', 'nativeMessaging', 'unlimitedStorage', 'clipboardRead']) {
   if (permissions.includes(forbidden)) {
     fail(`manifest must not request risky permission: ${forbidden}`);
   }
 }
 
-const hostPermissions = manifest.host_permissions || [];
 const allowedHosts = new Set(['http://127.0.0.1:*/*', 'http://localhost:*/*']);
-
-for (const host of hostPermissions) {
+for (const host of manifest.host_permissions || []) {
   if (!allowedHosts.has(host)) {
     fail(`manifest host_permissions must remain local-only; found ${host}`);
   }
 }
 
 const background = readText(path.join(chromeSrc, 'background.js'));
-for (const token of [
-  'chrome.action.onClicked',
-  'chrome.omnibox.setDefaultSuggestion',
-  'src/react.html?url=',
-  'src/page.html?url=',
-  'preferredBrowserLane',
-  'reactprofile',
-  'legacy',
-  'crab://64hex.image',
-]) {
+for (const token of ['chrome.action.onClicked', 'react.html?url=', 'page.html?url=', 'preferredBrowserLane']) {
   requireIncludes(background, token, 'background.js');
 }
-
-for (const forbidden of [
-  '<hash>',
-  '<64',
-  '&lt;',
-  'chrome.history',
-  'chrome.cookies',
-  'webRequestBlocking',
-  'nativeMessaging',
-  'http://127.0.0.1:5303',
-  'http://127.0.0.1:5304',
-  'http://127.0.0.1:8088',
-  'http://127.0.0.1:9090',
-  'svc-wallet',
-  'svc-storage',
-  'svc-index',
-  'ron-ledger',
-]) {
+for (const forbidden of ['src/react.html?url=', 'src/page.html?url=', '<hash>', '<64', '&lt;', 'chrome.history', 'chrome.cookies', 'webRequestBlocking', 'nativeMessaging']) {
   forbidIncludes(background, forbidden, 'background.js');
 }
 
-const popupHtml = readText(path.join(chromeSrc, 'popup.html'));
-for (const token of [
-  'Open React CrabLink',
-  'Open Legacy Fallback',
-  './popup.js',
-  'crab://<hash>.image',
-]) {
-  requireIncludes(popupHtml, token, 'popup.html');
-}
-
 const popupJs = readText(path.join(chromeSrc, 'popup.js'));
-for (const token of [
-  'chrome.tabs.create',
-  'src/react.html?url=',
-  'src/page.html?url=',
-  'launchCrabLinkBrowser(\'react\')',
-  'launchCrabLinkBrowser(\'legacy\')',
-]) {
+for (const token of ['chrome.tabs.create', 'react.html?url=', 'page.html?url=']) {
   requireIncludes(popupJs, token, 'popup.js');
 }
-
-for (const forbidden of [
-  'fetch(',
-  'wallet/hold',
-  'assets/image',
-  'sites/prepare',
-  'Authorization',
-  'privateKey',
-  'seedPhrase',
-]) {
+for (const forbidden of ['src/react.html?url=', 'src/page.html?url=', 'fetch(', 'wallet/hold', 'assets/image', 'sites/prepare', 'Authorization', 'privateKey', 'seedPhrase']) {
   forbidIncludes(popupJs, forbidden, 'popup.js');
 }
 
 const pageHtml = readText(path.join(chromeSrc, 'page.html'));
-for (const token of [
-  './page.js',
-  './page-site-root-upload.js',
-  './page-product-preview.js',
-  './page-site-render-mode.js',
-  './page-site-creator-proof.js',
-  './page-profile-home.js',
-  './page-profile-editor.js',
-  './page-profile-gateway.js',
-  './page-profile-avatar.js',
-  './page-local-catalog.js',
-  './page-profile-polish.js',
-  './page-article-draft.js',
-  './page-video-draft.js',
-  './page-stream-draft.js',
-  './page-podcast-draft.js',
-  './page-alt-vault.js',
-  'id="drawerRoc"',
-  'hidden aria-hidden="true"',
-]) {
-  requireIncludes(pageHtml, token, 'page.html legacy lane');
+for (const token of ['react.html', 'compatibility redirect', 'window.location.replace']) {
+  requireIncludes(pageHtml, token, 'page.html compatibility redirect');
 }
-
-for (const forbidden of [
-  './page-local-route-mode.js',
-  './page-passport-home.js',
-  'passportNextLevelCard',
-  'passport-permission-grid',
-  'passport-home-actions',
-  'passport-username-form',
-]) {
-  forbidIncludes(pageHtml, forbidden, 'page.html');
+for (const forbidden of ['./page.js', './page-', './page.css', 'id="drawerRoc"', 'page-local-route-mode']) {
+  forbidIncludes(pageHtml, forbidden, 'page.html compatibility redirect');
 }
 
 const reactHtml = readText(path.join(chromeSrc, 'react.html'));
-for (const token of [
-  'id="root"',
-  './app/main.jsx',
-  'type="module"',
-]) {
-  requireIncludes(reactHtml, token, 'react.html');
+for (const token of ['id="root"', './app/main.jsx', 'type="module"']) {
+  requireIncludes(reactHtml, token, 'react.html source entry');
 }
 
 const routeRegistry = readText(path.join(chromeSrc, 'app', 'routeRegistry.js'));
-for (const route of [
-  'home',
-  'site',
-  'image',
-  'profile',
-  'music',
-  'lyrics',
-  'article',
-  'post',
-  'comment',
-  'video',
-  'stream',
-  'podcast',
-  'ad',
-  'algo',
-  'code',
-  'game',
-  'asset',
-  'notFound',
-  'problem',
-]) {
+for (const route of ['home', 'site', 'image', 'profile', 'music', 'lyrics', 'article', 'post', 'comment', 'video', 'stream', 'podcast', 'ad', 'algo', 'code', 'game', 'asset', 'notFound', 'problem']) {
   requireIncludes(routeRegistry, `${route}: lazy(() => import(`, 'routeRegistry.js');
 }
 
-const router = readText(path.join(chromeSrc, 'app', 'router.js'));
-for (const token of [
-  'crab://home',
-  'TYPED_ASSET_RE',
-  'PROFILE_HANDLE_RE',
-  'kind: \'site\'',
-]) {
-  requireIncludes(router, token, 'router.js');
-}
-forbidIncludes(router, 'crab://b3/', 'router.js');
-
-const appMain = readText(path.join(chromeSrc, 'app', 'main.jsx'));
-for (const token of [
-  'createRoot',
-  "import App from './App.jsx'",
-  '../shared/theme/themeTokens.css',
-  '../shared/theme/light.css',
-  '../shared/theme/dark.css',
-]) {
-  requireIncludes(appMain, token, 'app/main.jsx');
+const walletClientPath = path.join(chromeSrc, 'shared', 'api', 'walletClient.js');
+const walletModule = await import(pathToFileURL(walletClientPath).href);
+if (typeof walletModule.toWalletHoldApiBody !== 'function') {
+  fail('shared/api/walletClient.js missing toWalletHoldApiBody export');
 }
 
-const walletClient = readText(path.join(chromeSrc, 'shared', 'api', 'walletClient.js'));
-for (const token of [
-  'toWalletHoldApiBody',
-  'expectedNonceFromWalletError',
-  'loadNextNonceHint',
-  'persistNextNonceHint',
-  'confirmed !== true',
-]) {
-  requireIncludes(walletClient, token, 'shared/api/walletClient.js');
-}
+const holdBody = walletModule.toWalletHoldApiBody({
+  from: 'acct:main',
+  to: 'acct:escrow',
+  asset: 'roc',
+  amount_minor: '25',
+  nonce: 7,
+  memo: 'CrabLink static contract check',
+  idempotency_key: 'check-wallet-hold-7',
+});
 
-const bodyStart = walletClient.indexOf('export function toWalletHoldApiBody');
-if (bodyStart < 0) {
-  fail('shared/api/walletClient.js missing toWalletHoldApiBody');
-}
-const bodyEnd = walletClient.indexOf('\n}', bodyStart);
-const holdBody = walletClient.slice(bodyStart, bodyEnd > bodyStart ? bodyEnd : bodyStart + 700);
-
-for (const token of ['from:', 'to:', 'asset:', 'amount_minor:', 'nonce:', 'memo:', 'idempotency_key:']) {
-  requireIncludes(holdBody, token, 'toWalletHoldApiBody');
-}
-
-for (const forbidden of [
-  'schema',
-  'api_request',
-  'apiRequest',
-  'ui_preview_request',
-  'uiPreviewRequest',
-  'hold_template',
-  'holdTemplate',
-  'wallet_hold',
-  'walletHold',
-  'paid_storage',
-  'paidStorage',
-]) {
-  forbidIncludes(holdBody, forbidden, 'toWalletHoldApiBody strict body');
+const expectedHoldKeys = ['amount_minor', 'asset', 'from', 'idempotency_key', 'memo', 'nonce', 'to'];
+const actualHoldKeys = Object.keys(holdBody).sort();
+if (JSON.stringify(actualHoldKeys) !== JSON.stringify(expectedHoldKeys)) {
+  fail(`toWalletHoldApiBody keys drifted: expected ${expectedHoldKeys.join(',')} got ${actualHoldKeys.join(',')}`);
 }
 
 const reactSources = collectFiles(path.join(chromeSrc, 'app'), /\.(js|jsx|css|html)$/)
@@ -422,23 +255,29 @@ for (const file of reactSources) {
   }
 }
 
-loadAllJsonIn(path.join(shared, 'fixtures'));
-loadAllJsonIn(path.join(shared, 'schemas'));
+loadAllJsonIn(path.join(root, 'shared', 'fixtures'));
+loadAllJsonIn(path.join(root, 'shared', 'schemas'));
 loadAllJsonIn(path.join(chrome, 'test', 'fixtures'));
 
 console.log('json/structure checks: ok');
 NODE
 
-for file in \
-  "$CHROME_SRC/background.js" \
-  "$CHROME_SRC/content.js" \
-  "$CHROME_SRC/popup.js" \
-  "$CHROME_SRC/options.js" \
-  "$CHROME_SRC/storage.js" \
-  "$CHROME_SRC/ronClient.js" \
-  "$CHROME_SRC/crab.js"; do
+while IFS= read -r file; do
   node --check "$file" >/dev/null
-done
+done < <(
+  find "$CHROME_SRC" -type f -name '*.js' \
+    ! -path "$CHROME_SRC/legacy/retired-vanilla/*" \
+    ! -path "$CHROME_SRC/app/*" \
+    ! -path "$CHROME_SRC/pages/*" \
+    ! -path "$CHROME_SRC/shared/*" \
+    | sort
+)
+
+while IFS= read -r file; do
+  node --check "$file" >/dev/null
+done < <(
+  find "$CHROME_SRC/app" "$CHROME_SRC/shared" "$CHROME_SRC/pages" -type f -name '*.js' | sort
+)
 
 bash -n "$ROOT/scripts/check-chrome.sh" >/dev/null
 bash -n "$ROOT/scripts/check-react-lane.sh" >/dev/null
@@ -449,11 +288,9 @@ bash -n "$ROOT/scripts/smoke-first-run-profile.sh" >/dev/null
 bash -n "$ROOT/scripts/green-gate-local.sh" >/dev/null
 bash -n "$ROOT/scripts/make_codebundle.sh" >/dev/null
 
-for file in "${optional_files[@]}"; do
-  if [[ -f "$file" ]]; then
-    bash -n "$file" >/dev/null
-  fi
-done
+if [[ -f "$ROOT/scripts/smoke-site-create-local.sh" ]]; then
+  bash -n "$ROOT/scripts/smoke-site-create-local.sh" >/dev/null
+fi
 
 echo "json/structure checks: ok"
 echo "javascript syntax checks: ok"

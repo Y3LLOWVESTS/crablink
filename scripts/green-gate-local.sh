@@ -1,44 +1,34 @@
 #!/usr/bin/env bash
-# RO:WHAT — One-command local green-gate runner for CrabLink Chrome extension and gateway smokes.
-# RO:WHY — Locks the proven image/site/profile/NEXT_LEVEL foundation before expanding to more asset primitives.
-# RO:INTERACTS — scripts/check-chrome.sh, check-react-lane.sh, package-chrome.sh, smoke-local-gateway.sh, smoke-profile-gateway.sh, smoke-first-run-profile.sh, smoke-site-create-local.sh, make_codebundle.sh.
-# RO:INVARIANTS — default path is non-mutating; ROC-spending/profile/first-run smokes require explicit opt-in env flags.
-# RO:METRICS — delegates x-correlation-id/x-request-id to child smoke scripts.
+# RO:WHAT — One-command local green-gate runner for CrabLink React-primary extension.
+# RO:WHY — Locks the refactor completion gate before deeper NEXT_LEVEL product work resumes.
+# RO:INTERACTS — npm build, check-react-lane.sh, check-chrome.sh, package-chrome.sh, smoke scripts, make_codebundle.sh.
+# RO:INVARIANTS — default path is non-mutating; paid image/site/profile/bootstrap smokes require explicit opt-in.
+# RO:METRICS — child smoke scripts carry gateway correlation/request IDs where applicable.
 # RO:CONFIG — CRABLINK_GREEN_RUN_*, CRABLINK_GREEN_MUTATING, CRABLINK_GREEN_MAKE_CODEBUNDLE, GATEWAY_URL.
-# RO:SECURITY — no token persistence; no silent spend; paid upload/site create/profile claim/first-run only run when explicitly enabled.
-# RO:TEST — run from crablink repo root with scripts/green-gate-local.sh.
+# RO:SECURITY — no silent ROC spend; no token persistence; no direct internal-service calls from browser code.
+# RO:TEST — run from repo root with bash scripts/green-gate-local.sh.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
 
 CRABLINK_GREEN_MUTATING="${CRABLINK_GREEN_MUTATING:-0}"
-
-CRABLINK_GREEN_RUN_BOOTSTRAP="${CRABLINK_GREEN_RUN_BOOTSTRAP:-0}"
-CRABLINK_GREEN_RUN_PROFILE_CLAIM="${CRABLINK_GREEN_RUN_PROFILE_CLAIM:-0}"
-CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE="${CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE:-0}"
+CRABLINK_GREEN_RUN_GATEWAY="${CRABLINK_GREEN_RUN_GATEWAY:-0}"
 CRABLINK_GREEN_RUN_KNOWN_GOOD="${CRABLINK_GREEN_RUN_KNOWN_GOOD:-0}"
 CRABLINK_GREEN_RUN_UPLOAD="${CRABLINK_GREEN_RUN_UPLOAD:-0}"
 CRABLINK_GREEN_RUN_SITE="${CRABLINK_GREEN_RUN_SITE:-0}"
+CRABLINK_GREEN_RUN_PROFILE_CLAIM="${CRABLINK_GREEN_RUN_PROFILE_CLAIM:-0}"
+CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE="${CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE:-0}"
+CRABLINK_GREEN_MAKE_CODEBUNDLE="${CRABLINK_GREEN_MAKE_CODEBUNDLE:-1}"
 
 CRABLINK_GREEN_IMAGE_PRICE="${CRABLINK_GREEN_IMAGE_PRICE:-25}"
 CRABLINK_GREEN_SITE_REQUIRE_CRAB_RESOLVE="${CRABLINK_GREEN_SITE_REQUIRE_CRAB_RESOLVE:-1}"
-CRABLINK_GREEN_MAKE_CODEBUNDLE="${CRABLINK_GREEN_MAKE_CODEBUNDLE:-1}"
 
 if [[ "$CRABLINK_GREEN_MUTATING" == "1" ]]; then
-  CRABLINK_GREEN_RUN_UPLOAD="${CRABLINK_GREEN_RUN_UPLOAD:-1}"
-  CRABLINK_GREEN_RUN_SITE="${CRABLINK_GREEN_RUN_SITE:-1}"
-
-  if [[ "${CRABLINK_GREEN_RUN_UPLOAD}" != "1" ]]; then
-    CRABLINK_GREEN_RUN_UPLOAD="1"
-  fi
-
-  if [[ "${CRABLINK_GREEN_RUN_SITE}" != "1" ]]; then
-    CRABLINK_GREEN_RUN_SITE="1"
-  fi
+  CRABLINK_GREEN_RUN_UPLOAD="1"
+  CRABLINK_GREEN_RUN_SITE="1"
 fi
-
-cd "$ROOT"
 
 need_file() {
   local file="$1"
@@ -47,12 +37,6 @@ need_file() {
     echo "error: missing required file: $file"
     exit 1
   fi
-}
-
-need_executable_script() {
-  local file="$1"
-  need_file "$file"
-  chmod +x "$file"
 }
 
 step() {
@@ -75,111 +59,120 @@ skip() {
   echo "reason: $reason"
 }
 
-need_executable_script "scripts/check-chrome.sh"
-need_executable_script "scripts/check-react-lane.sh"
-need_executable_script "scripts/package-chrome.sh"
-need_executable_script "scripts/smoke-local-gateway.sh"
-need_executable_script "scripts/smoke-profile-gateway.sh"
-need_executable_script "scripts/smoke-first-run-profile.sh"
-need_executable_script "scripts/smoke-site-create-local.sh"
-need_executable_script "scripts/make_codebundle.sh"
+need_file "package.json"
+need_file "vite.config.js"
+need_file "scripts/check-react-lane.sh"
+need_file "scripts/check-chrome.sh"
+need_file "scripts/package-chrome.sh"
+need_file "scripts/make_codebundle.sh"
+need_file "scripts/smoke-local-gateway.sh"
+need_file "scripts/smoke-profile-gateway.sh"
+need_file "scripts/smoke-first-run-profile.sh"
+need_file "scripts/smoke-site-create-local.sh"
 
-echo "CrabLink local green gate"
-echo "root:                  $ROOT"
-echo "gateway:               ${GATEWAY_URL:-${CRABLINK_GATEWAY_URL:-http://127.0.0.1:8090}}"
-echo "mutating shortcut:     $CRABLINK_GREEN_MUTATING"
-echo "run bootstrap:         $CRABLINK_GREEN_RUN_BOOTSTRAP"
-echo "run profile claim:     $CRABLINK_GREEN_RUN_PROFILE_CLAIM"
-echo "run first-run profile: $CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE"
-echo "run known-good raw:    $CRABLINK_GREEN_RUN_KNOWN_GOOD"
-echo "run paid image upload: $CRABLINK_GREEN_RUN_UPLOAD"
-echo "run site create:       $CRABLINK_GREEN_RUN_SITE"
-echo "image price expected:  $CRABLINK_GREEN_IMAGE_PRICE"
-echo "site crab hard gate:   $CRABLINK_GREEN_SITE_REQUIRE_CRAB_RESOLVE"
-echo "make codebundle:       $CRABLINK_GREEN_MAKE_CODEBUNDLE"
-echo "react build/check:    1"
+echo "CrabLink React-primary green gate"
+echo "root:                         $ROOT"
+echo "gateway:                      ${GATEWAY_URL:-${CRABLINK_GATEWAY_URL:-http://127.0.0.1:8090}}"
+echo "mutating smokes:              $CRABLINK_GREEN_MUTATING"
+echo "gateway smoke:                $CRABLINK_GREEN_RUN_GATEWAY"
+echo "known-good asset smoke:       $CRABLINK_GREEN_RUN_KNOWN_GOOD"
+echo "paid image upload smoke:      $CRABLINK_GREEN_RUN_UPLOAD"
+echo "site create smoke:            $CRABLINK_GREEN_RUN_SITE"
+echo "profile claim smoke:          $CRABLINK_GREEN_RUN_PROFILE_CLAIM"
+echo "first-run profile smoke:      $CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE"
+echo "make codebundle:              $CRABLINK_GREEN_MAKE_CODEBUNDLE"
 
-step "1. Static legacy extension checks" \
-  scripts/check-chrome.sh
+step "Vite build" npm run build
 
-step "2. React/Vite lane checks" \
-  scripts/check-react-lane.sh
+step "React lane static/build contract check" env CRABLINK_REACT_SKIP_BUILD=1 bash scripts/check-react-lane.sh
 
-step "3. Chrome package build" \
-  scripts/package-chrome.sh
+step "Chrome extension static contract check" bash scripts/check-chrome.sh
 
-step "4. Non-mutating local gateway smoke" \
-  scripts/smoke-local-gateway.sh
-
-if [[ "$CRABLINK_GREEN_RUN_BOOTSTRAP" == "1" ]]; then
-  step "5. Optional passport/bootstrap smoke" \
-    env CRABLINK_SMOKE_RUN_BOOTSTRAP=1 scripts/smoke-local-gateway.sh
+if [[ "$CRABLINK_GREEN_RUN_GATEWAY" == "1" ]]; then
+  step "Gateway smoke" bash scripts/smoke-local-gateway.sh
 else
-  skip "5. Optional passport/bootstrap smoke" "set CRABLINK_GREEN_RUN_BOOTSTRAP=1"
-fi
-
-if [[ "$CRABLINK_GREEN_RUN_PROFILE_CLAIM" == "1" ]]; then
-  step "6. Optional gateway profile claim/read smoke" \
-    scripts/smoke-profile-gateway.sh
-else
-  skip "6. Optional gateway profile claim/read smoke" "set CRABLINK_GREEN_RUN_PROFILE_CLAIM=1"
-fi
-
-if [[ "$CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE" == "1" ]]; then
-  step "7. Optional first-run passport + profile smoke" \
-    scripts/smoke-first-run-profile.sh
-else
-  skip "7. Optional first-run passport + profile smoke" "set CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE=1"
+  skip "Gateway smoke" "set CRABLINK_GREEN_RUN_GATEWAY=1 when the RustyOnions stack is running"
 fi
 
 if [[ "$CRABLINK_GREEN_RUN_KNOWN_GOOD" == "1" ]]; then
-  step "8. Optional known-good raw preview smoke" \
-    env CRABLINK_SMOKE_RUN_KNOWN_GOOD=1 scripts/smoke-local-gateway.sh
+  step "Known-good asset smoke" env CRABLINK_SMOKE_RUN_KNOWN_GOOD=1 bash scripts/smoke-local-gateway.sh
 else
-  skip "8. Optional known-good raw preview smoke" "set CRABLINK_GREEN_RUN_KNOWN_GOOD=1"
+  skip "Known-good asset smoke" "set CRABLINK_GREEN_RUN_KNOWN_GOOD=1 and CRABLINK_SMOKE_KNOWN_GOOD_CRAB_URL=crab://..."
 fi
 
 if [[ "$CRABLINK_GREEN_RUN_UPLOAD" == "1" ]]; then
-  step "9. Optional paid image upload smoke" \
-    env \
-      CRABLINK_SMOKE_EXPECT_IMAGE_PRICE="$CRABLINK_GREEN_IMAGE_PRICE" \
-      CRABLINK_SMOKE_RUN_UPLOAD=1 \
-      scripts/smoke-local-gateway.sh
+  step "Paid image upload smoke" env \
+    CRABLINK_SMOKE_RUN_UPLOAD=1 \
+    CRABLINK_SMOKE_EXPECT_IMAGE_PRICE="$CRABLINK_GREEN_IMAGE_PRICE" \
+    bash scripts/smoke-local-gateway.sh
 else
-  skip "9. Optional paid image upload smoke" "set CRABLINK_GREEN_RUN_UPLOAD=1 or CRABLINK_GREEN_MUTATING=1"
+  skip "Paid image upload smoke" "set CRABLINK_GREEN_RUN_UPLOAD=1, or CRABLINK_GREEN_MUTATING=1"
 fi
 
 if [[ "$CRABLINK_GREEN_RUN_SITE" == "1" ]]; then
-  step "10. Optional site create/open smoke" \
-    env \
-      CRABLINK_SITE_REQUIRE_CRAB_RESOLVE="$CRABLINK_GREEN_SITE_REQUIRE_CRAB_RESOLVE" \
-      scripts/smoke-site-create-local.sh
+  step "Site create smoke" env \
+    CRABLINK_SITE_REQUIRE_CRAB_RESOLVE="$CRABLINK_GREEN_SITE_REQUIRE_CRAB_RESOLVE" \
+    bash scripts/smoke-site-create-local.sh
 else
-  skip "10. Optional site create/open smoke" "set CRABLINK_GREEN_RUN_SITE=1 or CRABLINK_GREEN_MUTATING=1"
+  skip "Site create smoke" "set CRABLINK_GREEN_RUN_SITE=1, or CRABLINK_GREEN_MUTATING=1"
 fi
+
+if [[ "$CRABLINK_GREEN_RUN_PROFILE_CLAIM" == "1" ]]; then
+  step "Profile gateway smoke" bash scripts/smoke-profile-gateway.sh
+else
+  skip "Profile gateway smoke" "set CRABLINK_GREEN_RUN_PROFILE_CLAIM=1 when profile backend routes are ready"
+fi
+
+if [[ "$CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE" == "1" ]]; then
+  step "First-run profile smoke" bash scripts/smoke-first-run-profile.sh
+else
+  skip "First-run profile smoke" "set CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE=1 when first-run profile routes are ready"
+fi
+
+step "Package staged Chrome extension" bash scripts/package-chrome.sh
 
 if [[ "$CRABLINK_GREEN_MAKE_CODEBUNDLE" == "1" ]]; then
-  step "11. Regenerate codebundle" \
-    scripts/make_codebundle.sh
+  step "Regenerate codebundle" bash scripts/make_codebundle.sh
 else
-  skip "11. Regenerate codebundle" "set CRABLINK_GREEN_MAKE_CODEBUNDLE=1"
+  skip "Codebundle generation" "set CRABLINK_GREEN_MAKE_CODEBUNDLE=1 to regenerate CODEBUNDLE_CHROME_EXTENSION.md"
 fi
+
+need_file "dist/chrome-src/react.html"
+need_file "dist/chrome-src/page.html"
+need_file "dist/chrome-extension-staging/react.html"
+need_file "dist/chrome-extension-staging/page.html"
+need_file "dist/crablink-extension-chrome.zip"
 
 echo
 echo "============================================================"
-echo "CrabLink local green gate passed."
+echo "CrabLink green gate passed"
 echo "============================================================"
+echo "Load unpacked from:"
+echo "  $ROOT/dist/chrome-extension-staging"
 echo
-echo "Non-mutating gates proved:"
-echo "- static legacy extension checks"
-echo "- React/Vite lane checks"
-echo "- Chrome package build"
-echo "- gateway read/prepare route smoke"
+echo "Manual staged-extension smoke routes:"
+echo "  crab://home"
+echo "  crab://site"
+echo "  crab://image"
+echo "  crab://profile"
+echo "  crab://music"
+echo "  crab://lyrics"
+echo "  crab://article"
+echo "  crab://post"
+echo "  crab://comment"
+echo "  crab://video"
+echo "  crab://stream"
+echo "  crab://podcast"
+echo "  crab://ad"
+echo "  crab://algo"
+echo "  crab://code"
+echo "  crab://game"
+echo "  crab://definitely-missing-site"
 echo
-echo "Optional gated smokes run:"
-echo "- bootstrap:         $CRABLINK_GREEN_RUN_BOOTSTRAP"
-echo "- profile claim:     $CRABLINK_GREEN_RUN_PROFILE_CLAIM"
-echo "- first-run profile: $CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE"
-echo "- known-good raw:    $CRABLINK_GREEN_RUN_KNOWN_GOOD"
-echo "- paid image upload: $CRABLINK_GREEN_RUN_UPLOAD"
-echo "- site create/open:  $CRABLINK_GREEN_RUN_SITE"
+echo "Final manual proof items before deleting more legacy files:"
+echo "  1. Toolbar opens root react.html, not src/react.html."
+echo "  2. Passport drawer opens."
+echo "  3. Balance chip refreshes without fake ledger truth."
+echo "  4. Image upload still returns and previews crab://<hash>.image."
+echo "  5. Site create/open still works."
+echo "  6. Legacy fallback page.html still opens if intentionally selected."
