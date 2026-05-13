@@ -1,32 +1,56 @@
 /*
- * RO:WHAT — Styles for the React-owned crab://post workspace.
- * RO:WHY — CrabLink refactor; keeps post route polished while shared layout components carry common structure.
- * RO:INTERACTS — PostPage.jsx, PostDraft.jsx, shared theme/form/card/layout styles, shell layout.
- * RO:INVARIANTS — use CSS variables; local draft styling only; no hard-coded backend truth.
+ * RO:WHAT — Styles for the React-owned crab://post workspace and publish flow.
+ * RO:WHY — NEXT_LEVEL text primitive work needs post drafting plus explicit gateway prepare/hold/publish stages.
+ * RO:INTERACTS — PostPage.jsx, PostDraft.jsx, PostPublishFlow.jsx, shared theme/form/card/layout styles, shell layout.
+ * RO:INVARIANTS — use CSS variables; never style local drafts as backend-confirmed truth.
  * RO:TEST — visual/manual checks in CrabLink full-tab browser in light and dark mode.
  */
 
 .post-page {
   display: grid;
   gap: 1rem;
+
+  --post-panel-bg: var(--cl-card, #ffffff);
+  --post-soft-bg: color-mix(in srgb, var(--cl-card, #ffffff) 74%, var(--cl-bg, #f5f4f1) 26%);
+  --post-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
 }
 
-.post-draft-card {
+[data-theme='dark'] .post-page {
+  --post-panel-bg: #0b0b0b;
+  --post-soft-bg: #050505;
+  --post-border-soft: #242424;
+}
+
+.post-draft-card,
+.post-publish-card {
   min-width: 0;
 }
 
-.post-draft-intro {
+.post-draft-intro,
+.post-publish-badges,
+.post-publish-actions,
+.post-action-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.post-draft-intro {
   margin-bottom: 1rem;
 }
 
-.post-form-grid {
+.post-form-grid,
+.post-publish-grid,
+.post-publish-controls,
+.post-publish-success {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
   margin-bottom: 0.9rem;
+}
+
+.post-publish-controls {
+  grid-template-columns: minmax(0, 1fr) 160px;
 }
 
 .post-inline-dev {
@@ -50,9 +74,6 @@
 }
 
 .post-action-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
   justify-content: flex-end;
 }
 
@@ -91,8 +112,106 @@
   background: #050505;
 }
 
+.post-section-copy,
+.post-publish-step p {
+  color: var(--cl-muted, #626262);
+  line-height: 1.55;
+}
+
+.post-publish-card .post-section-copy {
+  margin-bottom: 1rem;
+}
+
+.post-publish-warning {
+  display: grid;
+  gap: 0.25rem;
+  margin: 1rem 0;
+  padding: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--cl-warning, #d97706) 50%, var(--post-border-soft));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--cl-warning, #d97706) 11%, var(--post-soft-bg));
+}
+
+.post-publish-warning strong {
+  color: var(--cl-text, #111111);
+}
+
+.post-publish-warning span {
+  color: var(--cl-muted, #626262);
+  line-height: 1.45;
+}
+
+.post-publish-step {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--post-border-soft);
+  border-radius: 22px;
+  background: var(--post-soft-bg);
+}
+
+.post-publish-step header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.post-publish-step h3 {
+  margin: 0.1rem 0 0;
+  color: var(--cl-text, #111111);
+  font-size: 1.1rem;
+}
+
+.post-publish-actions {
+  align-items: center;
+}
+
+.post-publish-actions .cl-button {
+  min-width: max-content;
+}
+
+.post-publish-success {
+  margin-top: 0.25rem;
+}
+
+.post-publish-fact {
+  min-width: 0;
+  padding: 0.82rem;
+  border: 1px solid var(--post-border-soft);
+  border-radius: 16px;
+  background: var(--post-soft-bg);
+}
+
+.post-publish-fact span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.post-publish-fact strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--cl-text, #111111);
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.post-publish-fact .is-monospace {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 @media (max-width: 760px) {
-  .post-form-grid {
+  .post-form-grid,
+  .post-publish-grid,
+  .post-publish-controls,
+  .post-publish-success {
     grid-template-columns: 1fr;
   }
 
@@ -101,11 +220,18 @@
     justify-content: stretch;
   }
 
-  .post-action-buttons {
+  .post-action-buttons,
+  .post-publish-actions {
     justify-content: stretch;
+    width: 100%;
   }
 
-  .post-action-buttons .cl-button {
+  .post-action-buttons .cl-button,
+  .post-publish-actions .cl-button {
     width: 100%;
+  }
+
+  .post-publish-step header {
+    display: grid;
   }
 }

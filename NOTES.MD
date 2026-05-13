@@ -47046,3 +47046,2226 @@ Preserve all invariants: gateway-only CrabLink, no fake receipts, no fake b3, no
 
 
 ### END NOTE - MAY 13 2026 - 15:00 CST
+
+
+
+### BEGIN NOTE - MAY 13 2026 - 17:00 CST
+
+# Carryover Notes — CrabLink / NEXT_LEVEL — May 13, 2026
+
+## 0. Session headline
+
+This session turned `crab://site` from a working-but-cluttered creator/debug page into a **clean product-facing guided site launch flow**.
+
+The biggest proof: the user successfully created a new site:
+
+```text
+crab://ron3
+```
+
+That means the current React CrabLink site path can:
+
+```text
+choose a site name
+lock creator identity to current passport/wallet context
+edit/import root HTML
+use a template
+preview safely
+prepare site launch
+confirm explicit ROC hold
+store root HTML as b3 object
+create named site pointer
+open/render named crab:// site
+```
+
+This is now a real product-shaped flow, not just a backend smoke test.
+
+The newest codebundle confirms the React lane is now the active CrabLink structure, with app shell files, page folders, shared components, shared embed files, shared manifest helpers, and a cleaned site folder under `extensions/chrome/src/pages/site/`. 
+
+---
+
+## 1. Current active north star
+
+The active next-step blueprint remains `NEXT_LEVEL.MD`.
+
+Its mission is to turn the proven:
+
+```text
+paid image upload
++ crab://site proof
++ <crab-image> reference embed proof
+```
+
+into:
+
+```text
+content-addressed creator web
++ reusable asset primitives
++ reference-graph sites
++ manifest-backed attribution
++ RON Passports with @usernames
++ reputation/moderation summaries
++ pseudonymous alt passports
++ privacy-honest alt wallet handling
++ ROC payout routing
++ hosting/placement modes
++ SDK/CrabLink developer UX
+```
+
+`NEXT_LEVEL.MD` also explicitly says not to skip the current proof layer: paid image path, site creation/open, named-site rendering, root HTML rendering, `<crab-image>` rendering, and the image-root guard are the current foundation. 
+
+Core rules still active:
+
+```text
+CrabLink remains gateway-only.
+No direct svc-wallet call.
+No direct svc-storage call.
+No direct svc-index call.
+No direct ron-ledger call.
+No fake ROC.
+No fake receipt.
+No silent spend.
+No arbitrary JS execution from crab links.
+Sites store references; assets keep their own b3 identity.
+Storage stores bytes only.
+Names are human pointers.
+b3 hashes are canonical.
+```
+
+---
+
+## 2. What was completed in this session
+
+## 2.1 Site page cleanup and product simplification
+
+Before cleanup, `crab://site` had too many surfaces visible at once:
+
+```text
+command center
+local builder
+creator proof
+status
+root document editor
+reference composer
+sandbox preview
+reference graph
+launch flow
+manifest drawer
+developer details
+```
+
+The user correctly called out that about 70% of the page felt unnecessary for real use.
+
+We then moved the site page to a cleaner product structure:
+
+```text
+Site Workspace
+  → Guided Site Launch
+  → Local Sandbox Preview
+  → Advanced Proof and Diagnostics
+```
+
+The “advanced” area remains available for future RON-online debugging, but it no longer dominates the normal builder view.
+
+## 2.2 Guided launch became the real site creation surface
+
+The first cleanup accidentally hid too much. The user correctly pointed out that there was no obvious way to:
+
+```text
+enter site name
+see derived URL
+set title
+add description
+drop/paste/import HTML
+upload/import a template file
+see creator identity
+```
+
+The next batch fixed that by creating `SiteGuidedSetup.jsx` and integrating it into `SiteLaunchFlow.jsx`.
+
+The guided launch card now contains the real user-facing inputs:
+
+```text
+site name
+derived crab:// URL
+site title
+description
+tags
+current creator/passport lock
+current wallet lock
+template selector
+HTML import button
+root HTML editor
+root guard
+local byte count
+backend root CID status
+clear/copy controls
+```
+
+This is now the correct product direction.
+
+## 2.3 Creator identity rule was corrected
+
+The user made an important product decision:
+
+```text
+Only the current passport holder can create their own site.
+CrabLink should not imply that one user can create a site on behalf of another passport.
+```
+
+The UI now reflects this:
+
+```text
+current passport only
+creator locked to active CrabLink passport
+wallet locked to linked/current wallet context
+no owner/passport/wallet “make on behalf” fields in normal builder flow
+```
+
+This matches NEXT_LEVEL’s passport doctrine: passports are identity/capability records, not wallets; main passports can create sites when policy allows; alts should not create sites by default.
+
+## 2.4 Site folder spaghetti cleanup
+
+We reviewed the site folder and identified dead/superseded page components.
+
+Current active site folder in the codebundle is now:
+
+```text
+extensions/chrome/src/pages/site/site.css
+extensions/chrome/src/pages/site/siteDraftModel.js
+extensions/chrome/src/pages/site/SiteGuidedSetup.jsx
+extensions/chrome/src/pages/site/SiteLaunchFlow.css
+extensions/chrome/src/pages/site/SiteLaunchFlow.jsx
+extensions/chrome/src/pages/site/SiteManifestDrawer.jsx
+extensions/chrome/src/pages/site/SitePage.jsx
+extensions/chrome/src/pages/site/SiteRender.jsx
+extensions/chrome/src/pages/site/siteRenderModel.js
+extensions/chrome/src/pages/site/SiteResolvedProof.jsx
+extensions/chrome/src/pages/site/SiteSandboxPreview.jsx
+extensions/chrome/src/pages/site/siteTemplates.js
+```
+
+That is a much healthier structure. The site route now has a clear mental model:
+
+```text
+SitePage.jsx
+  route owner
+
+SiteLaunchFlow.jsx + SiteGuidedSetup.jsx
+  site creation product flow
+
+SiteRender.jsx + SiteSandboxPreview.jsx
+  local/named safe rendering
+
+SiteResolvedProof.jsx + SiteManifestDrawer.jsx
+  collapsed proof/debug
+
+siteDraftModel.js
+  local draft/manifest/stats/guards
+
+siteRenderModel.js
+  named-site/root/render normalization
+
+siteTemplates.js
+  starter templates
+
+site.css + SiteLaunchFlow.css
+  visual system
+```
+
+## 2.5 Retired files moved to attic, not deleted
+
+We moved retired files out of active source into:
+
+```text
+attic/site-cleanup-2026-05-13/
+```
+
+The user first considered deleting them, then decided to keep them for safety.
+
+Preserve this decision.
+
+Do **not** delete the attic folder next session unless the user explicitly asks again.
+
+Retired files currently kept for reference:
+
+```text
+SiteCommandCenter.jsx
+SiteCreate.jsx
+SiteCreatorProof.jsx
+SiteDiagnostics.jsx
+SiteReferenceComposer.jsx
+SiteResolvedSummary.jsx
+SiteRootDocumentPanel.jsx
+SiteRootUpload.jsx
+```
+
+Important: these should remain outside `extensions/chrome/src` so Vite/check scripts do not treat them as active code.
+
+## 2.6 Consolidated named-site proof panel
+
+We replaced scattered named-site proof/debug cards with:
+
+```text
+SiteResolvedProof.jsx
+```
+
+This gives named site rendering one consolidated proof/debug panel instead of multiple small files.
+
+Current named-site flow:
+
+```text
+SiteRender.jsx
+  resolves named site through gateway
+  fetches root document through gateway
+  renders root HTML in SiteSandboxPreview
+  shows SiteResolvedProof as collapsed/useful proof panel
+```
+
+## 2.7 Build/check/package passed after cleanup
+
+User reported the cleanup worked very well.
+
+The normal verification path remains:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+bash scripts/check-react-lane.sh
+bash scripts/check-chrome.sh
+bash scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+The latest uploaded codebundle was generated after the cleanup and shows the cleaned active site folder. 
+
+---
+
+## 3. Current proof state
+
+## 3.1 Confirmed working proofs
+
+Current known working product proofs:
+
+```text
+CrabLink React full-tab shell works.
+crab://site opens.
+Guided site launch works.
+Site creation works.
+crab://ron3 was created successfully.
+Named sites render.
+Root HTML preview works.
+Root HTML can be stored as b3 object.
+Site root CID auto-fill works.
+Site create uses backend proof.
+Safe sandbox preview works.
+<crab-image> reference rendering works from prior proof.
+The active site folder has been reduced/cleaned.
+Advanced/debug surfaces are no longer dominant.
+```
+
+## 3.2 Important known-good asset/site references
+
+Current known-good React image upload proof from memory:
+
+```text
+crab://ad1e9bef7834d7a37fde676abdf095c33c59de8e3d667fe99b5f091e6444e8d1.image
+```
+
+Fresh site proof from this session:
+
+```text
+crab://ron3
+```
+
+Older proof site mentioned in NEXT_LEVEL/running notes:
+
+```text
+crab://thedustyonion6
+```
+
+Use `crab://ron3` as the newest site proof from this session unless the user creates a newer one.
+
+---
+
+## 4. Current active code structure worth preserving
+
+## 4.1 App/shell layer
+
+The current codebundle shows this React app shell structure:
+
+```text
+extensions/chrome/src/app/App.jsx
+extensions/chrome/src/app/appContext.js
+extensions/chrome/src/app/appEvents.js
+extensions/chrome/src/app/appState.js
+extensions/chrome/src/app/main.jsx
+extensions/chrome/src/app/router.js
+extensions/chrome/src/app/routeRegistry.js
+extensions/chrome/src/app/settings.js
+extensions/chrome/src/app/shell/*
+```
+
+Important shell components:
+
+```text
+AddressBar.jsx
+BalanceChip.jsx
+BrowserNav.jsx
+CreatorChip.jsx
+HeaderAdSlot.jsx
+PassportActions.jsx
+PassportChip.jsx
+PassportDrawer.jsx
+PassportSummary.jsx
+Shell.jsx
+TopBar.jsx
+ToastHost.jsx
+```
+
+This structure is good. Continue using it. Do not regress to vanilla DOM patch modules.
+
+## 4.2 Page folder architecture
+
+The current page-folder structure is now strong:
+
+```text
+pages/ad
+pages/algo
+pages/article
+pages/asset
+pages/code
+pages/comment
+pages/game
+pages/home
+pages/image
+pages/lyrics
+pages/music
+pages/notFound
+pages/podcast
+pages/post
+pages/problem
+pages/profile
+pages/site
+pages/stream
+pages/video
+```
+
+This matches the refactor direction: one route/page folder owns its own page.
+
+## 4.3 Shared embed system already exists
+
+The codebundle contains:
+
+```text
+extensions/chrome/src/shared/embed/crabArticleEmbed.jsx
+extensions/chrome/src/shared/embed/crabAudioEmbed.jsx
+extensions/chrome/src/shared/embed/crabCommentEmbed.jsx
+extensions/chrome/src/shared/embed/crabImageEmbed.jsx
+extensions/chrome/src/shared/embed/crabPostEmbed.jsx
+extensions/chrome/src/shared/embed/crabVideoEmbed.jsx
+extensions/chrome/src/shared/embed/embedRegistry.js
+extensions/chrome/src/shared/embed/safeHtml.js
+extensions/chrome/src/shared/embed/sandboxFrame.js
+```
+
+This is likely the next best CrabLink-only work area.
+
+NEXT_LEVEL Phase 1 says to clean/generalize the embed resolver, keep `<crab-image>` behavior unchanged, prepare registry entries for future embed tags, keep fetches gateway-only, and keep scripts disabled in sandbox. 
+
+## 4.4 Shared manifest system exists
+
+The codebundle contains:
+
+```text
+extensions/chrome/src/shared/manifest/accessPolicy.js
+extensions/chrome/src/shared/manifest/economicsPolicy.js
+extensions/chrome/src/shared/manifest/linkedAssets.js
+extensions/chrome/src/shared/manifest/manifestDrafts.js
+extensions/chrome/src/shared/manifest/manifestForm.jsx
+extensions/chrome/src/shared/manifest/manifestPreview.jsx
+extensions/chrome/src/shared/manifest/manifestSections.jsx
+extensions/chrome/src/shared/manifest/provenance.js
+extensions/chrome/src/shared/manifest/renditionGroups.js
+extensions/chrome/src/shared/manifest/rightsPolicy.js
+extensions/chrome/src/shared/manifest/uniformManifest.js
+extensions/chrome/src/shared/manifest/versionHistory.js
+```
+
+This aligns with NEXT_LEVEL’s uniform manifest direction. Continue strengthening shared manifest helpers rather than copying manifest logic into each page.
+
+---
+
+## 5. Site route architecture after cleanup
+
+## 5.1 Keep this ownership model
+
+```text
+SitePage.jsx
+  decides local workspace vs named site mode
+  mounts SiteLaunchFlow first
+  mounts SiteRender preview second
+  keeps advanced proof/diagnostics collapsed
+
+SiteLaunchFlow.jsx
+  owns prepare → hold → store root → create flow
+  owns paid action state
+  owns paid proof
+  owns nonce hint
+  owns root store state
+  owns create state
+
+SiteGuidedSetup.jsx
+  owns product-facing site fields
+  locks creator to current passport/wallet
+  owns template/import/root HTML editor
+  owns local root guard display
+
+SiteRender.jsx
+  resolves/fetches named sites
+  renders local draft preview
+  passes untrusted HTML to sandbox preview
+
+SiteSandboxPreview.jsx
+  owns safe iframe/render boundary
+  no arbitrary scripts
+
+SiteResolvedProof.jsx
+  owns named-site proof/debug
+
+SiteManifestDrawer.jsx
+  owns collapsed manifest view
+
+siteDraftModel.js
+  local draft default values
+  manifest draft building
+  stats
+  root guard
+  validation
+
+siteRenderModel.js
+  named-site/root response normalization
+  render error normalization
+```
+
+## 5.2 Do not bring back these problems
+
+Avoid reintroducing:
+
+```text
+separate command center duplicating launch flow
+separate creator proof panel in normal site flow
+separate root upload panel outside guided launch
+reference composer as default visible clutter
+multiple named-site proof components
+debug JSON dominating builder view
+owner/passport/wallet override fields in normal builder
+any “create on behalf of another passport” wording
+```
+
+## 5.3 Attic rule
+
+The attic files are useful reference only.
+
+Do not import from:
+
+```text
+attic/site-cleanup-2026-05-13/
+```
+
+Do not move them back into active source unless a very specific piece is needed and refactored into the new architecture.
+
+---
+
+## 6. Product rules clarified by this session
+
+## 6.1 Site creator rule
+
+Only the active main/current passport should create a site.
+
+Current product language should stay close to:
+
+```text
+Create as your current passport.
+Creator is locked to the active CrabLink passport.
+You cannot create a site on behalf of another passport.
+```
+
+Future backend rule:
+
+```text
+Main passports may create sites when policy allows.
+Anonymous/pseudonymous alts may browse/surf/comment, but should not create sites by default.
+```
+
+## 6.2 Site root rule
+
+Site root must be document/root HTML bytes, not an image asset CID.
+
+The root guard should continue preventing this mistake:
+
+```text
+Do not paste crab://<hash>.image as root document CID.
+Do not use image CID as site root.
+Store root HTML through gateway /paid/o to get real b3 root CID.
+```
+
+## 6.3 Site reference graph rule
+
+A site may reference assets, but assets remain independent.
+
+Correct model:
+
+```text
+site root HTML
+  contains <crab-image src="crab://<hash>.image">
+image asset
+  keeps its own b3 hash
+  keeps its own manifest
+  keeps its own owner/payout/provenance/receipts
+```
+
+Do not collapse image bytes into the site.
+
+## 6.4 Debug/proof rule
+
+Debug and proof panels are necessary for RON going online, but they should be collapsed and useful.
+
+Builder view should prioritize:
+
+```text
+make site
+preview site
+launch site
+open site
+```
+
+Developer view should contain:
+
+```text
+manifest JSON
+gateway proof
+request/result details
+root document proof
+correlation IDs
+sandbox policy
+route debug
+```
+
+---
+
+## 7. Recommended next implementation batch
+
+## Batch NEXT_LEVEL-1: CrabLink embed registry cleanup + site proof smoke polish
+
+This is the best next batch because it is low-risk, CrabLink-only, and directly follows NEXT_LEVEL Phase 1. NEXT_LEVEL says this phase should keep `<crab-image>` working, extract/generalize the embed resolver shape, prepare future embed tags, keep all fetches gateway-only, and keep scripts disabled in the sandbox. 
+
+## 7.1 Files to inspect first
+
+```text
+extensions/chrome/src/pages/site/SiteRender.jsx
+extensions/chrome/src/pages/site/SiteSandboxPreview.jsx
+extensions/chrome/src/pages/site/SiteResolvedProof.jsx
+extensions/chrome/src/pages/site/SiteManifestDrawer.jsx
+extensions/chrome/src/pages/site/site.css
+
+extensions/chrome/src/shared/embed/embedRegistry.js
+extensions/chrome/src/shared/embed/crabImageEmbed.jsx
+extensions/chrome/src/shared/embed/crabVideoEmbed.jsx
+extensions/chrome/src/shared/embed/crabAudioEmbed.jsx
+extensions/chrome/src/shared/embed/crabArticleEmbed.jsx
+extensions/chrome/src/shared/embed/crabPostEmbed.jsx
+extensions/chrome/src/shared/embed/crabCommentEmbed.jsx
+extensions/chrome/src/shared/embed/safeHtml.js
+extensions/chrome/src/shared/embed/sandboxFrame.js
+
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/smoke-site-create-local.sh
+scripts/smoke-local-gateway.sh
+```
+
+## 7.2 Goals
+
+```text
+Keep crab://site clean.
+Keep crab://ron3 opening if stack still has the data.
+Keep named-site rendering full width.
+Keep <crab-image> rendering unchanged.
+Make unsupported future embeds render honest placeholders.
+Make embed registry the single place future embed kinds are declared.
+Make unsupported embed placeholders explicitly say "not backend-wired yet" or equivalent.
+Do not add publish routes.
+Do not add fake post/comment/article/video backend behavior.
+Do not add arbitrary code execution.
+Do not call anything except gateway client.
+```
+
+## 7.3 Acceptance criteria
+
+```text
+npm run build passes.
+scripts/check-react-lane.sh passes.
+scripts/check-chrome.sh passes.
+scripts/package-chrome.sh passes.
+scripts/make_codebundle.sh passes.
+
+Manual:
+crab://site opens.
+Guided launch card is still first.
+Site preview is still second.
+Advanced proof remains collapsed.
+crab://ron3 opens if local backend still has it.
+A site with <crab-image> still renders image.
+Unsupported <crab-video>, <crab-post>, <crab-comment>, <crab-article>, <crab-audio> do not break preview.
+Unsupported embed tags do not pretend backend support exists.
+No arbitrary scripts execute in sandbox.
+```
+
+---
+
+## 8. Recommended batch after embed cleanup
+
+## Batch NEXT_LEVEL-2: RustyOnions ron-proto + ron-naming DTO/parser foundation
+
+Do this only after CrabLink embed/site cleanup is stable.
+
+This will require the RustyOnions codebundle, `CODECHECK.md`, and `CODECOMMENTS.MD`.
+
+NEXT_LEVEL says the DTO/naming layer should come before service logic, and initial DTOs include text asset bodies, post/comment/article assets, asset references, reference graph/site reference map, passport public manifest/profile, reputation, moderator summary, site moderator role, and attribution status. 
+
+## 8.1 Crates to touch
+
+```text
+ron-proto
+ron-naming
+```
+
+## 8.2 Do not touch yet
+
+```text
+svc-passport mutation
+omnigate post routes
+svc-gateway post routes
+svc-wallet
+ron-ledger
+svc-storage
+svc-index
+ron-accounting
+svc-rewarder
+```
+
+## 8.3 DTO/parser targets
+
+```text
+PassportPublicManifestV1
+PassportPublicProfileV1
+ReputationSummaryV1
+ModeratorSummaryV1
+SiteModeratorRoleV1
+
+TextAssetBodyV1
+PostAssetV1
+CommentAssetV1
+ArticleAssetV1
+TextFormat
+AssetRelationV1
+AttributionStatus
+
+AssetReferenceV1
+ReferenceGraphV1
+ThreadManifestV1
+SiteReferenceMapV1
+```
+
+## 8.4 ron-naming targets
+
+```text
+@username parse/normalize
+reserved username rejection
+canonical crab://@username formatting
+canonical crab://<64hex>.<kind> formatting
+typed asset suffix support only where backed by DTOs/routes
+.profile / .passport / .alt parser design later, per addendum
+```
+
+## 8.5 Rust gates
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+cargo fmt
+cargo clippy -p ron-proto --all-targets -- -D warnings
+cargo test -p ron-proto --all-targets
+cargo clippy -p ron-naming --all-targets -- -D warnings
+cargo test -p ron-naming --all-targets
+```
+
+Stop after DTO/parser green. Do not wire services in the same batch.
+
+---
+
+## 9. Key NEXT_LEVEL implementation order to preserve
+
+The recommended order is:
+
+```text
+1. CrabLink-only embed registry + site polish.
+2. ron-proto + ron-naming DTO/parser foundation.
+3. svc-passport main @username claim MVP.
+4. omnigate/gateway read-only profile exposure.
+5. CrabLink first-passport @username UX and creator hydration.
+6. Alt passport MVP, local/private-first.
+7. Site edit/revision route contract.
+8. Text asset DTO foundation and then .post route.
+9. Gateway .post exposure.
+10. Product smoke for paid post.
+11. CrabLink post UI.
+12. Repeat for .comment.
+13. Repeat for .article.
+14. Reference graph/thread/site refs.
+15. Paid views.
+16. Accounting events.
+17. Rewarder split planning.
+18. Hosting placement.
+19. Media-lite.
+20. Full media streaming later.
+```
+
+Do not jump directly to video streaming. NEXT_LEVEL is explicit that video/music require more careful range/chunk/edge/accounting work and should start with media-lite only. 
+
+---
+
+## 10. Current completion estimate
+
+## 10.1 First product-proof slice
+
+```text
+~92–95%
+```
+
+This slice means:
+
+```text
+CrabLink + ROC + b3 + image asset pages + named sites + root HTML + crab-image embeds + guided site launch
+```
+
+Reason:
+
+```text
+paid image path has been proven
+site creation has been proven
+named site rendering has been proven
+root HTML b3 storage has been proven
+crab-image embed has been proven
+site UI is now product-clean
+site folder was cleaned
+crab://ron3 was created successfully
+```
+
+Remaining gap:
+
+```text
+embed registry cleanup/generalization
+manual smoke/check documentation
+full repeatability check on fresh stack
+```
+
+## 10.2 CrabLink Chrome MVP
+
+```text
+~72–80%
+```
+
+Strong:
+
+```text
+React full-tab shell
+routes/page folders
+settings
+passport drawer
+balance chip
+image page
+site page
+profile page scaffold
+creator workspaces
+theme structure
+header ad slot component
+safe sandbox preview
+shared embed files
+shared manifest files
+```
+
+Still missing:
+
+```text
+first-run passport creation UX polish
+backend-confirmed @username claim/read integration
+crab://@username route integration
+real reputation/mod score hydration
+clean receipt history
+more robust smokes for mutating flows
+multi-browser packaging
+```
+
+## 10.3 Full NEXT_LEVEL blueprint
+
+```text
+~50–60%
+```
+
+Why not higher:
+
+```text
+.post/.comment/.article backend primitives not implemented
+real profile/passport public manifests not implemented
+real @username backend claim path not complete
+alt passports not complete
+site revisions not complete
+paid views not complete
+accounting→rewarder→wallet payout loop not productized
+media-lite/video/music not complete
+hosting placement not complete
+reputation/moderation scoring not complete
+```
+
+Why the estimate improved:
+
+```text
+CrabLink has crossed from prototype to usable product shell.
+Site creation UX is now clean.
+Folder architecture is no longer spaghetti in the site route.
+Reference-graph image embed proof is real.
+```
+
+---
+
+## 11. Active invariants to paste into next session
+
+```text
+CRABLINK / NEXT_LEVEL INVARIANTS
+
+- CrabLink is a browser client only.
+- CrabLink talks to svc-gateway only.
+- No direct svc-wallet / svc-storage / svc-index / omnigate / ron-ledger calls from CrabLink.
+- No fake ROC.
+- No fake receipts.
+- No silent spend.
+- Paid actions require explicit confirmation.
+- Wallet truth is backend/ledger truth only.
+- b3:<64 lowercase hex> is canonical internal content ID.
+- crab://<64 lowercase hex>.<kind> is canonical public typed asset URL.
+- crab://<site_name> is a human site pointer.
+- crab://@username is future human identity/discovery pointer.
+- Names are human pointers; b3 hashes are canonical.
+- Sites store references; assets remain independent.
+- Storage stores bytes by CID only.
+- Passports are identity/capability records, not wallets.
+- Public passport/profile manifests may be b3-addressed, but private passport material is not “just an asset.”
+- Main passports can create sites when policy allows.
+- Alts may browse/surf/comment but should not create sites by default.
+- Alt wallets/accounts are separate.
+- No public main↔alt linkage by default.
+- Do not promise private alt→main withdrawal until real privacy protocol exists.
+- Do not execute arbitrary code from crab links.
+- Unsupported future embeds must render honest placeholders, not fake backend truth.
+```
+
+---
+
+## 12. Commands for next CrabLink session
+
+Standard safe gate:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+bash scripts/check-react-lane.sh
+bash scripts/check-chrome.sh
+bash scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Optional file-tree check:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+find extensions/chrome/src/pages/site -maxdepth 1 -type f | sort
+```
+
+Expected active site files:
+
+```text
+SiteGuidedSetup.jsx
+SiteLaunchFlow.css
+SiteLaunchFlow.jsx
+SiteManifestDrawer.jsx
+SitePage.jsx
+SiteRender.jsx
+SiteResolvedProof.jsx
+SiteSandboxPreview.jsx
+site.css
+siteDraftModel.js
+siteRenderModel.js
+siteTemplates.js
+```
+
+Optional attic check:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+find attic/site-cleanup-2026-05-13 -maxdepth 1 -type f | sort
+```
+
+Do not delete attic unless user explicitly asks again.
+
+---
+
+## 13. Suggested opening prompt for the next session
+
+```text
+We are continuing CrabLink / NEXT_LEVEL work. Review the latest CODEBUNDLE_CHROME_EXTENSION.md and NEXT_LEVEL.MD. In the previous session we cleaned crab://site, moved retired site files into attic/site-cleanup-2026-05-13, kept the attic for safety, created crab://ron3 successfully, and confirmed the guided site launch is now the real product surface. The active site folder is now SitePage, SiteLaunchFlow, SiteGuidedSetup, SiteRender, SiteSandboxPreview, SiteResolvedProof, SiteManifestDrawer, siteDraftModel, siteRenderModel, siteTemplates, and CSS only. 
+
+Next, continue with NEXT_LEVEL-1: CrabLink-only embed registry cleanup/generalization. Keep <crab-image> working unchanged. Make unsupported crab-video/crab-audio/crab-article/crab-post/crab-comment render honest placeholders through the shared embed registry. Do not touch Rust crates yet. Preserve gateway-only, no fake truth, no silent spend, and no arbitrary site JS execution. Provide full paste-ready files.
+```
+
+---
+
+## 14. Final next-step recommendation
+
+The next batch should **not** add another big page or another backend feature yet.
+
+The correct move is:
+
+```text
+CrabLink-only embed registry cleanup/generalization.
+```
+
+Reason:
+
+```text
+It directly follows NEXT_LEVEL Phase 1.
+It keeps work low-risk.
+It validates the cleaned React architecture.
+It prevents future embed spaghetti before .post/.comment/.article/.video/.music arrive.
+It strengthens the site-as-reference-graph model.
+It keeps the proven <crab-image> path green.
+```
+
+After that, switch to RustyOnions only when the user provides the current RustyOnions codebundle and relevant docs.
+
+
+### END NOTE - MAY 13 2026 - 17:00 CST
+
+
+### BEGIN NOTE - MAY 13 2026 - 18:50 CST
+
+Yes — I traced the working image/site path and the missing post/comment/article path. The reason image and site work is not just the CrabLink UI. They work because **all three layers exist and agree on the same contract**:
+
+```text
+CrabLink
+→ svc-gateway public route
+→ omnigate product/BFF route
+→ svc-storage + svc-index + svc-wallet where appropriate
+→ returned crab:// URL / hydrated DTO
+```
+
+For **post/comment/article**, CrabLink is now ahead of the backend: the frontend clients and publish panels exist, but the matching RustyOnions route families do not yet exist in `svc-gateway` and `omnigate`.
+
+---
+
+# 1. What made image/site work
+
+## The backend public surface already exists for image and site
+
+The proven gateway product surface includes:
+
+```text
+GET  /crab/resolve
+GET  /b3/:asset
+POST /paid/o/prepare
+POST /assets/image/prepare
+POST /assets/image
+POST /sites/prepare
+POST /sites
+GET  /sites/:name
+POST /wallet/hold
+```
+
+Those gateway routes proxy to Omnigate equivalents under `/v1/...`, and `svc-gateway` is deliberately proxy-only: it does not store bytes, price storage, mutate wallet/ledger, parse manifests, or write index pointers.  The current `svc-gateway/src/routes/product.rs` confirms this route family is mounted, including `/wallet/hold`, `/assets/image/prepare`, `/assets/image`, `/sites/prepare`, `/sites`, and `/sites/:name`. 
+
+That means CrabLink can stay thin and gateway-only.
+
+---
+
+# 2. Image flow: what actually happens
+
+The image path works because Omnigate has a real image asset route family:
+
+```text
+POST /assets/image/prepare
+→ gateway proxies to /v1/assets/image/prepare
+
+POST /wallet/hold
+→ gateway proxies to /v1/wallet/hold
+→ Omnigate wallet façade
+→ svc-wallet
+→ ron-ledger
+
+POST /assets/image
+→ gateway proxies to /v1/assets/image
+→ Omnigate coordinates storage + manifest + index
+```
+
+The Rust code shows `omnigate/src/routes/v1/assets.rs` currently owns image prepare/upload only, with routes mounted for `/image/prepare` and `/image`. It interacts with `svc-storage` paid object routes, `svc-storage /o`, and `svc-index` manifest pointer routes, while preserving the invariant that Omnigate does **not** call wallet or mutate ledger. 
+
+The successful image upload test proves the shape of the final image response:
+
+```text
+schema: omnigate.image-asset-upload.v1
+asset_kind: image
+asset_cid: b3:<hash>
+crab_url: crab://<hash>.image
+storage_upload: paid object write result
+manifest.status: stored
+manifest.manifest_cid: b3:<hash>
+index_pointer.status: stored
+owner/passport/wallet fields
+payout fields
+```
+
+The test also verifies the storage upload, manifest storage, and index pointer write path. 
+
+On the CrabLink side, the important part is the paid-proof header contract. `assetClient.js` normalizes proof data and requires:
+
+```text
+x-ron-wallet-txid
+x-ron-wallet-receipt-hash
+x-ron-paid-estimate-minor
+x-ron-wallet-from
+x-ron-wallet-to
+```
+
+It explicitly fails if those pieces are missing.  The older `x-ron-wallet-hold-txid` name should not be used as the CrabLink contract going forward; the notes explicitly warn not to use the wrong header. 
+
+---
+
+# 3. Site flow: what actually happens
+
+The site path is slightly different because a site is a named pointer plus manifest, not a typed hash asset.
+
+The proven flow is:
+
+```text
+crab://site UI
+→ POST /sites/prepare
+→ explicit /wallet/hold
+→ store root HTML as real b3 object
+→ POST /sites with root_document_cid
+→ site manifest stored through svc-storage /o
+→ site name pointer stored through svc-index
+→ GET /sites/:name
+→ crab://<site_name> resolves
+```
+
+Omnigate’s site prepare route validates strict JSON, safe site name, safe file paths, and a nonzero total byte count. It calls `svc-storage` paid estimate and returns a wallet hold template without mutating wallet, ledger, storage, or index. 
+
+Omnigate’s site create route validates strict JSON, `root_document_cid`, route map CIDs, and asset map CIDs. Then it builds a site manifest, stores that manifest through `svc-storage /o`, writes the site pointer through `svc-index PUT /v1/index/sites/:site_name/manifest`, and returns `omnigate.site-create.v1`. 
+
+The site resolver then performs the read-only hydration chain:
+
+```text
+GET /v1/sites/:name
+→ GET svc-index /v1/index/sites/:name/manifest
+→ GET svc-storage /o/<manifest_cid>
+→ parse site manifest JSON
+→ return omnigate.site-page.v1
+```
+
+That is the key pattern we need to preserve. 
+
+The CrabLink `SiteLaunchFlow` matches this: it stores root HTML, auto-fills the returned `root_document_cid`, then submits `POST /sites` with paid proof and the stored CID. 
+
+---
+
+# 4. What post/comment/article already have
+
+CrabLink now has the frontend contracts:
+
+```text
+extensions/chrome/src/shared/api/postAssetClient.js
+extensions/chrome/src/shared/api/commentAssetClient.js
+extensions/chrome/src/shared/api/articleAssetClient.js
+
+extensions/chrome/src/pages/post/PostPublishFlow.jsx
+extensions/chrome/src/pages/comment/CommentPublishFlow.jsx
+extensions/chrome/src/pages/article/ArticlePublishFlow.jsx
+```
+
+The current CrabLink codebundle confirms those files exist.  The post client already calls:
+
+```text
+POST /assets/post/prepare
+POST /assets/post
+```
+
+and sends the same paid-proof header family used by image.  The comment client similarly calls:
+
+```text
+POST /assets/comment/prepare
+POST /assets/comment
+```
+
+and uses the same gateway-only, proof-required shape. 
+
+So the frontend is not the blocker anymore. The missing backend routes are.
+
+---
+
+# 5. What the backend must add for post/comment/article
+
+## A. `svc-gateway` route exposure
+
+Add these public routes to `crates/svc-gateway/src/routes/product.rs`:
+
+```text
+POST /assets/post/prepare
+POST /assets/post
+
+POST /assets/comment/prepare
+POST /assets/comment
+
+POST /assets/article/prepare
+POST /assets/article
+```
+
+They should proxy to:
+
+```text
+POST /v1/assets/post/prepare
+POST /v1/assets/post
+
+POST /v1/assets/comment/prepare
+POST /v1/assets/comment
+
+POST /v1/assets/article/prepare
+POST /v1/assets/article
+```
+
+No business logic should be added to `svc-gateway`.
+
+Gateway should keep doing only this:
+
+```text
+preserve selected headers
+preserve body
+preserve query if relevant
+filter hop-by-hop headers
+return upstream status/body
+map upstream connect failure to structured 502
+```
+
+The existing gateway product-route tests already prove this pattern for image and site, including body/header preservation and upstream 502 behavior. 
+
+Suggested gateway tests:
+
+```text
+post_prepare_proxy_preserves_body_headers
+post_publish_proxy_preserves_paid_headers
+comment_prepare_proxy_preserves_body_headers
+comment_publish_proxy_preserves_paid_headers
+article_prepare_proxy_preserves_body_headers
+article_publish_proxy_preserves_paid_headers
+text_asset_upstream_failure_returns_problem_502
+```
+
+---
+
+## B. Omnigate route handlers
+
+`crates/omnigate/src/routes/v1/assets.rs` currently only mounts:
+
+```rust
+.route("/image/prepare", post(image_prepare))
+.route("/image", post(image_upload))
+```
+
+The next backend batch needs to add:
+
+```rust
+.route("/post/prepare", post(post_prepare))
+.route("/post", post(post_publish))
+.route("/comment/prepare", post(comment_prepare))
+.route("/comment", post(comment_publish))
+.route("/article/prepare", post(article_prepare))
+.route("/article", post(article_publish))
+```
+
+Omnigate already mounts `assets::router()` under `/v1/assets`, so adding these routes in the assets router gives the correct upstream path. 
+
+The implementation should mirror image, but with JSON text content instead of raw image bytes.
+
+---
+
+# 6. Recommended backend contract for text assets
+
+## Shared prepare response
+
+Each prepare route should:
+
+```text
+validate strict JSON
+validate required content fields
+validate required site/parent relations
+validate bytes > 0
+validate payer_account
+validate owner_passport_subject
+call svc-storage paid estimate
+return wallet_hold_template
+return next route hints
+not call wallet
+not mutate ledger
+not store bytes
+not write index
+```
+
+Suggested response schemas:
+
+```text
+omnigate.post-asset-prepare.v1
+omnigate.comment-asset-prepare.v1
+omnigate.article-asset-prepare.v1
+```
+
+Suggested common response fields:
+
+```json
+{
+  "schema": "omnigate.post-asset-prepare.v1",
+  "asset_kind": "post",
+  "action": "paid_storage_put",
+  "asset": "roc",
+  "bytes": 1234,
+  "content_type": "application/json; charset=utf-8",
+  "owner": {
+    "passport_subject": "passport:main:dev",
+    "wallet_account": "acct_dev"
+  },
+  "paid_storage": {
+    "estimate": {}
+  },
+  "wallet_hold_template": {
+    "from": "acct_dev",
+    "to": "escrow_paid_write",
+    "asset": "roc",
+    "amount_minor": "25"
+  },
+  "manifest_preview": {},
+  "next": {
+    "wallet_hold": "/wallet/hold",
+    "submit": "/assets/post",
+    "resolve_hint": "crab://<hash>.post"
+  }
+}
+```
+
+The exact amount comes from storage/economics policy, not CrabLink.
+
+---
+
+## Shared publish response
+
+Each publish route should:
+
+```text
+validate strict JSON
+require paid proof headers
+canonicalize content envelope
+store content bytes through svc-storage paid write
+build asset manifest
+store manifest through svc-storage /o
+write asset CID → manifest CID pointer through svc-index
+return crab://<hash>.<kind>
+```
+
+Suggested schemas:
+
+```text
+omnigate.post-asset-publish.v1
+omnigate.comment-asset-publish.v1
+omnigate.article-asset-publish.v1
+```
+
+or, if we want to mirror image exactly:
+
+```text
+omnigate.post-asset-upload.v1
+omnigate.comment-asset-upload.v1
+omnigate.article-asset-upload.v1
+```
+
+I would use **publish** for text assets because the UI says publish and the content is not an uploaded binary file. The frontend does not currently depend on the schema string, so we can choose clean names before implementation.
+
+Suggested publish response:
+
+```json
+{
+  "schema": "omnigate.post-asset-publish.v1",
+  "asset_kind": "post",
+  "asset_cid": "b3:<64 hex>",
+  "crab_url": "crab://<64 hex>.post",
+  "storage_upload": {
+    "status": "stored",
+    "cid": "b3:<64 hex>",
+    "paid": true
+  },
+  "manifest": {
+    "status": "stored",
+    "manifest_cid": "b3:<64 hex>",
+    "storage_path": "/o"
+  },
+  "index_pointer": {
+    "status": "stored",
+    "route": "/v1/index/assets/<hash>/manifest",
+    "http_status": 202
+  },
+  "owner": {
+    "passport_subject": "passport:main:dev",
+    "wallet_account": "acct_dev"
+  },
+  "payout": {
+    "default_action": "content_view",
+    "recipient_account": "acct_dev"
+  },
+  "metadata": {},
+  "relations": {},
+  "receipts": [],
+  "links": {
+    "crab": "crab://<hash>.post",
+    "resolve": "/v1/b3/<hash>.post",
+    "raw": "/o/b3:<hash>",
+    "manifest_raw": "/o/b3:<manifest_hash>"
+  },
+  "warnings": []
+}
+```
+
+---
+
+# 7. Text content bodies must be canonical
+
+NEXT_LEVEL already says the text asset body should be canonical JSON or canonical UTF-8 envelope, and should not hash arbitrary UI state. Ownership and receipts belong in the manifest, not inside the raw body. 
+
+Recommended raw content objects:
+
+## Post content object
+
+```json
+{
+  "schema": "ron.text-asset.v1",
+  "kind": "post",
+  "format": "text/plain; charset=utf-8",
+  "title": "Post title",
+  "body": "Post body",
+  "metadata": {
+    "post_kind": "short_text",
+    "language": "en",
+    "tags": ["post", "demo"]
+  },
+  "relations": {
+    "site": "crab://example-site",
+    "parent": "crab://<64hex>.post"
+  }
+}
+```
+
+## Comment content object
+
+```json
+{
+  "schema": "ron.text-asset.v1",
+  "kind": "comment",
+  "format": "text/plain; charset=utf-8",
+  "title": "Optional comment title",
+  "body": "Comment body",
+  "metadata": {
+    "comment_kind": "reply",
+    "language": "en",
+    "tags": ["comment", "reply"]
+  },
+  "relations": {
+    "site": "crab://example-site",
+    "target": "crab://<64hex>.post",
+    "parent": "crab://<64hex>.post",
+    "thread": "crab://<64hex>.thread"
+  }
+}
+```
+
+## Article content object
+
+```json
+{
+  "schema": "ron.text-asset.v1",
+  "kind": "article",
+  "format": "text/markdown; charset=utf-8",
+  "title": "Article title",
+  "subtitle": "Optional subtitle",
+  "summary": "Short summary",
+  "body": "# Article body",
+  "metadata": {
+    "article_kind": "essay",
+    "language": "en",
+    "tags": ["article", "essay"]
+  },
+  "relations": {
+    "site": "crab://example-site",
+    "hero_image": "crab://<64hex>.image",
+    "source": "crab://<64hex>.post"
+  }
+}
+```
+
+---
+
+# 8. Post/comment/article validation rules
+
+## Post
+
+Required:
+
+```text
+title
+body
+site_context_crab_url
+payer_account
+owner_passport_subject
+bytes > 0
+```
+
+Optional:
+
+```text
+parent_crab_url
+tags
+language
+content_warning
+post_kind
+```
+
+Relations:
+
+```text
+site required
+parent optional
+```
+
+## Comment
+
+Required:
+
+```text
+body
+site_context_crab_url
+parent_crab_url or target_crab_url
+payer_account
+owner_passport_subject
+bytes > 0
+```
+
+Optional:
+
+```text
+title
+thread_context_crab_url
+tags
+language
+content_warning
+comment_kind
+```
+
+Relations:
+
+```text
+site required
+target/parent required
+thread optional
+```
+
+## Article
+
+Required:
+
+```text
+title
+body
+site_context_crab_url
+payer_account
+owner_passport_subject
+bytes > 0
+```
+
+Optional:
+
+```text
+subtitle
+summary
+hero_image_crab_url
+linked_source_crab_url
+tags
+language
+content_warning
+article_kind
+```
+
+Relations:
+
+```text
+site required
+hero image optional, but must be .image if present
+source optional
+```
+
+This matches the product decision that posts and articles should not float disconnected from sites, and comments should point at a site plus a parent target.
+
+---
+
+# 9. The resolver probably does not need major changes
+
+The good news: the generic asset resolver already supports the typed asset-page path. Omnigate’s resolver parses:
+
+```text
+crab://<64hex>.<asset_kind>
+/v1/b3/<64hex>.<asset_kind>
+```
+
+and then hydrates the asset page by:
+
+```text
+parse crab/b3 target
+→ canonicalize to b3:<hash>
+→ call svc-index for asset manifest pointer
+→ call svc-storage HEAD for storage availability
+→ compose AssetPageResponse
+→ return JSON
+```
+
+
+
+The resolver already accepts asset kinds including:
+
+```text
+article
+post
+comment
+```
+
+
+
+`ron-proto` also already has `AssetKind` support for `article`, `post`, and `comment`, plus the canonical public URL helper for `crab://<64hex>.<kind>`.  The current Rust code also shows the `AssetKind` enum includes post/comment/article in the beta-supported suffix list. 
+
+So the missing piece is not mainly resolving. The missing piece is **publishing**: create the content object, manifest, and index pointer so the existing resolver has something to hydrate.
+
+---
+
+# 10. Recommended implementation sequence for next session
+
+## Step 0 — Review before code
+
+Before generating Rust files next session:
+
+```text
+Review CODECHECK.md
+Use CODECOMMENTS.MD header conventions
+Keep full paste-ready file paths
+Preserve no-direct-ledger/no-silent-spend invariants
+```
+
+## Step 1 — Add backend route exposure in `svc-gateway`
+
+File:
+
+```text
+crates/svc-gateway/src/routes/product.rs
+```
+
+Add route declarations:
+
+```rust
+.route("/assets/post/prepare", post(post_prepare))
+.route("/assets/post", post(post_publish))
+.route("/assets/comment/prepare", post(comment_prepare))
+.route("/assets/comment", post(comment_publish))
+.route("/assets/article/prepare", post(article_prepare))
+.route("/assets/article", post(article_publish))
+```
+
+Add proxy functions:
+
+```text
+post_prepare    → /v1/assets/post/prepare
+post_publish    → /v1/assets/post
+comment_prepare → /v1/assets/comment/prepare
+comment_publish → /v1/assets/comment
+article_prepare → /v1/assets/article/prepare
+article_publish → /v1/assets/article
+```
+
+Add/update tests:
+
+```text
+crates/svc-gateway/tests/product_routes_proxy.rs
+```
+
+Acceptance:
+
+```bash
+cargo fmt -p svc-gateway
+cargo clippy -p svc-gateway --all-targets --no-deps -- -D warnings
+cargo test -p svc-gateway --test product_routes_proxy
+cargo test -p svc-gateway --all-targets
+```
+
+## Step 2 — Add Omnigate text asset routes
+
+Likely file:
+
+```text
+crates/omnigate/src/routes/v1/assets.rs
+```
+
+Possible cleaner split:
+
+```text
+crates/omnigate/src/routes/v1/assets.rs
+crates/omnigate/src/routes/v1/text_assets.rs
+```
+
+If using a split, `assets.rs` can merge the image router and text router internally. But the lowest-risk path is to extend `assets.rs` because that is already mounted under `/v1/assets`.
+
+Add handlers:
+
+```text
+post_prepare
+post_publish
+comment_prepare
+comment_publish
+article_prepare
+article_publish
+```
+
+Add shared helpers:
+
+```text
+validate_text_asset_prepare()
+validate_text_asset_publish()
+build_text_content_bytes()
+store_paid_text_content()
+store_text_manifest()
+put_asset_manifest_pointer()
+build_text_asset_response()
+extract_paid_proof_headers()
+normalize_text_tags()
+validate_site_relation()
+validate_typed_relation()
+```
+
+Acceptance:
+
+```bash
+cargo fmt -p omnigate
+cargo clippy -p omnigate --all-targets --no-deps -- -D warnings
+cargo test -p omnigate --test image_asset_prepare
+cargo test -p omnigate --test text_asset_prepare
+cargo test -p omnigate --all-targets
+```
+
+## Step 3 — Add Omnigate tests
+
+New test file recommendation:
+
+```text
+crates/omnigate/tests/text_asset_publish.rs
+```
+
+Tests:
+
+```text
+post_prepare_returns_wallet_hold_template
+post_publish_stores_content_manifest_and_index_pointer
+comment_prepare_requires_site_and_parent_target
+comment_publish_stores_content_manifest_and_index_pointer
+article_prepare_requires_site_title_body
+article_publish_stores_content_manifest_and_index_pointer
+invalid_paid_proof_fails
+invalid_relation_kind_fails
+oversized_text_body_fails
+```
+
+Use dummy `svc-storage` and `svc-index` exactly like the image and site tests.
+
+## Step 4 — Add live smoke scripts
+
+New scripts:
+
+```text
+scripts/web3_text_asset_smoke.sh
+```
+
+or individual scripts:
+
+```text
+scripts/web3_post_asset_smoke.sh
+scripts/web3_comment_asset_smoke.sh
+scripts/web3_article_asset_smoke.sh
+```
+
+Default should be safe/read-only where possible, with mutation flags:
+
+```text
+RON_RUN_POST_CREATE=1
+RON_RUN_COMMENT_CREATE=1
+RON_RUN_ARTICLE_CREATE=1
+```
+
+Smoke flow:
+
+```text
+start stack
+prepare text asset
+wallet hold
+publish text asset
+resolve returned crab://<hash>.<kind>
+assert schema == omnigate.asset-page.v1
+assert asset_kind matches
+assert manifest present
+assert storage available
+assert owner/payout present
+assert wallet balance refresh works
+```
+
+## Step 5 — CrabLink retest
+
+After backend wiring:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Manual test order:
+
+```text
+crab://post
+→ fill title/body/site
+→ prepare
+→ hold
+→ publish
+→ open returned crab://<hash>.post
+
+crab://comment
+→ fill body/site/parent
+→ prepare
+→ hold
+→ publish
+→ open returned crab://<hash>.comment
+
+crab://article
+→ fill title/body/site
+→ prepare
+→ hold
+→ publish
+→ open returned crab://<hash>.article
+```
+
+---
+
+# 11. Carry-over notes for next session
+
+## Current project state
+
+CrabLink React lane is now ahead of RustyOnions backend for text primitives.
+
+Completed in CrabLink:
+
+```text
+crab://post page exists
+crab://post has draft builder
+crab://post has site-required manifest draft
+crab://post has Prepare → Confirm ROC Hold → Submit Post Publish panel
+
+crab://comment page exists
+crab://comment has draft builder
+crab://comment has required site context + parent target
+crab://comment has Prepare → Confirm ROC Hold → Submit Comment Publish panel
+
+crab://article page exists
+crab://article has draft builder
+crab://article now has site-required UI
+crab://article has Prepare → Confirm ROC Hold → Submit Article Publish panel
+```
+
+The expected current behavior is:
+
+```text
+post/comment/article prepare attempts fail honestly with backend not wired yet
+```
+
+This is correct because the Rust backend does not yet expose:
+
+```text
+/assets/post/prepare
+/assets/post
+/assets/comment/prepare
+/assets/comment
+/assets/article/prepare
+/assets/article
+```
+
+## Known working product proofs to preserve
+
+Image works:
+
+```text
+crab://image
+→ /assets/image/prepare
+→ /wallet/hold
+→ /assets/image
+→ returns crab://<hash>.image
+→ asset page resolves
+```
+
+Site works:
+
+```text
+crab://site
+→ /sites/prepare
+→ /wallet/hold
+→ root HTML stored as b3 object
+→ /sites
+→ crab://<site_name>
+→ site resolves/renders
+```
+
+Image embed works:
+
+```html
+<crab-image src="crab://<hash>.image"></crab-image>
+```
+
+inside site HTML.
+
+This proves the reference-graph direction:
+
+```text
+sites store references
+assets remain independently b3-addressed
+CrabLink resolves embeds through gateway only
+```
+
+## Backend facts to preserve
+
+`svc-gateway` is proxy-only.
+
+It should not:
+
+```text
+price
+store
+hydrate
+write index
+call wallet directly
+mutate ledger
+parse product manifests
+```
+
+Omnigate is the BFF/coordinator.
+
+It may:
+
+```text
+prepare product operations
+call storage estimate
+coordinate storage writes
+coordinate manifest storage
+coordinate index pointer writes
+hydrate asset/site pages
+proxy wallet façade routes
+```
+
+It must not:
+
+```text
+mutate ledger directly
+create wallet holds internally for publish routes
+silently spend ROC
+pretend receipt proof exists
+```
+
+`svc-storage` stores bytes by CID.
+
+`svc-index` stores pointers.
+
+`svc-wallet` is the wallet mutation front door.
+
+`ron-ledger` remains durable economic truth.
+
+## Key implementation target next session
+
+Build RustyOnions backend support for text assets:
+
+```text
+post first
+comment second
+article third
+```
+
+The cleanest backend strategy:
+
+```text
+1. Add shared text asset helpers in omnigate.
+2. Add post/comment/article routes in one backend batch.
+3. Add gateway proxy routes for all three.
+4. Add tests.
+5. Run post end-to-end first.
+6. Then comment.
+7. Then article.
+```
+
+Do not skip tests and do not wire only the UI.
+
+## Exact route family to implement
+
+Public gateway:
+
+```text
+POST /assets/post/prepare
+POST /assets/post
+POST /assets/comment/prepare
+POST /assets/comment
+POST /assets/article/prepare
+POST /assets/article
+```
+
+Omnigate internal:
+
+```text
+POST /v1/assets/post/prepare
+POST /v1/assets/post
+POST /v1/assets/comment/prepare
+POST /v1/assets/comment
+POST /v1/assets/article/prepare
+POST /v1/assets/article
+```
+
+Existing resolver routes should then work automatically after index pointers exist:
+
+```text
+GET /b3/<hash>.post
+GET /b3/<hash>.comment
+GET /b3/<hash>.article
+
+GET /crab/resolve?url=crab://<hash>.post
+GET /crab/resolve?url=crab://<hash>.comment
+GET /crab/resolve?url=crab://<hash>.article
+```
+
+## Text asset create/publish chain
+
+For each kind:
+
+```text
+Prepare:
+CrabLink sends strict JSON
+→ gateway
+→ omnigate
+→ storage estimate
+→ hold template returned
+
+Hold:
+CrabLink explicit confirmation
+→ gateway /wallet/hold
+→ omnigate wallet façade
+→ svc-wallet
+→ ron-ledger
+
+Publish:
+CrabLink sends strict JSON + paid proof headers
+→ gateway
+→ omnigate
+→ storage paid object write for content bytes
+→ storage /o for manifest bytes
+→ index asset pointer write
+→ response returns crab://<hash>.<kind>
+```
+
+## Required proof headers
+
+Use the modern header set:
+
+```text
+x-ron-paid-op: hold
+x-ron-paid-asset: roc
+x-ron-paid-estimate-minor: <amount>
+x-ron-wallet-txid: <txid>
+x-ron-wallet-receipt-hash: <receipt_hash>
+x-ron-wallet-from: <payer>
+x-ron-wallet-to: <escrow>
+x-ron-asset-kind: post/comment/article
+```
+
+Optional metadata headers:
+
+```text
+x-ron-asset-title
+x-ron-asset-description
+x-ron-asset-tags
+```
+
+Avoid depending on the older `x-ron-wallet-hold-txid` header in new CrabLink/backend contracts.
+
+## DTO/model recommendation
+
+Minimum viable backend DTOs can be local to Omnigate first, but the better long-term alignment is to add or confirm `ron-proto` DTOs for:
+
+```text
+TextAssetBodyV1
+PostAssetV1
+CommentAssetV1
+ArticleAssetV1
+AssetReferenceV1
+ReferenceGraphV1
+```
+
+NEXT_LEVEL explicitly says `ron-proto` owns cross-service DTOs and that text DTOs should come before service logic. 
+
+Practical compromise:
+
+```text
+If time is short:
+  implement strict local Omnigate DTOs first,
+  but keep field names aligned with future ron-proto.
+
+If time allows:
+  add ron-proto DTOs first,
+  then use them from Omnigate tests/routes.
+```
+
+## Suggested first backend batch files
+
+Likely Rust files:
+
+```text
+crates/svc-gateway/src/routes/product.rs
+crates/svc-gateway/tests/product_routes_proxy.rs
+
+crates/omnigate/src/routes/v1/assets.rs
+crates/omnigate/tests/text_asset_publish.rs
+```
+
+Possible DTO files if promoted immediately:
+
+```text
+crates/ron-proto/src/asset/text.rs
+crates/ron-proto/src/asset/mod.rs
+crates/ron-proto/tests/text_asset.rs
+```
+
+Possible smoke scripts:
+
+```text
+scripts/web3_post_asset_smoke.sh
+scripts/web3_comment_asset_smoke.sh
+scripts/web3_article_asset_smoke.sh
+```
+
+## Commands for next session
+
+RustyOnions:
+
+```bash
+cargo fmt
+cargo clippy -p ron-proto --all-targets --no-deps -- -D warnings
+cargo test -p ron-proto --all-targets
+
+cargo clippy -p omnigate --all-targets --no-deps -- -D warnings
+cargo test -p omnigate --test text_asset_publish
+cargo test -p omnigate --all-targets
+
+cargo clippy -p svc-gateway --all-targets --no-deps -- -D warnings
+cargo test -p svc-gateway --test product_routes_proxy
+cargo test -p svc-gateway --all-targets
+```
+
+CrabLink after backend:
+
+```bash
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+## Acceptance gate for the next major milestone
+
+A true green milestone is:
+
+```text
+crab://post publishes through CrabLink
+backend returns crab://<hash>.post
+GET /crab/resolve?url=crab://<hash>.post returns omnigate.asset-page.v1
+asset_kind == post
+manifest present
+storage availability present
+owner/payout present
+wallet balance refreshes
+```
+
+Then repeat for:
+
+```text
+crab://comment
+crab://article
+```
+
+## Priority warning
+
+Do not try to build embedding for post/comment/article onto sites until the backend publish path works.
+
+Correct order:
+
+```text
+1. Publish post/comment/article as real assets.
+2. Resolve them as typed asset pages.
+3. Then update embed registry/renderers from placeholder to real hydration.
+4. Then insert <crab-post>, <crab-comment>, <crab-article> into site HTML/reference graph.
+```
+
+This avoids fake assets and keeps the project clean.
+
+## Overall current estimate
+
+CrabLink frontend refactor for the text-primitive pages is around:
+
+```text
+post/comment/article UI contract: ~80–85% complete
+```
+
+because the pages, draft state, manifest previews, publish panels, and gateway client calls exist.
+
+RustyOnions backend support for those three text primitives is around:
+
+```text
+post/comment/article backend publish support: ~0–10% complete
+```
+
+because the generic resolver and asset kind vocabulary already support the suffixes, but the actual prepare/publish route families are not implemented.
+
+The next session should be a RustyOnions backend wiring session, not another CrabLink UI session.
+
+
+### END NOTE - MAY 13 2026 - 18:50 CST

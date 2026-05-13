@@ -1,8 +1,8 @@
 /**
  * RO:WHAT — Pure props-driven post draft workspace for the React-owned crab://post route.
- * RO:WHY — CrabLink refactor; reuses shared creator panels instead of old route-local hero/JSON/copy state.
- * RO:INTERACTS — PostPage.jsx, postDraftModel.js, shared components, React shell app context.
- * RO:INVARIANTS — local draft only; no fake b3 CID; no fake manifest CID; no publication claim; no silent ROC spend.
+ * RO:WHY — NEXT_LEVEL needs post drafts to be site-attached before real backend publish routes are used.
+ * RO:INTERACTS — PostPage.jsx, PostPublishFlow.jsx, postDraftModel.js, shared components, React shell app context.
+ * RO:INVARIANTS — local manifest draft only; no fake b3 CID; no fake manifest CID; no publication claim; no silent ROC spend.
  * RO:METRICS — none.
  * RO:CONFIG — optional local passport/wallet display labels from app settings.
  * RO:SECURITY — trusted UI only; no private keys; no seed phrases; no direct internal-service calls.
@@ -41,9 +41,11 @@ export default function PostDraft({ app, draftState }) {
     completeness,
   } = draftState;
 
+  const siteAttached = Boolean(manifest?.site_connection?.attached);
+
   return (
     <Card
-      eyebrow="Local builder"
+      eyebrow="Builder"
       title="Post draft"
       className="post-draft-card"
       actions={
@@ -57,13 +59,15 @@ export default function PostDraft({ app, draftState }) {
       }
     >
       <div className="post-draft-intro">
-        <Badge tone="warning">Local only</Badge>
+        <Badge tone="warning">Draft</Badge>
         <Badge tone="neutral">crab://post</Badge>
-        <Badge tone="neutral">No wallet action</Badge>
+        <Badge tone={siteAttached ? 'success' : 'warning'}>
+          {siteAttached ? 'site attached' : 'site required'}
+        </Badge>
       </div>
 
       <div className="post-form-grid">
-        <Field label="Title" help="Creator-facing post title. This is local draft text only.">
+        <Field label="Title" help="Creator-facing post title. Backend will verify final publish data." required>
           <TextInput
             value={draft.title}
             onChange={(event) => updateDraft('title', event.target.value)}
@@ -73,7 +77,7 @@ export default function PostDraft({ app, draftState }) {
 
         <Field
           label="Creator display"
-          help="Display label only. Backend identity truth must come from svc-gateway later."
+          help="Display label only. Backend identity truth must come from svc-gateway."
         >
           <TextInput
             value={draft.creatorDisplay}
@@ -82,7 +86,7 @@ export default function PostDraft({ app, draftState }) {
           />
         </Field>
 
-        <Field label="Post kind" help="Planning field only; no backend schema is claimed here.">
+        <Field label="Post kind" help="Planning field for the future backend post DTO.">
           <select
             className="cl-select"
             value={draft.postKind}
@@ -96,7 +100,7 @@ export default function PostDraft({ app, draftState }) {
           </select>
         </Field>
 
-        <Field label="Visibility" help="Planning field only; this page does not enforce access.">
+        <Field label="Visibility" help="Planning field only; backend policy must enforce access later.">
           <select
             className="cl-select"
             value={draft.visibility}
@@ -110,7 +114,7 @@ export default function PostDraft({ app, draftState }) {
           </select>
         </Field>
 
-        <Field label="Rights mode" help="Planning field only; no policy enforcement yet.">
+        <Field label="Rights mode" help="Planning field only; backend policy must verify/enforce later.">
           <select
             className="cl-select"
             value={draft.rightsMode}
@@ -159,8 +163,9 @@ export default function PostDraft({ app, draftState }) {
 
       <div className="post-form-grid">
         <Field
-          label="Site context crab URL"
-          help="Optional future reference to the site where this post belongs."
+          label="Site connection crab URL"
+          help="Required for post publishing. Posts should belong to a site reference graph, even though post bytes stay independently content-addressed."
+          required
         >
           <TextInput
             value={draft.siteContextCrabUrl}
@@ -172,7 +177,7 @@ export default function PostDraft({ app, draftState }) {
 
         <Field
           label="Parent post/comment crab URL"
-          help="Optional future thread/reference graph pointer."
+          help="Optional thread/reference graph pointer for replies or quote-style relationships."
         >
           <TextInput
             value={draft.parentCrabUrl}
@@ -185,7 +190,7 @@ export default function PostDraft({ app, draftState }) {
 
       <Field
         label="Tags"
-        help="Comma-separated draft tags. These are not indexed until a real backend publish route exists."
+        help="Comma-separated draft tags. Backend indexing only happens after real publish succeeds."
       >
         <TextInput
           value={draft.tags}
@@ -196,14 +201,14 @@ export default function PostDraft({ app, draftState }) {
 
       <Field
         label="Post body"
-        help="Plain text only. This page does not render posts as HTML."
+        help="Plain text only. CrabLink will send JSON to the gateway publish route; it does not render post body as HTML."
         required
       >
         <TextArea
           value={draft.body}
           onChange={(event) => updateDraft('body', event.target.value)}
           rows={12}
-          placeholder="Write a post that can later become a b3-backed asset..."
+          placeholder="Write a post that can become a b3-backed post asset..."
         />
       </Field>
 
@@ -223,7 +228,7 @@ export default function PostDraft({ app, draftState }) {
           <Badge tone={completeness === 100 ? 'success' : 'neutral'}>
             {completeness}% complete
           </Badge>
-          <span>Local draft state</span>
+          <span>{siteAttached ? 'Ready for gateway prepare' : 'Needs site connection'}</span>
         </div>
 
         <div className="post-action-buttons">
@@ -246,6 +251,8 @@ export default function PostDraft({ app, draftState }) {
 export function PostSidePanel({ draftState }) {
   const { draft, viewMode, stats, manifest, completeness } = draftState;
   const tags = manifest?.metadata?.tags || [];
+  const siteAttached = Boolean(stats.site_attached);
+  const parentAttached = Boolean(stats.parent_attached);
 
   return (
     <>
@@ -257,15 +264,17 @@ export function PostSidePanel({ draftState }) {
           { label: 'Lines', value: stats.lines || 0 },
           { label: 'Tags', value: tags.length },
           { label: 'Crab links', value: stats.crab_links || 0 },
+          { label: 'Site', value: siteAttached ? 'attached' : 'missing' },
+          { label: 'Parent', value: parentAttached ? 'attached' : 'optional' },
         ]}
-        notes={['local draft', 'plain text', 'no receipt']}
+        notes={['post draft', siteAttached ? 'site attached' : 'site required', 'backend proof required']}
       />
 
       <RouteTruthPanel
         routeKind="post"
         tone="warning"
-        title="Not backend truth"
-        copy="This is local UI state only. It does not create a content ID, manifest ID, receipt, index pointer, publication, hold, capture, release, or paid access event."
+        title="Backend truth boundary"
+        copy="The builder can form a post publish request, but only gateway responses from /assets/post can create real content IDs, manifest IDs, receipts, index pointers, and crab://<hash>.post URLs."
       />
 
       {viewMode === 'developer' ? (
@@ -284,6 +293,10 @@ export function PostSidePanel({ draftState }) {
             </p>
 
             <div className="post-preview-tags">
+              <Badge tone={siteAttached ? 'success' : 'warning'} uppercase={false}>
+                {siteAttached ? manifest?.site_connection?.normalized_crab_url : 'site connection required'}
+              </Badge>
+
               {draft.contentWarning ? (
                 <Badge tone="warning" uppercase={false}>
                   CW: {draft.contentWarning}

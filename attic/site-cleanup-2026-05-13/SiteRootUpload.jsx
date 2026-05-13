@@ -1,12 +1,12 @@
 /**
- * RO:WHAT — Local root HTML editor/importer/template picker for the React crab://site workspace.
- * RO:WHY — Restores polished site template cards while keeping backend root CID auto-fill support.
- * RO:INTERACTS — SiteCreate, SiteRender, SiteLaunchFlow, siteDraftModel root guard, siteTemplates.
+ * RO:WHAT — Local root HTML editor/importer/template/reference picker for the React crab://site workspace.
+ * RO:WHY — Restores polished site template cards and adds NEXT_LEVEL reference-graph composition while preserving backend root CID auto-fill support.
+ * RO:INTERACTS — SiteCreate, SiteRender, SiteLaunchFlow, SiteReferenceComposer, siteDraftModel root guard, siteTemplates.
  * RO:INVARIANTS — local editor only; storage happens in SiteLaunchFlow after explicit hold; no fake root CID; no image CID as site root.
  * RO:METRICS — none.
- * RO:CONFIG — draft rootHtml and rootDocumentCid fields.
- * RO:SECURITY — selected HTML is previewed in sandbox; scripts are stripped in preview.
- * RO:TEST — manual local HTML paste/file import/template insert/store launch smoke.
+ * RO:CONFIG — draft rootHtml, assetMapJson, renderPolicy, and rootDocumentCid fields.
+ * RO:SECURITY — selected HTML is previewed in sandbox; scripts are stripped in preview; references are local HTML only until backend publish exists.
+ * RO:TEST — manual local HTML paste/file import/template insert/reference insert/store launch smoke.
  */
 
 import { useState } from 'react';
@@ -17,6 +17,7 @@ import CopyButton from '../../shared/components/CopyButton.jsx';
 import Field from '../../shared/components/Field.jsx';
 import TextArea from '../../shared/components/TextArea.jsx';
 import TextInput from '../../shared/components/TextInput.jsx';
+import SiteReferenceComposer from './SiteReferenceComposer.jsx';
 import { SITE_TEMPLATES, buildSiteTemplatePatch } from './siteTemplates.js';
 
 export default function SiteRootUpload({ draftState }) {
@@ -137,6 +138,8 @@ export default function SiteRootUpload({ draftState }) {
           ))}
         </div>
       </section>
+
+      <SiteReferenceComposer draftState={draftState} />
 
       <div className={`site-root-guard is-${rootGuard.level || 'warning'}`}>
         <strong>Root guard</strong>

@@ -9,6 +9,13 @@
  * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://post route smoke.
  */
 
+import {
+  buildContentReferenceGraphDraft,
+  buildReferenceConnectionDraft,
+  buildSiteConnectionDraft,
+  connectionIsSatisfied,
+} from '../../shared/manifest/siteAttachment.js';
+
 export const DEFAULT_POST_DRAFT = Object.freeze({
   title: '',
   body: '',
@@ -71,6 +78,23 @@ export function buildPostManifestDraft(draft, { app = null, route = null } = {})
     app?.settings?.handle ||
     app?.settings?.passportSubject ||
     '';
+  const siteConnection = buildSiteConnectionDraft({
+    siteContextCrabUrl: safeDraft.siteContextCrabUrl,
+    assetKind: 'post',
+    required: true,
+    relation: 'published_on_site',
+  });
+  const parentConnection = buildReferenceConnectionDraft({
+    crabUrl: safeDraft.parentCrabUrl,
+    acceptedAssetKinds: ['post', 'comment'],
+    required: false,
+    relation: 'reply_or_thread_parent',
+    label: 'parent post/comment',
+  });
+  const referenceGraph = buildContentReferenceGraphDraft({
+    siteConnection,
+    parentConnection,
+  });
 
   return {
     schema: 'crablink.local.post-draft.v1',
@@ -101,10 +125,14 @@ export function buildPostManifestDraft(draft, { app = null, route = null } = {})
       wallet_account_label: app?.settings?.walletAccount || '',
       backend_confirmed: false,
     },
+    site_connection: siteConnection,
+    reference_graph: referenceGraph,
     linked_assets: {
       site_context_crab_url: safeDraft.siteContextCrabUrl.trim() || null,
       parent_crab_url: safeDraft.parentCrabUrl.trim() || null,
       embedded_assets: [],
+      site_connection: siteConnection,
+      reference_graph: referenceGraph,
     },
     rights_policy: {
       mode: safeDraft.rightsMode,
@@ -148,12 +176,27 @@ export function postStats(draft) {
   const tags = parseTags(draft?.tags || '');
   const links = countCrabLinks(combined);
 
+  const siteConnection = buildSiteConnectionDraft({
+    siteContextCrabUrl: draft?.siteContextCrabUrl,
+    assetKind: 'post',
+    required: true,
+    relation: 'published_on_site',
+  });
+  const parentConnection = buildReferenceConnectionDraft({
+    crabUrl: draft?.parentCrabUrl,
+    acceptedAssetKinds: ['post', 'comment'],
+    relation: 'reply_or_thread_parent',
+    label: 'parent post/comment',
+  });
+
   return {
     characters: body.length,
     words: body.trim() ? body.trim().split(/\s+/).length : 0,
     lines: body ? body.split(/\r\n|\r|\n/).length : 0,
     tags: tags.length,
     crab_links: links,
+    site_attached: connectionIsSatisfied(siteConnection),
+    parent_attached: connectionIsSatisfied(parentConnection),
   };
 }
 
@@ -172,6 +215,12 @@ export function getPostCompleteness(draft) {
     safeDraft.visibility,
     safeDraft.rightsMode,
     safeDraft.moderationMode,
+    connectionIsSatisfied(buildSiteConnectionDraft({
+      siteContextCrabUrl: safeDraft.siteContextCrabUrl,
+      assetKind: 'post',
+      required: true,
+      relation: 'published_on_site',
+    })),
   ];
 
   const complete = checks.filter(Boolean).length;

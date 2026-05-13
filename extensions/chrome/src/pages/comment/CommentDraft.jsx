@@ -1,8 +1,8 @@
 /**
  * RO:WHAT — Pure props-driven comment draft workspace for the React-owned crab://comment route.
- * RO:WHY — CrabLink refactor; reuses shared creator panels and keeps route state owned by CommentPage.
- * RO:INTERACTS — CommentPage.jsx, commentDraftModel.js, shared components, React shell app context.
- * RO:INVARIANTS — local draft only; no fake b3 CID; no fake manifest CID; no publication claim; no silent ROC spend.
+ * RO:WHY — NEXT_LEVEL needs comments to be parent-targeted and site-attached before real backend publish routes are used.
+ * RO:INTERACTS — CommentPage.jsx, CommentPublishFlow.jsx, commentDraftModel.js, shared components, React shell app context.
+ * RO:INVARIANTS — local manifest draft only; no fake b3 CID; no fake manifest CID; no publication claim; no silent ROC spend.
  * RO:METRICS — none.
  * RO:CONFIG — optional local passport/wallet display labels from app settings.
  * RO:SECURITY — trusted UI only; no private keys; no seed phrases; no direct internal-service calls.
@@ -41,9 +41,12 @@ export default function CommentDraft({ app, draftState }) {
     completeness,
   } = draftState;
 
+  const siteAttached = Boolean(manifest?.site_connection?.attached);
+  const parentAttached = Boolean(manifest?.reference_graph?.parent?.attached);
+
   return (
     <Card
-      eyebrow="Local builder"
+      eyebrow="Builder"
       title="Comment draft"
       className="comment-draft-card"
       actions={
@@ -57,9 +60,14 @@ export default function CommentDraft({ app, draftState }) {
       }
     >
       <div className="comment-draft-intro">
-        <Badge tone="warning">Local only</Badge>
+        <Badge tone="warning">Draft</Badge>
         <Badge tone="neutral">crab://comment</Badge>
-        <Badge tone="neutral">No wallet action</Badge>
+        <Badge tone={siteAttached ? 'success' : 'warning'}>
+          {siteAttached ? 'site attached' : 'site required'}
+        </Badge>
+        <Badge tone={parentAttached ? 'success' : 'warning'}>
+          {parentAttached ? 'parent attached' : 'parent required'}
+        </Badge>
       </div>
 
       <div className="comment-form-grid">
@@ -73,7 +81,7 @@ export default function CommentDraft({ app, draftState }) {
 
         <Field
           label="Creator display"
-          help="Display label only. Backend identity truth must come from svc-gateway later."
+          help="Display label only. Backend identity truth must come from svc-gateway."
         >
           <TextInput
             value={draft.creatorDisplay}
@@ -82,7 +90,7 @@ export default function CommentDraft({ app, draftState }) {
           />
         </Field>
 
-        <Field label="Comment kind" help="Planning field only; no backend schema is claimed here.">
+        <Field label="Comment kind" help="Planning field for the future backend comment DTO.">
           <select
             className="cl-select"
             value={draft.commentKind}
@@ -96,7 +104,7 @@ export default function CommentDraft({ app, draftState }) {
           </select>
         </Field>
 
-        <Field label="Visibility" help="Planning field only; this page does not enforce access.">
+        <Field label="Visibility" help="Planning field only; backend policy must enforce access later.">
           <select
             className="cl-select"
             value={draft.visibility}
@@ -110,7 +118,7 @@ export default function CommentDraft({ app, draftState }) {
           </select>
         </Field>
 
-        <Field label="Rights mode" help="Planning field only; no policy enforcement yet.">
+        <Field label="Rights mode" help="Planning field only; backend policy must verify/enforce later.">
           <select
             className="cl-select"
             value={draft.rightsMode}
@@ -160,7 +168,8 @@ export default function CommentDraft({ app, draftState }) {
       <div className="comment-form-grid">
         <Field
           label="Parent post/comment crab URL"
-          help="Optional future reference to the post or comment being replied to."
+          help="Required for comment publishing. Use a crab://<64 lowercase hex>.post or crab://<64 lowercase hex>.comment target."
+          required
         >
           <TextInput
             value={draft.parentCrabUrl}
@@ -172,7 +181,8 @@ export default function CommentDraft({ app, draftState }) {
 
         <Field
           label="Site context crab URL"
-          help="Optional future reference to the site where this comment belongs."
+          help="Required for publish. Comments should belong to a site context even though comment bytes stay independently content-addressed."
+          required
         >
           <TextInput
             value={draft.siteContextCrabUrl}
@@ -197,18 +207,18 @@ export default function CommentDraft({ app, draftState }) {
 
       <Field
         label="Tags"
-        help="Comma-separated draft tags. These are not indexed until a real backend publish route exists."
+        help="Comma-separated draft tags. Backend indexing only happens after real publish succeeds."
       >
         <TextInput
           value={draft.tags}
           onChange={(event) => updateDraft('tags', event.target.value)}
-          placeholder="comment, reply, moderation"
+          placeholder="comment, reply"
         />
       </Field>
 
       <Field
         label="Comment body"
-        help="Plain text only. This page does not render comments as HTML."
+        help="Plain text only. CrabLink will send JSON to the gateway publish route; it does not render comment body as HTML."
         required
       >
         <TextArea
@@ -235,7 +245,7 @@ export default function CommentDraft({ app, draftState }) {
           <Badge tone={completeness === 100 ? 'success' : 'neutral'}>
             {completeness}% complete
           </Badge>
-          <span>Local draft state</span>
+          <span>{siteAttached && parentAttached ? 'Ready for gateway prepare' : 'Needs site and parent target'}</span>
         </div>
 
         <div className="comment-action-buttons">
@@ -258,6 +268,9 @@ export default function CommentDraft({ app, draftState }) {
 export function CommentSidePanel({ draftState }) {
   const { draft, viewMode, stats, manifest, completeness } = draftState;
   const tags = manifest?.metadata?.tags || [];
+  const siteAttached = Boolean(stats.site_attached);
+  const parentAttached = Boolean(stats.parent_attached);
+  const threadAttached = Boolean(stats.thread_attached);
 
   return (
     <>
@@ -269,15 +282,18 @@ export function CommentSidePanel({ draftState }) {
           { label: 'Lines', value: stats.lines || 0 },
           { label: 'Tags', value: tags.length },
           { label: 'Crab links', value: stats.crab_links || 0 },
+          { label: 'Site', value: siteAttached ? 'attached' : 'missing' },
+          { label: 'Parent', value: parentAttached ? 'attached' : 'missing' },
+          { label: 'Thread', value: threadAttached ? 'attached' : 'optional' },
         ]}
-        notes={['local draft', 'plain text', 'no receipt']}
+        notes={['comment draft', siteAttached ? 'site attached' : 'site required', parentAttached ? 'parent attached' : 'parent required']}
       />
 
       <RouteTruthPanel
         routeKind="comment"
         tone="warning"
-        title="Not backend truth"
-        copy="This is local UI state only. It does not create a content ID, manifest ID, receipt, index pointer, publication, hold, capture, release, or paid access event."
+        title="Backend truth boundary"
+        copy="The builder can form a comment publish request, but only gateway responses from /assets/comment can create real content IDs, manifest IDs, receipts, index pointers, and crab://<hash>.comment URLs."
       />
 
       {viewMode === 'developer' ? (
@@ -296,6 +312,14 @@ export function CommentSidePanel({ draftState }) {
             </p>
 
             <div className="comment-preview-tags">
+              <Badge tone={parentAttached ? 'success' : 'warning'} uppercase={false}>
+                {parentAttached ? manifest?.reference_graph?.parent?.normalized_crab_url || draft.parentCrabUrl : 'parent target required'}
+              </Badge>
+
+              <Badge tone={siteAttached ? 'success' : 'warning'} uppercase={false}>
+                {siteAttached ? manifest?.site_connection?.normalized_crab_url || draft.siteContextCrabUrl : 'site context required'}
+              </Badge>
+
               {draft.contentWarning ? (
                 <Badge tone="warning" uppercase={false}>
                   CW: {draft.contentWarning}

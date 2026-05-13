@@ -1,12 +1,12 @@
 /**
- * RO:WHAT — Explicit React prepare → wallet hold → store root HTML → site create flow for crab://site.
- * RO:WHY — Restores old protected site-launch parity: backend root CID auto-fill before /sites create.
- * RO:INTERACTS — siteClient, objectClient, walletClient, SitePage, app.refreshWallet, gateway /sites/prepare, /wallet/hold, /paid/o, /sites.
- * RO:INVARIANTS — no silent ROC spend; create requires real root_document_cid and backend hold proof; no direct storage/index/ledger calls.
- * RO:METRICS — displays gateway correlation IDs for prepare/root-store/create diagnostics.
- * RO:CONFIG — uses app settings for gateway URL, passport subject, wallet account, and bearer token.
- * RO:SECURITY — root HTML is stored as untrusted bytes and later rendered only in a scriptless sandbox.
- * RO:TEST — manual crab://site prepare/hold/store-root/create smoke from extension React button.
+ * RO:WHAT — Guided prepare → wallet hold → store root HTML → site create flow for crab://site.
+ * RO:WHY — Combines real site setup inputs with the proven explicit paid launch sequence.
+ * RO:INTERACTS — SiteGuidedSetup, siteClient, objectClient, walletClient, gateway /sites/prepare, /wallet/hold, /paid/o, /sites.
+ * RO:INVARIANTS — current passport only; no silent ROC spend; create requires real root CID and backend hold proof.
+ * RO:METRICS — displays gateway correlation IDs inside collapsed diagnostics.
+ * RO:CONFIG — uses app settings/identity for current passport and wallet only.
+ * RO:SECURITY — root HTML is untrusted bytes and later rendered only in a scriptless sandbox.
+ * RO:TEST — manual crab://site guided launch smoke from extension React button.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -33,6 +33,9 @@ import {
   stableSiteIdempotencyKey,
   summarizeSiteCreateData,
 } from '../../shared/api/siteClient.js';
+import { normalizeSiteName, parseJsonObject } from './siteDraftModel.js';
+import SiteGuidedSetup, { getCurrentCreatorIdentity } from './SiteGuidedSetup.jsx';
+import './SiteLaunchFlow.css';
 
 const DEFAULT_ESCROW_ACCOUNT = 'escrow_paid_write';
 
@@ -45,125 +48,108 @@ const IDLE = Object.freeze({
 });
 
 export default function SiteLaunchFlow({ app, draftState }) {
-  const settings = app?.settings || {};
-  const siteClient = useMemo(
-    () => createSiteClient(app?.clients?.gateway),
-    [app?.clients?.gateway],
-  );
-  const objectClient = useMemo(
-    () => createObjectClient(app?.clients?.gateway),
-    [app?.clients?.gateway],
-  );
+  const siteClient = useMemo(() => createSiteClient(app?.clients?.gateway), [app?.clients?.gateway]);
+  const objectClient = useMemo(() => createObjectClient(app?.clients?.gateway), [app?.clients?.gateway]);
+  const draft = draftState?.draft || {};
+  const stats = draftState?.stats || {};
+  const manifest = draftState?.manifest || {};
+  const updateDraft = draftState?.updateDraft;
+  const creator = useMemo(() => getCurrentCreatorIdentity(app, draft), [app, draft]);
+  const developerMode = draftState?.viewMode === 'developer' || app?.settings?.devMode === true;
 
   const [escrowAccount, setEscrowAccount] = useState(DEFAULT_ESCROW_ACCOUNT);
-  const [holdNonce, setHoldNonce] = useState(() => loadNextNonceHint(settings.walletAccount));
+  const [holdNonce, setHoldNonce] = useState(() => loadNextNonceHint(creator.walletAccount));
   const [prepareState, setPrepareState] = useState(IDLE);
   const [holdState, setHoldState] = useState(IDLE);
   const [rootStoreState, setRootStoreState] = useState(IDLE);
   const [createState, setCreateState] = useState(IDLE);
   const [storedRootCid, setStoredRootCid] = useState('');
 
-  const draft = draftState?.draft || {};
-  const stats = draftState?.stats || {};
-  const manifest = draftState?.manifest || {};
-  const updateDraft = draftState?.updateDraft;
-
+  const siteName = normalizeSiteName(draft.siteName);
   const rootDocumentCid = normalizeSiteCid(storedRootCid || draft.rootDocumentCid);
   const rootHtmlBytes = byteLength(draft.rootHtml || '');
   const rootHtmlFingerprint = sourceFingerprint(draft.rootHtml || '');
-
   const preflight = getPreflight({
     draft,
-    rootDocumentCid,
+    creator,
     rootHtmlBytes,
-    settings,
     stats,
   });
 
   const prepareRequest = useMemo(() => {
     try {
       return normalizeSitePrepareRequest({
-        site_name: draft.siteName,
+        site_name: siteName,
         files: [
           {
             path: 'index.html',
             bytes: rootHtmlBytes,
           },
         ],
-        payer_account: settings.walletAccount,
-        owner_passport_subject: settings.passportSubject || draft.ownerPassport,
-        owner_wallet_account: settings.walletAccount || draft.ownerWallet,
+        payer_account: creator.walletAccount,
+        owner_passport_subject: creator.passportSubject,
+        owner_wallet_account: creator.walletAccount,
         title: draft.title,
         description: draft.description,
         client_idempotency_key: stableSiteIdempotencyKey(
           'site-prepare',
-          draft.siteName,
+          siteName,
           rootHtmlBytes,
           draft.title,
+          creator.passportSubject,
         ),
       });
     } catch (_error) {
       return null;
     }
   }, [
-    draft.siteName,
+    siteName,
+    rootHtmlBytes,
     draft.title,
     draft.description,
-    draft.ownerPassport,
-    draft.ownerWallet,
-    rootHtmlBytes,
-    settings.walletAccount,
-    settings.passportSubject,
+    creator.walletAccount,
+    creator.passportSubject,
   ]);
 
   const createRequest = useMemo(() => {
     try {
       return normalizeSiteCreateRequest({
-        site_name: draft.siteName,
+        site_name: siteName,
         root_document_cid: rootDocumentCid,
-        owner_passport_subject: settings.passportSubject || draft.ownerPassport,
-        owner_wallet_account: settings.walletAccount || draft.ownerWallet,
+        owner_passport_subject: creator.passportSubject,
+        owner_wallet_account: creator.walletAccount,
         title: draft.title,
         description: draft.description,
         route_map: mergeRootRoute(draft.routeMapJson, rootDocumentCid),
         asset_map: mergeRootAsset(draft.assetMapJson, rootDocumentCid),
         client_idempotency_key: stableSiteIdempotencyKey(
           'site-create',
-          draft.siteName,
+          siteName,
           rootDocumentCid,
           draft.title,
+          creator.passportSubject,
         ),
       });
     } catch (_error) {
       return null;
     }
   }, [
-    draft.siteName,
+    siteName,
+    rootDocumentCid,
+    creator.passportSubject,
+    creator.walletAccount,
     draft.title,
     draft.description,
-    draft.ownerPassport,
-    draft.ownerWallet,
     draft.routeMapJson,
     draft.assetMapJson,
-    rootDocumentCid,
-    settings.walletAccount,
-    settings.passportSubject,
   ]);
 
   const amountMinor = extractPrepareAmountMinor(prepareState.data);
 
   const holdRequest = useMemo(() => {
-    if (!amountMinor || !prepareState.data) {
+    if (!amountMinor || !prepareState.data || !creator.walletAccount) {
       return null;
     }
-
-    const from = stringValue(
-      prepareState.data?.wallet_hold?.payer_account,
-      prepareState.data?.wallet_hold_template?.from,
-      prepareState.data?.wallet_hold?.from,
-      prepareRequest?.payer_account,
-      settings.walletAccount,
-    );
 
     const to = stringValue(
       prepareState.data?.wallet_hold?.escrow_account,
@@ -175,27 +161,35 @@ export default function SiteLaunchFlow({ app, draftState }) {
     const nonce = Number(holdNonce);
     const safeNonce = Number.isSafeInteger(nonce) && nonce > 0 ? nonce : 1;
 
-    if (!from || !to) {
+    if (!to) {
       return null;
     }
 
     return {
-      from,
+      from: creator.walletAccount,
       to,
       asset: 'roc',
       amount_minor: amountMinor,
       nonce: safeNonce,
-      memo: `CrabLink site launch hold for ${draft.siteName || 'site'}`,
+      memo: `CrabLink site launch hold for ${siteName || 'site'}`,
       idempotency_key: stableSiteIdempotencyKey(
         'site-wallet-hold',
         prepareRequest?.client_idempotency_key,
-        from,
+        creator.walletAccount,
         to,
         amountMinor,
         safeNonce,
       ),
     };
-  }, [amountMinor, prepareState.data, prepareRequest, settings.walletAccount, escrowAccount, holdNonce, draft.siteName]);
+  }, [
+    amountMinor,
+    prepareState.data,
+    prepareRequest,
+    creator.walletAccount,
+    escrowAccount,
+    holdNonce,
+    siteName,
+  ]);
 
   const paidProof = useMemo(() => {
     if (holdState.status !== 'ok') {
@@ -240,7 +234,28 @@ export default function SiteLaunchFlow({ app, draftState }) {
     Boolean(rootDocumentCid) &&
     (rootStoredForCurrentHtml || Boolean(draft.rootDocumentCid));
 
+  const completedRoot = Boolean(rootDocumentCid) && (rootStoredForCurrentHtml || Boolean(draft.rootDocumentCid));
   const createdSummary = createState.status === 'ok' ? summarizeSiteCreateData(createState.data) : null;
+  const activeStep = getActiveStep({
+    preflight,
+    prepareState,
+    holdState,
+    paidProof,
+    completedRoot,
+    canCreate,
+    createState,
+  });
+  const steps = buildSteps({
+    activeStep,
+    prepareState,
+    holdState,
+    paidProof,
+    rootStoreState,
+    completedRoot,
+    createState,
+    canCreate,
+  });
+  const hasLaunchError = [prepareState, holdState, rootStoreState, createState].some((state) => state.status === 'error');
 
   useEffect(() => {
     setPrepareState(IDLE);
@@ -248,12 +263,12 @@ export default function SiteLaunchFlow({ app, draftState }) {
     setRootStoreState(IDLE);
     setCreateState(IDLE);
     setStoredRootCid(normalizeSiteCid(draft.rootDocumentCid));
-    setHoldNonce(loadNextNonceHint(settings.walletAccount));
+    setHoldNonce(loadNextNonceHint(creator.walletAccount));
   }, [
-    draft.siteName,
+    siteName,
     rootHtmlFingerprint,
-    settings.walletAccount,
-    settings.passportSubject,
+    creator.walletAccount,
+    creator.passportSubject,
   ]);
 
   useEffect(() => {
@@ -262,7 +277,7 @@ export default function SiteLaunchFlow({ app, draftState }) {
     if (cid !== storedRootCid) {
       setStoredRootCid(cid);
     }
-  }, [draft.rootDocumentCid]);
+  }, [draft.rootDocumentCid, storedRootCid]);
 
   async function sendPrepare() {
     if (!prepareRequest || !preflight.canPrepare) {
@@ -333,13 +348,14 @@ export default function SiteLaunchFlow({ app, draftState }) {
       [
         'Confirm ROC hold for site launch?',
         '',
+        `Creator: ${creator.creatorDisplay || creator.passportSubject}`,
+        `Site: crab://${siteName}`,
         `Amount: ${formatMinorUnits(holdRequest.amount_minor)} ROC minor units`,
         `From: ${holdRequest.from}`,
         `Escrow: ${holdRequest.to}`,
         `Nonce: ${holdRequest.nonce}`,
         '',
         'This sends a wallet hold through the configured gateway.',
-        'If the wallet returns a nonce conflict, CrabLink will retry once with the backend-provided expected nonce.',
         'It does not store root HTML or create the site pointer until you click the next buttons.',
       ].join('\n'),
     );
@@ -378,7 +394,7 @@ export default function SiteLaunchFlow({ app, draftState }) {
 
       if (Number.isSafeInteger(nextNonce) && nextNonce > 1) {
         setHoldNonce(String(nextNonce));
-        persistNextNonceHint(usedRequest.from || settings.walletAccount, nextNonce);
+        persistNextNonceHint(usedRequest.from || creator.walletAccount, nextNonce);
       }
 
       setHoldState({
@@ -392,22 +408,21 @@ export default function SiteLaunchFlow({ app, draftState }) {
         request: usedRequest,
       });
 
-      await app?.refreshWallet?.(settings.walletAccount);
+      await app?.refreshWallet?.(creator.walletAccount);
 
       app?.notify?.({
         title: response?.nonceRecovery?.recovered ? 'ROC hold created after nonce retry' : 'ROC hold created',
         message: normalizedHold.receipt_hash
-          ? response?.nonceRecovery?.recovered
-            ? `CrabLink retried automatically with nonce ${response.nonceRecovery.retried_nonce}.`
-            : 'Hold proof ready. Store Root HTML is now available.'
+          ? 'Hold proof ready. Store Root HTML is now available.'
           : 'Hold succeeded, but the receipt hash was not found in the response.',
         tone: normalizedHold.receipt_hash ? 'success' : 'warning',
       });
     } catch (error) {
       const expectedNonce = expectedNonceFromWalletError(error);
+
       if (expectedNonce) {
         setHoldNonce(String(expectedNonce));
-        persistNextNonceHint(holdRequest.from || settings.walletAccount, expectedNonce);
+        persistNextNonceHint(holdRequest.from || creator.walletAccount, expectedNonce);
       }
 
       setHoldState({
@@ -442,7 +457,8 @@ export default function SiteLaunchFlow({ app, draftState }) {
       [
         'Store Root HTML?',
         '',
-        `Site: crab://${draft.siteName || 'site'}`,
+        `Creator: ${creator.creatorDisplay || creator.passportSubject}`,
+        `Site: crab://${siteName}`,
         `Bytes: ${formatBytes(rootHtmlBytes)}`,
         `Paid proof txid: ${paidProof.txid}`,
         '',
@@ -506,7 +522,7 @@ export default function SiteLaunchFlow({ app, draftState }) {
 
       app?.notify?.({
         title: 'Root HTML stored',
-        message: `${shortCid(cid)} auto-filled. Click Create Site to write crab://${draft.siteName || '<site_name>'}.`,
+        message: `${shortCid(cid)} auto-filled. Click Create Site to write crab://${siteName || '<site_name>'}.`,
         tone: 'success',
       });
     } catch (error) {
@@ -542,6 +558,7 @@ export default function SiteLaunchFlow({ app, draftState }) {
       [
         'Create CrabLink site?',
         '',
+        `Creator: ${creator.creatorDisplay || creator.passportSubject}`,
         `Site: crab://${createRequest.site_name}`,
         `Root: ${createRequest.root_document_cid}`,
         `Txid: ${paidProof.txid}`,
@@ -586,7 +603,7 @@ export default function SiteLaunchFlow({ app, draftState }) {
         request: createRequest,
       });
 
-      await app?.refreshWallet?.(settings.walletAccount);
+      await app?.refreshWallet?.(creator.walletAccount);
 
       app?.notify?.({
         title: 'Site created',
@@ -618,6 +635,7 @@ export default function SiteLaunchFlow({ app, draftState }) {
 
   function openCreatedSite() {
     const url = createdSummary?.crabUrl;
+
     if (url && typeof app?.navigate === 'function') {
       app.navigate(url);
     }
@@ -626,108 +644,251 @@ export default function SiteLaunchFlow({ app, draftState }) {
   return (
     <Card
       eyebrow="Launch"
-      title="Site launch flow"
-      className="site-launch-card"
+      title="Guided site launch"
+      className="site-launch-card site-launch-compact-card"
       actions={
         <div className="site-page-actions">
-          <Badge tone={preflight.ready ? 'success' : 'warning'}>
-            {preflight.ready ? 'ready' : 'needs steps'}
+          <Badge tone={createdSummary?.crabUrl ? 'success' : preflight.canPrepare ? 'info' : 'warning'}>
+            {createdSummary?.crabUrl ? 'created' : preflight.canPrepare ? 'ready for flow' : 'needs setup'}
           </Badge>
-          <Badge tone="neutral">prepare</Badge>
-          <Badge tone="neutral">hold</Badge>
-          <Badge tone="neutral">store root</Badge>
-          <Badge tone="neutral">create</Badge>
+          <Badge tone="neutral">current passport only</Badge>
+          <Badge tone="neutral">gateway-only</Badge>
         </div>
       }
     >
-      <p className="site-panel-note">
-        Store Root HTML only creates a raw b3 root document. The named URL, such as <code>crab://ron5</code>,
-        exists only after Create Site successfully writes the site manifest pointer.
-      </p>
+      <SiteGuidedSetup app={app} draftState={draftState} rootDocumentCid={rootDocumentCid} />
 
-      <div className="site-launch-preflight">
-        <Fact label="Site" value={draft.siteName ? `crab://${draft.siteName}` : 'not set'} />
-        <Fact label="Root HTML bytes" value={formatBytes(rootHtmlBytes)} />
-        <Fact label="Root document CID" value={rootDocumentCid || 'not stored yet'} monospace />
-        <Fact label="Passport" value={settings.passportSubject || draft.ownerPassport || 'missing'} />
-        <Fact label="Wallet" value={settings.walletAccount || draft.ownerWallet || 'missing'} />
-        <Fact label="Completeness" value={`${draftState?.completeness || 0}%`} />
+      <div className="site-launch-hero">
+        <div>
+          <p className="site-launch-route">{siteName ? `crab://${siteName}` : 'crab://<site-name>'}</p>
+          <p className="site-panel-note">
+            Prepare estimates the launch. Hold creates an explicit ROC hold. Store Root HTML returns a real
+            b3 root CID. Create Site writes the named pointer.
+          </p>
+        </div>
+
+        <div className="site-launch-next-card">
+          <span>Current step</span>
+          <strong>{labelForStep(activeStep)}</strong>
+          <small>{copyForStep(activeStep, preflight, proofIssue, rootDocumentCid)}</small>
+        </div>
       </div>
 
-      {!preflight.ready && (
-        <div className="site-launch-warning">
-          <strong>Launch status</strong>
-          <span>{preflight.reason}</span>
-        </div>
-      )}
+      <div className="site-launch-step-grid" aria-label="Site launch step status">
+        {steps.map((step) => (
+          <LaunchStepCard key={step.key} step={step} />
+        ))}
+      </div>
 
-      <section className="site-launch-step">
-        <header>
-          <div>
-            <p className="cl-eyebrow">Step 1</p>
-            <h3>Prepare site launch</h3>
-          </div>
-          <Badge tone={toneForStatus(prepareState.status)}>{labelForStatus(prepareState.status)}</Badge>
-        </header>
+      {hasLaunchError && <ErrorBanner states={{ prepareState, holdState, rootStoreState, createState }} />}
 
-        <p>
-          Sends strict JSON metadata to <code>/sites/prepare</code>. This estimates the paid action and returns wallet
-          hold instructions. It does not create the site pointer.
-        </p>
-
-        <div className="site-page-actions">
-          <Button variant="primary" disabled={!preflight.canPrepare || !prepareRequest || prepareState.status === 'sending'} onClick={sendPrepare}>
-            {prepareState.status === 'sending' ? 'Preparing…' : 'Prepare Site'}
-          </Button>
-          <CopyButton text={JSON.stringify(prepareRequest || {}, null, 2)} label="Copy prepare JSON" disabled={!prepareRequest} />
-        </div>
-
-        <JsonPreview
-          label="Prepare request/result"
-          data={{
-            request: prepareRequest,
-            result: summarizeResult(prepareState),
-            amount_minor: amountMinor || null,
-          }}
-          initiallyOpen={prepareState.status === 'error'}
+      <section className="site-launch-action-box" aria-label="Active launch action">
+        <ActiveAction
+          activeStep={activeStep}
+          preflight={preflight}
+          prepareState={prepareState}
+          holdState={holdState}
+          rootStoreState={rootStoreState}
+          createState={createState}
+          holdRequest={holdRequest}
+          paidProof={paidProof}
+          proofIssue={proofIssue}
+          rootDocumentCid={rootDocumentCid}
+          rootHtmlBytes={rootHtmlBytes}
+          rootStoredForCurrentHtml={rootStoredForCurrentHtml}
+          createdSummary={createdSummary}
+          canStoreRoot={canStoreRoot}
+          canCreate={canCreate}
+          escrowAccount={escrowAccount}
+          holdNonce={holdNonce}
+          setEscrowAccount={setEscrowAccount}
+          setHoldNonce={setHoldNonce}
+          sendPrepare={sendPrepare}
+          confirmHold={confirmHold}
+          storeRootHtml={storeRootHtml}
+          createSite={createSite}
+          openCreatedSite={openCreatedSite}
         />
       </section>
 
-      <section className="site-launch-step">
-        <header>
-          <div>
-            <p className="cl-eyebrow">Step 2</p>
-            <h3>Confirm ROC hold</h3>
+      <details className="site-launch-diagnostics" open={developerMode || hasLaunchError}>
+        <summary>Developer request/result details</summary>
+        <div className="site-launch-diagnostics-grid">
+          <JsonPreview
+            label="Prepare request/result"
+            data={{
+              request: prepareRequest,
+              result: summarizeResult(prepareState),
+              amount_minor: amountMinor || null,
+            }}
+            initiallyOpen={prepareState.status === 'error'}
+          />
+
+          <JsonPreview
+            label="Hold request/result"
+            data={{
+              request: holdRequest,
+              used_request: holdState.request,
+              result: summarizeResult(holdState),
+              nonce_recovery: holdState.response?.nonceRecovery || null,
+              paid_proof_ready: Boolean(paidProof),
+              paid_proof: paidProof,
+              proof_issue: proofIssue || null,
+            }}
+            initiallyOpen={holdState.status === 'error' || Boolean(proofIssue)}
+          />
+
+          <JsonPreview
+            label="Root storage request/result"
+            data={{
+              request: rootStoreState.request,
+              result: summarizeResult(rootStoreState),
+              root_document_cid: rootDocumentCid || null,
+              root_stored_for_current_html: rootStoredForCurrentHtml,
+            }}
+            initiallyOpen={rootStoreState.status === 'error'}
+          />
+
+          <JsonPreview
+            label="Create request/result"
+            data={{
+              request: createRequest,
+              result: summarizeResult(createState),
+              created_summary: createdSummary,
+              can_create: canCreate,
+            }}
+            initiallyOpen={createState.status === 'error'}
+          />
+
+          {developerMode && (
+            <JsonPreview
+              label="Local draft manifest"
+              data={manifest || null}
+              initiallyOpen={false}
+            />
+          )}
+        </div>
+      </details>
+    </Card>
+  );
+}
+
+function ActiveAction({
+  activeStep,
+  preflight,
+  prepareState,
+  holdState,
+  rootStoreState,
+  createState,
+  holdRequest,
+  paidProof,
+  proofIssue,
+  rootDocumentCid,
+  rootHtmlBytes,
+  rootStoredForCurrentHtml,
+  createdSummary,
+  canStoreRoot,
+  canCreate,
+  escrowAccount,
+  holdNonce,
+  setEscrowAccount,
+  setHoldNonce,
+  sendPrepare,
+  confirmHold,
+  storeRootHtml,
+  createSite,
+  openCreatedSite,
+}) {
+  if (activeStep === 'done') {
+    return (
+      <div className="site-launch-action-content">
+        <div>
+          <p className="cl-eyebrow">Launch complete</p>
+          <h3>Named site pointer created</h3>
+          <p>Open the returned site URL to verify named resolution, manifest hydration, root fetch, and sandbox rendering.</p>
+        </div>
+
+        <div className="site-launch-compact-result">
+          <MiniFact label="Site" value={createdSummary?.crabUrl || 'not returned'} monospace />
+          <MiniFact label="Manifest" value={createdSummary?.manifestCid || 'not returned'} monospace />
+          <MiniFact label="Index" value={createdSummary?.indexPointerStatus || 'not returned'} />
+        </div>
+
+        <div className="site-page-actions">
+          <Button variant="primary" disabled={!createdSummary?.crabUrl} onClick={openCreatedSite}>
+            Open Site
+          </Button>
+          <CopyButton text={createdSummary?.crabUrl || ''} label="Copy site URL" disabled={!createdSummary?.crabUrl} />
+        </div>
+      </div>
+    );
+  }
+
+  if (activeStep === 'prepare') {
+    return (
+      <div className="site-launch-action-content">
+        <div>
+          <p className="cl-eyebrow">Step 1</p>
+          <h3>Prepare site launch</h3>
+          <p>
+            Sends strict JSON metadata to <code>/sites/prepare</code>. This estimates the paid action and returns
+            wallet hold instructions. It does not create the site pointer.
+          </p>
+        </div>
+
+        {!preflight.canPrepare && (
+          <div className="site-launch-warning">
+            <strong>Prepare blocked</strong>
+            <span>{preflight.reason}</span>
           </div>
-          <Badge tone={toneForStatus(holdState.status)}>{labelForStatus(holdState.status)}</Badge>
-        </header>
+        )}
+
+        {preflight.canPrepare && preflight.reason && (
+          <div className="site-launch-warning is-info">
+            <strong>Ready for prepare</strong>
+            <span>{preflight.reason}</span>
+          </div>
+        )}
+
+        <div className="site-page-actions">
+          <Button
+            variant="primary"
+            disabled={!preflight.canPrepare || prepareState.status === 'sending'}
+            onClick={sendPrepare}
+          >
+            {prepareState.status === 'sending' ? 'Preparing…' : 'Prepare Site'}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (activeStep === 'hold') {
+    return (
+      <div className="site-launch-action-content">
+        <div>
+          <p className="cl-eyebrow">Step 2</p>
+          <h3>Confirm ROC hold</h3>
+          <p>
+            The prepare response supplied the amount and escrow target. This is the explicit user-confirmed wallet hold.
+          </p>
+        </div>
 
         <div className="site-launch-controls">
           <Field label="Escrow account">
             <TextInput value={escrowAccount} onChange={(event) => setEscrowAccount(event.target.value)} />
           </Field>
-
           <Field label="Nonce hint">
             <TextInput value={holdNonce} onChange={(event) => setHoldNonce(event.target.value)} inputMode="numeric" />
           </Field>
         </div>
 
-        <div className="site-launch-preflight">
-          <Fact label="From" value={holdRequest?.from || 'waiting for prepare'} />
-          <Fact label="To" value={holdRequest?.to || 'waiting for prepare'} />
-          <Fact label="Amount minor" value={holdRequest?.amount_minor || 'waiting for prepare'} />
-          <Fact label="Proof" value={paidProof ? 'ready' : holdState.status === 'ok' ? 'missing receipt fields' : 'waiting'} />
-          <Fact label="Idempotency" value={holdRequest?.idempotency_key || 'waiting for prepare'} monospace />
+        <div className="site-launch-facts-compact">
+          <MiniFact label="From" value={holdRequest?.from || 'waiting'} />
+          <MiniFact label="To" value={holdRequest?.to || 'waiting'} />
+          <MiniFact label="Amount minor" value={holdRequest?.amount_minor || 'waiting'} />
+          <MiniFact label="Proof" value={paidProof ? 'ready' : holdState.status === 'ok' ? 'incomplete' : 'waiting'} />
         </div>
-
-        {holdState.response?.nonceRecovery?.recovered && (
-          <div className="site-launch-warning">
-            <strong>Nonce auto-recovered</strong>
-            <span>
-              Wallet expected nonce {holdState.response.nonceRecovery.retried_nonce}; CrabLink retried once automatically after your confirmation.
-            </span>
-          </div>
-        )}
 
         {proofIssue && (
           <div className="site-launch-warning">
@@ -740,37 +901,35 @@ export default function SiteLaunchFlow({ app, draftState }) {
           <Button variant="primary" disabled={!holdRequest || holdState.status === 'sending'} onClick={confirmHold}>
             {holdState.status === 'sending' ? 'Holding…' : 'Confirm ROC Hold'}
           </Button>
-          <CopyButton text={JSON.stringify(holdRequest || {}, null, 2)} label="Copy hold JSON" disabled={!holdRequest} />
+        </div>
+      </div>
+    );
+  }
+
+  if (activeStep === 'store') {
+    return (
+      <div className="site-launch-action-content">
+        <div>
+          <p className="cl-eyebrow">Step 3</p>
+          <h3>Store root HTML</h3>
+          <p>
+            Sends root HTML bytes to <code>/paid/o</code> with the wallet hold proof. The returned <code>b3:</code>
+            content ID auto-fills the root document CID.
+          </p>
         </div>
 
-        <JsonPreview
-          label="Hold request/result"
-          data={{
-            request: holdRequest,
-            used_request: holdState.request,
-            result: summarizeResult(holdState),
-            nonce_recovery: holdState.response?.nonceRecovery || null,
-            paid_proof_ready: Boolean(paidProof),
-            paid_proof: paidProof,
-            proof_issue: proofIssue || null,
-          }}
-          initiallyOpen={holdState.status === 'error' || Boolean(proofIssue)}
-        />
-      </section>
-
-      <section className="site-launch-step">
-        <header>
-          <div>
-            <p className="cl-eyebrow">Step 3</p>
-            <h3>Store root HTML</h3>
+        {!canStoreRoot && (
+          <div className="site-launch-warning">
+            <strong>Store blocked</strong>
+            <span>{proofIssue || 'Confirm ROC Hold first. Then this button will store the local root HTML bytes.'}</span>
           </div>
-          <Badge tone={toneForStatus(rootStoreState.status)}>{labelForStatus(rootStoreState.status)}</Badge>
-        </header>
+        )}
 
-        <p>
-          Sends the root HTML bytes to <code>/paid/o</code> with the wallet hold proof. A successful backend response
-          auto-fills <code>root_document_cid</code>. This is not the same as creating <code>crab://{draft.siteName || 'site'}</code>.
-        </p>
+        <div className="site-launch-compact-result">
+          <MiniFact label="Root CID" value={rootDocumentCid || 'not stored yet'} monospace />
+          <MiniFact label="Bytes" value={formatBytes(rootHtmlBytes)} />
+          <MiniFact label="Current HTML" value={rootStoredForCurrentHtml ? 'stored' : 'not stored in this session'} />
+        </div>
 
         <div className="site-page-actions">
           <Button
@@ -782,110 +941,193 @@ export default function SiteLaunchFlow({ app, draftState }) {
           </Button>
           <CopyButton text={rootDocumentCid || ''} label="Copy Root CID" disabled={!rootDocumentCid} />
         </div>
+      </div>
+    );
+  }
 
-        {!canStoreRoot && (
-          <div className="site-launch-warning">
-            <strong>Store status</strong>
-            <span>{proofIssue || 'Confirm ROC Hold first. Then this button will store the local root HTML bytes.'}</span>
-          </div>
-        )}
-
-        {rootStoreState.status === 'ok' && (
-          <div className="site-launch-compact-result">
-            <MiniFact label="Root stored" value="complete" />
-            <MiniFact label="Root CID" value={rootDocumentCid || 'not returned'} monospace />
-            <MiniFact label="Bytes" value={formatBytes(rootHtmlBytes)} />
-            <MiniFact label="Next" value="Click Create Site" />
-          </div>
-        )}
-
-        <JsonPreview
-          label="Root storage request/result"
-          data={{
-            request: rootStoreState.request,
-            result: summarizeResult(rootStoreState),
-            root_document_cid: rootDocumentCid || null,
-            root_stored_for_current_html: rootStoredForCurrentHtml,
-          }}
-          initiallyOpen={rootStoreState.status === 'error'}
-        />
-      </section>
-
-      <section className="site-launch-step">
-        <header>
-          <div>
-            <p className="cl-eyebrow">Step 4</p>
-            <h3>Create site pointer</h3>
-          </div>
-          <Badge tone={toneForStatus(createState.status)}>{labelForStatus(createState.status)}</Badge>
-        </header>
-
+  return (
+    <div className="site-launch-action-content">
+      <div>
+        <p className="cl-eyebrow">Step 4</p>
+        <h3>Create site pointer</h3>
         <p>
-          Sends <code>POST /sites</code> with the backend root CID and wallet hold proof. The backend stores the site
-          manifest and writes the site-name pointer, which is what makes the named <code>crab://</code> URL resolve.
+          Sends <code>POST /sites</code> with the backend root CID and wallet hold proof. This is what makes the named
+          <code> crab://</code> URL resolve.
         </p>
+      </div>
 
-        <div className="site-page-actions">
-          <Button
-            variant="primary"
-            disabled={!canCreate || createState.status === 'sending'}
-            onClick={createSite}
-          >
-            {createState.status === 'sending' ? 'Creating…' : 'Create Site'}
-          </Button>
-          <Button variant="secondary" disabled={!createdSummary?.crabUrl} onClick={openCreatedSite}>
-            Open Site
-          </Button>
-          <CopyButton text={createdSummary?.crabUrl || ''} label="Copy site URL" disabled={!createdSummary?.crabUrl} />
+      {!canCreate && (
+        <div className="site-launch-warning">
+          <strong>Create blocked</strong>
+          <span>
+            {!rootDocumentCid
+              ? 'Store Root HTML first.'
+              : !paidProof
+                ? 'Wallet hold proof is not available.'
+                : 'Store Root HTML for the current root before creating the site.'}
+          </span>
         </div>
+      )}
 
-        {!canCreate && (
-          <div className="site-launch-warning">
-            <strong>Create status</strong>
-            <span>
-              {!rootDocumentCid
-                ? 'Store Root HTML first.'
-                : !paidProof
-                  ? 'Wallet hold proof is not available. Do not leave the workspace before creating the site.'
-                  : !createRequest
-                    ? 'Create request is not valid yet.'
-                    : 'Store Root HTML for the current root before creating the site.'}
-            </span>
-          </div>
-        )}
+      <div className="site-launch-compact-result">
+        <MiniFact label="Site" value="ready for pointer" />
+        <MiniFact label="Root CID" value={rootDocumentCid || 'missing'} monospace />
+        <MiniFact label="Proof" value={paidProof ? 'ready' : 'missing'} />
+      </div>
 
-        {createState.status === 'ok' && (
-          <div className="site-launch-compact-result">
-            <MiniFact label="Create" value="complete" />
-            <MiniFact label="Site" value={createdSummary?.crabUrl || 'not returned'} monospace />
-            <MiniFact label="Manifest" value={createdSummary?.manifestCid || 'not returned'} monospace />
-            <MiniFact label="Index" value={createdSummary?.indexPointerStatus || 'not returned'} />
-          </div>
-        )}
-
-        <JsonPreview
-          label="Create request/result"
-          data={{
-            request: createRequest,
-            result: summarizeResult(createState),
-            created_summary: createdSummary,
-            can_create: canCreate,
-          }}
-          initiallyOpen={createState.status === 'error'}
-        />
-      </section>
-
-      <JsonPreview
-        label="Local draft manifest"
-        data={manifest || null}
-        initiallyOpen={draftState?.viewMode === 'developer'}
-      />
-    </Card>
+      <div className="site-page-actions">
+        <Button
+          variant="primary"
+          disabled={!canCreate || createState.status === 'sending'}
+          onClick={createSite}
+        >
+          {createState.status === 'sending' ? 'Creating…' : 'Create Site'}
+        </Button>
+        <Button variant="secondary" disabled={!createdSummary?.crabUrl} onClick={openCreatedSite}>
+          Open Site
+        </Button>
+        <CopyButton text={createdSummary?.crabUrl || ''} label="Copy site URL" disabled={!createdSummary?.crabUrl} />
+      </div>
+    </div>
   );
 }
 
-function getPreflight({ draft, rootDocumentCid, rootHtmlBytes, settings, stats }) {
-  if (!String(draft?.siteName || '').trim()) {
+function LaunchStepCard({ step }) {
+  return (
+    <div className={`site-launch-step-card is-${step.status} ${step.active ? 'is-active' : ''}`}>
+      <span>{step.number}</span>
+      <strong>{step.label}</strong>
+      <small>{step.detail}</small>
+      <Badge tone={step.tone}>{step.badge}</Badge>
+    </div>
+  );
+}
+
+function ErrorBanner({ states }) {
+  const errors = Object.entries(states)
+    .map(([key, state]) => ({ key, state }))
+    .filter(({ state }) => state?.status === 'error');
+
+  if (!errors.length) {
+    return null;
+  }
+
+  return (
+    <div className="site-launch-error-strip">
+      <strong>Launch needs attention</strong>
+      <span>
+        {errors.map(({ key, state }) => `${labelForStateKey(key)}: ${state.error?.message || 'failed'}`).join(' · ')}
+      </span>
+    </div>
+  );
+}
+
+function getActiveStep({ preflight, prepareState, holdState, paidProof, completedRoot, canCreate, createState }) {
+  if (createState.status === 'ok') return 'done';
+  if (!preflight.canPrepare || prepareState.status !== 'ok') return 'prepare';
+  if (holdState.status !== 'ok' || !paidProof) return 'hold';
+  if (!completedRoot) return 'store';
+  if (canCreate || createState.status !== 'ok') return 'create';
+  return 'create';
+}
+
+function buildSteps({ activeStep, prepareState, holdState, paidProof, rootStoreState, completedRoot, createState, canCreate }) {
+  return [
+    {
+      key: 'prepare',
+      number: 1,
+      label: 'Prepare',
+      status: stepStatus('prepare', activeStep, prepareState.status === 'ok', prepareState.status),
+      active: activeStep === 'prepare',
+      badge: stepBadge(prepareState.status === 'ok', prepareState.status),
+      tone: stepTone(prepareState.status === 'ok', prepareState.status),
+      detail: prepareState.status === 'ok' ? 'estimate ready' : prepareState.status === 'error' ? 'prepare failed' : 'estimate action',
+    },
+    {
+      key: 'hold',
+      number: 2,
+      label: 'Hold',
+      status: stepStatus('hold', activeStep, holdState.status === 'ok' && Boolean(paidProof), holdState.status),
+      active: activeStep === 'hold',
+      badge: stepBadge(holdState.status === 'ok' && Boolean(paidProof), holdState.status),
+      tone: stepTone(holdState.status === 'ok' && Boolean(paidProof), holdState.status),
+      detail: paidProof ? 'proof ready' : holdState.status === 'error' ? 'hold failed' : 'explicit ROC hold',
+    },
+    {
+      key: 'store',
+      number: 3,
+      label: 'Store root',
+      status: stepStatus('store', activeStep, completedRoot, rootStoreState.status),
+      active: activeStep === 'store',
+      badge: stepBadge(completedRoot, rootStoreState.status),
+      tone: stepTone(completedRoot, rootStoreState.status),
+      detail: completedRoot ? 'root CID ready' : rootStoreState.status === 'error' ? 'store failed' : 'write root bytes',
+    },
+    {
+      key: 'create',
+      number: 4,
+      label: 'Create',
+      status: stepStatus('create', activeStep, createState.status === 'ok', createState.status),
+      active: activeStep === 'create',
+      badge: stepBadge(createState.status === 'ok', createState.status, canCreate),
+      tone: stepTone(createState.status === 'ok', createState.status, canCreate),
+      detail: createState.status === 'ok' ? 'site pointer created' : canCreate ? 'ready to create' : 'needs root + proof',
+    },
+  ];
+}
+
+function stepStatus(key, activeStep, complete, rawStatus) {
+  if (complete) return 'complete';
+  if (rawStatus === 'error') return 'error';
+  if (rawStatus === 'sending') return 'sending';
+  if (activeStep === key) return 'active';
+  return 'waiting';
+}
+
+function stepBadge(complete, rawStatus, ready = false) {
+  if (complete) return 'done';
+  if (rawStatus === 'sending') return 'sending';
+  if (rawStatus === 'error') return 'failed';
+  if (ready) return 'ready';
+  return 'waiting';
+}
+
+function stepTone(complete, rawStatus, ready = false) {
+  if (complete) return 'success';
+  if (rawStatus === 'sending') return 'info';
+  if (rawStatus === 'error') return 'warning';
+  if (ready) return 'info';
+  return 'neutral';
+}
+
+function labelForStep(step) {
+  if (step === 'done') return 'Open the created site';
+  if (step === 'prepare') return 'Prepare launch estimate';
+  if (step === 'hold') return 'Confirm explicit ROC hold';
+  if (step === 'store') return 'Store root HTML bytes';
+  return 'Create named site pointer';
+}
+
+function copyForStep(step, preflight, proofIssue, rootDocumentCid) {
+  if (step === 'done') return 'The named crab:// URL is ready to open.';
+  if (step === 'prepare') return preflight.reason || 'Ask the gateway for the paid site-launch estimate.';
+  if (step === 'hold') return proofIssue || 'Create a real wallet hold proof before writing root bytes.';
+  if (step === 'store') return rootDocumentCid ? 'Root CID exists; confirm it belongs to the current HTML before create.' : 'Store the current root HTML and auto-fill a b3 root CID.';
+  return 'Submit /sites with the backend root CID and hold proof.';
+}
+
+function labelForStateKey(key) {
+  if (key === 'prepareState') return 'Prepare';
+  if (key === 'holdState') return 'Hold';
+  if (key === 'rootStoreState') return 'Root store';
+  if (key === 'createState') return 'Create';
+  return key;
+}
+
+function getPreflight({ draft, creator, rootHtmlBytes, stats }) {
+  const siteName = normalizeSiteName(draft?.siteName || '');
+
+  if (!siteName) {
     return {
       ready: false,
       canPrepare: false,
@@ -893,19 +1135,27 @@ function getPreflight({ draft, rootDocumentCid, rootHtmlBytes, settings, stats }
     };
   }
 
-  if (!String(settings?.passportSubject || draft?.ownerPassport || '').trim()) {
+  if (!String(draft?.title || '').trim()) {
     return {
       ready: false,
       canPrepare: false,
-      reason: 'Configure a passport subject before preparing launch.',
+      reason: 'Add a site title before preparing launch.',
     };
   }
 
-  if (!String(settings?.walletAccount || draft?.ownerWallet || '').trim()) {
+  if (!creator?.passportSubject) {
     return {
       ready: false,
       canPrepare: false,
-      reason: 'Configure a wallet account before preparing launch.',
+      reason: 'Refresh or configure the current passport before preparing launch.',
+    };
+  }
+
+  if (!creator?.walletAccount) {
+    return {
+      ready: false,
+      canPrepare: false,
+      reason: 'Refresh or configure the wallet linked to the current passport before preparing launch.',
     };
   }
 
@@ -913,7 +1163,7 @@ function getPreflight({ draft, rootDocumentCid, rootHtmlBytes, settings, stats }
     return {
       ready: false,
       canPrepare: false,
-      reason: 'Add root HTML before preparing launch.',
+      reason: 'Paste, template, or import root HTML before preparing launch.',
     };
   }
 
@@ -925,19 +1175,11 @@ function getPreflight({ draft, rootDocumentCid, rootHtmlBytes, settings, stats }
     };
   }
 
-  if (!rootDocumentCid) {
-    return {
-      ready: false,
-      canPrepare: true,
-      reason:
-        'Prepare and hold are available. Store Root HTML next; the returned b3 CID will auto-fill the final create step.',
-    };
-  }
-
   return {
     ready: true,
     canPrepare: true,
-    reason: '',
+    reason:
+      'Prepare and hold are available. Store Root HTML next; the returned b3 CID will auto-fill the final create step.',
   };
 }
 
@@ -992,15 +1234,6 @@ function filterCidMap(value) {
   return out;
 }
 
-function parseJsonObject(value) {
-  try {
-    const parsed = JSON.parse(String(value || '{}'));
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-  } catch (_error) {
-    return {};
-  }
-}
-
 function holdProofIssue(holdState, paidProof) {
   if (holdState.status !== 'ok' || paidProof) {
     return '';
@@ -1022,7 +1255,7 @@ function holdProofIssue(holdState, paidProof) {
     return 'Wallet hold succeeded, but CrabLink could not turn it into a paid proof.';
   }
 
-  return `Wallet hold succeeded, but the hold proof is missing: ${missing.join(', ')}. Open “Hold request/result” to inspect the backend response.`;
+  return `Wallet hold succeeded, but the hold proof is missing: ${missing.join(', ')}. Open Developer request/result details to inspect the backend response.`;
 }
 
 function summarizeResult(state) {
@@ -1054,45 +1287,11 @@ function summarizeResult(state) {
   };
 }
 
-function toneForStatus(status) {
-  if (status === 'ok') return 'success';
-  if (status === 'sending') return 'info';
-  if (status === 'error') return 'warning';
-  return 'neutral';
-}
-
-function labelForStatus(status) {
-  if (status === 'ok') return 'ready';
-  if (status === 'sending') return 'sending';
-  if (status === 'error') return 'failed';
-  return 'not sent';
-}
-
-function Fact({ label, value, monospace = false }) {
-  return (
-    <div>
-      <span>{label}</span>
-      <strong className={monospace ? 'is-monospace' : ''}>{value || 'n/a'}</strong>
-    </div>
-  );
-}
-
 function MiniFact({ label, value, monospace = false }) {
   return (
     <div className="site-launch-mini-fact">
       <span>{label}</span>
-      <strong
-        className={monospace ? 'is-monospace' : ''}
-        style={{
-          display: 'block',
-          marginTop: '0.15rem',
-          fontSize: monospace ? '0.78rem' : '0.9rem',
-          lineHeight: 1.35,
-          overflowWrap: 'anywhere',
-        }}
-      >
-        {value || 'n/a'}
-      </strong>
+      <strong className={monospace ? 'is-monospace' : ''}>{value || 'n/a'}</strong>
     </div>
   );
 }

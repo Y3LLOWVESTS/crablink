@@ -1,20 +1,16 @@
 /**
- * RO:WHAT — React scaffold component for extensions/chrome/src/shared/embed/crabPostEmbed.jsx.
- * RO:WHY — CrabLink refactor; gives this UI surface a single clear owner.
- * RO:INTERACTS — App shell, route registry, shared components, and page-local CSS.
- * RO:INVARIANTS — no fake backend truth; no silent ROC spend; no direct internal-service calls.
- * RO:METRICS — none yet.
- * RO:CONFIG — app context/settings when wired.
- * RO:SECURITY — render trusted UI only; untrusted crab content belongs in sandboxed surfaces.
- * RO:TEST — component and route smoke tests once implemented.
+ * RO:WHAT — React placeholder component for future crab://<hash>.post embeds.
+ * RO:WHY — Reserves the post primitive UX before text asset DTOs and routes are wired.
+ * RO:INTERACTS — CrabFutureEmbedPlaceholder, embedRegistry.js, future post/thread pages.
+ * RO:INVARIANTS — no fake backend truth; no publish/read claim until .post contracts exist.
+ * RO:METRICS — none.
+ * RO:CONFIG — crabUrl/title/detail props.
+ * RO:SECURITY — trusted React text only; untrusted site HTML stays in sandboxed surfaces.
+ * RO:TEST — npm run build; visual smoke when wired into a route.
  */
 
-export default function CrabPostEmbed() {
-  return (
-    <section className="cl-card cl-scaffold-card">
-      <p className="cl-eyebrow">Scaffold</p>
-      <h1>CrabPostEmbed</h1>
-      <p>extensions/chrome/src/shared/embed/crabPostEmbed.jsx</p>
-    </section>
-  );
+import CrabFutureEmbedPlaceholder from './CrabFutureEmbedPlaceholder.jsx';
+
+export default function CrabPostEmbed(props) {
+  return <CrabFutureEmbedPlaceholder tag="crab-post" {...props} />;
 }

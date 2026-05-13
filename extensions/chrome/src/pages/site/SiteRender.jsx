@@ -1,8 +1,8 @@
 /**
  * RO:WHAT — Safe site renderer for local drafts and named gateway-resolved sites.
- * RO:WHY — Gives React site route first-class rendering while keeping resolution, root fetch, and preview isolated.
- * RO:INTERACTS — siteClient, safeHtml/sandbox components, SiteManifestDrawer, SiteCreatorProof, site render subcomponents.
- * RO:INVARIANTS — gateway-only named resolution; no direct storage/index; iframe preview has no scripts; no fake manifest/root proof.
+ * RO:WHY — Keeps site rendering focused: resolve/fetch root, render sandbox, show one consolidated proof panel.
+ * RO:INTERACTS — siteClient, SiteSandboxPreview, SiteResolvedProof, shared safe renderer.
+ * RO:INVARIANTS — gateway-only named resolution; no direct storage/index; iframe preview has no scripts; no fake proof.
  * RO:METRICS — displays gateway status, root fetch status, correlation IDs, sandbox policy, and embed render summary.
  * RO:CONFIG — gateway client from app context.
  * RO:SECURITY — untrusted HTML goes through shared sanitizer and strict sandbox iframe props.
@@ -13,11 +13,7 @@ import { useEffect, useMemo, useState } from 'react';
 import LoadingState from '../../shared/components/LoadingState.jsx';
 import RouteProblemPanel from '../../shared/components/RouteProblemPanel.jsx';
 import { createSiteClient } from '../../shared/api/siteClient.js';
-import SiteCreatorProof from './SiteCreatorProof.jsx';
-import SiteDiagnostics from './SiteDiagnostics.jsx';
-import SiteManifestDrawer from './SiteManifestDrawer.jsx';
-import SiteResolvedSummary from './SiteResolvedSummary.jsx';
-import SiteRootDocumentPanel from './SiteRootDocumentPanel.jsx';
+import SiteResolvedProof from './SiteResolvedProof.jsx';
 import SiteSandboxPreview from './SiteSandboxPreview.jsx';
 
 const EMPTY_STATE = Object.freeze({
@@ -177,21 +173,10 @@ function ResolvedSiteView({ app, result, rootHtml, rootStatus, rootResponse, roo
   const summary = result?.summary || {};
   const rootUrl = siteClient.rootDocumentUrl(summary.rootDocumentCid);
   const previewHtml = rootHtml || '';
+  const developer = Boolean(app?.settings?.devMode || app?.state?.developerMode || app?.state?.viewMode === 'developer');
 
   return (
     <section className="site-render-stack">
-      <SiteResolvedSummary app={app} result={result} />
-
-      <SiteRootDocumentPanel
-        summary={summary}
-        rootStatus={rootStatus}
-        rootResponse={rootResponse}
-        rootError={rootError}
-        rootUrl={rootUrl}
-      />
-
-      <SiteCreatorProof resolvedSite={result} />
-
       <SiteSandboxPreview
         mode="gateway"
         summary={summary}
@@ -199,17 +184,17 @@ function ResolvedSiteView({ app, result, rootHtml, rootStatus, rootResponse, roo
         rootStatus={rootStatus}
         rootError={rootError}
         siteClient={siteClient}
+        developer={developer}
       />
 
-      <SiteManifestDrawer resolvedSite={result} />
-
-      <SiteDiagnostics
+      <SiteResolvedProof
+        app={app}
         result={result}
-        summary={summary}
+        rootHtml={rootHtml}
         rootStatus={rootStatus}
         rootResponse={rootResponse}
-        rootHtml={rootHtml}
         rootError={rootError}
+        rootUrl={rootUrl}
       />
     </section>
   );

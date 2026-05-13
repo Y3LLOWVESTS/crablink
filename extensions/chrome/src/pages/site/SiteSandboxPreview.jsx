@@ -52,17 +52,24 @@ export default function SiteSandboxPreview({
       return '';
     },
   });
+  const renderPolicy = sandboxed.policy || {};
+  const embedSummary = renderPolicy.embed_summary || {};
+  const referenceGraph = renderPolicy.reference_graph || {};
 
   return (
     <Card
       eyebrow="Sandbox"
       title={isLocal ? 'Local site sandbox preview' : 'Site preview'}
-      className="site-preview-card"
+      className="site-preview-card site-render-primary"
       actions={
         <div className="site-preview-badges">
           <Badge tone={isLocal ? 'warning' : 'info'}>{isLocal ? 'local only' : 'read-only'}</Badge>
           <Badge tone="neutral">scripts stripped</Badge>
           <Badge tone="neutral">strict sandbox</Badge>
+          <Badge tone={embedSummary.blocked ? 'warning' : 'success'}>
+            {Number(embedSummary.rendered || 0)} embed(s) rendered
+          </Badge>
+          {Number(embedSummary.blocked || 0) > 0 && <Badge tone="warning">{embedSummary.blocked} blocked</Badge>}
           {!isLocal && <Badge tone={toneForRootStatus(rootStatus)}>{labelForRootStatus(rootStatus)}</Badge>}
         </div>
       }
@@ -73,6 +80,8 @@ export default function SiteSandboxPreview({
         {...getSiteIframeSandboxProps()}
         srcDoc={sandboxed.html}
       />
+
+      <ReferenceGraphPreview referenceGraph={referenceGraph} embedSummary={embedSummary} />
 
       {isLocal && (
         <div className="site-preview-meta">
@@ -88,12 +97,60 @@ export default function SiteSandboxPreview({
           label={isLocal ? 'Local preview render policy' : 'Gateway preview render policy'}
           data={{
             manifest: isLocal ? manifest : null,
-            safe_renderer: sandboxed.policy,
+            safe_renderer: renderPolicy,
             sandbox_policy: describeSandboxPolicy(),
           }}
         />
       )}
     </Card>
+  );
+}
+
+function ReferenceGraphPreview({ referenceGraph = {}, embedSummary = {} }) {
+  const references = Array.isArray(referenceGraph.references) ? referenceGraph.references : [];
+  const hasReferences = references.length > 0;
+  const encountered = Number(embedSummary.encountered || 0);
+
+  if (!hasReferences && encountered <= 0) {
+    return (
+      <section className="site-reference-graph" aria-label="Reference graph summary">
+        <div>
+          <span>Reference graph</span>
+          <strong>No crab asset references detected in this root document.</strong>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="site-reference-graph" aria-label="Reference graph summary">
+      <div className="site-reference-graph-head">
+        <div>
+          <span>Reference graph</span>
+          <strong>
+            {referenceGraph.total || references.length || encountered} crab reference(s) detected; {embedSummary.rendered || 0} rendered,{' '}
+            {embedSummary.blocked || 0} blocked.
+          </strong>
+        </div>
+        <Badge tone={Number(embedSummary.blocked || 0) > 0 ? 'warning' : 'success'}>
+          {Number(embedSummary.blocked || 0) > 0 ? 'fail-closed' : 'clean'}
+        </Badge>
+      </div>
+
+      {hasReferences && (
+        <div className="site-reference-graph-list">
+          {references.slice(0, 8).map((reference, index) => (
+            <div key={`${reference.crabUrl || reference.tag || 'reference'}-${index}`}>
+              <span>{reference.tag || 'crab-reference'}</span>
+              <strong>{reference.crabUrl || reference.detail || 'unresolved reference'}</strong>
+              <small>{reference.status || 'unknown'} · {reference.kind || 'unknown kind'}</small>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {references.length > 8 && <p className="site-panel-note">Showing first 8 references. Developer diagnostics contain the full summary.</p>}
+    </section>
   );
 }
 

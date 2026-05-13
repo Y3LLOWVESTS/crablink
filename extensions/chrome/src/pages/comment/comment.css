@@ -1,32 +1,56 @@
 /*
- * RO:WHAT — Styles for the React-owned crab://comment workspace.
- * RO:WHY — CrabLink refactor; keeps comment route polished while shared layout components carry common structure.
- * RO:INTERACTS — CommentPage.jsx, CommentDraft.jsx, shared theme/form/card/layout styles, shell layout.
- * RO:INVARIANTS — use CSS variables; local draft styling only; no hard-coded backend truth.
+ * RO:WHAT — Styles for the React-owned crab://comment workspace and publish flow.
+ * RO:WHY — NEXT_LEVEL text primitive work needs comment drafting plus explicit gateway prepare/hold/publish stages.
+ * RO:INTERACTS — CommentPage.jsx, CommentDraft.jsx, CommentPublishFlow.jsx, shared theme/form/card/layout styles, shell layout.
+ * RO:INVARIANTS — use CSS variables; never style local drafts as backend-confirmed truth.
  * RO:TEST — visual/manual checks in CrabLink full-tab browser in light and dark mode.
  */
 
 .comment-page {
   display: grid;
   gap: 1rem;
+
+  --comment-panel-bg: var(--cl-card, #ffffff);
+  --comment-soft-bg: color-mix(in srgb, var(--cl-card, #ffffff) 74%, var(--cl-bg, #f5f4f1) 26%);
+  --comment-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
 }
 
-.comment-draft-card {
+[data-theme='dark'] .comment-page {
+  --comment-panel-bg: #0b0b0b;
+  --comment-soft-bg: #050505;
+  --comment-border-soft: #242424;
+}
+
+.comment-draft-card,
+.comment-publish-card {
   min-width: 0;
 }
 
-.comment-draft-intro {
+.comment-draft-intro,
+.comment-publish-badges,
+.comment-publish-actions,
+.comment-action-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.comment-draft-intro {
   margin-bottom: 1rem;
 }
 
-.comment-form-grid {
+.comment-form-grid,
+.comment-publish-grid,
+.comment-publish-controls,
+.comment-publish-success {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
   margin-bottom: 0.9rem;
+}
+
+.comment-publish-controls {
+  grid-template-columns: minmax(0, 1fr) 160px;
 }
 
 .comment-inline-dev {
@@ -50,9 +74,6 @@
 }
 
 .comment-action-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
   justify-content: flex-end;
 }
 
@@ -91,8 +112,106 @@
   background: #050505;
 }
 
+.comment-section-copy,
+.comment-publish-step p {
+  color: var(--cl-muted, #626262);
+  line-height: 1.55;
+}
+
+.comment-publish-card .comment-section-copy {
+  margin-bottom: 1rem;
+}
+
+.comment-publish-warning {
+  display: grid;
+  gap: 0.25rem;
+  margin: 1rem 0;
+  padding: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--cl-warning, #d97706) 50%, var(--comment-border-soft));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--cl-warning, #d97706) 11%, var(--comment-soft-bg));
+}
+
+.comment-publish-warning strong {
+  color: var(--cl-text, #111111);
+}
+
+.comment-publish-warning span {
+  color: var(--cl-muted, #626262);
+  line-height: 1.45;
+}
+
+.comment-publish-step {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--comment-border-soft);
+  border-radius: 22px;
+  background: var(--comment-soft-bg);
+}
+
+.comment-publish-step header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.comment-publish-step h3 {
+  margin: 0.1rem 0 0;
+  color: var(--cl-text, #111111);
+  font-size: 1.1rem;
+}
+
+.comment-publish-actions {
+  align-items: center;
+}
+
+.comment-publish-actions .cl-button {
+  min-width: max-content;
+}
+
+.comment-publish-success {
+  margin-top: 0.25rem;
+}
+
+.comment-publish-fact {
+  min-width: 0;
+  padding: 0.82rem;
+  border: 1px solid var(--comment-border-soft);
+  border-radius: 16px;
+  background: var(--comment-soft-bg);
+}
+
+.comment-publish-fact span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.comment-publish-fact strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--cl-text, #111111);
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.comment-publish-fact .is-monospace {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 @media (max-width: 760px) {
-  .comment-form-grid {
+  .comment-form-grid,
+  .comment-publish-grid,
+  .comment-publish-controls,
+  .comment-publish-success {
     grid-template-columns: 1fr;
   }
 
@@ -101,11 +220,18 @@
     justify-content: stretch;
   }
 
-  .comment-action-buttons {
+  .comment-action-buttons,
+  .comment-publish-actions {
     justify-content: stretch;
+    width: 100%;
   }
 
-  .comment-action-buttons .cl-button {
+  .comment-action-buttons .cl-button,
+  .comment-publish-actions .cl-button {
     width: 100%;
+  }
+
+  .comment-publish-step header {
+    display: grid;
   }
 }

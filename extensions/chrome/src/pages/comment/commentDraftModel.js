@@ -9,6 +9,13 @@
  * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://comment route smoke.
  */
 
+import {
+  buildContentReferenceGraphDraft,
+  buildReferenceConnectionDraft,
+  buildSiteConnectionDraft,
+  connectionIsSatisfied,
+} from '../../shared/manifest/siteAttachment.js';
+
 export const DEFAULT_COMMENT_DRAFT = Object.freeze({
   title: '',
   body: '',
@@ -72,6 +79,31 @@ export function buildCommentManifestDraft(draft, { app = null, route = null } = 
     app?.settings?.handle ||
     app?.settings?.passportSubject ||
     '';
+  const siteConnection = buildSiteConnectionDraft({
+    siteContextCrabUrl: safeDraft.siteContextCrabUrl,
+    assetKind: 'comment',
+    required: true,
+    relation: 'comment_on_site',
+  });
+  const parentConnection = buildReferenceConnectionDraft({
+    crabUrl: safeDraft.parentCrabUrl,
+    acceptedAssetKinds: ['post', 'comment'],
+    required: true,
+    relation: 'comment_parent',
+    label: 'parent post/comment',
+  });
+  const threadConnection = buildReferenceConnectionDraft({
+    crabUrl: safeDraft.threadContextCrabUrl,
+    acceptedAssetKinds: ['thread', 'post'],
+    required: false,
+    relation: 'thread_context',
+    label: 'thread context',
+  });
+  const referenceGraph = buildContentReferenceGraphDraft({
+    siteConnection,
+    parentConnection,
+    threadConnection,
+  });
 
   return {
     schema: 'crablink.local.comment-draft.v1',
@@ -102,11 +134,15 @@ export function buildCommentManifestDraft(draft, { app = null, route = null } = 
       wallet_account_label: app?.settings?.walletAccount || '',
       backend_confirmed: false,
     },
+    site_connection: siteConnection,
+    reference_graph: referenceGraph,
     linked_assets: {
       parent_crab_url: safeDraft.parentCrabUrl.trim() || null,
       site_context_crab_url: safeDraft.siteContextCrabUrl.trim() || null,
       thread_context_crab_url: safeDraft.threadContextCrabUrl.trim() || null,
       embedded_assets: [],
+      site_connection: siteConnection,
+      reference_graph: referenceGraph,
     },
     rights_policy: {
       mode: safeDraft.rightsMode,
@@ -150,12 +186,35 @@ export function commentStats(draft) {
   const tags = parseTags(draft?.tags || '');
   const links = countCrabLinks(combined);
 
+  const siteConnection = buildSiteConnectionDraft({
+    siteContextCrabUrl: draft?.siteContextCrabUrl,
+    assetKind: 'comment',
+    required: true,
+    relation: 'comment_on_site',
+  });
+  const parentConnection = buildReferenceConnectionDraft({
+    crabUrl: draft?.parentCrabUrl,
+    acceptedAssetKinds: ['post', 'comment'],
+    required: true,
+    relation: 'comment_parent',
+    label: 'parent post/comment',
+  });
+  const threadConnection = buildReferenceConnectionDraft({
+    crabUrl: draft?.threadContextCrabUrl,
+    acceptedAssetKinds: ['thread', 'post'],
+    relation: 'thread_context',
+    label: 'thread context',
+  });
+
   return {
     characters: body.length,
     words: body.trim() ? body.trim().split(/\s+/).length : 0,
     lines: body ? body.split(/\r\n|\r|\n/).length : 0,
     tags: tags.length,
     crab_links: links,
+    site_attached: connectionIsSatisfied(siteConnection),
+    parent_attached: connectionIsSatisfied(parentConnection),
+    thread_attached: connectionIsSatisfied(threadConnection),
   };
 }
 
@@ -173,7 +232,19 @@ export function getCommentCompleteness(draft) {
     safeDraft.visibility,
     safeDraft.rightsMode,
     safeDraft.moderationMode,
-    safeDraft.parentCrabUrl.trim() || safeDraft.siteContextCrabUrl.trim() || safeDraft.threadContextCrabUrl.trim(),
+    connectionIsSatisfied(buildSiteConnectionDraft({
+      siteContextCrabUrl: safeDraft.siteContextCrabUrl,
+      assetKind: 'comment',
+      required: true,
+      relation: 'comment_on_site',
+    })),
+    connectionIsSatisfied(buildReferenceConnectionDraft({
+      crabUrl: safeDraft.parentCrabUrl,
+      acceptedAssetKinds: ['post', 'comment'],
+      required: true,
+      relation: 'comment_parent',
+      label: 'parent post/comment',
+    })),
   ];
 
   const complete = checks.filter(Boolean).length;

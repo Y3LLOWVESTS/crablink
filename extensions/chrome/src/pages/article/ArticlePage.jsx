@@ -1,11 +1,11 @@
 /**
- * RO:WHAT — Route owner for the React crab://article local creator workspace.
- * RO:WHY — CrabLink refactor; migrates a low-risk long-form content primitive onto shared creator workspace architecture.
- * RO:INTERACTS — ArticleDraft.jsx, articleDraftModel.js, useCreatorDraft, CreatorWorkspaceLayout, RouteTruthPanel.
- * RO:INVARIANTS — local draft only; no fake b3 CID; no fake manifest CID; no ROC mutation; no backend publication claim.
- * RO:METRICS — none; future publish/prepare routes must use gateway client metrics/correlation IDs.
- * RO:CONFIG — app settings are display labels only.
- * RO:SECURITY — trusted local UI only; no arbitrary crab code execution; no wallet spend authority.
+ * RO:WHAT — Route owner for the React crab://article creator and publish workspace.
+ * RO:WHY — Completes the frontend NEXT_LEVEL text primitive set after post and comment.
+ * RO:INTERACTS — ArticleDraft.jsx, ArticlePublishFlow.jsx, articleDraftModel.js, useCreatorDraft, CreatorWorkspaceLayout, RouteTruthPanel.
+ * RO:INVARIANTS — no fake b3 CID; no fake manifest CID; no silent ROC spend; backend publication only when gateway returns real proof.
+ * RO:METRICS — gateway correlation IDs are displayed in the publish flow diagnostics.
+ * RO:CONFIG — app settings supply gateway URL, passport subject, wallet account, and dev bearer token.
+ * RO:SECURITY — trusted local UI only; all backend calls go through svc-gateway; no arbitrary crab code execution; no wallet spend authority stored here.
  * RO:TEST — npm run build; check-react-lane; manual crab://article route smoke.
  */
 
@@ -14,6 +14,7 @@ import CreatorWorkspaceLayout from '../../shared/components/CreatorWorkspaceLayo
 import RouteTruthPanel from '../../shared/components/RouteTruthPanel.jsx';
 import useCreatorDraft from '../../shared/hooks/useCreatorDraft.js';
 import ArticleDraft, { ArticleSidePanel } from './ArticleDraft.jsx';
+import ArticlePublishFlow from './ArticlePublishFlow.jsx';
 import {
   DEFAULT_ARTICLE_DRAFT,
   buildArticleManifestDraft,
@@ -29,14 +30,14 @@ const PRINCIPLES = Object.freeze([
       'Articles should become standalone typed assets so sites, profiles, feeds, and references can point to them without copying the article into every page.',
   },
   {
-    title: 'Reference graph ready',
+    title: 'Site-attached publishing',
     copy:
-      'An article can later link to a hero image, source material, comments, posts, authors, versions, and site context through manifest-backed references.',
+      'A publishable article needs a site context because articles should normally belong to a site, blog, publication, or creator page rather than float disconnected.',
   },
   {
-    title: 'Publishing boundary',
+    title: 'Publish boundary',
     copy:
-      'Local drafts can preview structure and metadata, but only backend routes can create canonical b3 content, manifests, receipts, and index pointers.',
+      'The builder can prepare and submit gateway requests, but only real backend responses may create CIDs, receipts, manifests, and index pointers.',
   },
 ]);
 
@@ -57,11 +58,11 @@ export default function ArticlePage({ app, route }) {
     <CreatorWorkspaceLayout
       eyebrow="crab://article"
       title="Article Workspace"
-      copy="Draft long-form article assets that can later be referenced by sites, profiles, posts, comments, feeds, and creator pages. This React route is local-only and does not publish anything yet."
+      copy="Draft and publish the third site-attached text primitive. Articles should carry title, summary, body, site context, optional hero image, and provenance references before becoming b3-backed assets."
       badges={[
         { label: 'React lane', tone: 'neutral' },
-        { label: 'Local draft', tone: 'warning' },
-        { label: 'Long-form primitive', tone: 'neutral' },
+        { label: 'Article primitive', tone: 'warning' },
+        { label: 'Gateway publish path', tone: 'neutral' },
       ]}
       principles={PRINCIPLES}
       side={<ArticleSidePanel draftState={draftState} />}
@@ -71,10 +72,20 @@ export default function ArticlePage({ app, route }) {
         routeKind="article"
         tone="info"
         title="Article route truth boundary"
-        allowed={['local writing', 'article manifest preview', 'copy JSON', 'builder/developer view']}
+        copy="crab://article now has a gateway-wired publish lane. It still does not claim any b3 CID, manifest CID, receipt, index pointer, or wallet mutation unless the backend returns it."
+        allowed={[
+          'local writing',
+          'required site context',
+          'article manifest preview',
+          'optional hero image reference',
+          'gateway prepare attempt',
+          'explicit ROC hold',
+          'article publish request',
+        ]}
       />
 
       <ArticleDraft app={app} draftState={draftState} />
+      <ArticlePublishFlow app={app} draftState={draftState} />
     </CreatorWorkspaceLayout>
   );
 }

@@ -9,6 +9,13 @@
  * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://article route smoke.
  */
 
+import {
+  buildContentReferenceGraphDraft,
+  buildReferenceConnectionDraft,
+  buildSiteConnectionDraft,
+  connectionIsSatisfied,
+} from '../../shared/manifest/siteAttachment.js';
+
 export const DEFAULT_ARTICLE_DRAFT = Object.freeze({
   title: '',
   subtitle: '',
@@ -75,6 +82,31 @@ export function buildArticleManifestDraft(draft, { app = null, route = null } = 
     app?.settings?.handle ||
     app?.settings?.passportSubject ||
     '';
+  const siteConnection = buildSiteConnectionDraft({
+    siteContextCrabUrl: safeDraft.siteContextCrabUrl,
+    assetKind: 'article',
+    required: true,
+    relation: 'published_on_site',
+  });
+  const heroImageConnection = buildReferenceConnectionDraft({
+    crabUrl: safeDraft.heroImageCrabUrl,
+    acceptedAssetKinds: ['image'],
+    required: false,
+    relation: 'hero_image',
+    label: 'hero image',
+  });
+  const sourceConnection = buildReferenceConnectionDraft({
+    crabUrl: safeDraft.linkedSourceCrabUrl,
+    acceptedAssetKinds: ['post', 'article', 'image', 'video', 'music', 'song'],
+    required: false,
+    relation: 'source_or_reference',
+    label: 'source/reference',
+  });
+  const referenceGraph = buildContentReferenceGraphDraft({
+    siteConnection,
+    heroImageConnection,
+    sourceConnection,
+  });
 
   return {
     schema: 'crablink.local.article-draft.v1',
@@ -107,11 +139,15 @@ export function buildArticleManifestDraft(draft, { app = null, route = null } = 
       wallet_account_label: app?.settings?.walletAccount || '',
       backend_confirmed: false,
     },
+    site_connection: siteConnection,
+    reference_graph: referenceGraph,
     linked_assets: {
       site_context_crab_url: safeDraft.siteContextCrabUrl.trim() || null,
       hero_image_crab_url: safeDraft.heroImageCrabUrl.trim() || null,
       linked_source_crab_url: safeDraft.linkedSourceCrabUrl.trim() || null,
       embedded_assets: [],
+      site_connection: siteConnection,
+      reference_graph: referenceGraph,
     },
     rights_policy: {
       mode: safeDraft.rightsMode,
@@ -156,6 +192,25 @@ export function articleStats(draft) {
   const combined = `${title}\n${subtitle}\n${summary}\n${body}`.trim();
   const tags = parseTags(draft?.tags || '');
 
+  const siteConnection = buildSiteConnectionDraft({
+    siteContextCrabUrl: draft?.siteContextCrabUrl,
+    assetKind: 'article',
+    required: true,
+    relation: 'published_on_site',
+  });
+  const heroImageConnection = buildReferenceConnectionDraft({
+    crabUrl: draft?.heroImageCrabUrl,
+    acceptedAssetKinds: ['image'],
+    relation: 'hero_image',
+    label: 'hero image',
+  });
+  const sourceConnection = buildReferenceConnectionDraft({
+    crabUrl: draft?.linkedSourceCrabUrl,
+    acceptedAssetKinds: ['post', 'article', 'image', 'video', 'music', 'song'],
+    relation: 'source_or_reference',
+    label: 'source/reference',
+  });
+
   return {
     characters: body.length,
     words: body.trim() ? body.trim().split(/\s+/).length : 0,
@@ -163,6 +218,9 @@ export function articleStats(draft) {
     tags: tags.length,
     crab_links: countCrabLinks(combined),
     reading_minutes: estimateReadingMinutes(body),
+    site_attached: connectionIsSatisfied(siteConnection),
+    hero_image_attached: connectionIsSatisfied(heroImageConnection),
+    source_attached: connectionIsSatisfied(sourceConnection),
   };
 }
 
@@ -182,6 +240,12 @@ export function getArticleCompleteness(draft) {
     safeDraft.visibility,
     safeDraft.rightsMode,
     safeDraft.moderationMode,
+    connectionIsSatisfied(buildSiteConnectionDraft({
+      siteContextCrabUrl: safeDraft.siteContextCrabUrl,
+      assetKind: 'article',
+      required: true,
+      relation: 'published_on_site',
+    })),
   ];
 
   const complete = checks.filter(Boolean).length;

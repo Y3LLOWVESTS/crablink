@@ -1,11 +1,11 @@
 /**
- * RO:WHAT — Route owner for the React crab://comment local creator workspace.
- * RO:WHY — CrabLink refactor; migrates a low-risk comment primitive onto shared creator workspace architecture.
- * RO:INTERACTS — CommentDraft.jsx, commentDraftModel.js, useCreatorDraft, CreatorWorkspaceLayout, RouteTruthPanel.
- * RO:INVARIANTS — local draft only; no fake b3 CID; no fake manifest CID; no ROC mutation; no backend publication claim.
- * RO:METRICS — none; future publish/prepare routes must use gateway client metrics/correlation IDs.
- * RO:CONFIG — app settings are display labels only.
- * RO:SECURITY — trusted local UI only; no arbitrary crab code execution; no wallet spend authority.
+ * RO:WHAT — Route owner for the React crab://comment creator and publish workspace.
+ * RO:WHY — NEXT_LEVEL text primitives continue post → comment → article, with comment becoming the second gateway-wired page contract.
+ * RO:INTERACTS — CommentDraft.jsx, CommentPublishFlow.jsx, commentDraftModel.js, useCreatorDraft, CreatorWorkspaceLayout, RouteTruthPanel.
+ * RO:INVARIANTS — no fake b3 CID; no fake manifest CID; no silent ROC spend; backend publication only when gateway returns real proof.
+ * RO:METRICS — gateway correlation IDs are displayed in the publish flow diagnostics.
+ * RO:CONFIG — app settings supply gateway URL, passport subject, wallet account, and dev bearer token.
+ * RO:SECURITY — trusted local UI only; all backend calls go through svc-gateway; no arbitrary crab code execution; no wallet spend authority stored here.
  * RO:TEST — npm run build; check-react-lane; manual crab://comment route smoke.
  */
 
@@ -14,6 +14,7 @@ import CreatorWorkspaceLayout from '../../shared/components/CreatorWorkspaceLayo
 import RouteTruthPanel from '../../shared/components/RouteTruthPanel.jsx';
 import useCreatorDraft from '../../shared/hooks/useCreatorDraft.js';
 import CommentDraft, { CommentSidePanel } from './CommentDraft.jsx';
+import CommentPublishFlow from './CommentPublishFlow.jsx';
 import {
   DEFAULT_COMMENT_DRAFT,
   buildCommentManifestDraft,
@@ -29,14 +30,14 @@ const PRINCIPLES = Object.freeze([
       'Comments should become their own typed assets so threads, posts, sites, profiles, and moderation views can reference them without owning all comment data directly.',
   },
   {
-    title: 'Context pointer',
+    title: 'Required context',
     copy:
-      'A comment can later point to a parent post, another comment, a site context, or a thread context while keeping the comment bytes independently content-addressed.',
+      'A publishable comment needs a site context plus a parent post/comment target, while the comment bytes stay independently content-addressed.',
   },
   {
-    title: 'Moderation ready',
+    title: 'Publish boundary',
     copy:
-      'Comments need moderation state, visibility policy, provenance, and creator identity without pretending local drafts are backend-confirmed truth.',
+      'The builder can prepare and submit gateway requests, but only real backend responses may create CIDs, receipts, manifests, and index pointers.',
   },
 ]);
 
@@ -57,11 +58,11 @@ export default function CommentPage({ app, route }) {
     <CreatorWorkspaceLayout
       eyebrow="crab://comment"
       title="Comment Workspace"
-      copy="Draft standalone comment assets that can later be referenced by posts, threads, sites, moderation views, profiles, and creator pages. This React route is local-only and does not publish anything yet."
+      copy="Draft and publish the second site-attached text primitive. Comments should point at a parent post/comment plus site context, then become their own b3-backed assets when the backend route exists."
       badges={[
         { label: 'React lane', tone: 'neutral' },
-        { label: 'Local draft', tone: 'warning' },
-        { label: 'Thread primitive', tone: 'neutral' },
+        { label: 'Comment primitive', tone: 'warning' },
+        { label: 'Gateway publish path', tone: 'neutral' },
       ]}
       principles={PRINCIPLES}
       side={<CommentSidePanel draftState={draftState} />}
@@ -71,10 +72,20 @@ export default function CommentPage({ app, route }) {
         routeKind="comment"
         tone="info"
         title="Comment route truth boundary"
-        allowed={['local writing', 'comment manifest preview', 'copy JSON', 'builder/developer view']}
+        copy="crab://comment now has a gateway-wired publish lane. It still does not claim any b3 CID, manifest CID, receipt, index pointer, or wallet mutation unless the backend returns it."
+        allowed={[
+          'local writing',
+          'required site context',
+          'required parent target',
+          'comment manifest preview',
+          'gateway prepare attempt',
+          'explicit ROC hold',
+          'comment publish request',
+        ]}
       />
 
       <CommentDraft app={app} draftState={draftState} />
+      <CommentPublishFlow app={app} draftState={draftState} />
     </CreatorWorkspaceLayout>
   );
 }

@@ -1,8 +1,8 @@
 /**
  * RO:WHAT — Pure props-driven article draft workspace for the React-owned crab://article route.
- * RO:WHY — CrabLink refactor; reuses shared creator panels and keeps route state owned by ArticlePage.
- * RO:INTERACTS — ArticlePage.jsx, articleDraftModel.js, shared components, React shell app context.
- * RO:INVARIANTS — local draft only; no fake b3 CID; no fake manifest CID; no publication claim; no silent ROC spend.
+ * RO:WHY — NEXT_LEVEL needs articles to be site-attached before real backend publish routes are used.
+ * RO:INTERACTS — ArticlePage.jsx, ArticlePublishFlow.jsx, articleDraftModel.js, shared components, React shell app context.
+ * RO:INVARIANTS — local manifest draft only; no fake b3 CID; no fake manifest CID; no publication claim; no silent ROC spend.
  * RO:METRICS — none.
  * RO:CONFIG — optional local passport/wallet display labels from app settings.
  * RO:SECURITY — trusted UI only; no private keys; no seed phrases; no direct internal-service calls.
@@ -41,9 +41,13 @@ export default function ArticleDraft({ app, draftState }) {
     completeness,
   } = draftState;
 
+  const siteAttached = Boolean(manifest?.site_connection?.attached);
+  const heroImageAttached = Boolean(manifest?.reference_graph?.hero_image?.attached);
+  const sourceAttached = Boolean(manifest?.reference_graph?.source?.attached);
+
   return (
     <Card
-      eyebrow="Local builder"
+      eyebrow="Builder"
       title="Article draft"
       className="article-draft-card"
       actions={
@@ -57,13 +61,18 @@ export default function ArticleDraft({ app, draftState }) {
       }
     >
       <div className="article-draft-intro">
-        <Badge tone="warning">Local only</Badge>
+        <Badge tone="warning">Draft</Badge>
         <Badge tone="neutral">crab://article</Badge>
-        <Badge tone="neutral">No wallet action</Badge>
+        <Badge tone={siteAttached ? 'success' : 'warning'}>
+          {siteAttached ? 'site attached' : 'site required'}
+        </Badge>
+        <Badge tone={heroImageAttached ? 'success' : 'neutral'}>
+          {heroImageAttached ? 'hero image linked' : 'hero optional'}
+        </Badge>
       </div>
 
       <div className="article-form-grid">
-        <Field label="Title" help="Creator-facing article title. This is local draft text only.">
+        <Field label="Title" help="Creator-facing article title. Backend will verify final publish data." required>
           <TextInput
             value={draft.title}
             onChange={(event) => updateDraft('title', event.target.value)}
@@ -73,7 +82,7 @@ export default function ArticleDraft({ app, draftState }) {
 
         <Field
           label="Creator display"
-          help="Display label only. Backend identity truth must come from svc-gateway later."
+          help="Display label only. Backend identity truth must come from svc-gateway."
         >
           <TextInput
             value={draft.creatorDisplay}
@@ -99,7 +108,7 @@ export default function ArticleDraft({ app, draftState }) {
           />
         </Field>
 
-        <Field label="Article kind" help="Planning field only; no backend schema is claimed here.">
+        <Field label="Article kind" help="Planning field for the future backend article DTO.">
           <select
             className="cl-select"
             value={draft.articleKind}
@@ -113,7 +122,7 @@ export default function ArticleDraft({ app, draftState }) {
           </select>
         </Field>
 
-        <Field label="Visibility" help="Planning field only; this page does not enforce access.">
+        <Field label="Visibility" help="Planning field only; backend policy must enforce access later.">
           <select
             className="cl-select"
             value={draft.visibility}
@@ -127,7 +136,7 @@ export default function ArticleDraft({ app, draftState }) {
           </select>
         </Field>
 
-        <Field label="Rights mode" help="Planning field only; no policy enforcement yet.">
+        <Field label="Rights mode" help="Planning field only; backend policy must verify/enforce later.">
           <select
             className="cl-select"
             value={draft.rightsMode}
@@ -171,7 +180,8 @@ export default function ArticleDraft({ app, draftState }) {
       <div className="article-form-grid">
         <Field
           label="Site context crab URL"
-          help="Optional future reference to the site where this article belongs."
+          help="Required for article publishing. Articles should belong to a site, blog, publication, or creator page."
+          required
         >
           <TextInput
             value={draft.siteContextCrabUrl}
@@ -183,7 +193,7 @@ export default function ArticleDraft({ app, draftState }) {
 
         <Field
           label="Hero image crab URL"
-          help="Optional future reference to an image asset used as the article hero."
+          help="Optional reference to an image asset used as the article hero."
         >
           <TextInput
             value={draft.heroImageCrabUrl}
@@ -217,7 +227,7 @@ export default function ArticleDraft({ app, draftState }) {
 
       <Field
         label="Tags"
-        help="Comma-separated draft tags. These are not indexed until a real backend publish route exists."
+        help="Comma-separated draft tags. Backend indexing only happens after real publish succeeds."
       >
         <TextInput
           value={draft.tags}
@@ -228,14 +238,14 @@ export default function ArticleDraft({ app, draftState }) {
 
       <Field
         label="Article body"
-        help="Plain text/Markdown-like draft text only. This page does not render articles as HTML."
+        help="Plain text/Markdown-like draft text. CrabLink sends JSON to the gateway publish route; it does not render article body as HTML."
         required
       >
         <TextArea
           value={draft.body}
           onChange={(event) => updateDraft('body', event.target.value)}
           rows={16}
-          placeholder="Write an article that can later become a b3-backed asset..."
+          placeholder="Write an article that can become a b3-backed article asset..."
         />
       </Field>
 
@@ -255,7 +265,7 @@ export default function ArticleDraft({ app, draftState }) {
           <Badge tone={completeness === 100 ? 'success' : 'neutral'}>
             {completeness}% complete
           </Badge>
-          <span>Local draft state</span>
+          <span>{siteAttached ? 'Ready for gateway prepare' : 'Needs site connection'}</span>
         </div>
 
         <div className="article-action-buttons">
@@ -278,6 +288,9 @@ export default function ArticleDraft({ app, draftState }) {
 export function ArticleSidePanel({ draftState }) {
   const { draft, viewMode, stats, manifest, completeness } = draftState;
   const tags = manifest?.metadata?.tags || [];
+  const siteAttached = Boolean(stats.site_attached);
+  const heroImageAttached = Boolean(stats.hero_image_attached);
+  const sourceAttached = Boolean(stats.source_attached);
 
   return (
     <>
@@ -290,15 +303,22 @@ export function ArticleSidePanel({ draftState }) {
           { label: 'Tags', value: tags.length },
           { label: 'Crab links', value: stats.crab_links || 0 },
           { label: 'Read min', value: stats.reading_minutes || 0 },
+          { label: 'Site', value: siteAttached ? 'attached' : 'missing' },
+          { label: 'Hero', value: heroImageAttached ? 'linked' : 'optional' },
+          { label: 'Source', value: sourceAttached ? 'linked' : 'optional' },
         ]}
-        notes={['local draft', 'plain text', 'no receipt']}
+        notes={[
+          'article draft',
+          siteAttached ? 'site attached' : 'site required',
+          'backend proof required',
+        ]}
       />
 
       <RouteTruthPanel
         routeKind="article"
         tone="warning"
-        title="Not backend truth"
-        copy="This is local UI state only. It does not create a content ID, manifest ID, receipt, index pointer, publication, hold, capture, release, or paid access event."
+        title="Backend truth boundary"
+        copy="The builder can form an article publish request, but only gateway responses from /assets/article can create real content IDs, manifest IDs, receipts, index pointers, and crab://<hash>.article URLs."
       />
 
       {viewMode === 'developer' ? (
@@ -319,6 +339,22 @@ export function ArticleSidePanel({ draftState }) {
             </p>
 
             <div className="article-preview-tags">
+              <Badge tone={siteAttached ? 'success' : 'warning'} uppercase={false}>
+                {siteAttached ? manifest?.site_connection?.normalized_crab_url : 'site connection required'}
+              </Badge>
+
+              {heroImageAttached ? (
+                <Badge tone="success" uppercase={false}>
+                  hero image linked
+                </Badge>
+              ) : null}
+
+              {sourceAttached ? (
+                <Badge tone="success" uppercase={false}>
+                  source linked
+                </Badge>
+              ) : null}
+
               {draft.contentWarning ? (
                 <Badge tone="warning" uppercase={false}>
                   CW: {draft.contentWarning}

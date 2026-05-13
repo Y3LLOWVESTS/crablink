@@ -9,10 +9,10 @@
  * RO:TEST — npm run build; scripts/check-react-lane.sh; manual malicious HTML smoke.
  */
 
-import { renderSafeEmbeds } from './embedRegistry.js';
+import { renderSafeEmbeds, summarizeReferences } from './embedRegistry.js';
 import { describeSandboxPolicy } from './sandboxFrame.js';
 
-export const SAFE_HTML_VERSION = 'crablink.safe-html.v1';
+export const SAFE_HTML_VERSION = 'crablink.safe-html.v2';
 
 export function markUntrustedHtml(html) {
   return String(html || '');
@@ -48,9 +48,11 @@ export function sanitizeUntrustedHtml(input) {
     .replace(/<base\b[^>]*>/gi, '')
     .replace(/<meta\b[^>]*(?:http-equiv\s*=\s*["']?refresh["']?)[^>]*>/gi, '')
     .replace(/<link\b[^>]*(?:rel\s*=\s*["']?(?:preload|prefetch|modulepreload)["']?)[^>]*>/gi, '')
-    .replace(/<form\b[^>]*>/gi, '<div class="crablink-blocked-form" role="note">')
+    .replace(/<form\b[^>]*>/gi, '<div class="crablink-blocked-form" role="note"><strong>Form blocked by CrabLink sandbox</strong>')
     .replace(/<\/form>/gi, '</div>')
     .replace(/<input\b[^>]*>/gi, '')
+    .replace(/<textarea\b[^<]*(?:(?!<\/textarea>)<[^<]*)*<\/textarea>/gi, '')
+    .replace(/<select\b[^<]*(?:(?!<\/select>)<[^<]*)*<\/select>/gi, '')
     .replace(/<button\b[^>]*>/gi, '<span class="crablink-disabled-button">')
     .replace(/<\/button>/gi, '</span>')
     .replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, '')
@@ -70,6 +72,7 @@ export function summarizeSafeHtmlPolicy({ input = '', output = '', embedSummary 
     input_bytes: byteLength(input),
     output_bytes: byteLength(output),
     embed_summary: embedSummary || null,
+    reference_graph: summarizeReferences(embedSummary || {}),
     sandbox: describeSandboxPolicy(),
     stripped: Object.freeze({
       scripts: true,
@@ -170,7 +173,7 @@ function safePreviewBanner(summary, source) {
 
   return [
     '<div class="crablink-preview-boundary">',
-    `<span>CrabLink sandbox · ${escapeHtml(mode)} · scripts disabled</span>`,
+    `<span>CrabLink sandbox · ${escapeHtml(mode)} · scripts disabled · reference graph aware</span>`,
     `<code>${site}</code>`,
     '</div>',
   ].join('');
@@ -205,12 +208,13 @@ function safePreviewCss() {
     }
 
     main, article, section {
-      max-width: 1120px;
+      width: min(1280px, calc(100vw - 40px));
+      max-width: none;
       margin-left: auto;
       margin-right: auto;
     }
 
-    main { padding: 48px 28px; }
+    main { padding: 56px 0; }
 
     h1 {
       margin: 0 0 18px;
@@ -343,6 +347,11 @@ function safePreviewCss() {
       padding: 0 12px;
       color: var(--cl-safe-muted);
       font-weight: 800;
+    }
+
+    @media (max-width: 760px) {
+      main, article, section { width: min(100%, calc(100vw - 24px)); }
+      main { padding: 32px 0; }
     }
   </style>`;
 }
