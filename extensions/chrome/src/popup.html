@@ -8,12 +8,15 @@
     <style>
       :root {
         color-scheme: dark;
-        --bg: #0d1628;
-        --panel: #111c31;
-        --border: #2c3a54;
-        --text: #f7fbff;
-        --muted: #a9b6cc;
-        --blue: #2f67f2;
+        --bg: #050505;
+        --panel: #101010;
+        --panel-2: #171717;
+        --border: #303030;
+        --text: #f8f8f8;
+        --muted: #b6b6b6;
+        --accent: #f2f2f2;
+        --accent-text: #111111;
+        --secondary: #222222;
         --bad: #fca5a5;
       }
 
@@ -23,8 +26,8 @@
 
       html,
       body {
-        width: 320px;
-        min-width: 320px;
+        width: 340px;
+        min-width: 340px;
         margin: 0;
         padding: 0;
         overflow: hidden;
@@ -40,7 +43,7 @@
         gap: 12px;
         padding: 16px;
         border: 1px solid var(--border);
-        background: var(--panel);
+        background: linear-gradient(180deg, var(--panel), var(--panel-2));
       }
 
       h1 {
@@ -56,16 +59,27 @@
         line-height: 1.35;
       }
 
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
       button {
         min-height: 38px;
-        border: 0;
+        border: 1px solid var(--border);
         border-radius: 12px;
-        background: var(--blue);
-        color: white;
+        background: var(--accent);
+        color: var(--accent-text);
         font: inherit;
-        font-weight: 800;
+        font-weight: 850;
         cursor: pointer;
         padding: 10px 12px;
+      }
+
+      button.secondary {
+        background: var(--secondary);
+        color: var(--text);
       }
 
       #errorText {
@@ -78,12 +92,11 @@
         display: block;
       }
 
-      body.error #openButton {
-        display: block;
-      }
-
-      #openButton {
-        display: none;
+      .hint {
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
       }
     </style>
   </head>
@@ -91,9 +104,18 @@
   <body>
     <main>
       <h1>Opening CrabLink…</h1>
-      <p>This popup is only a launcher. The full CrabLink browser will open in a normal tab.</p>
+      <p>React is now the primary CrabLink browser lane. The old page lane remains available as a fallback.</p>
+
+      <section class="hint" aria-label="Safety note">
+        <p>No wallet action happens from this popup. It only opens an extension-owned browser tab.</p>
+      </section>
+
       <p id="errorText"></p>
-      <button id="openButton" type="button">Open CrabLink Browser</button>
+
+      <div class="actions">
+        <button id="openButton" type="button">Open React CrabLink</button>
+        <button id="legacyButton" class="secondary" type="button">Open Legacy Fallback</button>
+      </div>
     </main>
 
     <script type="module" src="./popup.js"></script>
