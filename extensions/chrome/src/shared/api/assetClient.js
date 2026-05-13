@@ -11,6 +11,7 @@
 
 const HEX_64_RE = /^[0-9a-f]{64}$/;
 const ASSET_KIND_RE = /^[a-z][a-z0-9_-]{0,31}$/;
+const MAX_IDEMPOTENCY_KEY_BYTES = 64;
 
 export function createAssetClient(gateway) {
   return new AssetClient(gateway);
@@ -29,10 +30,9 @@ export class AssetResolveError extends Error {
     this.remediation = details.remediation || remediationForProblem(this.problemCode);
     this.target = details.target || null;
     this.attempts = Array.isArray(details.attempts) ? details.attempts : [];
-    this.primaryError = details.primaryError || null;
-    this.fallbackError = details.fallbackError || null;
     this.data = details.data || null;
-    this.correlationId = details.correlationId || correlationFromAttempts(this.attempts);
+    this.correlationId = details.correlationId || '';
+    this.route = details.route || '';
   }
 }
 
@@ -41,239 +41,345 @@ export class AssetClient {
     this.gateway = gateway || null;
   }
 
+  get ready() {
+    return Boolean(this.gateway);
+  }
+
   async resolveRoute(route) {
-    let target;
+    this.assertGateway();
 
-    try {
-      target = normalizeAssetRoute(route);
-    } catch (error) {
-      throw makeAssetResolveError({
-        problemCode: error?.problemCode || 'invalid_asset_route',
-        target: null,
-        attempts: [],
-        primaryError: error,
-        fallbackError: null,
-      });
-    }
-
-    this.assertGateway('Asset resolution');
-
+    const target = normalizeAssetTarget(route);
     const attempts = [];
-    let primaryError = null;
+
+    const crabPath = `/crab/resolve?url=${encodeURIComponent(target.assetUrl)}`;
 
     try {
-      const response = await this.gateway.resolveCrab(target.assetUrl);
-
-      attempts.push(successAttempt('/crab/resolve', response));
-      validateAssetPageResponse(response?.data, {
-        route: '/crab/resolve',
-        target,
-        response,
+      const response = await this.gateway.request(crabPath, {
+        label: 'Asset crab resolve',
       });
 
-      return buildResolvedAsset({
-        target,
-        response,
-        data: response.data,
-        source: 'crab_resolve',
-        attempts,
-      });
+      attempts.push(attemptFromResponse(response, crabPath, true));
+
+      return normalizeAssetResolveResponse(response, target, attempts);
     } catch (error) {
-      primaryError = error;
-      attempts.push(errorAttempt('/crab/resolve', error));
+      attempts.push(attemptFromError(error, crabPath));
     }
 
+    const b3Path = `/b3/${target.hash}.${target.kind}`;
+
     try {
-      const response = await this.gateway.getB3Asset(target.hash, target.assetKind);
-
-      attempts.push(successAttempt(`/b3/${target.hash}.${target.assetKind}`, response));
-      validateAssetPageResponse(response?.data, {
-        route: `/b3/${target.hash}.${target.assetKind}`,
-        target,
-        response,
+      const response = await this.gateway.request(b3Path, {
+        label: 'Asset b3 resolve',
       });
 
-      return buildResolvedAsset({
-        target,
-        response,
-        data: response.data,
-        source: 'b3_asset',
-        attempts,
-      });
-    } catch (fallbackError) {
-      attempts.push(errorAttempt(`/b3/${target.hash}.${target.assetKind}`, fallbackError));
+      attempts.push(attemptFromResponse(response, b3Path, true));
 
-      throw makeAssetResolveError({
+      return normalizeAssetResolveResponse(response, target, attempts);
+    } catch (error) {
+      attempts.push(attemptFromError(error, b3Path));
+
+      throw new AssetResolveError(error?.message || 'Asset could not be resolved.', {
+        problemCode: statusToProblemCode(error?.status),
+        reason: error?.reason || statusToProblemCode(error?.status),
+        status: Number(error?.status || 0),
+        retryable: Boolean(error?.retryable || isRetryableStatus(error?.status)),
         target,
         attempts,
-        primaryError,
-        fallbackError,
+        data: error?.data || null,
+        correlationId: error?.correlationId || '',
+        route: error?.route || b3Path,
       });
     }
   }
 
-  async prepareImageAsset(payload = {}, options = {}) {
-    this.assertGateway('Image prepare');
+  previewSources(hash, kind = 'image') {
+    const normalizedHash = normalizeHash(hash);
+    const assetKind = normalizeKind(kind);
 
-    const body = normalizeImagePreparePayload(payload);
-    const idempotencyKey = String(
-      options.idempotencyKey ||
-        body.client_idempotency_key ||
-        stableClientKey('image-prepare', body.title, body.bytes, body.content_type),
-    ).trim();
+    if (!normalizedHash) {
+      return [];
+    }
+
+    if (typeof this.gateway?.url === 'function') {
+      return [
+        this.gateway.url(`/o/b3:${normalizedHash}`),
+        this.gateway.url(`/b3/${normalizedHash}.${assetKind}`),
+      ];
+    }
+
+    const baseUrl = String(this.gateway?.baseUrl || 'http://127.0.0.1:8090').replace(/\/+$/, '');
+
+    return [
+      `${baseUrl}/o/b3:${normalizedHash}`,
+      `${baseUrl}/b3/${normalizedHash}.${assetKind}`,
+    ];
+  }
+
+  async prepareImage(payload = {}) {
+    this.assertGateway();
+
+    const request = normalizeImagePrepareRequest(payload);
 
     return this.gateway.request('/assets/image/prepare', {
       method: 'POST',
-      body,
+      body: request,
       label: 'Image prepare',
+      mutation: true,
       headers: {
-        'idempotency-key': idempotencyKey,
+        'Idempotency-Key': request.client_idempotency_key,
       },
+      idempotencyKey: request.client_idempotency_key,
     });
   }
 
-  async uploadImageAsset({
-    file,
-    title = '',
-    description = '',
-    tags = [],
-    paidProof = null,
-    idempotencyKey = '',
-  } = {}) {
-    this.assertGateway('Image upload');
+  async uploadImage({ file, bytes, contentType, paidProof, metadata = {}, idempotencyKey = '' } = {}) {
+    this.assertGateway();
 
-    if (!isBlobLike(file)) {
-      throw assetMutationError('Image upload requires the selected File/Blob bytes.', 'missing_image_file');
-    }
-
+    const blob = normalizeImageBlob(file || bytes, contentType);
     const proof = normalizePaidProof(paidProof);
-    const idem = String(
+    const contentTypeHeader = stringValue(contentType, file?.type, blob.type, 'application/octet-stream');
+    const idem = compactIdempotencyKey(
       idempotencyKey ||
-        proof.idem ||
-        stableClientKey('image-upload', file.name, file.size, proof.txid),
-    ).trim();
+        stableIdempotencyKey(
+          'image-upload',
+          proof.txid,
+          proof.receipt_hash,
+          String(blob.size),
+          contentTypeHeader,
+          metadata?.title,
+        ),
+      'image-upload',
+    );
 
-    return this.gateway.request('/assets/image', {
+    const headers = {
+      'Content-Type': contentTypeHeader,
+      'Idempotency-Key': idem,
+      'x-ron-paid-op': proof.op || 'hold',
+      'x-ron-paid-asset': proof.asset || 'roc',
+      'x-ron-paid-estimate-minor': proof.amount_minor,
+      'x-ron-wallet-txid': proof.txid,
+      'x-ron-wallet-receipt-hash': proof.receipt_hash,
+      'x-ron-wallet-from': proof.from,
+      'x-ron-wallet-to': proof.to,
+    };
+
+    const title = stringValue(metadata.title);
+    const description = stringValue(metadata.description, metadata.altText, metadata.alt_text);
+    const tags = Array.isArray(metadata.tags) ? metadata.tags.join(',') : stringValue(metadata.tags);
+
+    if (title) headers['x-ron-asset-title'] = title;
+    if (description) headers['x-ron-asset-description'] = description;
+    if (tags) headers['x-ron-asset-tags'] = tags;
+
+    const response = await this.gateway.request('/assets/image', {
       method: 'POST',
-      body: file,
+      body: blob,
       label: 'Image upload',
-      headers: imageUploadHeaders({
-        file,
-        title,
-        description,
-        tags,
-        paidProof: proof,
-        idempotencyKey: idem,
-      }),
-    });
-  }
-
-  gatewayB3Url(hash, assetKind = 'image') {
-    const target = normalizeAssetTarget({
-      hash,
-      assetKind,
+      mutation: true,
+      parseAs: 'json',
+      headers,
+      idempotencyKey: idem,
     });
 
-    if (!this.gateway?.url) {
-      return '';
-    }
+    const assetUrl = extractImageAssetUrl(response?.data || response);
+    const assetCid = extractImageAssetCid(response?.data || response);
 
-    return this.gateway.url(`/b3/${target.hash}.${target.assetKind}`);
-  }
-
-  gatewayObjectUrl(hash, assetKind = 'image') {
-    const target = normalizeAssetTarget({
-      hash,
-      assetKind,
-    });
-
-    if (!this.gateway?.url) {
-      return '';
-    }
-
-    return this.gateway.url(`/o/${target.cid}`);
-  }
-
-  previewSources(hash, assetKind = 'image') {
-    const target = normalizeAssetTarget({
-      hash,
-      assetKind,
-    });
-
-    const sources = [
-      {
-        key: 'raw-object',
-        label: 'Raw object bytes',
-        description: 'Gateway raw object route, used for the real image preview when the object exists.',
-        url: this.gatewayObjectUrl(target.hash, target.assetKind),
+    return {
+      ...response,
+      request: {
+        bytes: blob.size,
+        content_type: contentTypeHeader,
+        headers: redactProofHeaders(headers),
+        idempotency_key: idem,
       },
-      {
-        key: 'typed-b3',
-        label: 'Typed b3 route',
-        description: 'Typed asset route fallback. Some stacks return JSON here, so this may not render as an image.',
-        url: this.gatewayB3Url(target.hash, target.assetKind),
-      },
-    ].filter((source) => source.url);
-
-    return Object.freeze(sources.map((source) => Object.freeze(source)));
+      paidProof: proof,
+      imageAssetUrl: assetUrl,
+      imageAssetCid: assetCid,
+    };
   }
 
-  assertGateway(label = 'Asset request') {
+  assertGateway() {
     if (!this.gateway || typeof this.gateway.request !== 'function') {
-      throw new AssetResolveError(`${label} requires the configured gateway client.`, {
-        problemCode: 'gateway_unconfigured',
+      throw new AssetResolveError('Asset request requires the configured gateway client.', {
+        problemCode: 'missing_gateway_client',
         reason: 'missing_gateway_client',
         retryable: false,
-        target: null,
-        attempts: [],
       });
     }
   }
 }
 
-export function normalizeAssetRoute(route) {
-  const params = route?.params || {};
+export function normalizeImagePrepareRequest(payload = {}) {
+  const bytes = normalizePositiveInteger(
+    payload.bytes,
+    payload.size,
+    payload.size_bytes,
+    payload.file_bytes,
+    payload.fileBytes,
+  );
+  const payerAccount = stringValue(
+    payload.payer_account,
+    payload.payerAccount,
+    payload.wallet_account,
+    payload.walletAccount,
+    payload.from,
+  );
+  const ownerPassport = stringValue(
+    payload.owner_passport_subject,
+    payload.ownerPassportSubject,
+    payload.passport,
+    payload.passportSubject,
+  );
+  const contentType = stringValue(payload.content_type, payload.contentType, payload.mime, 'image/png');
+  const title = stringValue(payload.title, 'Untitled image draft').slice(0, 160);
+  const description = stringValue(payload.description, payload.altText, payload.alt_text).slice(0, 500);
+  const tags = normalizeTags(payload.tags);
+  const idempotency = compactIdempotencyKey(
+    payload.client_idempotency_key ||
+      payload.clientIdempotencyKey ||
+      payload.idempotency_key ||
+      stableIdempotencyKey('image-prepare', payerAccount, ownerPassport, bytes, contentType, title),
+    'image-prepare',
+  );
 
-  return normalizeAssetTarget({
-    hash: params.hash,
-    assetKind: params.assetKind,
-    assetUrl: params.assetUrl || route?.normalizedInput,
-    cid: params.cid,
+  if (!bytes) {
+    throw makeAssetError('Image prepare requires a positive byte count.', 'missing_image_bytes');
+  }
+
+  if (!payerAccount) {
+    throw makeAssetError('Image prepare requires a payer wallet account.', 'missing_payer_account');
+  }
+
+  return stripEmpty({
+    bytes: Number(bytes),
+    payer_account: payerAccount,
+    owner_passport_subject: ownerPassport,
+    content_type: contentType,
+    title,
+    description,
+    tags,
+    client_idempotency_key: idempotency,
   });
 }
 
-export function normalizeAssetTarget({ hash, assetKind = 'image', assetUrl = '', cid = '' } = {}) {
-  const safeHash = String(hash || '').trim().toLowerCase();
-  const safeKind = String(assetKind || 'image').trim().toLowerCase();
-  const safeCid = String(cid || `b3:${safeHash}`).trim().toLowerCase();
-  const safeAssetUrl = String(assetUrl || `crab://${safeHash}.${safeKind}`).trim();
+export function normalizePaidProof(input = {}) {
+  const source = input?.walletHold || input?.hold || input?.receipt || input?.data || input || {};
 
-  if (!HEX_64_RE.test(safeHash)) {
-    throw targetError('Asset route requires a canonical 64-character lowercase b3 hash.', {
-      problemCode: 'invalid_asset_hash',
-      reason: 'invalid_hash',
-    });
+  const proof = {
+    op: stringValue(source.op, source.paid_op, 'hold'),
+    asset: stringValue(source.asset, 'roc').toLowerCase(),
+    amount_minor: normalizePositiveInteger(
+      source.amount_minor,
+      source.amountMinor,
+      source.amount,
+      input.amount_minor,
+      input.amountMinor,
+    ),
+    txid: stringValue(
+      source.txid,
+      source.tx_id,
+      source.transaction_id,
+      source.wallet_txid,
+      source.walletTxid,
+      input.txid,
+      input.tx_id,
+    ),
+    receipt_hash: stringValue(
+      source.receipt_hash,
+      source.receiptHash,
+      source.wallet_receipt_hash,
+      source.walletReceiptHash,
+      input.receipt_hash,
+      input.receiptHash,
+    ),
+    from: stringValue(source.from, source.payer, input.from),
+    to: stringValue(source.to, source.escrow, source.payee, input.to),
+  };
+
+  if (!proof.txid) {
+    throw makeAssetError('Paid upload requires x-ron-wallet-txid proof.', 'missing_wallet_txid');
   }
 
-  if (!ASSET_KIND_RE.test(safeKind)) {
-    throw targetError('Asset route has an unsupported asset kind suffix.', {
-      problemCode: 'unsupported_kind',
-      reason: 'unsupported_asset_kind',
-    });
+  if (!proof.receipt_hash) {
+    throw makeAssetError('Paid upload requires x-ron-wallet-receipt-hash proof.', 'missing_wallet_receipt_hash');
   }
 
-  return Object.freeze({
-    hash: safeHash,
-    assetKind: safeKind,
-    cid: safeCid.startsWith('b3:') ? safeCid : `b3:${safeHash}`,
-    assetUrl: safeAssetUrl.startsWith('crab://') ? safeAssetUrl : `crab://${safeHash}.${safeKind}`,
-  });
+  if (!proof.amount_minor) {
+    throw makeAssetError('Paid upload requires x-ron-paid-estimate-minor proof.', 'missing_paid_amount');
+  }
+
+  if (!proof.from) {
+    throw makeAssetError('Paid upload requires x-ron-wallet-from proof.', 'missing_wallet_from');
+  }
+
+  if (!proof.to) {
+    throw makeAssetError('Paid upload requires x-ron-wallet-to proof.', 'missing_wallet_to');
+  }
+
+  return proof;
+}
+
+export function extractImageAssetUrl(data = {}) {
+  const source = data?.data && typeof data.data === 'object' ? data.data : data;
+  const direct = stringValue(
+    source.crab_url,
+    source.crabUrl,
+    source.asset_url,
+    source.assetUrl,
+    source.url,
+    source.image_url,
+    source.imageUrl,
+  );
+
+  if (direct.startsWith('crab://')) {
+    return direct;
+  }
+
+  const cid = extractImageAssetCid(source);
+
+  if (cid?.startsWith('b3:')) {
+    return `crab://${cid.slice(3)}.image`;
+  }
+
+  return '';
+}
+
+export function extractImageAssetCid(data = {}) {
+  const source = data?.data && typeof data.data === 'object' ? data.data : data;
+  const direct = stringValue(
+    source.cid,
+    source.content_id,
+    source.contentId,
+    source.image_cid,
+    source.imageCid,
+    source.b3,
+    source.hash,
+    source.digest,
+  );
+
+  const normalized = normalizeCid(direct);
+
+  if (normalized) {
+    return normalized;
+  }
+
+  const nested =
+    objectValue(source.asset) ||
+    objectValue(source.image) ||
+    objectValue(source.object) ||
+    objectValue(source.manifest) ||
+    null;
+
+  if (nested) {
+    return extractImageAssetCid(nested);
+  }
+
+  return '';
 }
 
 export function normalizeAssetResolveProblem(error) {
   if (error instanceof AssetResolveError) {
     return {
-      name: error.name,
       title: error.title,
       copy: error.copy,
       message: error.message,
@@ -281,488 +387,328 @@ export function normalizeAssetResolveProblem(error) {
       reason: error.reason,
       status: error.status,
       retryable: error.retryable,
-      remediation: error.remediation,
       target: error.target,
       attempts: error.attempts,
+      remediation: error.remediation,
       correlationId: error.correlationId,
+      route: error.route,
       data: error.data,
     };
   }
 
-  const attempts = Array.isArray(error?.attempts) ? error.attempts : [];
-  const problemCode = classifyProblem({
-    attempts,
-    primaryError: error?.primaryError || error,
-    fallbackError: error?.fallbackError || null,
-  });
+  const status = Number(error?.status || 0);
+  const code = statusToProblemCode(status);
 
   return {
-    name: String(error?.name || 'Error'),
-    title: titleForProblem(problemCode),
-    copy: copyForProblem(problemCode),
-    message: String(error?.message || error || 'Asset resolution failed.'),
-    problemCode,
-    reason: String(error?.reason || problemCode),
-    status: Number(error?.status || error?.fallbackError?.status || error?.primaryError?.status || 0),
-    retryable: Boolean(error?.retryable || error?.fallbackError?.retryable || error?.primaryError?.retryable),
-    remediation: remediationForProblem(problemCode),
+    title: titleForProblem(code),
+    copy: copyForProblem(code),
+    message: String(error?.message || 'Asset request failed.'),
+    problemCode: code,
+    reason: error?.reason || code,
+    status,
+    retryable: Boolean(error?.retryable || isRetryableStatus(status)),
     target: error?.target || null,
-    attempts,
-    correlationId: String(
-      error?.correlationId ||
-        error?.fallbackError?.correlationId ||
-        error?.primaryError?.correlationId ||
-        correlationFromAttempts(attempts) ||
-        '',
-    ),
-    data: error?.data || error?.fallbackError?.data || error?.primaryError?.data || null,
+    attempts: Array.isArray(error?.attempts) ? error.attempts : [],
+    remediation: remediationForProblem(code),
+    correlationId: error?.correlationId || '',
+    route: error?.route || '',
+    data: error?.data || null,
   };
 }
 
-export function normalizeImagePreparePayload(payload = {}) {
-  const bytes = positiveInteger(payload.bytes);
-  const contentType = stringValue(payload.content_type, payload.contentType, 'image/png');
-  const title = stringValue(payload.title);
-  const description = stringValue(payload.description);
-  const tags = normalizeTags(payload.tags);
+function normalizeAssetResolveResponse(response, target, attempts) {
+  const data = response?.data || response || {};
+  const cid = extractImageAssetCid(data) || target.cid;
+  const crabUrl = extractImageAssetUrl(data) || target.assetUrl;
 
-  if (!bytes) {
-    throw assetMutationError('Image prepare requires a positive byte count.', 'missing_image_bytes');
-  }
-
-  return stripUndefined({
-    bytes,
-    payer_account: stringValue(payload.payer_account, payload.payerAccount),
-    owner_passport_subject: stringValue(
-      payload.owner_passport_subject,
-      payload.ownerPassportSubject,
-      payload.owner_passport,
-    ),
-    content_type: contentType,
-    title: title || undefined,
-    description: description || undefined,
-    tags,
-    client_idempotency_key: stringValue(
-      payload.client_idempotency_key,
-      payload.clientIdempotencyKey,
-      stableClientKey('image-prepare', title, bytes, contentType),
-    ),
-  });
-}
-
-export function normalizePaidProof(value = {}) {
-  const proof = value && typeof value === 'object' ? value : {};
-
-  const normalized = {
-    txid: stringValue(proof.txid, proof.tx_id, proof.hold_id, proof.id),
-    receipt_hash: stringValue(proof.receipt_hash, proof.receiptHash, proof.hash),
-    from: stringValue(proof.from, proof.payer, proof.payer_account),
-    to: stringValue(proof.to, proof.escrow, proof.escrow_account),
-    amount_minor: stringValue(proof.amount_minor, proof.amountMinor, proof.estimate_minor),
-    asset: stringValue(proof.asset, 'roc').toLowerCase(),
-    op: stringValue(proof.op, 'hold').toLowerCase(),
-    idem: stringValue(proof.idem, proof.idempotency_key, proof.idempotencyKey),
-  };
-
-  if (
-    !normalized.txid ||
-    !normalized.receipt_hash ||
-    !normalized.from ||
-    !normalized.to ||
-    !/^[0-9]+$/.test(normalized.amount_minor) ||
-    normalized.amount_minor === '0'
-  ) {
-    throw assetMutationError(
-      'Image upload requires a wallet hold proof with txid, receipt_hash, payer, escrow, and positive amount.',
-      'missing_paid_hold_proof',
-    );
-  }
-
-  return Object.freeze(normalized);
-}
-
-export function extractImageAssetUrl(data = {}) {
-  const object = data && typeof data === 'object' ? data : {};
-
-  return stringValue(
-    object.crab_url,
-    object.crabUrl,
-    object.asset_crab_url,
-    object.assetCrabUrl,
-    object.links?.crab,
-    object.asset?.crab_url,
-    object.asset?.crabUrl,
-    object.result?.crab_url,
-    object.result?.crabUrl,
-  );
-}
-
-export function extractImageAssetCid(data = {}) {
-  const object = data && typeof data === 'object' ? data : {};
-
-  return stringValue(
-    object.asset_cid,
-    object.assetCid,
-    object.cid,
-    object.asset?.cid,
-    object.asset?.asset_cid,
-    object.result?.asset_cid,
-  );
-}
-
-function imageUploadHeaders({ file, title, description, tags, paidProof, idempotencyKey }) {
-  return stripUndefined({
-    'Content-Type': stringValue(file?.type, 'image/png'),
-    'idempotency-key': idempotencyKey,
-    'x-ron-paid-op': paidProof.op || 'hold',
-    'x-ron-paid-asset': paidProof.asset || 'roc',
-    'x-ron-paid-estimate-minor': paidProof.amount_minor,
-    'x-ron-wallet-txid': paidProof.txid,
-    'x-ron-wallet-receipt-hash': paidProof.receipt_hash,
-    'x-ron-wallet-from': paidProof.from,
-    'x-ron-wallet-to': paidProof.to,
-    'x-ron-asset-title': stringValue(title),
-    'x-ron-asset-description': stringValue(description),
-    'x-ron-asset-tags': normalizeTags(tags).join(','),
-  });
-}
-
-function validateAssetPageResponse(data, context) {
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    const error = new Error('Gateway returned a malformed asset response instead of an asset page JSON object.');
-    error.name = 'AssetMalformedResponseError';
-    error.problemCode = 'malformed_response';
-    error.reason = 'malformed_response';
-    error.status = Number(context?.response?.status || 0);
-    error.retryable = false;
-    error.data = data ?? null;
-    error.correlationId = String(context?.response?.correlationId || '');
-    throw error;
-  }
-}
-
-function buildResolvedAsset({ target, response, data, source, attempts }) {
-  return Object.freeze({
-    ok: true,
-    source,
-    target,
-    response: Object.freeze({
-      status: response?.status || 0,
-      route: response?.route || '',
+  return {
+    ...response,
+    data,
+    asset: data,
+    summary: stripEmpty({
+      hash: cid?.startsWith('b3:') ? cid.slice(3) : target.hash,
+      cid,
+      crabUrl,
+      kind: target.kind,
+      status: response?.status || 200,
       correlationId: response?.correlationId || '',
     }),
-    data,
-    attempts: Object.freeze(attempts.map((attempt) => Object.freeze({ ...attempt }))),
-    resolvedAt: new Date().toISOString(),
-  });
-}
-
-function successAttempt(route, response) {
-  return {
-    method: 'GET',
-    route,
-    ok: true,
-    status: Number(response?.status || 0),
-    reason: 'ok',
-    message: 'Gateway returned an asset response.',
-    correlationId: String(response?.correlationId || ''),
-    retryable: false,
-  };
-}
-
-function errorAttempt(route, error) {
-  return {
-    method: 'GET',
-    route,
-    ok: false,
-    status: Number(error?.status || 0),
-    reason: String(error?.reason || error?.problemCode || error?.name || 'request_failed'),
-    message: String(error?.message || 'Gateway request failed.'),
-    correlationId: String(error?.correlationId || ''),
-    retryable: Boolean(error?.retryable),
-  };
-}
-
-function makeAssetResolveError({ target, attempts, primaryError, fallbackError, problemCode = '' }) {
-  const classified = problemCode || classifyProblem({ attempts, primaryError, fallbackError });
-  const status = bestStatus(attempts, fallbackError, primaryError);
-  const retryable = Boolean(
-    fallbackError?.retryable ||
-      primaryError?.retryable ||
-      attempts.some((attempt) => attempt.retryable),
-  );
-
-  const message =
-    messageForProblem(classified, target) ||
-    fallbackError?.message ||
-    primaryError?.message ||
-    `Unable to resolve ${target?.assetUrl || 'this asset'} through the configured gateway.`;
-
-  return new AssetResolveError(message, {
-    problemCode: classified,
-    reason: reasonForProblem(classified, fallbackError, primaryError),
-    status,
-    retryable,
     target,
     attempts,
-    primaryError,
-    fallbackError,
-    data: fallbackError?.data || primaryError?.data || null,
-    correlationId: correlationFromAttempts(attempts),
-  });
-}
-
-function classifyProblem({ attempts = [], primaryError = null, fallbackError = null }) {
-  const all = [
-    ...(Array.isArray(attempts) ? attempts : []),
-    primaryError,
-    fallbackError,
-  ].filter(Boolean);
-
-  if (all.some((item) => item?.problemCode === 'invalid_asset_hash' || item?.reason === 'invalid_hash')) {
-    return 'invalid_asset_hash';
-  }
-
-  if (
-    all.some((item) =>
-      includesAny(reasonText(item), [
-        'unsupported_asset_kind',
-        'unsupported_kind',
-        'invalid_asset_kind',
-        'unknown_asset_kind',
-      ]),
-    )
-  ) {
-    return 'unsupported_kind';
-  }
-
-  if (all.some((item) => item?.problemCode === 'malformed_response' || item?.reason === 'malformed_response')) {
-    return 'malformed_response';
-  }
-
-  if (
-    all.some((item) =>
-      includesAny(reasonText(item), ['policy', 'forbidden', 'denied', 'capability', 'unauthorized']),
-    ) ||
-    all.some((item) => Number(item?.status || 0) === 401 || Number(item?.status || 0) === 403)
-  ) {
-    return 'policy_denied';
-  }
-
-  if (attempts.length > 0 && attempts.every((attempt) => Number(attempt.status || 0) === 404)) {
-    return 'asset_not_found';
-  }
-
-  if (all.some((item) => Number(item?.status || 0) === 404)) {
-    return 'asset_not_found';
-  }
-
-  if (
-    attempts.length > 0 &&
-    attempts.every((attempt) => Number(attempt.status || 0) === 0) &&
-    attempts.some((attempt) => includesAny(reasonText(attempt), ['network_error', 'timeout', 'failed to fetch']))
-  ) {
-    return 'gateway_unreachable';
-  }
-
-  if (all.some((item) => Number(item?.status || 0) >= 500)) {
-    return 'gateway_upstream_unavailable';
-  }
-
-  if (all.some((item) => includesAny(reasonText(item), ['network_error', 'timeout', 'aborterror']))) {
-    return 'gateway_unreachable';
-  }
-
-  return 'asset_resolve_failed';
-}
-
-function titleForProblem(problemCode) {
-  const titles = {
-    gateway_unconfigured: 'Gateway is not configured',
-    gateway_unreachable: 'Gateway unreachable',
-    gateway_upstream_unavailable: 'Gateway or upstream unavailable',
-    asset_not_found: 'Asset not found',
-    policy_denied: 'Policy denied this asset',
-    unsupported_kind: 'Unsupported asset kind',
-    invalid_asset_hash: 'Invalid asset hash',
-    invalid_asset_route: 'Invalid asset route',
-    malformed_response: 'Malformed asset response',
-    asset_resolve_failed: 'Asset could not be resolved',
   };
-
-  return titles[problemCode] || titles.asset_resolve_failed;
 }
 
-function copyForProblem(problemCode) {
-  const copies = {
-    gateway_unconfigured:
-      'CrabLink does not have a gateway client for this route. Check the gateway settings before resolving typed assets.',
-    gateway_unreachable:
-      'CrabLink could not reach the configured gateway before the request failed or timed out.',
-    gateway_upstream_unavailable:
-      'The gateway answered, but one of the backend services needed for asset hydration appears unavailable.',
-    asset_not_found:
-      'The gateway could not find a manifest, object, or hydrated asset page for this canonical typed asset route.',
-    policy_denied:
-      'The gateway or policy layer refused this asset request. CrabLink will not bypass that decision.',
-    unsupported_kind:
-      'This typed crab asset suffix is not supported by the current gateway/parser contract.',
-    invalid_asset_hash:
-      'Typed asset routes require a canonical 64-character lowercase BLAKE3 hash.',
-    invalid_asset_route:
-      'The route could not be normalized into a safe typed crab asset target.',
-    malformed_response:
-      'The gateway returned data, but it was not the expected asset page JSON object.',
-    asset_resolve_failed:
-      'The gateway did not return a hydrated asset response. CrabLink shows the failure instead of inventing local asset truth.',
+function normalizeAssetTarget(route) {
+  const params = route?.params || {};
+  const raw =
+    stringValue(route?.normalizedInput, route?.rawInput, params.assetUrl, params.crabUrl) ||
+    `crab://${params.cid || params.hash || ''}.${params.assetKind || params.kind || 'image'}`;
+
+  const parsed = parseAssetUrl(raw);
+  const hash = normalizeHash(params.hash || params.cid || parsed.hash);
+  const kind = normalizeKind(params.assetKind || params.kind || parsed.kind || 'image');
+
+  if (!hash) {
+    throw new AssetResolveError('Typed asset route requires a 64-character lowercase b3 hash.', {
+      problemCode: 'invalid_asset_hash',
+      reason: 'invalid_asset_hash',
+      retryable: false,
+      target: { raw },
+    });
+  }
+
+  if (!kind) {
+    throw new AssetResolveError('Typed asset route requires an asset kind.', {
+      problemCode: 'invalid_asset_kind',
+      reason: 'invalid_asset_kind',
+      retryable: false,
+      target: { raw, hash },
+    });
+  }
+
+  return {
+    raw,
+    hash,
+    cid: `b3:${hash}`,
+    kind,
+    assetUrl: `crab://${hash}.${kind}`,
   };
-
-  return copies[problemCode] || copies.asset_resolve_failed;
 }
 
-function remediationForProblem(problemCode) {
-  const remediations = {
-    gateway_unconfigured: 'Open settings and confirm the gateway URL points at svc-gateway.',
-    gateway_unreachable:
-      'Start the local RustyOnions stack, confirm /healthz and /readyz, then retry this route.',
-    gateway_upstream_unavailable:
-      'Check svc-gateway, omnigate, svc-index, and svc-storage readiness, then retry.',
-    asset_not_found:
-      'Confirm the asset exists in the current local stack or republish/regenerate the dev asset.',
-    policy_denied:
-      'Use an identity/capability that is allowed by policy, or treat this as a real denial.',
-    unsupported_kind:
-      'Use a supported asset suffix such as .image, or wait for backend support for this kind.',
-    invalid_asset_hash:
-      'Use crab://<64 lowercase hex>.<kind> or b3:<64 lowercase hex>.',
-    invalid_asset_route:
-      'Check the address bar value and retry with a canonical crab:// typed asset URL.',
-    malformed_response:
-      'Check the gateway route contract. This route should return an asset-page JSON object, not raw bytes or HTML.',
-    asset_resolve_failed:
-      'Retry after checking gateway readiness. The route debug panel keeps the exact attempts visible.',
+function parseAssetUrl(value) {
+  const raw = String(value || '').trim();
+  const match = raw.match(/^crab:\/\/([0-9a-f]{64})\.([a-z][a-z0-9_-]{0,31})$/i);
+
+  if (match) {
+    return {
+      hash: match[1].toLowerCase(),
+      kind: match[2].toLowerCase(),
+    };
+  }
+
+  const b3 = raw.match(/^b3:([0-9a-f]{64})$/i);
+
+  if (b3) {
+    return {
+      hash: b3[1].toLowerCase(),
+      kind: 'image',
+    };
+  }
+
+  return {
+    hash: '',
+    kind: '',
   };
-
-  return remediations[problemCode] || remediations.asset_resolve_failed;
 }
 
-function messageForProblem(problemCode, target) {
-  const assetUrl = target?.assetUrl || 'this typed asset';
+function normalizeHash(value) {
+  const raw = String(value || '')
+    .trim()
+    .replace(/^b3:/i, '')
+    .toLowerCase();
 
-  if (problemCode === 'asset_not_found') {
-    return `${assetUrl} was not found by the configured gateway.`;
+  return HEX_64_RE.test(raw) ? raw : '';
+}
+
+function normalizeCid(value) {
+  const hash = normalizeHash(value);
+  return hash ? `b3:${hash}` : '';
+}
+
+function normalizeKind(value) {
+  const kind = String(value || '').trim().toLowerCase();
+  return ASSET_KIND_RE.test(kind) ? kind : '';
+}
+
+function normalizeImageBlob(value, contentType = '') {
+  if (value instanceof Blob) {
+    return value;
   }
 
-  if (problemCode === 'policy_denied') {
-    return `${assetUrl} was denied by gateway or policy checks.`;
+  if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
+    return new Blob([value], {
+      type: contentType || 'application/octet-stream',
+    });
   }
 
-  if (problemCode === 'gateway_unreachable') {
-    return `CrabLink could not reach the configured gateway while resolving ${assetUrl}.`;
+  if (typeof value === 'string') {
+    return new Blob([value], {
+      type: contentType || 'text/plain;charset=utf-8',
+    });
   }
 
-  if (problemCode === 'unsupported_kind') {
-    return `${target?.assetKind || 'This asset kind'} is not supported by the current route contract.`;
+  throw makeAssetError('Image upload requires a selected file/blob.', 'missing_image_file');
+}
+
+function normalizeTags(value) {
+  if (Array.isArray(value)) {
+    return value.map((tag) => String(tag || '').trim()).filter(Boolean).slice(0, 24);
   }
 
-  return '';
+  return String(value || '')
+    .split(',')
+    .map((tag) => tag.trim().replace(/^#/, ''))
+    .filter(Boolean)
+    .slice(0, 24);
 }
 
-function reasonForProblem(problemCode, fallbackError, primaryError) {
-  return String(
-    fallbackError?.reason ||
-      fallbackError?.problemCode ||
-      primaryError?.reason ||
-      primaryError?.problemCode ||
-      problemCode,
-  );
+function attemptFromResponse(response, route, ok) {
+  return {
+    ok: Boolean(ok),
+    route,
+    status: Number(response?.status || 200),
+    reason: ok ? 'ok' : '',
+    message: ok ? 'resolved' : '',
+    correlationId: response?.correlationId || '',
+  };
 }
 
-function bestStatus(attempts = [], fallbackError = null, primaryError = null) {
-  const fallbackStatus = Number(fallbackError?.status || 0);
-  const primaryStatus = Number(primaryError?.status || 0);
+function attemptFromError(error, route) {
+  return {
+    ok: false,
+    route: error?.route || route,
+    status: Number(error?.status || 0),
+    reason: error?.reason || statusToProblemCode(error?.status),
+    message: String(error?.message || 'request failed'),
+    correlationId: error?.correlationId || '',
+  };
+}
 
-  if (fallbackStatus) {
-    return fallbackStatus;
+function statusToProblemCode(status) {
+  const code = Number(status || 0);
+
+  if (code === 0) return 'gateway_unavailable';
+  if (code === 400) return 'asset_bad_request';
+  if (code === 401) return 'asset_unauthorized';
+  if (code === 403) return 'asset_policy_denied';
+  if (code === 404) return 'asset_not_found';
+  if (code === 408) return 'asset_timeout';
+  if (code === 413) return 'asset_too_large';
+  if (code === 429) return 'asset_rate_limited';
+  if (code >= 500) return 'asset_upstream_unavailable';
+
+  return `asset_http_${code}`;
+}
+
+function titleForProblem(code) {
+  if (code === 'asset_not_found') return 'Asset not found';
+  if (code === 'gateway_unavailable') return 'Gateway unavailable';
+  if (code === 'asset_policy_denied') return 'Asset access denied';
+  return 'Asset could not be resolved';
+}
+
+function copyForProblem(code) {
+  if (code === 'asset_not_found') {
+    return 'The gateway was reachable, but it could not find this typed b3-backed asset.';
   }
 
-  if (primaryStatus) {
-    return primaryStatus;
+  if (code === 'gateway_unavailable') {
+    return 'CrabLink could not reach the configured gateway for this typed asset route.';
   }
 
-  const lastAttempt = attempts
-    .slice()
-    .reverse()
-    .find((attempt) => Number(attempt?.status || 0));
-
-  return Number(lastAttempt?.status || 0);
+  return 'CrabLink could not hydrate this typed asset through the configured gateway.';
 }
 
-function correlationFromAttempts(attempts = []) {
-  const attempt = attempts
-    .slice()
-    .reverse()
-    .find((item) => String(item?.correlationId || '').trim());
+function remediationForProblem(code) {
+  if (code === 'asset_not_found') {
+    return 'If the local dev database was reset, upload the image again or use a current known-good asset URL.';
+  }
 
-  return String(attempt?.correlationId || '');
+  if (code === 'gateway_unavailable') {
+    return 'Start the RustyOnions dev stack, then refresh the route from extension-origin React.';
+  }
+
+  if (code === 'asset_policy_denied') {
+    return 'Check passport/capability settings before retrying.';
+  }
+
+  return 'Review gateway logs and the structured problem JSON before changing route code.';
 }
 
-function reasonText(item) {
-  return `${item?.problemCode || ''} ${item?.reason || ''} ${item?.name || ''} ${item?.message || ''}`.toLowerCase();
-}
-
-function includesAny(text, needles) {
-  return needles.some((needle) => text.includes(needle));
-}
-
-function targetError(message, details = {}) {
+function makeAssetError(message, reason = 'asset_client_error') {
   const error = new Error(message);
-  error.name = 'AssetTargetError';
-  error.problemCode = details.problemCode || 'invalid_asset_route';
-  error.reason = details.reason || error.problemCode;
-  error.retryable = false;
-  return error;
-}
-
-function assetMutationError(message, reason) {
-  const error = new Error(String(message || 'Asset mutation failed.'));
-  error.name = 'AssetMutationError';
-  error.reason = reason || 'asset_mutation_failed';
+  error.name = 'AssetClientError';
+  error.reason = reason;
   error.status = 0;
   error.retryable = false;
   return error;
 }
 
-function isBlobLike(value) {
-  return Boolean(
-    value &&
-      typeof value === 'object' &&
-      typeof value.size === 'number' &&
-      typeof value.type === 'string' &&
-      (typeof Blob === 'undefined' || value instanceof Blob),
+function redactProofHeaders(headers) {
+  return Object.fromEntries(
+    Object.entries(headers || {}).map(([key, value]) => {
+      if (key.toLowerCase().includes('receipt') || key.toLowerCase().includes('txid')) {
+        const raw = String(value || '');
+        return [key, raw.length > 16 ? `${raw.slice(0, 8)}…${raw.slice(-6)}` : raw];
+      }
+
+      return [key, value];
+    }),
   );
 }
 
-function positiveInteger(value) {
-  const n = Number(value);
-
-  if (!Number.isSafeInteger(n) || n <= 0) {
-    return 0;
-  }
-
-  return n;
+function stableIdempotencyKey(...parts) {
+  return parts
+    .flat()
+    .map((part) => String(part ?? '').trim())
+    .filter(Boolean)
+    .join(':') || `crablink:${Date.now()}:${Math.random().toString(16).slice(2)}`;
 }
 
-function normalizeTags(value) {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 24);
+function compactIdempotencyKey(value, prefix = 'crablink') {
+  const raw = String(value || '').trim();
+  const normalized = raw
+    .toLowerCase()
+    .replace(/[^a-z0-9_.:-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  if (normalized.length > 0 && normalized.length <= MAX_IDEMPOTENCY_KEY_BYTES) {
+    return normalized;
   }
 
-  return String(value || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 24);
+  const hash = fnv1aHex(normalized || `${Date.now()}:${Math.random()}`);
+  const cleanPrefix = String(prefix || 'crablink')
+    .toLowerCase()
+    .replace(/[^a-z0-9_.:-]+/g, '-')
+    .slice(0, 20);
+  const budget = MAX_IDEMPOTENCY_KEY_BYTES - cleanPrefix.length - hash.length - 2;
+  const suffix = normalized.slice(0, Math.max(0, budget));
+
+  return suffix ? `${cleanPrefix}:${hash}:${suffix}` : `${cleanPrefix}:${hash}`;
+}
+
+function fnv1aHex(value) {
+  let hash = 0x811c9dc5;
+  const text = String(value || '');
+
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function normalizePositiveInteger(...values) {
+  for (const value of values) {
+    const raw = String(value ?? '').trim();
+
+    if (/^[0-9]+$/.test(raw) && raw !== '0') {
+      return raw;
+    }
+
+    const n = Number(raw);
+    if (Number.isSafeInteger(n) && n > 0) {
+      return String(n);
+    }
+  }
+
+  return '';
+}
+
+function objectValue(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
 }
 
 function stringValue(...values) {
@@ -777,20 +723,17 @@ function stringValue(...values) {
   return '';
 }
 
-function stripUndefined(value) {
+function stripEmpty(value) {
   return Object.fromEntries(
-    Object.entries(value || {}).filter(([, child]) => child !== undefined && child !== null && child !== ''),
+    Object.entries(value || {}).filter(([, child]) => {
+      if (child === undefined || child === null) return false;
+      if (typeof child === 'string' && !child.trim()) return false;
+      return true;
+    }),
   );
 }
 
-function stableClientKey(...parts) {
-  const clean = parts
-    .map((part) => String(part ?? '').trim())
-    .filter(Boolean)
-    .join(':')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-zA-Z0-9:_./-]+/g, '-')
-    .slice(0, 180);
-
-  return `crablink-react:${clean || Date.now()}`;
+function isRetryableStatus(status) {
+  const code = Number(status || 0);
+  return code === 408 || code === 429 || code >= 500;
 }

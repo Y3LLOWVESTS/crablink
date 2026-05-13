@@ -10,9 +10,8 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import Button from '../../shared/components/Button.jsx';
-import ErrorPanel from '../../shared/components/ErrorPanel.jsx';
 import LoadingState from '../../shared/components/LoadingState.jsx';
+import RouteProblemPanel from '../../shared/components/RouteProblemPanel.jsx';
 import { createSiteClient } from '../../shared/api/siteClient.js';
 import SiteCreatorProof from './SiteCreatorProof.jsx';
 import SiteDiagnostics from './SiteDiagnostics.jsx';
@@ -130,20 +129,22 @@ export default function SiteRender({
 
     if (state.status === 'error') {
       return (
-        <ErrorPanel
+        <RouteProblemPanel
           title="Site could not be resolved"
           copy="The gateway did not return a hydrated site response. React is showing the failure instead of inventing a site."
           error={state.error}
-          actions={
-            <div className="site-page-actions">
-              <Button variant="secondary" onClick={app?.refreshRoute}>
-                Retry
-              </Button>
-              <Button variant="ghost" onClick={() => app?.navigate?.('crab://site')}>
-                Open Site Workspace
-              </Button>
-            </div>
-          }
+          route={route}
+          target={{
+            siteName,
+            crabUrl: `crab://${siteName}`,
+            route_kind: 'named_site',
+          }}
+          remediation="If this site was just created, refresh after the gateway/index is ready. Otherwise open crab://site and create the named pointer first."
+          onRetry={app?.refreshRoute}
+          onWorkspace={() => app?.navigate?.('crab://site')}
+          workspaceLabel="Open Site Workspace"
+          jsonLabel="Named site problem JSON"
+          attemptTitle="Named site gateway attempt"
         />
       );
     }

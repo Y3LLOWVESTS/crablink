@@ -1,9 +1,9 @@
 /*
- * RO:WHAT — Developer-view styles for CrabLink.
- * RO:WHY — Keeps JSON/contracts/diagnostics available without dominating Builder View.
- * RO:INTERACTS — JsonPreview.jsx and Developer panels.
- * RO:INVARIANTS — developer data must not claim fake backend truth.
- * RO:TEST — visual/manual developer toggle smoke.
+ * RO:WHAT — Developer and structured diagnostics styles for CrabLink.
+ * RO:WHY — Keeps JSON/contracts/problem details available without dominating Builder View.
+ * RO:INTERACTS — JsonPreview.jsx, RouteProblemPanel.jsx, ErrorPanel.jsx, route diagnostic panels.
+ * RO:INVARIANTS — diagnostics must not claim fake backend truth; errors stay visible and readable.
+ * RO:TEST — visual/manual developer toggle, gateway-offline, named-site 404, and asset 404 smoke.
  */
 
 .cl-json {
@@ -11,3 +11,250 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+.cl-route-problem-stack {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.cl-route-problem-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cl-route-problem-card.is-warning {
+  border-color: color-mix(in srgb, var(--cl-warning, #b7791f) 48%, var(--cl-border, #d9d6cf));
+}
+
+.cl-route-problem-card.is-danger {
+  border-color: color-mix(in srgb, var(--cl-danger, #b42318) 48%, var(--cl-border, #d9d6cf));
+}
+
+.cl-route-problem-card.is-info {
+  border-color: color-mix(in srgb, var(--cl-accent, #111111) 24%, var(--cl-border, #d9d6cf));
+}
+
+.cl-route-problem-actions,
+.cl-route-problem-action-row,
+.cl-route-problem-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cl-route-problem-copy {
+  margin: 0 0 0.75rem;
+  color: var(--cl-muted, #626262);
+  line-height: 1.55;
+}
+
+.cl-route-problem-message {
+  margin: 0 0 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--cl-warning, #b7791f) 42%, var(--cl-border, #d9d6cf));
+  border-radius: 16px;
+  padding: 0.75rem 0.85rem;
+  background: color-mix(in srgb, var(--cl-warning, #b7791f) 8%, var(--cl-card, #ffffff));
+  color: var(--cl-text, #111111);
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+[data-theme='dark'] .cl-route-problem-message {
+  background: color-mix(in srgb, var(--cl-warning, #b7791f) 12%, #050505);
+}
+
+.cl-route-problem-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.cl-route-problem-facts div {
+  min-width: 0;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 16px;
+  padding: 0.75rem;
+  background: color-mix(in srgb, var(--cl-card, #ffffff) 72%, var(--cl-bg, #f5f4f1) 28%);
+}
+
+[data-theme='dark'] .cl-route-problem-facts div {
+  background: #050505;
+}
+
+.cl-route-problem-facts span,
+.cl-error-facts span {
+  display: block;
+  margin-bottom: 0.28rem;
+  color: var(--cl-muted, #626262);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cl-route-problem-facts strong,
+.cl-error-facts strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--cl-text, #111111);
+  font-weight: 850;
+}
+
+.cl-route-problem-facts .is-monospace strong,
+.cl-route-attempt-list strong,
+.cl-route-attempt-list small,
+.cl-error-facts .is-monospace strong {
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+}
+
+.cl-route-problem-help {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  border: 1px dashed var(--cl-border, rgba(120, 120, 120, 0.35));
+  border-radius: 18px;
+  padding: 0.85rem;
+  background: color-mix(in srgb, var(--cl-card, #ffffff) 70%, var(--cl-bg, #f5f4f1) 30%);
+}
+
+[data-theme='dark'] .cl-route-problem-help {
+  background: #050505;
+}
+
+.cl-route-problem-help div:first-child {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.cl-route-problem-help strong {
+  color: var(--cl-text, #111111);
+}
+
+.cl-route-problem-help span {
+  color: var(--cl-muted, #626262);
+  line-height: 1.45;
+}
+
+.cl-route-problem-attempt-card {
+  min-width: 0;
+}
+
+.cl-route-attempt-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.cl-route-attempt-list div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 16px;
+  padding: 0.75rem;
+  background: color-mix(in srgb, var(--cl-card, #ffffff) 76%, var(--cl-bg, #f5f4f1) 24%);
+}
+
+[data-theme='dark'] .cl-route-attempt-list div {
+  background: #050505;
+}
+
+.cl-route-attempt-list div.is-ok {
+  border-color: color-mix(in srgb, var(--cl-success, #12805c) 48%, var(--cl-border, #d9d6cf));
+}
+
+.cl-route-attempt-list div.is-error {
+  border-color: color-mix(in srgb, var(--cl-danger, #b42318) 34%, var(--cl-border, #d9d6cf));
+}
+
+.cl-route-attempt-list span {
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 999px;
+  padding: 0.24rem 0.45rem;
+  color: var(--cl-muted, #626262);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cl-route-attempt-list strong {
+  overflow-wrap: anywhere;
+  color: var(--cl-text, #111111);
+}
+
+.cl-route-attempt-list small {
+  overflow-wrap: anywhere;
+  color: var(--cl-muted, #626262);
+  text-align: right;
+}
+
+.cl-error-panel {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cl-error-message {
+  margin: 0 0 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--cl-danger, #b42318) 35%, var(--cl-border, #d9d6cf));
+  border-radius: 16px;
+  padding: 0.75rem 0.85rem;
+  color: var(--cl-text, #111111);
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.cl-error-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0.9rem 0;
+}
+
+.cl-error-facts div {
+  min-width: 0;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 14px;
+  padding: 0.7rem;
+  background: color-mix(in srgb, var(--cl-card, #ffffff) 72%, var(--cl-bg, #f5f4f1) 28%);
+}
+
+[data-theme='dark'] .cl-error-facts div {
+  background: #050505;
+}
+
+.cl-error-default-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+@media (max-width: 940px) {
+  .cl-route-problem-facts,
+  .cl-error-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cl-route-attempt-list div {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-route-attempt-list small {
+    text-align: left;
+  }
+}
+
+@media (max-width: 620px) {
+  .cl-route-problem-facts,
+  .cl-error-facts {
+    grid-template-columns: 1fr;
+  }
+}

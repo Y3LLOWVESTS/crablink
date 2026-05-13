@@ -21,28 +21,31 @@ import TruthBoundary from '../../shared/components/TruthBoundary.jsx';
 export default function AssetHydratedView({ route, result, assetClient, resolverState }) {
   const [imagePreviewOk, setImagePreviewOk] = useState(true);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [previewRevision, setPreviewRevision] = useState(0);
   const [failedPreviewSources, setFailedPreviewSources] = useState([]);
   const [developerOpen, setDeveloperOpen] = useState(false);
 
   const summary = useMemo(() => summarizeAsset(result, route), [result, route]);
 
   const previewSources = useMemo(() => {
-    if (summary.kind !== 'image' || !summary.hash || !assetClient?.previewSources) {
+    if (!summary.isImageRoute || !summary.hash || !assetClient?.previewSources) {
       return [];
     }
 
     try {
-      return assetClient.previewSources(summary.hash, summary.kind);
+      return normalizePreviewSources(assetClient.previewSources(summary.hash, 'image'));
     } catch (_error) {
       return [];
     }
-  }, [assetClient, summary.hash, summary.kind]);
+  }, [assetClient, summary.hash, summary.isImageRoute]);
 
   const previewSource = previewSources[previewIndex] || null;
+  const previewUrl = previewSource?.url ? withCacheBuster(previewSource.url, previewRevision) : '';
 
   useEffect(() => {
     setImagePreviewOk(true);
     setPreviewIndex(0);
+    setPreviewRevision((value) => value + 1);
     setFailedPreviewSources([]);
   }, [summary.hash, summary.kind, summary.crabUrl]);
 
@@ -62,10 +65,18 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
 
     if (previewIndex < previewSources.length - 1) {
       setPreviewIndex((value) => value + 1);
+      setPreviewRevision((value) => value + 1);
       return;
     }
 
     setImagePreviewOk(false);
+  }
+
+  function reloadPreview() {
+    setImagePreviewOk(true);
+    setPreviewIndex(0);
+    setFailedPreviewSources([]);
+    setPreviewRevision((value) => value + 1);
   }
 
   function openPreviewSource() {
@@ -102,16 +113,30 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
             <Badge tone={summary.receiptCount > 0 ? 'success' : 'neutral'}>
               receipts · {summary.receiptCount}
             </Badge>
+            {summary.kindWasRouteCorrected && (
+              <Badge tone="warning">route kind · {summary.routeKind}</Badge>
+            )}
           </div>
 
           <div className="asset-fact-grid">
             <Fact label="Kind" value={summary.kind} />
+            <Fact label="Route kind" value={summary.routeKind || 'n/a'} />
             <Fact label="CID" value={summary.cid} monospace />
             <Fact label="Owner" value={summary.owner || 'Not returned'} />
             <Fact label="Payout" value={summary.payout || 'Not returned'} />
             <Fact label="Manifest" value={summary.manifestCid || 'Not returned'} monospace />
             <Fact label="Correlation" value={summary.correlationId || 'n/a'} monospace />
           </div>
+
+          {summary.kindWasRouteCorrected && (
+            <div className="asset-preview-note">
+              <strong>Preview kind corrected from route suffix.</strong>
+              <span>
+                The gateway DTO reported a generic kind, but the canonical URL suffix is .image.
+                CrabLink is using the route suffix for preview selection while keeping the DTO fields visible.
+              </span>
+            </div>
+          )}
 
           {summary.tags.length > 0 && (
             <div className="asset-tags" aria-label="Asset tags">
@@ -127,17 +152,35 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
         <aside className="asset-side-panel" aria-label="Asset summary stats">
           <StatChip label="Kind" value={summary.kind} tone="info" />
           <StatChip label="Status" value={summary.status || 'OK'} tone="success" />
-          <StatChip label="Receipts" value={summary.receiptCount} tone={summary.receiptCount > 0 ? 'success' : 'neutral'} />
+          <StatChip
+            label="Receipts"
+            value={summary.receiptCount}
+            tone={summary.receiptCount > 0 ? 'success' : 'neutral'}
+          />
           <StatChip label="Attempts" value={summary.attempts.length} tone="neutral" />
         </aside>
       </section>
 
-      {summary.kind === 'image' && (
-        <Card eyebrow="Preview" title="Image preview" className="asset-preview-card">
+      {summary.isImageRoute && (
+        <Card
+          eyebrow="Preview"
+          title="Image preview"
+          className="asset-preview-card"
+          actions={
+            <div className="asset-copy-actions">
+              <Button variant="secondary" onClick={reloadPreview} disabled={previewSources.length === 0}>
+                Reload preview
+              </Button>
+              <Button variant="secondary" onClick={openPreviewSource} disabled={!previewSource?.url}>
+                Open source
+              </Button>
+            </div>
+          }
+        >
           {previewSource && imagePreviewOk ? (
             <div className="asset-image-preview-shell">
               <img
-                src={previewSource.url}
+                src={previewUrl}
                 alt={summary.title || summary.crabUrl || 'CrabLink image asset'}
                 onError={handlePreviewError}
               />
@@ -146,7 +189,8 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
             <div className="asset-preview-empty">
               <strong>Image bytes were not previewable from the gateway.</strong>
               <span>
-                The asset may not exist in the current local stack, or the typed route may return JSON instead of raw image bytes.
+                The asset hydrated successfully, but the image byte route did not load inside the preview.
+                Try Open source, check gateway /o support, or confirm the local dev storage still contains this object.
               </span>
             </div>
           )}
@@ -160,9 +204,10 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
               <span>Source URL</span>
               <strong>{previewSource?.url || 'n/a'}</strong>
             </div>
-            <Button variant="secondary" onClick={openPreviewSource} disabled={!previewSource?.url}>
-              Open source
-            </Button>
+            <div>
+              <span>Preview mode</span>
+              <strong>gateway raw bytes first</strong>
+            </div>
           </div>
 
           {failedPreviewSources.length > 0 && (
@@ -244,6 +289,8 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
               data={{
                 route,
                 summary,
+                preview_sources: previewSources,
+                failed_preview_sources: failedPreviewSources,
                 result,
               }}
               initiallyOpen
@@ -290,11 +337,47 @@ function summarizeAsset(result, route) {
   const policy = firstObject(data.policy, page.policy, asset.policy, manifest.policy);
   const receipts = firstArray(data.receipts, page.receipts, asset.receipts, manifest.receipts, object.receipts);
 
-  const target = firstObject(result?.target, route?.params);
-  const kind = stringValue(target.assetKind, object.kind, asset.kind, page.kind, data.kind, 'asset').toLowerCase();
-  const hash = normalizeHash(target.hash || object.hash || asset.hash || data.hash || manifest.hash);
+  const resultTarget = firstObject(result?.target);
+  const routeTarget = firstObject(route?.params);
+
+  const routeKind = cleanKind(
+    stringValue(
+      routeTarget.assetKind,
+      routeTarget.kind,
+      kindFromCrabUrl(route?.normalizedInput),
+      kindFromCrabUrl(resultTarget.assetUrl),
+    ),
+  );
+
+  const dtoKind = cleanKind(
+    stringValue(
+      resultTarget.assetKind,
+      resultTarget.kind,
+      object.kind,
+      asset.kind,
+      page.kind,
+      data.kind,
+      'asset',
+    ),
+  );
+
+  const kind = chooseDisplayKind({ routeKind, dtoKind });
+  const kindWasRouteCorrected = routeKind === 'image' && dtoKind !== 'image';
+
+  const hash = normalizeHash(
+    routeTarget.hash ||
+      resultTarget.hash ||
+      object.hash ||
+      asset.hash ||
+      data.hash ||
+      manifest.hash ||
+      routeTarget.cid ||
+      resultTarget.cid,
+  );
+
   const cid = stringValue(
-    target.cid,
+    routeTarget.cid,
+    resultTarget.cid,
     object.cid,
     object.content_id,
     object.contentId,
@@ -309,13 +392,20 @@ function summarizeAsset(result, route) {
     hash ? `b3:${hash}` : '',
   );
 
+  const resolvedHash = hash || normalizeHash(cid);
+
   return {
     kind,
+    dtoKind,
+    routeKind,
+    kindWasRouteCorrected,
+    isImageRoute: kind === 'image' || routeKind === 'image',
     kindLabel: labelFromKind(kind),
-    hash: hash || normalizeHash(cid),
+    hash: resolvedHash,
     cid,
     crabUrl: stringValue(
-      target.assetUrl,
+      resultTarget.assetUrl,
+      routeTarget.assetUrl,
       route?.normalizedInput,
       data.crab_url,
       data.crabUrl,
@@ -323,7 +413,7 @@ function summarizeAsset(result, route) {
       page.crabUrl,
       asset.crab_url,
       asset.crabUrl,
-      hash ? `crab://${hash}.${kind}` : '',
+      resolvedHash ? `crab://${resolvedHash}.${kind}` : '',
     ),
     title: stringValue(
       metadata.title,
@@ -384,11 +474,69 @@ function summarizeAsset(result, route) {
     accessPolicy: summarizePolicy(policy.access || policy.access_policy || object.access_policy),
     rightsPolicy: summarizePolicy(policy.rights || policy.rights_policy || object.rights_policy),
     tags: normalizeTags(object.tags || page.tags || asset.tags || metadata.tags || manifest.tags),
-    status: Number(result?.response?.status || 0),
-    correlationId: stringValue(result?.response?.correlationId, ''),
+    status: Number(result?.response?.status || result?.status || 0),
+    correlationId: stringValue(result?.response?.correlationId, result?.correlationId, ''),
     attempts: Array.isArray(result?.attempts) ? result.attempts : [],
     receiptCount: receipts.length,
   };
+}
+
+function chooseDisplayKind({ routeKind, dtoKind }) {
+  if (routeKind && routeKind !== 'asset') {
+    return routeKind;
+  }
+
+  if (dtoKind && dtoKind !== 'asset') {
+    return dtoKind;
+  }
+
+  return dtoKind || routeKind || 'asset';
+}
+
+function normalizePreviewSources(sources) {
+  if (!Array.isArray(sources)) {
+    return [];
+  }
+
+  return sources
+    .map((source, index) => {
+      if (typeof source === 'string') {
+        return {
+          key: index === 0 ? 'raw-object' : `source-${index + 1}`,
+          label: index === 0 ? 'Raw object bytes' : `Gateway preview source ${index + 1}`,
+          description: '',
+          url: source,
+        };
+      }
+
+      if (source && typeof source === 'object') {
+        return {
+          key: stringValue(source.key, `source-${index + 1}`),
+          label: stringValue(source.label, `Gateway preview source ${index + 1}`),
+          description: stringValue(source.description),
+          url: stringValue(source.url, source.href),
+        };
+      }
+
+      return null;
+    })
+    .filter((source) => source?.url);
+}
+
+function kindFromCrabUrl(value) {
+  const match = String(value || '').trim().match(/^crab:\/\/[0-9a-f]{64}\.([a-z][a-z0-9_-]{0,31})$/i);
+  return match ? match[1].toLowerCase() : '';
+}
+
+function withCacheBuster(url, revision) {
+  const safeUrl = String(url || '').trim();
+
+  if (!safeUrl) {
+    return '';
+  }
+
+  const separator = safeUrl.includes('?') ? '&' : '?';
+  return `${safeUrl}${separator}crablink_preview=${encodeURIComponent(String(revision || Date.now()))}`;
 }
 
 function firstObject(...values) {
@@ -421,6 +569,11 @@ function stringValue(...values) {
   }
 
   return '';
+}
+
+function cleanKind(value) {
+  const clean = String(value || '').trim().toLowerCase();
+  return /^[a-z][a-z0-9_-]{0,31}$/.test(clean) ? clean : '';
 }
 
 function normalizeHash(value) {

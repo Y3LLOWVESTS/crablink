@@ -45189,3 +45189,789 @@ The major win so far: CrabLink now feels like the beginning of a real browser la
 
 
 ### END NOTE - MAY 11 2026 - 21:50 CST
+
+
+### BEGIN NOTE - MAY 12 2026 - 20:05 CST
+
+
+# Carryover Notes — CrabLink React Refactor Checkpoint
+
+## 0. Executive checkpoint
+
+CrabLink is now in a **strong protected hybrid React-refactor state**.
+
+The current codebundle confirms the repo has the new React/Vite route-owned architecture under `extensions/chrome/src/app`, `extensions/chrome/src/pages`, and `extensions/chrome/src/shared`, while the older protected `page.html/page.js/page-*` lane still exists in the tree. The codebundle was regenerated on `2026-05-12T18:01:22Z`, includes 307 text files, and shows all current React route folders plus the remaining legacy files. 
+
+The most important new proof from this session:
+
+```text
+React crab://image
+→ selected local image
+→ /assets/image/prepare
+→ explicit /wallet/hold
+→ /assets/image upload
+→ fresh crab://<hash>.image URL
+→ gateway resolve
+→ asset hydration page
+→ image preview visible
+```
+
+Fresh known-good image URL from this session:
+
+```text
+crab://3387356e7b89c7ef6a230e79cf82d6ed774a6c7a441f606c26351f739d03cd16.image
+```
+
+That URL should be treated as the newest current React image-upload proof.
+
+## 1. Current completion estimate
+
+For the **CrabLink Chrome extension React refactor track**, I estimate:
+
+```text
+88–91% complete
+```
+
+This is not an estimate for the entire RustyOnions ecosystem or all future media/backend primitives. It is specifically the Chrome extension / React browser-client refactor.
+
+Why the estimate increased:
+
+```text
+- React shell exists and works from extension origin.
+- Route registry and one-route-one-owner structure exist.
+- Built-in route folders exist for site, image, profile, music, lyrics, article, post, comment, video, stream, podcast, ad, algo, code, game, asset, problem, and notFound.
+- Profile route has better local truth-boundary handling and username validation.
+- Named-site failure now shows structured, honest diagnostics.
+- Site create/read/render path has already proven real named-site creation.
+- React image publish now works through prepare → hold → upload.
+- The uploaded image resolves as a typed .image URL.
+- Generic asset hydration now renders image preview correctly even when the DTO says kind=asset but the route suffix is .image.
+- The build/package/codebundle gate was being run repeatedly as the working validation path.
+```
+
+Why it is not 95%+ yet:
+
+```text
+- Old protected lane still exists and should not be deleted yet.
+- Article/video/podcast/stream are still mostly local creator workspaces, not backend-published asset flows.
+- Site/image/profile need more regression guardrails before we call them fully safe.
+- React image flow needs repeated smoke with fresh images after restart and after stack resets.
+- Some check scripts still rely on exact token expectations, so future edits can break gates unexpectedly.
+- Backend routes for article/video/podcast/stream/music/lyrics/post/comment/ad/algo/code/game are not complete product routes yet.
+```
+
+## 2. Non-negotiable rules to preserve
+
+These remain the hard rules for the next instance:
+
+```text
+React + Vite is the full-tab CrabLink browser UI path.
+Plain MV3 JavaScript remains acceptable for background/content/popup/options glue.
+One route = one page owner.
+Gateway-only backend access.
+No direct calls to svc-wallet, svc-storage, svc-index, omnigate, ron-ledger, or other internal services from CrabLink.
+No fake b3 CIDs.
+No fake manifest CIDs.
+No fake receipts.
+No fake balances.
+No silent ROC spend.
+No arbitrary crab:// code execution.
+No broad Chrome permissions without explicit justification.
+No page-local-route-mode.js resurrection.
+No deleting the protected legacy lane until React parity is repeatedly proven.
+```
+
+The refactor TODO still defines the core direction as **one route = one page owner**, page folders for built-in `crab://` routes, shared shell/theme/ad/manifest systems, and eliminating late DOM patching/MutationObserver rescue logic. It also explicitly recommends React + Vite for the full-tab UI while keeping Chrome extension glue plain MV3 JavaScript. 
+
+## 3. What we accomplished in this session
+
+### 3.1 Structured route problem handling
+
+We added a reusable route problem pattern and tested it with a fake/missing named site. The page correctly showed:
+
+```text
+site_not_found
+HTTP 404
+not retryable
+gateway route /crab/resolve
+fallback route /sites/<name>
+correlation IDs
+structured JSON diagnostics
+```
+
+This was a good proof because it showed the React lane **does not invent a site** when the backend cannot resolve one. It displays the problem honestly.
+
+### 3.2 Profile hardening
+
+The React `crab://profile` page was hardened around:
+
+```text
+local @username validation
+local draft vs backend-confirmed username truth
+profile gateway/passport hints
+ROC display truth boundaries
+avatar .image reference validation
+no fake reputation score
+no fake moderator score
+no fake profile publication
+```
+
+Important: `crab://profile` is still mostly a **local profile workspace / display surface**. Backend-published profile, real @username reservation, real reputation, and real moderation scores remain future RustyOnions/backend work.
+
+### 3.3 Image publish flow moved from broken to working
+
+We debugged a full chain of React image publishing issues.
+
+Problems fixed:
+
+```text
+White screen after image page load.
+Null hold_template crash.
+Chrome omnibox Invalid XML error from literal <hash>.
+Wallet hold HTTP 422.
+Missing toWalletHoldApiBody export.
+Confusion between root shared/api/walletClient.js and extension-local extensions/chrome/src/shared/api/walletClient.js.
+check-chrome token failure for src/page.html?url=.
+router token failure around typedRouteOwner / hasRouteKind.
+No image preview after successful upload because resolved DTO kind showed "asset" while route suffix was ".image".
+```
+
+The most important wallet fix: the actual `/wallet/hold` request body must be strict. The UI can display extra preview/debug information, but the real API body sent to the wallet path must only contain strict wallet DTO fields:
+
+```text
+from
+to
+asset
+amount_minor
+nonce
+memo
+idempotency_key
+```
+
+Do not send UI-only fields such as:
+
+```text
+schema
+client_id
+api_request
+ui_preview_request
+paidProof
+file
+route
+```
+
+### 3.4 React image upload proof
+
+The newest successful image URL is:
+
+```text
+crab://3387356e7b89c7ef6a230e79cf82d6ed774a6c7a441f606c26351f739d03cd16.image
+```
+
+Observed success state:
+
+```text
+The asset page resolved.
+The canonical crab URL displayed.
+The content ID displayed as b3:<hash>.
+The manifest/DTO summary displayed.
+Gateway attempts showed HTTP 200.
+Receipt count showed 1.
+Image preview became visible after the AssetHydratedView fix.
+```
+
+Key implementation lesson: preview selection should trust the **route suffix** when the canonical URL is `.image`, even if the returned DTO says generic `kind: asset`. The UI should still display the DTO truth, but for preview behavior it can say, effectively:
+
+```text
+DTO kind = asset
+route kind = image
+therefore use image preview path
+```
+
+### 3.5 Important current file split: two wallet clients
+
+There are two wallet client files and they must not be mixed up:
+
+```text
+shared/api/walletClient.js
+extensions/chrome/src/shared/api/walletClient.js
+```
+
+The root file:
+
+```text
+shared/api/walletClient.js
+```
+
+should remain the simple shared/browser helper.
+
+The React Chrome extension file:
+
+```text
+extensions/chrome/src/shared/api/walletClient.js
+```
+
+is the one used by:
+
+```text
+extensions/chrome/src/pages/image/ImagePublishFlow.jsx
+```
+
+That extension-local wallet client must export:
+
+```text
+toWalletHoldApiBody
+```
+
+and must keep the strict DTO behavior.
+
+## 4. Current architecture snapshot
+
+The codebundle now shows the target React structure is present:
+
+```text
+extensions/chrome/src/app/
+extensions/chrome/src/app/shell/
+extensions/chrome/src/pages/
+extensions/chrome/src/shared/api/
+extensions/chrome/src/shared/components/
+extensions/chrome/src/shared/embed/
+extensions/chrome/src/shared/manifest/
+extensions/chrome/src/shared/theme/
+extensions/chrome/src/shared/utils/
+extensions/chrome/src/shared/styles/
+```
+
+It also still includes the legacy path:
+
+```text
+extensions/chrome/src/page.html
+extensions/chrome/src/page.js
+extensions/chrome/src/page-*.js
+extensions/chrome/src/page.css
+```
+
+That is currently acceptable. The refactor is protected/hybrid, not a deletion sprint.
+
+The route registry includes owners for the built-ins:
+
+```text
+home
+site
+image
+profile
+music
+lyrics
+article
+post
+comment
+video
+stream
+podcast
+ad
+algo
+code
+game
+asset
+notFound
+problem
+```
+
+The current codebundle search shows route-owned React pages and the registry structure are in place for all these built-ins. 
+
+## 5. Current product proof state
+
+### Proven strongly now
+
+```text
+React extension-origin route navigation works.
+crab://home works.
+crab://profile works as local profile workspace.
+crab://site works for site workspace and named-site read/render/error handling.
+crab://image works for React paid image publish.
+Typed .image asset URL resolves.
+Generic asset page hydrates gateway DTO.
+Image preview works from React asset page.
+Structured missing-site 404 problem page works.
+Wallet hold can succeed from React image flow.
+Strict wallet DTO issue has been fixed.
+```
+
+### Proven earlier and still important
+
+Known earlier good React-uploaded image:
+
+```text
+crab://6e343cbcbcd233a72ce45b197d1c45caea862480221ef0f7e4e4360f17e1fce0.image
+```
+
+Known previous image after old protected path:
+
+```text
+crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image
+```
+
+Older known proof:
+
+```text
+crab://984128e643b594b1ff15ed2c40cf1d589616b9ddb7b212d00e91670997c1b8e4.image
+```
+
+Known named-site proof from earlier:
+
+```text
+crab://ron6
+```
+
+Use the newest URL first for image regression:
+
+```text
+crab://3387356e7b89c7ef6a230e79cf82d6ed774a6c7a441f606c26351f739d03cd16.image
+```
+
+## 6. Important testing workflow
+
+The default testing path should now be:
+
+```text
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then:
+
+```text
+Reload unpacked extension in chrome://extensions
+Open CrabLink
+Click/open the React lane from the extension
+Test routes from extension origin
+```
+
+Only use the local HTTP fallback when needed for debugging:
+
+```text
+cd /Users/mymac/Desktop/crablink/dist/chrome-src
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+The user specifically prefers the extension-origin React route now that the React button/path works. Do not default back to the local HTTP server unless debugging Vite output or extension-origin behavior is blocked.
+
+## 7. Current regression watchlist
+
+Fail or stop the next batch if any of these happen:
+
+```text
+npm run build fails.
+scripts/check-react-lane.sh fails.
+scripts/check-chrome.sh fails.
+scripts/package-chrome.sh fails.
+background.js shows Invalid XML from omnibox descriptions.
+ImagePublishFlow white-screens.
+Wallet hold sends UI-only fields to /wallet/hold.
+toWalletHoldApiBody is missing from extensions/chrome/src/shared/api/walletClient.js.
+The root shared/api/walletClient.js gets accidentally overwritten with extension-local code.
+crab://<hash>.image resolves but does not show an Image preview card.
+Asset DTO kind=asset prevents .image preview.
+crab://definitely-missing-site invents a fake site instead of showing 404.
+crab://article falls through to /sites/article.
+crab://video falls through to /sites/video.
+crab://stream falls through to /sites/stream.
+crab://podcast falls through to /sites/podcast.
+Local draft pages claim backend publication.
+Local draft pages claim fake b3 CIDs.
+Local draft pages claim fake ROC charges.
+Local draft pages mutate wallet state.
+Any route calls internal services directly.
+Any page executes arbitrary crab:// code.
+```
+
+The existing creator-workspace documentation also calls out the specific route-regression pattern to avoid: article/video/stream/podcast must not fall through to site lookup, and local draft pages must not claim b3 assignment, ROC charge, or wallet mutation. 
+
+## 8. Things that remain for the refactor
+
+### 8.1 Immediate next work before adding more features
+
+Before deepening article/video/podcast/stream, the safest next batch should probably be **guardrails and regression hardening** around the new proofs:
+
+```text
+1. Update docs/manual checklist with the new current image proof URL.
+2. Add or tighten smoke/check coverage for React image upload assumptions.
+3. Add a static/check guard that the strict hold API JSON does not include schema/api_request/ui_preview_request.
+4. Add a check that background.js keeps src/page.html?url= token if check-chrome requires it.
+5. Add a check or comment warning about the two walletClient.js files.
+6. Add a check that page-local-route-mode.js does not return.
+7. Add manual test list for:
+   crab://3387356e7b89c7ef6a230e79cf82d6ed774a6c7a441f606c26351f739d03cd16.image
+   crab://definitely-missing-site
+   crab://ron6
+   crab://site
+   crab://image
+   crab://profile
+```
+
+This keeps the newest hard-won image proof from regressing.
+
+### 8.2 Article/video/podcast/stream are next product polish surfaces
+
+Yes, article, video, podcast, and stream remain important. They already have route folders in the target structure, and the refactor docs explicitly include pages for these creator surfaces. The target refactor tree defines separate route-owned folders for article, video, stream, and podcast, each with its own page/draft/component files and CSS. 
+
+Current interpretation:
+
+```text
+crab://article = local long-form article creator workspace
+crab://video = local video metadata/rendition planning workspace
+crab://podcast = local podcast/audio episode workspace
+crab://stream = local live-stream/session planning workspace
+```
+
+They should remain local-only until backend routes exist.
+
+Do not claim:
+
+```text
+backend publication
+real b3 CID
+real manifest CID
+real storage
+real ROC charge
+real stream session
+real podcast RSS/feed
+real video upload
+real chat/moderation truth
+```
+
+### 8.3 Recommended order for next route polish
+
+Best order:
+
+```text
+1. Article
+2. Video
+3. Podcast
+4. Stream
+```
+
+Reason:
+
+```text
+Article is lowest risk because it is mostly text/metadata.
+Video is next because it can focus on metadata/renditions without actual upload.
+Podcast is next because audio/local preview and episode metadata are manageable.
+Stream is last because live capture/session/chat/moderation/ingest creates the most future complexity.
+```
+
+Alternative if focusing on UX consistency instead of feature depth:
+
+```text
+1. Add shared CreatorWorkspaceLayout improvements.
+2. Add shared local truth-boundary block.
+3. Apply the same Builder/Developer polish to article/video/podcast/stream.
+4. Keep prepare buttons disabled or explicitly "future route probe only" until backend exists.
+```
+
+## 9. Backend/future product work still pending
+
+The current frontend can model these surfaces, but the backend still needs real route contracts for:
+
+```text
+article prepare/create/read
+post prepare/create/read
+comment prepare/create/read
+lyrics prepare/create/read
+music/song prepare/create/read
+video prepare/create/read
+podcast prepare/create/read
+stream prepare/create/session/read
+ad campaign prepare/create/read
+algo registry/read
+code primitive/facet read
+game manifest read
+profile publication
+@username claim/reservation
+reputation score truth
+moderation score truth
+rendition groups
+manifest version/history
+paid view/access
+creator payout splits
+ad payout splits
+policy/capability gates
+```
+
+The refactor notes preserve the uniform manifest direction: all asset types should share a top-level structure for identity/ownership/metadata/linked assets/renditions/versions/rights/access/economics/provenance/storage/receipts/truth boundaries, with page-specific fields layered inside. 
+
+## 10. Product/manifest rules to keep prominent
+
+### B3 and crab URL rules
+
+```text
+Internal content ID:
+b3:<64 lowercase hex>
+
+Public typed asset URL:
+crab://<64 lowercase hex>.<kind>
+
+Current canonical format:
+crab://<hash>.image
+not crab://b3/<hash>.image
+```
+
+### Image-like asset rule
+
+All image-like things are `.image` assets:
+
+```text
+profile avatars
+profile banners
+album covers
+video thumbnails
+film posters
+game covers
+article hero images
+ad creative images
+site logos
+thumbnails
+post images
+```
+
+Other manifests should link to `.image` assets instead of inventing new image-like kinds.
+
+### Rendition rule
+
+Every rendition is its own content-addressed object:
+
+```text
+original image = own b3 hash
+desktop image = own b3 hash
+mobile image = own b3 hash
+thumbnail image = own b3 hash
+```
+
+Each can be linked through a shared rendition group. Same broad rule applies later to videos and other media.
+
+### Facet/code rule
+
+Never allow:
+
+```text
+crab://<hash>.code
+```
+
+to mean arbitrary code execution.
+
+The correct model remains:
+
+```text
+b3hash.code = address
+facet.toml = contract
+svc-sandbox = cage
+ron-policy = judge
+CrabLink = renderer/launcher, not unsafe executor
+```
+
+## 11. Known tricky implementation details
+
+### 11.1 Check script tokens matter
+
+The check scripts have expected literal tokens. Recent failures included:
+
+```text
+app/router.js missing token:
+kind: hasRouteKind(assetKind) ? assetKind : 'asset'
+
+background.js missing token:
+src/page.html?url=
+```
+
+Even if code is logically equivalent, the check script may fail if the exact token is missing. Future batches should preserve those tokens or update the check script deliberately.
+
+### 11.2 Omnibox descriptions are XML-ish
+
+Chrome omnibox descriptions cannot include raw `<hash>` style text unless escaped. Use:
+
+```text
+64hex
+```
+
+or escape `<` and `>`.
+
+Do not reintroduce literal:
+
+```text
+<hash>
+```
+
+inside omnibox description strings.
+
+### 11.3 Strict wallet request body
+
+Actual wallet API body must remain strict:
+
+```json
+{
+  "from": "...",
+  "to": "...",
+  "asset": "roc",
+  "amount_minor": "...",
+  "nonce": 1,
+  "memo": "...",
+  "idempotency_key": "..."
+}
+```
+
+Developer preview JSON can include extra explanatory fields, but the actual request body must not.
+
+### 11.4 Asset preview should be route-kind aware
+
+The gateway may return generic:
+
+```text
+kind: asset
+```
+
+for a typed asset page. If the parsed route is:
+
+```text
+crab://<hash>.image
+```
+
+then the UI should still attempt image preview. Keep the DTO truth visible, but use the route suffix for safe preview selection.
+
+### 11.5 Root shared vs extension-local shared files
+
+Do not mix up:
+
+```text
+shared/api/walletClient.js
+extensions/chrome/src/shared/api/walletClient.js
+```
+
+The extension-local file is the React page import target.
+
+## 12. Recommended next session plan
+
+Start the next session with this:
+
+```text
+1. Confirm latest codebundle is the one generated after the image preview fix.
+2. Run full green gate.
+3. Reload the unpacked extension.
+4. Confirm React image URL still previews:
+   crab://3387356e7b89c7ef6a230e79cf82d6ed774a6c7a441f606c26351f739d03cd16.image
+5. Confirm crab://image can still perform prepare → hold → upload with a new small image.
+6. Confirm crab://definitely-missing-site still shows structured 404.
+7. Confirm crab://site and crab://profile still load.
+8. Only then start the next batch.
+```
+
+Recommended first next batch:
+
+```text
+Regression guardrails + docs/check updates for the now-working React image flow.
+```
+
+Recommended second next batch:
+
+```text
+Polish crab://article as the first low-risk creator workspace.
+```
+
+Recommended third next batch:
+
+```text
+Polish crab://video, focusing on metadata/renditions/poster image references without real upload claims.
+```
+
+Recommended fourth next batch:
+
+```text
+Polish crab://podcast.
+```
+
+Recommended fifth next batch:
+
+```text
+Polish crab://stream and stream + podcast companion mode, still local/future-gated.
+```
+
+## 13. Manual smoke list for the next instance
+
+Use this route sequence:
+
+```text
+crab://home
+crab://profile
+crab://site
+crab://ron6
+crab://definitely-missing-site
+crab://image
+crab://3387356e7b89c7ef6a230e79cf82d6ed774a6c7a441f606c26351f739d03cd16.image
+crab://article
+crab://video
+crab://podcast
+crab://stream
+crab://music
+crab://lyrics
+crab://post
+crab://comment
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+Expected:
+
+```text
+Each route has exactly one visible owner.
+No previous page remains stuck.
+No local creator route falls through to named-site lookup.
+No local creator route claims backend publication.
+No fake b3 CID appears in local draft routes.
+No fake ROC charge appears in local draft routes.
+Image asset page shows preview.
+Missing site page shows structured problem.
+Site page can read/render real named site if backend data exists.
+Profile page remains honest about local vs backend truth.
+```
+
+## 14. Bottom-line handoff
+
+The refactor has crossed a major threshold.
+
+Before this session, React image publishing was still fragile. After this session, the React image path successfully produced and resolved a new `.image` asset and displayed preview. That makes `crab://image` one of the strongest React parity proofs so far, alongside `crab://site` and `crab://profile`.
+
+The next instance should avoid broad rewrites. The right strategy is:
+
+```text
+Protect the proofs.
+Add regression guardrails.
+Then polish article/video/podcast/stream one route at a time.
+```
+
+The active north star remains:
+
+```text
+CrabLink should feel like a real browser layer for a new internet:
+professional
+fast
+clean
+beautiful
+trustworthy
+creator-first
+sandbox-first
+theme-consistent
+manifest-consistent
+gateway-only
+receipt-driven
+no fake truth
+no silent spend
+```
+
+
+
+### END NOTE - MAY 12 2026 - 20:05 CST

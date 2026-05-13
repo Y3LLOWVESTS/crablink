@@ -1,13 +1,21 @@
 /**
  * RO:WHAT — Local profile draft model for the React-owned crab://profile route.
- * RO:WHY — CrabLink refactor; profile/passport UX must look polished without claiming backend publication.
- * RO:INTERACTS — ProfilePage, ProfileHome, ProfileEditor, ProfileAvatar, ProfileAssets, AltVault.
+ * RO:WHY — CrabLink refactor; profile needs a polished identity surface without claiming backend profile publication.
+ * RO:INTERACTS — ProfilePage, ProfileHome, ProfileEditor, ProfileAvatar, ProfileAssets, AltVault, validation helpers.
  * RO:INVARIANTS — local draft only; no fake username claim; no fake reputation/mod score; no alt linkage leak.
  * RO:METRICS — none.
- * RO:CONFIG — app settings can prefill display-only passport/wallet/username/balance hints.
+ * RO:CONFIG — app settings can prefill display-only passport/wallet labels.
  * RO:SECURITY — no private keys, no seed phrases, no backend publication claim, no direct internal-service calls.
  * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://profile route smoke.
  */
+
+import {
+  imageHashFromCrabUrl as sharedImageHashFromCrabUrl,
+  isCrabImageUrl as sharedIsCrabImageUrl,
+  normalizeUsernameHandle,
+  validateCrabUrl,
+  validateUsername,
+} from '../../shared/utils/validation.js';
 
 export const PROFILE_VIEW_OPTIONS = Object.freeze([
   { value: 'builder', label: 'Builder' },
@@ -17,6 +25,7 @@ export const PROFILE_VIEW_OPTIONS = Object.freeze([
 export const PROFILE_STATUS_OPTIONS = Object.freeze([
   { value: 'local_draft', label: 'Local draft' },
   { value: 'private_preview', label: 'Private preview' },
+  { value: 'draft_saved', label: 'Draft saved' },
   { value: 'publish_later', label: 'Publish later' },
   { value: 'backend_required', label: 'Backend required' },
 ]);
@@ -34,6 +43,15 @@ export const PROFILE_ALT_POLICY_OPTIONS = Object.freeze([
   { value: 'site_scoped_alt_future', label: 'Site-scoped alt future' },
   { value: 'manual_disclosure_only', label: 'Manual disclosure only' },
 ]);
+
+export const USERNAME_STATUS_LABELS = Object.freeze({
+  local_draft: 'Local draft',
+  requested: 'Requested',
+  confirmed: 'Backend confirmed',
+  rejected: 'Rejected',
+  unavailable: 'Unavailable',
+  backend_unknown: 'Backend unknown',
+});
 
 export const DEFAULT_PROFILE_DRAFT = Object.freeze({
   displayName: 'Skinnycrabby',
@@ -60,7 +78,7 @@ export function buildProfileManifestDraft(draft, { app, route } = {}) {
   const safeDraft = normalizeProfileDraft(draft, app);
   const tags = parseTags(safeDraft.tags);
   const usernameTruth = getUsernameTruth(safeDraft, app);
-  const rocTruth = getRocDisplay(app);
+  const validations = validateProfileDraft(safeDraft);
 
   return {
     schema: 'crablink.local.profile-draft.v1',
@@ -75,6 +93,7 @@ export function buildProfileManifestDraft(draft, { app, route } = {}) {
       backend_published: false,
       public_profile_cid_exists: false,
       username_backend_confirmed: usernameTruth.backendConfirmed,
+      username_status: usernameTruth.status,
       reputation_backend_confirmed: false,
       moderation_backend_confirmed: false,
       alt_main_link_public: false,
@@ -83,10 +102,20 @@ export function buildProfileManifestDraft(draft, { app, route } = {}) {
       note:
         'This profile is a local CrabLink React draft. Backend profile publication, username claims, reputation, moderation truth, and public discovery must come from gateway-backed services later.',
     },
+    validation: {
+      local_syntax_only: true,
+      handle: serializeValidation(validations.handle),
+      avatar: serializeValidation(validations.avatar),
+      banner: serializeValidation(validations.banner),
+      website: serializeValidation(validations.website),
+      asset_catalogue: serializeValidation(validations.assetCatalogue),
+      site_catalogue: serializeValidation(validations.siteCatalogue),
+    },
     identity: {
       display_name: cleanOrNull(safeDraft.displayName),
       handle_hint: cleanHandle(safeDraft.handle),
-      displayed_username: usernameTruth.display,
+      username_hint: usernameTruth.username || null,
+      username_display: usernameTruth.display || null,
       username_source: usernameTruth.source,
       username_backend_confirmed: usernameTruth.backendConfirmed,
       owner_passport_hint: cleanOrNull(safeDraft.ownerPassport),
@@ -102,34 +131,29 @@ export function buildProfileManifestDraft(draft, { app, route } = {}) {
       status: safeDraft.profileStatus,
       discovery_mode: safeDraft.discoveryMode,
     },
-    wallet_display: {
-      account_hint: cleanOrNull(safeDraft.walletAccount),
-      roc_display: rocTruth.display,
-      ledger_backed: rocTruth.ledgerBacked,
-      display_only: true,
-      note: 'The profile page displays shell/account hints only. It does not create wallet authority.',
-    },
     media: {
       avatar: {
         crab_url: cleanOrNull(safeDraft.avatarCrabUrl),
         expected_kind: 'image',
-        syntactically_valid_image_url: isCrabImageUrl(safeDraft.avatarCrabUrl),
+        local_syntax_ok: validations.avatar.ok,
         backend_verified: false,
       },
       banner: {
         crab_url: cleanOrNull(safeDraft.bannerCrabUrl),
         expected_kind: 'image',
-        syntactically_valid_image_url: isCrabImageUrl(safeDraft.bannerCrabUrl),
+        local_syntax_ok: validations.banner.ok,
         backend_verified: false,
       },
     },
     catalogues: {
       assets: {
         crab_url: cleanOrNull(safeDraft.assetCatalogCrabUrl),
+        local_syntax_ok: validations.assetCatalogue.ok,
         backend_verified: false,
       },
       sites: {
         crab_url: cleanOrNull(safeDraft.siteCatalogCrabUrl),
+        local_syntax_ok: validations.siteCatalogue.ok,
         backend_verified: false,
       },
     },
@@ -142,13 +166,6 @@ export function buildProfileManifestDraft(draft, { app, route } = {}) {
       score: null,
       display: safeDraft.moderationNote || 'Not backend confirmed',
       backend_verified: false,
-    },
-    passport_permissions: {
-      main_identity_can_create_sites: true,
-      anonymous_alt_can_create_sites: false,
-      anonymous_alt_can_comment_future: true,
-      note:
-        'Site creation should be tied to a main identity/passport permission. Anonymous alts stay for browsing/commenting unless policy later says otherwise.',
     },
     alt_privacy: {
       mode: safeDraft.altPolicyMode,
@@ -172,8 +189,8 @@ export function buildProfileManifestDraft(draft, { app, route } = {}) {
 export function statsForProfileDraft(draft, app) {
   const safeDraft = normalizeProfileDraft(draft, app);
   const tags = parseTags(safeDraft.tags);
+  const validations = validateProfileDraft(safeDraft);
   const usernameTruth = getUsernameTruth(safeDraft, app);
-  const rocTruth = getRocDisplay(app);
 
   return {
     tagCount: tags.length,
@@ -182,31 +199,30 @@ export function statsForProfileDraft(draft, app) {
     hasBanner: isCrabImageUrl(safeDraft.bannerCrabUrl),
     hasBio: Boolean(cleanOrNull(safeDraft.bio)),
     hasHandle: Boolean(cleanHandle(safeDraft.handle)),
+    hasValidHandle: validations.handle.ok,
+    usernameTruth,
+    validations,
     hasPassport: Boolean(cleanOrNull(safeDraft.ownerPassport)),
     hasWallet: Boolean(cleanOrNull(safeDraft.walletAccount)),
     hasAssetCatalog: Boolean(cleanOrNull(safeDraft.assetCatalogCrabUrl)),
     hasSiteCatalog: Boolean(cleanOrNull(safeDraft.siteCatalogCrabUrl)),
-    usernameDisplay: usernameTruth.display,
-    usernameSource: usernameTruth.source,
-    usernameBackendConfirmed: usernameTruth.backendConfirmed,
-    rocDisplay: rocTruth.display,
-    rocLedgerBacked: rocTruth.ledgerBacked,
   };
 }
 
 export function getProfileCompleteness(draft, app) {
   const safeDraft = normalizeProfileDraft(draft, app);
+  const validations = validateProfileDraft(safeDraft);
+
   const checks = [
     cleanOrNull(safeDraft.displayName),
-    cleanHandle(safeDraft.handle),
+    validations.handle.ok,
     cleanOrNull(safeDraft.bio),
     cleanOrNull(safeDraft.tagline),
-    cleanOrNull(safeDraft.avatarCrabUrl),
+    validations.avatar.ok && cleanOrNull(safeDraft.avatarCrabUrl),
     cleanOrNull(safeDraft.ownerPassport),
     cleanOrNull(safeDraft.walletAccount),
     cleanOrNull(safeDraft.tags),
     safeDraft.profileStatus,
-    safeDraft.discoveryMode,
     safeDraft.altPolicyMode,
   ];
 
@@ -215,10 +231,15 @@ export function getProfileCompleteness(draft, app) {
 
 export function normalizeProfileDraft(draft, app) {
   const settings = app?.settings || {};
+  const preferredHandle = preferredHandleFromSettings(settings);
 
   return {
     ...DEFAULT_PROFILE_DRAFT,
     ...(draft || {}),
+    handle:
+      cleanHandle(draft?.handle) ||
+      preferredHandle ||
+      DEFAULT_PROFILE_DRAFT.handle,
     ownerPassport:
       cleanOrNull(draft?.ownerPassport) ||
       cleanOrNull(settings.passportSubject) ||
@@ -230,59 +251,136 @@ export function normalizeProfileDraft(draft, app) {
   };
 }
 
-export function getUsernameTruth(draft, app) {
+export function validateProfileDraft(draft) {
+  const safeDraft = {
+    ...DEFAULT_PROFILE_DRAFT,
+    ...(draft || {}),
+  };
+
+  return {
+    handle: validateProfileHandle(safeDraft.handle),
+    avatar: validateCrabUrl(safeDraft.avatarCrabUrl, { optional: true, kind: 'image' }),
+    banner: validateCrabUrl(safeDraft.bannerCrabUrl, { optional: true, kind: 'image' }),
+    website: validateCrabUrl(safeDraft.websiteCrabUrl, { optional: true }),
+    assetCatalogue: validateCrabUrl(safeDraft.assetCatalogCrabUrl, { optional: true }),
+    siteCatalogue: validateCrabUrl(safeDraft.siteCatalogCrabUrl, { optional: true }),
+  };
+}
+
+export function validateProfileHandle(value) {
+  return validateUsername(value, { optional: false });
+}
+
+export function getUsernameTruth(draft, app = {}) {
   const settings = app?.settings || {};
-  const status = String(settings.usernameStatus || '').trim().toLowerCase();
-  const confirmed = ['confirmed', 'verified', 'claimed', 'backend_confirmed', 'ready'].includes(status);
+  const safeDraft = {
+    ...DEFAULT_PROFILE_DRAFT,
+    ...(draft || {}),
+  };
 
   const confirmedHandle = cleanHandle(settings.handle || settings.username);
-  const requestedHandle = cleanHandle(
-    settings.requestedHandle ||
-      settings.requestedUsername ||
-      draft?.handle ||
-      DEFAULT_PROFILE_DRAFT.handle,
-  );
-  const localHandle = cleanHandle(draft?.handle || DEFAULT_PROFILE_DRAFT.handle);
+  const requestedHandle = cleanHandle(settings.requestedHandle || settings.requestedUsername);
+  const draftHandle = cleanHandle(safeDraft.handle);
+  const status = normalizeUsernameStatus(settings.usernameStatus);
+  const confirmed = status === 'confirmed' && Boolean(confirmedHandle);
+  const rejected = status === 'rejected' || status === 'unavailable';
 
-  if (confirmed && confirmedHandle) {
+  if (confirmed) {
+    const validation = validateProfileHandle(confirmedHandle);
+
     return {
-      display: confirmedHandle,
-      source: 'backend confirmed',
+      display: validation.display || confirmedHandle,
+      username: validation.normalized,
+      handle: validation.display || confirmedHandle,
       backendConfirmed: true,
-      status: status || 'confirmed',
+      status,
+      source: 'backend confirmed',
+      tone: 'success',
+      validation,
+      requestedHandle,
+      draftHandle,
     };
   }
 
   if (requestedHandle) {
+    const validation = validateProfileHandle(requestedHandle);
+
     return {
-      display: requestedHandle,
-      source: 'requested/local hint',
+      display: validation.display || requestedHandle,
+      username: validation.normalized,
+      handle: validation.display || requestedHandle,
       backendConfirmed: false,
-      status: status || 'unconfirmed',
+      status: rejected ? status : status === 'requested' ? 'requested' : 'local_draft',
+      source: rejected ? USERNAME_STATUS_LABELS[status] : 'requested locally',
+      tone: rejected ? 'danger' : 'warning',
+      validation,
+      requestedHandle,
+      draftHandle,
     };
   }
 
+  const validation = validateProfileHandle(draftHandle);
+
   return {
-    display: localHandle || '@username-local-draft',
-    source: 'local draft',
+    display: validation.display || draftHandle,
+    username: validation.normalized,
+    handle: validation.display || draftHandle,
     backendConfirmed: false,
-    status: status || 'local_draft',
+    status: 'local_draft',
+    source: 'local draft',
+    tone: validation.ok ? 'warning' : 'danger',
+    validation,
+    requestedHandle,
+    draftHandle,
   };
 }
 
-export function getRocDisplay(app) {
+export function getRocTruth(app = {}) {
   const settings = app?.settings || {};
-  const rawDisplay =
-    settings.rocBalanceDisplay ||
-    settings.rocBalanceMinorUnits ||
-    settings.balanceDisplay ||
-    settings.balance ||
+  const walletData = app?.walletState?.data || app?.wallet?.data || null;
+  const balanceFromWallet =
+    walletData?.available_display ||
+    walletData?.balance_display ||
+    walletData?.display ||
+    walletData?.formatted ||
     '';
+  const balanceFromSettings = settings.rocBalanceDisplay || '';
+  const ledgerBacked = Boolean(
+    walletData?.ledger_backed ||
+      walletData?.ledgerBacked ||
+      settings.rocLedgerBacked,
+  );
+  const source =
+    walletData?.source ||
+    settings.rocBalanceSource ||
+    (balanceFromWallet ? 'gateway wallet response' : balanceFromSettings ? 'stored display hint' : 'not loaded');
 
   return {
-    display: rawDisplay ? String(rawDisplay) : 'display only',
-    ledgerBacked: settings.rocLedgerBacked === true,
+    display: balanceFromWallet || balanceFromSettings || 'not loaded',
+    ledgerBacked,
+    source,
+    checkedAt: app?.walletState?.checkedAt || settings.rocBalanceUpdatedAt || '',
   };
+}
+
+export function preferredHandleFromSettings(settings = {}) {
+  return cleanHandle(
+    settings.handle ||
+      settings.username ||
+      settings.requestedHandle ||
+      settings.requestedUsername ||
+      '',
+  );
+}
+
+export function normalizeUsernameStatus(value) {
+  const status = String(value || '').trim().toLowerCase();
+
+  if (USERNAME_STATUS_LABELS[status]) {
+    return status;
+  }
+
+  return 'backend_unknown';
 }
 
 export function parseTags(input) {
@@ -294,12 +392,7 @@ export function parseTags(input) {
 }
 
 export function cleanHandle(value) {
-  const clean = String(value || '').trim();
-  if (!clean) {
-    return '';
-  }
-
-  return clean.startsWith('@') ? clean : `@${clean}`;
+  return normalizeUsernameHandle(value);
 }
 
 export function cleanOrNull(value) {
@@ -308,12 +401,11 @@ export function cleanOrNull(value) {
 }
 
 export function isCrabImageUrl(value) {
-  return /^crab:\/\/[0-9a-f]{64}\.image$/i.test(String(value || '').trim());
+  return sharedIsCrabImageUrl(value);
 }
 
 export function imageHashFromCrabUrl(value) {
-  const match = String(value || '').trim().match(/^crab:\/\/([0-9a-f]{64})\.image$/i);
-  return match ? match[1].toLowerCase() : '';
+  return sharedImageHashFromCrabUrl(value);
 }
 
 export function labelFromSnake(value) {
@@ -322,4 +414,14 @@ export function labelFromSnake(value) {
     .filter(Boolean)
     .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+function serializeValidation(validation) {
+  return {
+    ok: Boolean(validation?.ok),
+    code: validation?.code || '',
+    message: validation?.message || '',
+    normalized: validation?.normalized || '',
+    display: validation?.display || '',
+  };
 }

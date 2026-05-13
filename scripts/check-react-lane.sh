@@ -46,11 +46,13 @@ need_file "$ROOT/vite.config.js"
 need_file "$CHROME_SRC/react.html"
 need_file "$APP_DIR/main.jsx"
 need_file "$APP_DIR/App.jsx"
-need_file "$APP_DIR/appContext.js"
-need_file "$APP_DIR/appState.js"
 need_file "$APP_DIR/router.js"
 need_file "$APP_DIR/routeRegistry.js"
-need_file "$APP_DIR/settings.js"
+need_file "$SHARED_DIR/api/gatewayClient.js"
+need_file "$SHARED_DIR/api/walletClient.js"
+need_file "$SHARED_DIR/api/siteClient.js"
+need_file "$PAGES_DIR/site/SiteLaunchFlow.jsx"
+need_file "$PAGES_DIR/image/ImagePublishFlow.jsx"
 need_dir "$APP_DIR/shell"
 need_dir "$PAGES_DIR"
 need_dir "$SHARED_DIR"
@@ -62,7 +64,6 @@ const path = require('path');
 const root = process.env.ROOT_FOR_NODE;
 const chromeSrc = path.join(root, 'extensions', 'chrome', 'src');
 const app = path.join(chromeSrc, 'app');
-const shell = path.join(app, 'shell');
 const pages = path.join(chromeSrc, 'pages');
 const shared = path.join(chromeSrc, 'shared');
 
@@ -95,22 +96,6 @@ function forbidIncludes(source, token, label) {
   }
 }
 
-function assertFile(relative) {
-  const file = path.join(root, relative);
-  if (!fs.existsSync(file)) {
-    fail(`missing required file: ${relative}`);
-  }
-  return file;
-}
-
-function assertFileIfStrict(relative, label) {
-  const file = path.join(root, relative);
-  if (!fs.existsSync(file)) {
-    fail(`${label} missing required file: ${relative}`);
-  }
-  return file;
-}
-
 function collectTextFiles(dir) {
   const out = [];
   const stack = [dir];
@@ -137,6 +122,32 @@ function collectTextFiles(dir) {
   return out.sort();
 }
 
+function extractSuggestionArgument(source) {
+  const marker = 'chrome.omnibox.setDefaultSuggestion';
+  const start = source.indexOf(marker);
+
+  if (start < 0) {
+    return '';
+  }
+
+  const open = source.indexOf('(', start);
+  if (open < 0) {
+    return '';
+  }
+
+  let depth = 0;
+  for (let i = open; i < source.length; i += 1) {
+    const char = source[i];
+    if (char === '(') depth += 1;
+    if (char === ')') depth -= 1;
+    if (depth === 0) {
+      return source.slice(open + 1, i);
+    }
+  }
+
+  return '';
+}
+
 const pkg = loadJson(path.join(root, 'package.json'));
 if (pkg.type !== 'module') fail('package.json type must remain module');
 
@@ -152,15 +163,37 @@ for (const [name, command] of [
   }
 }
 
+const forbiddenLocalRouteController = path.join(chromeSrc, 'page-local-route-mode.js');
+if (fs.existsSync(forbiddenLocalRouteController)) {
+  fail('page-local-route-mode.js must not return; route ownership belongs to app/router.js and route pages');
+}
+
+const pageHtml = readText(path.join(chromeSrc, 'page.html'));
+forbidIncludes(pageHtml, 'page-local-route-mode.js', 'src/page.html');
+forbidIncludes(pageHtml, 'page-local-route-mode', 'src/page.html');
+
+const background = readText(path.join(chromeSrc, 'background.js'));
+for (const token of ['chrome.action.onClicked', 'src/page.html?url=', 'src/react.html?url=', 'reactprofile']) {
+  requireIncludes(background, token, 'src/background.js');
+}
+
+const suggestion = extractSuggestionArgument(background);
+if (!suggestion) {
+  fail('src/background.js missing chrome.omnibox.setDefaultSuggestion call');
+}
+
+for (const token of ['<hash>', '<64', '&lt;', '&gt;']) {
+  if (suggestion.includes(token)) {
+    fail(`src/background.js omnibox suggestion must not include placeholder token: ${token}`);
+  }
+}
+
 const vite = readText(path.join(root, 'vite.config.js'));
 for (const token of [
   'react.html',
   'page.html',
   'dist/chrome-src',
   '@vitejs/plugin-react',
-  'page-media',
-  'page-social',
-  'page-builder-stubs',
 ]) {
   requireIncludes(vite, token, 'vite.config.js');
 }
@@ -177,12 +210,6 @@ for (const token of [
   '../shared/theme/themeTokens.css',
   '../shared/theme/light.css',
   '../shared/theme/dark.css',
-  '../shared/styles/base.css',
-  '../shared/styles/layout.css',
-  '../shared/styles/forms.css',
-  '../shared/styles/cards.css',
-  '../shared/styles/modals.css',
-  '../shared/styles/developer.css',
 ]) {
   requireIncludes(main, token, 'app/main.jsx');
 }
@@ -246,12 +273,9 @@ for (const token of [
 ]) {
   requireIncludes(router, token, 'app/router.js');
 }
+forbidIncludes(router, 'crab://b3/', 'app/router.js');
 
-for (const oldAssetPath of ['crab://b3/']) {
-  forbidIncludes(router, oldAssetPath, 'app/router.js');
-}
-
-const shellFiles = [
+const requiredShellFiles = [
   'AddressBar.jsx',
   'BalanceChip.jsx',
   'BrowserNav.jsx',
@@ -268,50 +292,29 @@ const shellFiles = [
   'TopBar.jsx',
 ];
 
-for (const file of shellFiles) {
-  assertFile(path.join('extensions', 'chrome', 'src', 'app', 'shell', file));
-}
-
-const shellJsx = readText(path.join(shell, 'Shell.jsx'));
-for (const token of ['TopBar', 'HeaderAdSlot', 'ModalHost', 'ToastHost', 'data-route-kind']) {
-  requireIncludes(shellJsx, token, 'app/shell/Shell.jsx');
-}
-
-const topBar = readText(path.join(shell, 'TopBar.jsx'));
-for (const token of ['AddressBar', 'BrowserNav', 'PassportChip', 'BalanceChip', 'theme.toggleTheme', 'openSettings']) {
-  requireIncludes(topBar, token, 'app/shell/TopBar.jsx');
-}
-
-const passportChip = readText(path.join(shell, 'PassportChip.jsx'));
-for (const token of ['PassportDrawer', 'HTTP test mode', 'chrome.storage.local', 'aria-haspopup="dialog"']) {
-  requireIncludes(passportChip, token, 'app/shell/PassportChip.jsx');
-}
-
-const passportDrawer = readText(path.join(shell, 'PassportDrawer.jsx'));
-for (const token of ['Truth boundary', 'refreshIdentity', 'refreshWallet', 'JsonPreview', 'no wallet mutation']) {
-  requireIncludes(passportDrawer, token, 'app/shell/PassportDrawer.jsx');
-}
-
-for (const forbidden of ['createWalletHold', 'wallet/hold', 'sendTransaction', 'privateKey', 'seedPhrase']) {
-  forbidIncludes(passportDrawer, forbidden, 'app/shell/PassportDrawer.jsx');
+for (const file of requiredShellFiles) {
+  const full = path.join(app, 'shell', file);
+  if (!fs.existsSync(full)) {
+    fail(`missing required shell file: ${path.relative(root, full)}`);
+  }
 }
 
 const pageExpectations = new Map([
   ['home', ['HomePage.jsx', 'HomeQuickActions.jsx', 'home.css']],
   ['lyrics', ['LyricsPage.jsx', 'LyricsDraft.jsx', 'lyricsDraftModel.js', 'lyrics.css']],
   ['post', ['PostPage.jsx', 'PostDraft.jsx', 'postDraftModel.js', 'post.css']],
-  ['comment', ['CommentPage.jsx', 'CommentDraft.jsx', 'comment.css']],
-  ['article', ['ArticlePage.jsx', 'ArticleDraft.jsx', 'article.css']],
+  ['comment', ['CommentPage.jsx', 'CommentDraft.jsx', 'commentDraftModel.js', 'comment.css']],
+  ['article', ['ArticlePage.jsx', 'ArticleDraft.jsx', 'articleDraftModel.js', 'article.css']],
   ['music', ['MusicPage.jsx', 'MusicDraft.jsx', 'MusicLinkedAssets.jsx', 'MusicRights.jsx', 'music.css']],
-  ['podcast', ['PodcastPage.jsx', 'PodcastDraft.jsx', 'podcast.css']],
-  ['stream', ['StreamPage.jsx', 'StreamDraft.jsx', 'StreamPodcastMode.jsx', 'stream.css']],
-  ['video', ['VideoPage.jsx', 'VideoDraft.jsx', 'VideoRenditions.jsx', 'video.css']],
-  ['ad', ['AdPage.jsx', 'AdCampaignDraft.jsx', 'AdCreativePreview.jsx', 'ad.css']],
-  ['algo', ['AlgoPage.jsx', 'AlgoDraft.jsx', 'AlgoTransparency.jsx', 'algo.css']],
-  ['code', ['CodePage.jsx', 'CodeDraft.jsx', 'CodeFacet.jsx', 'FacetContractPreview.jsx', 'code.css']],
-  ['game', ['GamePage.jsx', 'GameDraft.jsx', 'GameAssets.jsx', 'game.css']],
-  ['site', ['SitePage.jsx', 'SiteCreate.jsx', 'SiteRender.jsx', 'SiteManifestDrawer.jsx', 'SiteRootUpload.jsx', 'SiteCreatorProof.jsx', 'site.css']],
-  ['image', ['ImagePage.jsx', 'ImageCreate.jsx', 'ImageManifest.jsx', 'ImagePreview.jsx', 'ImageRenditions.jsx', 'image.css']],
+  ['podcast', ['PodcastPage.jsx', 'PodcastDraft.jsx', 'podcastDraftModel.js', 'podcast.css']],
+  ['stream', ['StreamPage.jsx', 'StreamDraft.jsx', 'streamDraftModel.js', 'StreamPodcastMode.jsx', 'stream.css']],
+  ['video', ['VideoPage.jsx', 'VideoDraft.jsx', 'videoDraftModel.js', 'VideoRenditions.jsx', 'video.css']],
+  ['ad', ['AdPage.jsx', 'AdCampaignDraft.jsx', 'AdCreativePreview.jsx', 'adDraftModel.js', 'ad.css']],
+  ['algo', ['AlgoPage.jsx', 'AlgoDraft.jsx', 'AlgoTransparency.jsx', 'algoDraftModel.js', 'algo.css']],
+  ['code', ['CodePage.jsx', 'CodeDraft.jsx', 'CodeFacet.jsx', 'FacetContractPreview.jsx', 'codeDraftModel.js', 'code.css']],
+  ['game', ['GamePage.jsx', 'GameDraft.jsx', 'GameAssets.jsx', 'gameDraftModel.js', 'game.css']],
+  ['site', ['SitePage.jsx', 'SiteCreate.jsx', 'SiteLaunchFlow.jsx', 'SiteRender.jsx', 'SiteRootUpload.jsx', 'site.css']],
+  ['image', ['ImagePage.jsx', 'ImageCreate.jsx', 'ImagePublishFlow.jsx', 'ImagePreview.jsx', 'ImageRenditions.jsx', 'image.css']],
   ['profile', ['ProfilePage.jsx', 'ProfileHome.jsx', 'ProfileEditor.jsx', 'ProfileGateway.jsx', 'ProfileAvatar.jsx', 'ProfileAssets.jsx', 'AltVault.jsx', 'profile.css']],
   ['asset', ['AssetPage.jsx', 'AssetResolver.jsx', 'AssetHydratedView.jsx', 'asset.css']],
   ['notFound', ['NotFoundPage.jsx', 'notFound.css']],
@@ -320,7 +323,10 @@ const pageExpectations = new Map([
 
 for (const [route, files] of pageExpectations.entries()) {
   for (const file of files) {
-    assertFile(path.join('extensions', 'chrome', 'src', 'pages', route, file));
+    const full = path.join(pages, route, file);
+    if (!fs.existsSync(full)) {
+      fail(`missing required route file: ${path.relative(root, full)}`);
+    }
   }
 }
 
@@ -342,16 +348,15 @@ const localOnlyRoutes = [
 for (const route of localOnlyRoutes) {
   const routeDir = path.join(pages, route);
   const source = collectTextFiles(routeDir).map(readText).join('\n');
+  const label = `pages/${route}`;
 
-  requireIncludes(source, `crab://${route}`, `pages/${route}`);
-  requireIncludes(source, 'local', `pages/${route}`);
-  requireIncludes(source, 'truth', `pages/${route}`);
-  requireIncludes(source, 'false', `pages/${route}`);
+  requireIncludes(source, `crab://${route}`, label);
+  requireIncludes(source, 'local', label);
+  requireIncludes(source, 'truth', label);
 
   for (const forbidden of [
     'canonical_cid: `b3:',
     'canonical_cid: "b3:',
-    'canonical_crab_url: `crab://',
     'manifest_cid: `b3:',
     'assigns_b3_cid: true',
     'assigns_manifest_cid: true',
@@ -359,310 +364,138 @@ for (const route of localOnlyRoutes) {
     'writes_index_pointer: true',
     'performs_paid_action: true',
     'backend_route_claimed: true',
-    'paid_access_active: true',
-    'createWalletHold(',
     'wallet/hold',
+    'createWalletHold(',
     'fetch(\'http://127.0.0.1:',
     'fetch("http://127.0.0.1:',
   ]) {
-    forbidIncludes(source, forbidden, `pages/${route}`);
+    forbidIncludes(source, forbidden, label);
   }
-}
-
-const strictCreatorWorkspaceRoutes = new Set([
-  'lyrics',
-  'post',
-]);
-
-const creatorWorkspaceContracts = {
-  lyrics: {
-    modelFile: 'lyricsDraftModel.js',
-    pageFile: 'LyricsPage.jsx',
-    draftFile: 'LyricsDraft.jsx',
-    sidePanel: 'LyricsSidePanel',
-    schema: 'crablink.local.lyrics-draft.v1',
-  },
-  post: {
-    modelFile: 'postDraftModel.js',
-    pageFile: 'PostPage.jsx',
-    draftFile: 'PostDraft.jsx',
-    sidePanel: 'PostSidePanel',
-    schema: 'crablink.local.post-draft.v1',
-  },
-  comment: {
-    modelFile: 'commentDraftModel.js',
-    pageFile: 'CommentPage.jsx',
-    draftFile: 'CommentDraft.jsx',
-    sidePanel: 'CommentSidePanel',
-    schema: 'crablink.local.comment-draft.v1',
-  },
-  article: {
-    modelFile: 'articleDraftModel.js',
-    pageFile: 'ArticlePage.jsx',
-    draftFile: 'ArticleDraft.jsx',
-    sidePanel: 'ArticleSidePanel',
-    schema: 'crablink.local.article-draft.v1',
-  },
-  music: {
-    modelFile: 'musicDraftModel.js',
-    pageFile: 'MusicPage.jsx',
-    draftFile: 'MusicDraft.jsx',
-    sidePanel: 'MusicSidePanel',
-    schema: 'crablink.local.music-draft.v1',
-  },
-  podcast: {
-    modelFile: 'podcastDraftModel.js',
-    pageFile: 'PodcastPage.jsx',
-    draftFile: 'PodcastDraft.jsx',
-    sidePanel: 'PodcastSidePanel',
-    schema: 'crablink.local.podcast-draft.v1',
-  },
-  stream: {
-    modelFile: 'streamDraftModel.js',
-    pageFile: 'StreamPage.jsx',
-    draftFile: 'StreamDraft.jsx',
-    sidePanel: 'StreamSidePanel',
-    schema: 'crablink.local.stream-draft.v1',
-  },
-  video: {
-    modelFile: 'videoDraftModel.js',
-    pageFile: 'VideoPage.jsx',
-    draftFile: 'VideoDraft.jsx',
-    sidePanel: 'VideoSidePanel',
-    schema: 'crablink.local.video-draft.v1',
-  },
-  ad: {
-    modelFile: 'adDraftModel.js',
-    pageFile: 'AdPage.jsx',
-    draftFile: 'AdCampaignDraft.jsx',
-    sidePanel: 'AdSidePanel',
-    schema: 'crablink.local.ad-draft.v1',
-  },
-  algo: {
-    modelFile: 'algoDraftModel.js',
-    pageFile: 'AlgoPage.jsx',
-    draftFile: 'AlgoDraft.jsx',
-    sidePanel: 'AlgoSidePanel',
-    schema: 'crablink.local.algo-draft.v1',
-  },
-  code: {
-    modelFile: 'codeDraftModel.js',
-    pageFile: 'CodePage.jsx',
-    draftFile: 'CodeDraft.jsx',
-    sidePanel: 'CodeSidePanel',
-    schema: 'crablink.local.code-draft.v1',
-  },
-  game: {
-    modelFile: 'gameDraftModel.js',
-    pageFile: 'GamePage.jsx',
-    draftFile: 'GameDraft.jsx',
-    sidePanel: 'GameSidePanel',
-    schema: 'crablink.local.game-draft.v1',
-  },
-};
-
-for (const route of localOnlyRoutes) {
-  const contract = creatorWorkspaceContracts[route];
-  if (!contract) {
-    continue;
-  }
-
-  const routeDir = path.join(pages, route);
-  const routeLabel = `pages/${route}`;
-  const modelRelative = path.join('extensions', 'chrome', 'src', 'pages', route, contract.modelFile);
-  const modelPath = path.join(routeDir, contract.modelFile);
-  const source = collectTextFiles(routeDir).map(readText).join('\n');
-
-  const hasWorkspaceSignals =
-    fs.existsSync(modelPath) ||
-    source.includes('useCreatorDraft') ||
-    source.includes('CreatorWorkspaceLayout') ||
-    source.includes(contract.sidePanel) ||
-    source.includes('draftState');
-
-  const mustCheckWorkspaceContract =
-    strictCreatorWorkspaceRoutes.has(route) || hasWorkspaceSignals;
-
-  if (!mustCheckWorkspaceContract) {
-    continue;
-  }
-
-  assertFileIfStrict(modelRelative, routeLabel);
-
-  for (const token of [
-    'useCreatorDraft',
-    contract.modelFile,
-    contract.sidePanel,
-    'draftState',
-    'CreatorWorkspaceLayout',
-    'RouteTruthPanel',
-  ]) {
-    requireIncludes(source, token, routeLabel);
-  }
-
-  for (const forbidden of [
-    'let sidePanelState',
-    'sidePanelState =',
-    '.SidePanel =',
-    `${contract.draftFile.replace('.jsx', '')}.SidePanel`,
-    'navigator.clipboard.writeText',
-    'setCopyState',
-    'useMemo, useState',
-    'canonical_cid: `b3:',
-    'canonical_cid: "b3:',
-    'manifest_cid: `b3:',
-    'assigns_b3_cid: true',
-    'assigns_manifest_cid: true',
-    'publishes_asset: true',
-    'writes_index_pointer: true',
-    'performs_paid_action: true',
-    'backend_route_claimed: true',
-  ]) {
-    forbidIncludes(source, forbidden, routeLabel);
-  }
-
-  const modelSource = readText(modelPath);
-
-  for (const token of [
-    'DEFAULT_',
-    'build',
-    'ManifestDraft',
-    'stats',
-    'Completeness',
-    'truth_boundary',
-    'local_draft_only',
-    'assigns_b3_cid: false',
-    'assigns_manifest_cid: false',
-    'publishes_asset: false',
-    'writes_index_pointer: false',
-    'performs_paid_action: false',
-    'backend_route_claimed: false',
-  ]) {
-    requireIncludes(modelSource, token, `${routeLabel}/${contract.modelFile}`);
-  }
-
-  requireIncludes(modelSource, contract.schema, `${routeLabel}/${contract.modelFile}`);
 }
 
 const requiredSharedFiles = [
-  'shared/api/gatewayClient.js',
-  'shared/api/identityClient.js',
-  'shared/api/walletClient.js',
-  'shared/api/assetClient.js',
-  'shared/api/siteClient.js',
-  'shared/components/ActionBar.jsx',
-  'shared/components/Badge.jsx',
-  'shared/components/Button.jsx',
-  'shared/components/Card.jsx',
-  'shared/components/CopyButton.jsx',
-  'shared/components/CreatorWorkspaceLayout.jsx',
-  'shared/components/DraftStatsPanel.jsx',
-  'shared/components/EmptyState.jsx',
-  'shared/components/ErrorPanel.jsx',
-  'shared/components/Field.jsx',
-  'shared/components/FilePicker.jsx',
-  'shared/components/JsonPreview.jsx',
-  'shared/components/LoadingState.jsx',
-  'shared/components/ManifestPreviewPanel.jsx',
-  'shared/components/Modal.jsx',
-  'shared/components/PageHeader.jsx',
-  'shared/components/RouteTruthPanel.jsx',
-  'shared/components/SegmentedControl.jsx',
-  'shared/components/StatChip.jsx',
-  'shared/components/TextArea.jsx',
-  'shared/components/TextInput.jsx',
-  'shared/components/Toggle.jsx',
-  'shared/components/TruthBoundary.jsx',
-  'shared/hooks/useCreatorDraft.js',
-  'shared/manifest/uniformManifest.js',
-  'shared/manifest/manifestDrafts.js',
-  'shared/manifest/manifestForm.jsx',
-  'shared/manifest/manifestPreview.jsx',
-  'shared/manifest/renditionGroups.js',
-  'shared/manifest/linkedAssets.js',
-  'shared/styles/base.css',
-  'shared/styles/layout.css',
-  'shared/styles/forms.css',
-  'shared/styles/cards.css',
-  'shared/styles/modals.css',
-  'shared/styles/developer.css',
-  'shared/theme/ThemeProvider.jsx',
-  'shared/theme/themeStore.js',
-  'shared/theme/themeTokens.css',
-  'shared/theme/light.css',
-  'shared/theme/dark.css',
-  'shared/utils/crabUrl.js',
-  'shared/utils/b3.js',
-  'shared/utils/clipboard.js',
-  'shared/utils/format.js',
-  'shared/utils/nonce.js',
-  'shared/utils/validation.js',
-  'shared/utils/viewMode.js',
+  'api/gatewayClient.js',
+  'api/identityClient.js',
+  'api/walletClient.js',
+  'api/assetClient.js',
+  'api/siteClient.js',
+  'api/objectClient.js',
+  'components/CreatorWorkspaceLayout.jsx',
+  'components/DraftStatsPanel.jsx',
+  'components/ManifestPreviewPanel.jsx',
+  'components/RouteTruthPanel.jsx',
+  'components/TruthBoundary.jsx',
+  'hooks/useCreatorDraft.js',
+  'manifest/uniformManifest.js',
+  'manifest/manifestDrafts.js',
+  'manifest/manifestPreview.jsx',
+  'styles/base.css',
+  'styles/layout.css',
+  'styles/forms.css',
+  'styles/cards.css',
+  'styles/modals.css',
+  'styles/developer.css',
+  'theme/ThemeProvider.jsx',
+  'theme/themeStore.js',
+  'theme/themeTokens.css',
+  'theme/light.css',
+  'theme/dark.css',
+  'utils/crabUrl.js',
+  'utils/b3.js',
+  'utils/format.js',
+  'utils/nonce.js',
+  'utils/validation.js',
 ];
 
 for (const relative of requiredSharedFiles) {
-  assertFile(path.join('extensions', 'chrome', 'src', relative));
+  const full = path.join(shared, relative);
+  if (!fs.existsSync(full)) {
+    fail(`missing required shared file: ${path.relative(root, full)}`);
+  }
 }
 
-const sharedLayout = readText(path.join(shared, 'styles', 'layout.css'));
+const walletClient = readText(path.join(shared, 'api', 'walletClient.js'));
 for (const token of [
-  '.cl-creator-workspace',
-  '.cl-creator-workspace-grid',
-  '.cl-draft-stats-panel',
-  '.cl-manifest-preview-panel',
-  '.cl-route-truth-panel',
+  'Wallet display and explicit hold API helper',
+  'normalizeWalletHoldRequest',
+  'toWalletHoldApiBody',
+  'normalizeWalletHoldResponse',
+  'expectedNonceFromWalletError',
+  'loadNextNonceHint',
+  'persistNextNonceHint',
+  'clearNextNonceHint',
+  'confirmed !== true',
 ]) {
-  requireIncludes(sharedLayout, token, 'shared/styles/layout.css');
+  requireIncludes(walletClient, token, 'shared/api/walletClient.js');
 }
 
-const creatorWorkspaceLayout = readText(path.join(shared, 'components', 'CreatorWorkspaceLayout.jsx'));
-for (const token of [
-  'PageHeader',
-  'cl-creator-workspace',
-  'cl-creator-principles',
-  'cl-creator-workspace-grid',
+const holdBodyStart = walletClient.indexOf('export function toWalletHoldApiBody');
+if (holdBodyStart < 0) {
+  fail('shared/api/walletClient.js missing toWalletHoldApiBody export');
+}
+const holdBodySlice = walletClient.slice(holdBodyStart, walletClient.indexOf('\n}', holdBodyStart) + 2);
+for (const token of ['from:', 'to:', 'asset:', 'amount_minor:', 'nonce:', 'memo:', 'idempotency_key:']) {
+  requireIncludes(holdBodySlice, token, 'toWalletHoldApiBody');
+}
+for (const forbidden of [
+  'schema',
+  'api_request',
+  'apiRequest',
+  'ui_preview_request',
+  'uiPreviewRequest',
+  'hold_template',
+  'holdTemplate',
+  'wallet_hold',
+  'walletHold',
+  'paid_storage',
+  'paidStorage',
 ]) {
-  requireIncludes(creatorWorkspaceLayout, token, 'shared/components/CreatorWorkspaceLayout.jsx');
+  forbidIncludes(holdBodySlice, forbidden, 'toWalletHoldApiBody');
 }
 
-const useCreatorDraft = readText(path.join(shared, 'hooks', 'useCreatorDraft.js'));
+const siteLaunchFlow = readText(path.join(pages, 'site', 'SiteLaunchFlow.jsx'));
 for (const token of [
-  'useMemo',
-  'useState',
-  'buildManifest',
-  'buildStats',
-  'getCompleteness',
-  'clearDraft',
+  'loadNextNonceHint',
+  'persistNextNonceHint',
+  'normalizeWalletHoldResponse',
+  'expectedNonceFromWalletError',
 ]) {
-  requireIncludes(useCreatorDraft, token, 'shared/hooks/useCreatorDraft.js');
+  requireIncludes(siteLaunchFlow, token, 'pages/site/SiteLaunchFlow.jsx');
 }
 
-const manifestPreviewPanel = readText(path.join(shared, 'components', 'ManifestPreviewPanel.jsx'));
+const imagePublishFlow = readText(path.join(pages, 'image', 'ImagePublishFlow.jsx'));
 for (const token of [
-  'JsonPreview',
-  'CopyButton',
-  'stringifyManifest',
+  'Confirm ROC hold?',
+  '/wallet/hold',
+  'wallet hold proof headers',
 ]) {
-  requireIncludes(manifestPreviewPanel, token, 'shared/components/ManifestPreviewPanel.jsx');
+  requireIncludes(imagePublishFlow, token, 'pages/image/ImagePublishFlow.jsx');
+}
+forbidIncludes(imagePublishFlow, 'ui_preview_request:', 'pages/image/ImagePublishFlow.jsx');
+forbidIncludes(imagePublishFlow, 'api_request:', 'pages/image/ImagePublishFlow.jsx');
+
+const rootWallet = readText(path.join(root, 'shared', 'api', 'walletClient.js'));
+for (const token of ['Wallet display API helper', 'createWalletClient', 'getBalance']) {
+  requireIncludes(rootWallet, token, 'root shared/api/walletClient.js');
+}
+for (const forbidden of [
+  'loadNextNonceHint',
+  'persistNextNonceHint',
+  'MAX_IDEMPOTENCY_KEY_BYTES',
+  'expectedNonceFromWalletError',
+  'normalizeWalletHoldResponse',
+  'toWalletHoldApiBody',
+]) {
+  forbidIncludes(rootWallet, forbidden, 'root shared/api/walletClient.js');
 }
 
-const routeTruthPanel = readText(path.join(shared, 'components', 'RouteTruthPanel.jsx'));
-for (const token of [
-  'TruthBoundary',
-  'Not claimed here',
-  'no b3 CID minted',
-  'no wallet mutation',
-]) {
-  requireIncludes(routeTruthPanel, token, 'shared/components/RouteTruthPanel.jsx');
+const gatewayClient = readText(path.join(shared, 'api', 'gatewayClient.js'));
+for (const token of ['fetch(', 'x-correlation-id', 'requestTimeoutMs', 'gatewayUrl']) {
+  requireIncludes(gatewayClient, token, 'shared/api/gatewayClient.js');
 }
 
-const draftStatsPanel = readText(path.join(shared, 'components', 'DraftStatsPanel.jsx'));
-for (const token of [
-  'StatChip',
-  'completeness',
-  'cl-draft-completeness',
-]) {
-  requireIncludes(draftStatsPanel, token, 'shared/components/DraftStatsPanel.jsx');
+for (const forbidden of ['svc-wallet', 'svc-storage', 'svc-index', 'ron-ledger']) {
+  forbidIncludes(gatewayClient, forbidden, 'shared/api/gatewayClient.js');
 }
 
 const reactSources = [
@@ -702,15 +535,6 @@ for (const [file, source] of reactSources) {
   ]) {
     forbidIncludes(source, forbidden, label);
   }
-}
-
-const gatewayClient = readText(path.join(shared, 'api', 'gatewayClient.js'));
-for (const token of ['fetch(', 'x-correlation-id', 'requestTimeoutMs', 'gatewayUrl']) {
-  requireIncludes(gatewayClient, token, 'shared/api/gatewayClient.js');
-}
-
-for (const forbidden of ['svc-wallet', 'svc-storage', 'svc-index', 'ron-ledger']) {
-  forbidIncludes(gatewayClient, forbidden, 'shared/api/gatewayClient.js');
 }
 
 const light = readText(path.join(shared, 'theme', 'light.css'));

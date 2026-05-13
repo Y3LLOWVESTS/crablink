@@ -26,9 +26,11 @@ import {
 } from '../../shared/api/assetClient.js';
 import {
   compactIdempotencyKey,
+  createWalletClient,
   expectedNonceFromWalletError,
   normalizeWalletHoldResponse,
   stableIdempotencyKey,
+  toWalletHoldApiBody,
 } from '../../shared/api/walletClient.js';
 
 const DEFAULT_ESCROW_ACCOUNT = 'escrow_paid_write';
@@ -40,6 +42,7 @@ const IDLE_RESULT = Object.freeze({
   data: null,
   error: null,
   request: null,
+  apiRequest: null,
   nonceRecovery: null,
 });
 
@@ -50,9 +53,11 @@ export default function ImagePublishFlow({
   fileFacts,
 }) {
   const settings = app?.settings || {};
-  const assetClient = useMemo(
-    () => createAssetClient(app?.clients?.gateway),
-    [app?.clients?.gateway],
+  const gateway = app?.clients?.gateway || null;
+  const assetClient = useMemo(() => createAssetClient(gateway), [gateway]);
+  const walletClient = useMemo(
+    () => app?.clients?.wallet || createWalletClient(gateway),
+    [app?.clients?.wallet, gateway],
   );
 
   const [prepareState, setPrepareState] = useState(IDLE_RESULT);
@@ -70,7 +75,7 @@ export default function ImagePublishFlow({
         selectedFile?.type || '',
         draftState?.draft?.title || '',
         draftState?.draft?.description || '',
-        draftState?.draft?.tags || '',
+        normalizeTags(draftState?.draft?.tags || '').join(','),
         settings.passportSubject || '',
         settings.walletAccount || '',
       ].join('|'),
@@ -99,6 +104,7 @@ export default function ImagePublishFlow({
   const preflight = getPreflight({
     selectedFile,
     settings,
+    gateway,
   });
 
   const preparePayload = useMemo(
@@ -128,6 +134,14 @@ export default function ImagePublishFlow({
     [amountMinor, escrowAccount, holdNonce, prepareState.data, preparePayload, settings, selectedFile],
   );
 
+  const holdApiRequest = useMemo(() => {
+    try {
+      return holdRequest ? toWalletHoldApiBody(holdRequest) : null;
+    } catch (_error) {
+      return null;
+    }
+  }, [holdRequest]);
+
   const paidProof = useMemo(() => {
     if (holdState.status !== 'ok') {
       return null;
@@ -135,28 +149,35 @@ export default function ImagePublishFlow({
 
     try {
       const normalizedHold = normalizeWalletHoldResponse(
-        holdState.response?.walletHold || holdState.data || {},
-        holdState.request || {},
+        firstObject(
+          holdState.response?.walletHold,
+          holdState.data?.walletHold,
+          holdState.data,
+          holdState.response?.data,
+          holdState.response,
+        ),
+        holdState.apiRequest || holdState.request || {},
       );
 
       return normalizePaidProof({
         ...normalizedHold,
-        from: normalizedHold.from || holdState.request?.from,
-        to: normalizedHold.to || holdState.request?.to,
-        amount_minor: normalizedHold.amount_minor || holdState.request?.amount_minor,
-        asset: normalizedHold.asset || holdState.request?.asset,
-        idem: normalizedHold.idem || holdState.request?.idempotency_key,
+        from: normalizedHold.from || holdState.apiRequest?.from || holdState.request?.from,
+        to: normalizedHold.to || holdState.apiRequest?.to || holdState.request?.to,
+        amount_minor: normalizedHold.amount_minor || holdState.apiRequest?.amount_minor || holdState.request?.amount_minor,
+        asset: normalizedHold.asset || holdState.apiRequest?.asset || holdState.request?.asset || 'roc',
+        idem: normalizedHold.idem || holdState.apiRequest?.idempotency_key || holdState.request?.idempotency_key,
       });
     } catch (_error) {
       return null;
     }
   }, [holdState]);
 
-  const uploadCrabUrl = extractImageAssetUrl(uploadState.data);
-  const uploadAssetCid = extractImageAssetCid(uploadState.data);
+  const uploadPayload = firstObject(uploadState.data, uploadState.response?.data, uploadState.response);
+  const uploadCrabUrl = extractImageAssetUrl(uploadPayload);
+  const uploadAssetCid = extractImageAssetCid(uploadPayload);
 
   const canPrepare = preflight.ok && Boolean(preparePayload);
-  const canHold = prepareState.status === 'ok' && Boolean(holdRequest);
+  const canHold = prepareState.status === 'ok' && Boolean(holdRequest && holdApiRequest);
   const canUpload = holdState.status === 'ok' && Boolean(paidProof) && Boolean(selectedFile);
 
   async function sendPrepare() {
@@ -170,37 +191,49 @@ export default function ImagePublishFlow({
       data: null,
       error: null,
       request: preparePayload,
+      apiRequest: preparePayload,
       nonceRecovery: null,
     });
     setHoldState(IDLE_RESULT);
     setUploadState(IDLE_RESULT);
 
     try {
-      const response = await assetClient.prepareImageAsset(preparePayload, {
+      const response = await callAssetPrepare(assetClient, preparePayload, {
         idempotencyKey: preparePayload.client_idempotency_key,
       });
+
+      const data = firstObject(response?.data, response);
 
       setPrepareState({
         status: 'ok',
         response,
-        data: response.data,
+        data,
         error: null,
         request: preparePayload,
+        apiRequest: preparePayload,
         nonceRecovery: null,
       });
 
+      const template = extractHoldTemplate(data);
+      const suggestedNonce = firstString(template.nonce, template.next_nonce, template.nextNonce);
+
+      if (suggestedNonce) {
+        setHoldNonce(suggestedNonce);
+      }
+
       app?.notify?.({
         title: 'Image prepare succeeded',
-        message: `Gateway correlation: ${response.correlationId || 'n/a'}`,
+        message: `Gateway correlation: ${response?.correlationId || 'n/a'}`,
         tone: 'success',
       });
     } catch (error) {
       setPrepareState({
         status: 'error',
         response: null,
-        data: error?.data || null,
+        data: firstObject(error?.data, error?.response?.data),
         error,
         request: preparePayload,
+        apiRequest: preparePayload,
         nonceRecovery: null,
       });
 
@@ -221,10 +254,10 @@ export default function ImagePublishFlow({
       [
         'Confirm ROC hold?',
         '',
-        `Amount: ${formatMinorUnits(holdRequest.amount_minor)} ROC minor units`,
-        `From: ${holdRequest.from}`,
-        `Escrow: ${holdRequest.to}`,
-        `Nonce: ${holdRequest.nonce}`,
+        `Amount: ${formatMinorUnits(holdApiRequest.amount_minor)} ROC minor units`,
+        `From: ${holdApiRequest.from}`,
+        `Escrow: ${holdApiRequest.to}`,
+        `Nonce: ${holdApiRequest.nonce}`,
         '',
         'This creates a wallet hold through the configured gateway.',
         'It does not upload image bytes until you click Submit Image Upload.',
@@ -246,6 +279,7 @@ export default function ImagePublishFlow({
       data: null,
       error: null,
       request: holdRequest,
+      apiRequest: holdApiRequest,
       nonceRecovery: null,
     });
     setUploadState(IDLE_RESULT);
@@ -256,15 +290,18 @@ export default function ImagePublishFlow({
       setHoldState({
         status: 'ok',
         response: holdResult.response,
-        data: holdResult.response?.data || null,
+        data: firstObject(holdResult.response?.data, holdResult.response?.walletHold, holdResult.response),
         error: null,
         request: holdResult.request,
+        apiRequest: holdResult.apiRequest || toWalletHoldApiBody(holdResult.request),
         nonceRecovery: holdResult.nonceRecovery,
       });
 
-      const nextNonce = Number(holdResult.request?.nonce || 0) + 1;
+      const finalRequest = holdResult.apiRequest || toWalletHoldApiBody(holdResult.request);
+      const nextNonce = Number(finalRequest?.nonce || 0) + 1;
+
       if (Number.isSafeInteger(nextNonce) && nextNonce > 1) {
-        saveLastNonceHint(settings.walletAccount, holdResult.request?.nonce);
+        saveLastNonceHint(settings.walletAccount, finalRequest?.nonce);
         setHoldNonce(String(nextNonce));
       }
 
@@ -276,7 +313,7 @@ export default function ImagePublishFlow({
         tone: 'success',
       });
     } catch (error) {
-      const suggested = expectedNonceFromProblem(error, error?.message);
+      const suggested = expectedNonceFromProblem(error);
 
       if (suggested) {
         setHoldNonce(String(suggested));
@@ -285,16 +322,17 @@ export default function ImagePublishFlow({
       setHoldState({
         status: 'error',
         response: null,
-        data: error?.data || null,
+        data: firstObject(error?.data, error?.response?.data),
         error,
-        request: holdRequest,
+        request: error?.request || holdRequest,
+        apiRequest: error?.apiRequest || holdApiRequest,
         nonceRecovery: suggested
           ? {
               retried: false,
               suggested_nonce: suggested,
               reason: 'Backend returned a suggested/expected nonce, but retry did not complete.',
             }
-          : null,
+          : error?.nonceRecovery || null,
       });
 
       app?.notify?.({
@@ -308,62 +346,67 @@ export default function ImagePublishFlow({
   }
 
   async function createWalletHoldWithNonceRecovery(firstRequest) {
+    const firstApiRequest = toWalletHoldApiBody(firstRequest);
+
     try {
-      const firstResponse = await app?.clients?.wallet?.hold?.(firstRequest, {
-        confirmed: true,
-      });
+      const firstResponse = await callWalletHold(walletClient, firstApiRequest);
 
       return {
         response: firstResponse,
         request: firstRequest,
-        nonceRecovery: null,
+        apiRequest: firstResponse?.apiRequest || firstApiRequest,
+        nonceRecovery: firstResponse?.nonceRecovery || null,
       };
     } catch (firstError) {
-      const suggested = expectedNonceFromProblem(firstError, firstError?.message);
+      const suggested = expectedNonceFromProblem(firstError);
 
-      if (!suggested || suggested === Number(firstRequest.nonce || 0)) {
+      if (!suggested || String(suggested) === String(firstApiRequest.nonce || '')) {
+        firstError.request = firstRequest;
+        firstError.apiRequest = firstApiRequest;
         throw firstError;
       }
 
       const retryRequest = {
         ...firstRequest,
-        nonce: suggested,
+        nonce: Number(suggested),
         idempotency_key: buildWalletHoldIdempotencyKey({
           preparePayload,
-          from: firstRequest.from,
-          to: firstRequest.to,
-          amountMinor: firstRequest.amount_minor,
+          from: firstApiRequest.from,
+          to: firstApiRequest.to,
+          amountMinor: firstApiRequest.amount_minor,
           nonce: suggested,
         }),
       };
+      const retryApiRequest = toWalletHoldApiBody(retryRequest);
 
       setHoldNonce(String(suggested));
       setHoldState({
         status: 'sending',
         response: null,
-        data: firstError?.data || null,
+        data: firstObject(firstError?.data, firstError?.response?.data),
         error: null,
         request: retryRequest,
+        apiRequest: retryApiRequest,
         nonceRecovery: {
           retried: true,
-          first_nonce: firstRequest.nonce,
+          first_nonce: firstApiRequest.nonce,
           expected_nonce: suggested,
           status: 'retrying',
         },
       });
 
-      const retryResponse = await app?.clients?.wallet?.hold?.(retryRequest, {
-        confirmed: true,
-      });
+      const retryResponse = await callWalletHold(walletClient, retryApiRequest);
 
       return {
         response: retryResponse,
         request: retryRequest,
+        apiRequest: retryResponse?.apiRequest || retryApiRequest,
         nonceRecovery: {
           retried: true,
-          first_nonce: firstRequest.nonce,
+          first_nonce: firstApiRequest.nonce,
           expected_nonce: suggested,
           status: 'ok',
+          wallet_client_recovery: retryResponse?.nonceRecovery || null,
         },
       };
     }
@@ -404,17 +447,18 @@ export default function ImagePublishFlow({
       error: null,
       request: {
         route: '/assets/image',
-        file: fileFacts,
+        file: fileFacts || summarizeFile(selectedFile),
         paidProof,
       },
+      apiRequest: null,
       nonceRecovery: null,
     });
 
     try {
-      const response = await assetClient.uploadImageAsset({
+      const response = await callAssetUpload(assetClient, {
         file: selectedFile,
-        title: draftState?.draft?.title || '',
-        description: draftState?.draft?.description || '',
+        title: draftState?.draft?.title || selectedFile?.name || '',
+        description: draftState?.draft?.description || draftState?.draft?.altText || '',
         tags: normalizeTags(draftState?.draft?.tags || ''),
         paidProof,
         idempotencyKey:
@@ -423,7 +467,7 @@ export default function ImagePublishFlow({
           stableIdempotencyKey('image-upload', selectedFile.name, paidProof.txid),
       });
 
-      const data = response.data || {};
+      const data = firstObject(response?.data, response);
       const crabUrl = extractImageAssetUrl(data);
 
       setUploadState({
@@ -433,9 +477,10 @@ export default function ImagePublishFlow({
         error: null,
         request: {
           route: '/assets/image',
-          file: fileFacts,
+          file: fileFacts || summarizeFile(selectedFile),
           paidProof,
         },
+        apiRequest: response?.request || null,
         nonceRecovery: null,
       });
 
@@ -460,13 +505,14 @@ export default function ImagePublishFlow({
       setUploadState({
         status: 'error',
         response: null,
-        data: error?.data || null,
+        data: firstObject(error?.data, error?.response?.data),
         error,
         request: {
           route: '/assets/image',
-          file: fileFacts,
+          file: fileFacts || summarizeFile(selectedFile),
           paidProof,
         },
+        apiRequest: null,
         nonceRecovery: null,
       });
 
@@ -506,12 +552,12 @@ export default function ImagePublishFlow({
       </p>
 
       <section className="image-publish-grid" aria-label="Image publish prerequisites">
-        <Fact label="Gateway" value={settings.gatewayUrl || 'not configured'} />
+        <Fact label="Gateway" value={settings.gatewayUrl || gateway?.baseUrl || 'not configured'} />
         <Fact label="Passport" value={settings.passportSubject || 'not configured'} />
         <Fact label="Wallet" value={settings.walletAccount || 'not configured'} />
-        <Fact label="Selected file" value={fileFacts?.name || 'none'} />
+        <Fact label="Selected file" value={fileFacts?.name || selectedFile?.name || 'none'} />
         <Fact label="Simple upload cap" value="1 MiB MVP" />
-        <Fact label="Current file size" value={fileFacts ? formatBytes(fileFacts.size) : 'n/a'} />
+        <Fact label="Current file size" value={selectedFile ? formatBytes(selectedFile.size) : 'n/a'} />
       </section>
 
       {!preflight.ok && (
@@ -552,6 +598,7 @@ export default function ImagePublishFlow({
             request: preparePayload,
             result: summarizeResult(prepareState),
             amount_minor: amountMinor || null,
+            hold_template: extractHoldTemplate(prepareState.data),
           }}
         />
       </section>
@@ -566,9 +613,8 @@ export default function ImagePublishFlow({
         </header>
 
         <p>
-          Sends an explicit wallet hold to <code>/wallet/hold</code>. This requires a visible confirmation
-          and does not upload image bytes. The nonce box is a local convenience hint only; the backend remains
-          the source of truth and may return an expected nonce if the hint is stale.
+          Sends an explicit wallet hold to <code>/wallet/hold</code>. The developer preview may show
+          route metadata, but the actual API body is strict and only includes wallet DTO fields.
         </p>
 
         <div className="image-publish-controls">
@@ -582,10 +628,10 @@ export default function ImagePublishFlow({
         </div>
 
         <div className="image-publish-grid">
-          <Fact label="From" value={holdRequest?.from || 'waiting for prepare'} />
-          <Fact label="To" value={holdRequest?.to || 'waiting for prepare'} />
-          <Fact label="Amount minor" value={holdRequest?.amount_minor || 'waiting for prepare'} />
-          <Fact label="Idempotency" value={holdRequest?.idempotency_key || 'waiting for prepare'} monospace />
+          <Fact label="From" value={holdApiRequest?.from || 'waiting for prepare'} />
+          <Fact label="To" value={holdApiRequest?.to || 'waiting for prepare'} />
+          <Fact label="Amount minor" value={holdApiRequest?.amount_minor || 'waiting for prepare'} />
+          <Fact label="Idempotency" value={holdApiRequest?.idempotency_key || 'waiting for prepare'} monospace />
         </div>
 
         <div className="image-publish-actions">
@@ -593,16 +639,22 @@ export default function ImagePublishFlow({
             {holdState.status === 'sending' ? 'Holding…' : 'Confirm ROC Hold'}
           </Button>
           <CopyButton
-            text={JSON.stringify(holdRequest || {}, null, 2)}
-            label="Copy hold JSON"
-            disabled={!holdRequest}
+            text={JSON.stringify(holdApiRequest || {}, null, 2)}
+            label="Copy strict hold API JSON"
+            disabled={!holdApiRequest}
           />
         </div>
 
         <JsonPreview
           label="Hold request/result"
           data={{
-            request: holdRequest,
+            ui_preview_request: holdRequest
+              ? {
+                  schema: 'crablink.wallet-hold-preview.v1',
+                  ...holdRequest,
+                }
+              : null,
+            strict_api_request_sent_to_wallet: holdApiRequest,
             result: summarizeResult(holdState),
             nonce_recovery: holdState.nonceRecovery || null,
             paid_proof_ready: Boolean(paidProof),
@@ -653,14 +705,72 @@ export default function ImagePublishFlow({
             returned_crab_url: uploadCrabUrl || null,
             returned_asset_cid: uploadAssetCid || null,
           }}
-          initiallyOpen={uploadState.status === 'error'}
+          initiallyOpen={uploadState.status === 'error' || uploadState.status === 'ok'}
         />
       </section>
     </Card>
   );
 }
 
-function getPreflight({ selectedFile, settings }) {
+async function callAssetPrepare(assetClient, payload, options) {
+  if (typeof assetClient?.prepareImageAsset === 'function') {
+    return assetClient.prepareImageAsset(payload, options);
+  }
+
+  if (typeof assetClient?.prepareImage === 'function') {
+    return assetClient.prepareImage(payload, options);
+  }
+
+  throw new Error('Asset client is missing prepareImageAsset/prepareImage.');
+}
+
+async function callAssetUpload(assetClient, payload) {
+  if (typeof assetClient?.uploadImageAsset === 'function') {
+    return assetClient.uploadImageAsset(payload);
+  }
+
+  if (typeof assetClient?.uploadImage === 'function') {
+    return assetClient.uploadImage({
+      file: payload.file,
+      contentType: payload.file?.type || 'image/png',
+      paidProof: payload.paidProof,
+      metadata: {
+        title: payload.title,
+        description: payload.description,
+        tags: payload.tags,
+      },
+      idempotencyKey: payload.idempotencyKey,
+    });
+  }
+
+  throw new Error('Asset client is missing uploadImageAsset/uploadImage.');
+}
+
+async function callWalletHold(walletClient, strictApiRequest) {
+  if (typeof walletClient?.hold === 'function') {
+    return walletClient.hold(strictApiRequest, {
+      confirmed: true,
+    });
+  }
+
+  if (typeof walletClient?.createWalletHold === 'function') {
+    return walletClient.createWalletHold(strictApiRequest, {
+      confirmed: true,
+      idempotencyKey: strictApiRequest.idempotency_key,
+    });
+  }
+
+  throw new Error('Wallet client is missing hold/createWalletHold.');
+}
+
+function getPreflight({ selectedFile, settings, gateway }) {
+  if (!gateway) {
+    return {
+      ok: false,
+      reason: 'Gateway client is not loaded yet.',
+    };
+  }
+
   if (!selectedFile) {
     return {
       ok: false,
@@ -704,7 +814,7 @@ function buildPreparePayload({ draft, selectedFile, settings }) {
     owner_passport_subject: settings.passportSubject || undefined,
     content_type: contentType,
     title: draft.title || selectedFile.name || undefined,
-    description: draft.description || undefined,
+    description: draft.description || draft.altText || undefined,
     tags: normalizeTags(draft.tags),
     client_idempotency_key: stableIdempotencyKey(
       'image-prepare',
@@ -725,24 +835,45 @@ function buildHoldRequest({
   settings,
   selectedFile,
 }) {
-  const from = stringValue(
-    prepareData?.wallet_hold?.payer_account,
-    prepareData?.payer_account,
+  const prepare = asObject(prepareData);
+  const template = extractHoldTemplate(prepare);
+  const from = firstString(
+    template.from,
+    template.payer,
+    template.payer_account,
+    template.payerAccount,
+    prepare.payer_account,
+    prepare.payerAccount,
     preparePayload?.payer_account,
     settings.walletAccount,
   );
-  const to = String(escrowAccount || DEFAULT_ESCROW_ACCOUNT).trim();
-  const nonce = Number(holdNonce);
+  const to = firstString(
+    template.to,
+    template.escrow,
+    template.escrow_account,
+    template.escrowAccount,
+    escrowAccount,
+    DEFAULT_ESCROW_ACCOUNT,
+  );
+  const templateNonce = firstString(template.nonce, template.next_nonce, template.nextNonce);
+  const nonce = Number(firstString(holdNonce, templateNonce, '1'));
   const safeNonce = Number.isSafeInteger(nonce) && nonce > 0 ? nonce : 1;
-  const amount = String(amountMinor || '').trim();
+  const amount = firstString(
+    amountMinor,
+    template.amount_minor,
+    template.amountMinor,
+    template.amount,
+  );
 
   if (!from || !to || !/^[0-9]+$/.test(amount) || amount === '0') {
     return null;
   }
 
-  const idemHint = stringValue(
-    prepareData?.wallet_hold?.idempotency_key_hint,
-    prepareData?.wallet_hold?.idempotencyKeyHint,
+  const idemHint = firstString(
+    template.idempotency_key_hint,
+    template.idempotencyKeyHint,
+    template.idempotency_key,
+    template.idempotencyKey,
     preparePayload?.client_idempotency_key,
     preparePayload?.idempotency_key,
     selectedFile?.name,
@@ -751,10 +882,10 @@ function buildHoldRequest({
   return {
     from,
     to,
-    asset: 'roc',
+    asset: firstString(template.asset, 'roc').toLowerCase(),
     amount_minor: amount,
     nonce: safeNonce,
-    memo: `CrabLink image hold for ${selectedFile?.name || preparePayload?.title || 'image upload'}`,
+    memo: `CrabLink image hold for ${selectedFile?.name || preparePayload?.title || 'image upload'}`.slice(0, 240),
     idempotency_key: buildWalletHoldIdempotencyKey({
       preparePayload: {
         ...(preparePayload || {}),
@@ -782,24 +913,65 @@ function buildWalletHoldIdempotencyKey({ preparePayload, from, to, amountMinor, 
   );
 }
 
-function extractPrepareAmountMinor(data = {}) {
-  return stringValue(
-    data?.wallet_hold?.amount_minor,
-    data?.wallet_hold?.amountMinor,
-    data?.wallet_hold?.minimum_hold_minor,
-    data?.paid_storage?.estimate?.amount_minor,
-    data?.paid_storage?.estimate?.amount_minor_units,
-    data?.paid_storage?.estimate?.minimum_hold_minor,
-    data?.estimate?.amount_minor,
-    data?.estimate?.amountMinor,
-    data?.amount_minor,
-    data?.amountMinor,
-    data?.estimate_minor,
+function extractPrepareAmountMinor(data) {
+  const object = asObject(data);
+  const template = extractHoldTemplate(object);
+  const paidStorage = asObject(object.paid_storage || object.paidStorage);
+  const estimate = asObject(object.estimate || paidStorage.estimate || object.price);
+  const nestedPrice = asObject(object.pricing || object.cost);
+
+  return firstString(
+    template.amount_minor,
+    template.amountMinor,
+    template.minimum_hold_minor,
+    template.minimumHoldMinor,
+    estimate.amount_minor,
+    estimate.amountMinor,
+    estimate.amount_minor_units,
+    estimate.minimum_hold_minor,
+    nestedPrice.amount_minor,
+    nestedPrice.amountMinor,
+    object.amount_minor,
+    object.amountMinor,
+    object.estimate_minor,
+    object.estimateMinor,
+    object.price_minor,
+    object.priceMinor,
   );
 }
 
-function expectedNonceFromProblem(errorOrData = {}, message = '') {
-  return expectedNonceFromWalletError(errorOrData, message);
+function extractHoldTemplate(data) {
+  const object = asObject(data);
+
+  return firstObject(
+    object.hold_template,
+    object.holdTemplate,
+    object.wallet_hold_template,
+    object.walletHoldTemplate,
+    object.wallet_hold,
+    object.walletHold,
+    object.hold,
+    object.paid_hold,
+    object.paidHold,
+  );
+}
+
+function expectedNonceFromProblem(errorOrData = {}) {
+  const expected = expectedNonceFromWalletError(errorOrData);
+
+  if (expected) {
+    return expected;
+  }
+
+  const data = asObject(errorOrData?.data || errorOrData?.response?.data);
+  return firstString(
+    data.expected_nonce,
+    data.expectedNonce,
+    data.next_nonce,
+    data.nextNonce,
+    data.required_nonce,
+    data.requiredNonce,
+  );
 }
 
 function summarizeResult(state) {
@@ -816,13 +988,16 @@ function summarizeResult(state) {
     http: state.response?.status || state.error?.status || 0,
     correlation_id: state.response?.correlationId || state.error?.correlationId || '',
     nonce_recovery: state.nonceRecovery || null,
+    request: state.request || null,
+    strict_api_request: state.apiRequest || null,
     error: state.error
       ? {
           name: state.error.name || 'Error',
           message: state.error.message || String(state.error),
           reason: state.error.reason || '',
           status: state.error.status || 0,
-          data: state.error.data || null,
+          data: firstObject(state.error.data, state.error.response?.data),
+          api_request: state.error.apiRequest || null,
         }
       : null,
     data: state.data || null,
@@ -864,13 +1039,25 @@ function normalizeTags(value) {
     .slice(0, 24);
 }
 
+function summarizeFile(file) {
+  if (!file) {
+    return null;
+  }
+
+  return {
+    name: file.name || 'selected image',
+    size: file.size || 0,
+    type: file.type || 'image/png',
+  };
+}
+
 function stripUndefined(value) {
   return Object.fromEntries(
     Object.entries(value || {}).filter(([, child]) => child !== undefined && child !== null && child !== ''),
   );
 }
 
-function stringValue(...values) {
+function firstString(...values) {
   for (const value of values) {
     const safe = String(value ?? '').trim();
 
@@ -880,6 +1067,20 @@ function stringValue(...values) {
   }
 
   return '';
+}
+
+function asObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function firstObject(...values) {
+  for (const value of values) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value;
+    }
+  }
+
+  return {};
 }
 
 function nonceStorageKey(account) {

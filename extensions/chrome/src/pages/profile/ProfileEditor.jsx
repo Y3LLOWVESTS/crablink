@@ -22,13 +22,38 @@ import {
   PROFILE_DISCOVERY_OPTIONS,
   PROFILE_STATUS_OPTIONS,
   PROFILE_VIEW_OPTIONS,
+  getUsernameTruth,
+  validateProfileDraft,
 } from './profileDraftModel.js';
 
 export default function ProfileEditor({ app, draftState }) {
-  const { draft, updateDraft, clearDraft, viewMode, setViewMode, manifest, completeness } = draftState;
+  const {
+    draft,
+    updateDraft,
+    clearDraft,
+    viewMode,
+    setViewMode,
+    manifest,
+    completeness,
+  } = draftState;
+
+  const validation = validateProfileDraft(draft);
+  const usernameTruth = getUsernameTruth(draft, app);
+  const preferredSettingsHandle =
+    app?.settings?.handle ||
+    app?.settings?.username ||
+    app?.settings?.requestedHandle ||
+    app?.settings?.requestedUsername ||
+    '';
 
   function updateField(key) {
     return (event) => updateDraft(key, event.target.value);
+  }
+
+  function useConfiguredHandle() {
+    if (preferredSettingsHandle) {
+      updateDraft('handle', preferredSettingsHandle);
+    }
   }
 
   return (
@@ -50,8 +75,9 @@ export default function ProfileEditor({ app, draftState }) {
         <div className="profile-editor-intro">
           <Badge tone="warning">Local only</Badge>
           <Badge tone="neutral">crab://profile</Badge>
-          <Badge tone="neutral">No username claim</Badge>
+          <Badge tone={usernameTruth.tone}>{usernameTruth.source}</Badge>
           <Badge tone="neutral">No backend publish</Badge>
+          <Badge tone="neutral">No wallet mutation</Badge>
         </div>
 
         <section className="profile-fieldset" aria-label="Profile identity fields">
@@ -70,7 +96,11 @@ export default function ProfileEditor({ app, draftState }) {
               />
             </Field>
 
-            <Field label="@username hint" help="Local display hint only until backend reservation exists.">
+            <Field
+              label="@username hint"
+              help={validation.handle.ok ? validation.handle.message : ''}
+              error={validation.handle.ok ? '' : validation.handle.message}
+            >
               <TextInput
                 value={draft.handle}
                 onChange={updateField('handle')}
@@ -117,6 +147,23 @@ export default function ProfileEditor({ app, draftState }) {
             </Field>
           </div>
 
+          <div className="profile-editor-actions">
+            <div>
+              <strong>{usernameTruth.display || 'No username hint'}</strong>
+              <span>
+                {usernameTruth.backendConfirmed
+                  ? 'Backend confirmed username returned through settings.'
+                  : 'Local username hint only. Syntax does not reserve the name.'}
+              </span>
+            </div>
+
+            <div className="profile-editor-buttons">
+              <Button variant="secondary" onClick={useConfiguredHandle} disabled={!preferredSettingsHandle}>
+                Use configured handle
+              </Button>
+            </div>
+          </div>
+
           <Field label="Bio" help="Local profile bio. Public backend profile publication is future work.">
             <TextArea
               value={draft.bio}
@@ -135,7 +182,11 @@ export default function ProfileEditor({ app, draftState }) {
           </div>
 
           <div className="profile-form-grid">
-            <Field label="Avatar .image URL" help="Use crab://<64 lowercase hex>.image. Preview only.">
+            <Field
+              label="Avatar .image URL"
+              help={validation.avatar.ok ? 'Use crab://<64 lowercase hex>.image. Preview only.' : ''}
+              error={validation.avatar.ok ? '' : validation.avatar.message}
+            >
               <TextInput
                 value={draft.avatarCrabUrl}
                 onChange={updateField('avatarCrabUrl')}
@@ -144,7 +195,11 @@ export default function ProfileEditor({ app, draftState }) {
               />
             </Field>
 
-            <Field label="Banner .image URL" help="Future banner reference. Preview is not required yet.">
+            <Field
+              label="Banner .image URL"
+              help={validation.banner.ok ? 'Future banner reference. Preview is not required yet.' : ''}
+              error={validation.banner.ok ? '' : validation.banner.message}
+            >
               <TextInput
                 value={draft.bannerCrabUrl}
                 onChange={updateField('bannerCrabUrl')}
@@ -162,7 +217,11 @@ export default function ProfileEditor({ app, draftState }) {
           </div>
 
           <div className="profile-form-grid">
-            <Field label="Website crab URL">
+            <Field
+              label="Website crab URL"
+              help={validation.website.ok ? 'Optional named site or typed asset reference.' : ''}
+              error={validation.website.ok ? '' : validation.website.message}
+            >
               <TextInput
                 value={draft.websiteCrabUrl}
                 onChange={updateField('websiteCrabUrl')}
@@ -172,7 +231,11 @@ export default function ProfileEditor({ app, draftState }) {
             </Field>
 
             <Field label="Profile tags">
-              <TextInput value={draft.tags} onChange={updateField('tags')} placeholder="creator, crablink" />
+              <TextInput
+                value={draft.tags}
+                onChange={updateField('tags')}
+                placeholder="creator, crablink"
+              />
             </Field>
 
             <Field label="Profile status">
@@ -195,7 +258,11 @@ export default function ProfileEditor({ app, draftState }) {
               </select>
             </Field>
 
-            <Field label="Asset catalogue crab URL">
+            <Field
+              label="Asset catalogue crab URL"
+              help={validation.assetCatalogue.ok ? 'Future backend-backed profile asset list.' : ''}
+              error={validation.assetCatalogue.ok ? '' : validation.assetCatalogue.message}
+            >
               <TextInput
                 value={draft.assetCatalogCrabUrl}
                 onChange={updateField('assetCatalogCrabUrl')}
@@ -204,7 +271,11 @@ export default function ProfileEditor({ app, draftState }) {
               />
             </Field>
 
-            <Field label="Site catalogue crab URL">
+            <Field
+              label="Site catalogue crab URL"
+              help={validation.siteCatalogue.ok ? 'Future backend-backed profile site list.' : ''}
+              error={validation.siteCatalogue.ok ? '' : validation.siteCatalogue.message}
+            >
               <TextInput
                 value={draft.siteCatalogCrabUrl}
                 onChange={updateField('siteCatalogCrabUrl')}
@@ -255,7 +326,7 @@ export default function ProfileEditor({ app, draftState }) {
         <div className="profile-editor-actions">
           <div>
             <strong>{completeness}% complete</strong>
-            <span>Local profile draft completeness</span>
+            <span>Local profile draft completeness. Syntax-valid fields are still not backend proof.</span>
           </div>
 
           <div className="profile-editor-buttons">

@@ -1,10 +1,10 @@
 /**
  * RO:WHAT — Hero/profile card for crab://profile.
  * RO:WHY — Makes the profile route look like a real profile page while keeping truth boundaries visible.
- * RO:INTERACTS — ProfilePage, ProfileAvatar, ProfileGateway, shared Card/Badge/Button components.
- * RO:INVARIANTS — display local hints only; no fake username claim; no fake reputation/mod score.
+ * RO:INTERACTS — ProfilePage, ProfileAvatar, ProfileGateway, shared Card/Badge/Button/CopyButton components.
+ * RO:INVARIANTS — display local/backend-returned hints only; no fake username claim; no fake reputation/mod score.
  * RO:METRICS — none.
- * RO:CONFIG — local draft state and app settings.
+ * RO:CONFIG — local draft state, app settings, wallet display state.
  * RO:SECURITY — no alt linkage, no private keys, no backend mutation.
  * RO:TEST — manual crab://profile route smoke.
  */
@@ -14,8 +14,7 @@ import Button from '../../shared/components/Button.jsx';
 import CopyButton from '../../shared/components/CopyButton.jsx';
 import ProfileAvatar from './ProfileAvatar.jsx';
 import {
-  cleanHandle,
-  getRocDisplay,
+  getRocTruth,
   getUsernameTruth,
   labelFromSnake,
   parseTags,
@@ -25,7 +24,7 @@ export default function ProfileHome({ app, route, draftState, onEdit }) {
   const { draft, completeness, stats } = draftState;
   const tags = parseTags(draft.tags);
   const usernameTruth = getUsernameTruth(draft, app);
-  const rocTruth = getRocDisplay(app);
+  const rocTruth = getRocTruth(app);
   const routeLabel = route?.normalizedInput || 'crab://profile';
   const passportLabel = draft.ownerPassport || app?.settings?.passportSubject || 'passport label unavailable';
   const walletLabel = draft.walletAccount || app?.settings?.walletAccount || 'wallet label unavailable';
@@ -34,7 +33,7 @@ export default function ProfileHome({ app, route, draftState, onEdit }) {
     <section className="profile-hero" aria-label="Profile hero">
       <div className="profile-hero-card">
         <div className="profile-hero-banner" aria-hidden="true">
-          <div className="profile-hero-banner-copy">
+          <div className="profile-hero-banner-inner">
             <span>crab://profile</span>
             <strong>{draft.tagline || 'CrabLink creator profile draft'}</strong>
           </div>
@@ -44,16 +43,14 @@ export default function ProfileHome({ app, route, draftState, onEdit }) {
           <ProfileAvatar app={app} draft={draft} size="hero" />
 
           <div className="profile-hero-identity">
-            <div className="profile-title-row">
+            <div className="profile-hero-title-row">
               <div>
                 <p className="cl-eyebrow">RON Passport profile</p>
                 <h1>{draft.displayName || 'Unnamed profile'}</h1>
-                <p className="profile-handle">
-                  {usernameTruth.display || cleanHandle(draft.handle) || '@username-local-draft'}
-                </p>
+                <p className="profile-handle">{usernameTruth.display || '@username-local-draft'}</p>
               </div>
 
-              <div className="profile-hero-actions">
+              <div className="profile-editor-buttons">
                 <Button variant="primary" onClick={onEdit}>
                   Edit Profile
                 </Button>
@@ -67,9 +64,10 @@ export default function ProfileHome({ app, route, draftState, onEdit }) {
             </p>
 
             <div className="profile-badges" aria-label="Profile status badges">
-              <Badge tone="warning">local draft</Badge>
+              <Badge tone="warning">local profile draft</Badge>
+              <Badge tone={usernameTruth.tone}>{usernameTruth.source}</Badge>
               <Badge tone={usernameTruth.backendConfirmed ? 'success' : 'neutral'}>
-                {usernameTruth.source}
+                username {usernameTruth.backendConfirmed ? 'confirmed' : 'not confirmed'}
               </Badge>
               <Badge tone="neutral">{labelFromSnake(draft.profileStatus)}</Badge>
               <Badge tone="neutral">REP not confirmed</Badge>
@@ -98,7 +96,8 @@ export default function ProfileHome({ app, route, draftState, onEdit }) {
           <span>{routeLabel}</span>
           <span>{passportLabel}</span>
           <span>{walletLabel}</span>
-          <span>{stats.hasAvatar ? 'avatar image ref' : 'avatar placeholder'}</span>
+          <span>{stats?.hasAvatar ? 'avatar image ref' : 'avatar placeholder'}</span>
+          <span>{usernameTruth.validation?.ok ? 'username syntax ok' : 'username syntax issue'}</span>
         </div>
       </div>
     </section>

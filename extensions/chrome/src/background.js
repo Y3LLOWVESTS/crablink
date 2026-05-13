@@ -10,6 +10,8 @@ import { normalizeCrabInput } from './crab.js';
 
 const DEFAULT_BROWSER_URL = 'crab://site';
 const DEFAULT_REACT_BROWSER_URL = 'crab://profile';
+const LEGACY_PAGE_PREFIX = 'src/page.html?url=';
+const REACT_PAGE_PREFIX = 'src/react.html?url=';
 
 const BUILTIN_TARGETS = [
   'site',
@@ -92,8 +94,9 @@ chrome.action.onClicked.addListener(async () => {
 });
 
 chrome.omnibox.setDefaultSuggestion({
-  description:
-    'Open CrabLink: site, image, profile, reactprofile, reactimage, crab://<hash>.image, b3:<hash>, or a site name',
+  description: escapeDescription(
+    'Open CrabLink: site, image, profile, reactprofile, reactimage, crab://64hex.image, b3:64hex, or a site name',
+  ),
 });
 
 chrome.omnibox.onInputChanged.addListener((text, suggest) => {
@@ -166,6 +169,7 @@ function parseOmniboxCommand(input) {
   }
 
   const compactReact = parseCompactReactShortcut(raw);
+
   if (compactReact) {
     return {
       lane: 'react',
@@ -201,77 +205,118 @@ function parseCompactReactShortcut(raw) {
     return restLower;
   }
 
-  if (restLower.startsWith('crab://') || restLower.startsWith('b3:') || /^[0-9a-f]{64}(\.[a-z0-9_-]+)?$/i.test(rest)) {
+  if (
+    restLower.startsWith('crab://') ||
+    restLower.startsWith('b3:') ||
+    /^[0-9a-f]{64}(\.[a-z0-9_-]+)?$/i.test(rest)
+  ) {
     return rest;
   }
 
   return '';
 }
 
-function toReactShortcut(target) {
-  const safe = String(target || '').trim();
-
-  if (!safe) {
-    return 'reactprofile';
-  }
-
-  const lower = safe.toLowerCase();
-
-  if (BUILTIN_TARGETS.includes(lower)) {
-    return `react${lower}`;
-  }
-
-  return `react ${safe}`;
-}
-
-function normalizeActionTarget(value) {
-  const raw = String(value || '').trim();
-
-  if (!raw) {
-    return DEFAULT_BROWSER_URL;
-  }
-
+function normalizeActionTarget(input) {
   try {
-    return normalizeOmniboxTarget(raw);
+    return normalizeOmniboxTarget(input);
   } catch (_error) {
     return DEFAULT_BROWSER_URL;
   }
 }
 
-function normalizeOmniboxTarget(input) {
-  const value = String(input || '').trim();
+function normalizeOmniboxTarget(target) {
+  const raw = String(target || '').trim();
 
-  if (!value) {
+  if (!raw) {
     return DEFAULT_BROWSER_URL;
   }
 
-  const lower = value.toLowerCase();
+  const lower = raw.toLowerCase();
 
   if (BUILTIN_TARGETS.includes(lower)) {
     return `crab://${lower}`;
   }
 
-  const explicit =
-    value.startsWith('crab://') ||
-    value.startsWith('b3:') ||
-    /^[0-9a-fA-F]{64}$/.test(value) ||
-    /^[0-9a-fA-F]{64}\.[a-z0-9_-]+$/.test(value);
-
-  const candidate = explicit ? value : `crab://${value}`;
-  const normalized = normalizeCrabInput(candidate, { defaultKind: 'image' });
-
-  if (normalized.url) {
-    return normalized.url;
+  if (lower === 'home') {
+    return 'crab://home';
   }
 
-  throw new Error('Unable to normalize CrabLink target.');
+  if (lower.startsWith('crab://') || lower.startsWith('b3:') || /^[0-9a-f]{64}$/i.test(raw)) {
+    const normalized = normalizeCrabInput(raw, { defaultKind: 'image' });
+    return normalized.url || normalized.display || raw;
+  }
+
+  if (/^[0-9a-f]{64}\.[a-z][a-z0-9_-]{0,31}$/i.test(raw)) {
+    const normalized = normalizeCrabInput(`crab://${raw}`, { defaultKind: 'image' });
+    return normalized.url || normalized.display || `crab://${raw.toLowerCase()}`;
+  }
+
+  const siteName = normalizeSiteName(raw);
+
+  if (siteName) {
+    return `crab://${siteName}`;
+  }
+
+  throw new Error('Unsupported CrabLink omnibox target.');
 }
 
-async function openCrabLinkPage(crabUrl, disposition, { lane = 'legacy' } = {}) {
-  const safeLane = lane === 'react' ? 'react' : 'legacy';
+function normalizeSiteName(value) {
+  const raw = String(value || '')
+    .trim()
+    .replace(/^crab:\/\//i, '')
+    .toLowerCase();
 
-  const entry = safeLane === 'react' ? 'react.html' : 'src/page.html';
-  const pageUrl = chrome.runtime.getURL(`${entry}?url=${encodeURIComponent(crabUrl)}`);
+  if (!raw) {
+    return '';
+  }
+
+  if (!/^[a-z0-9][a-z0-9_-]{0,126}[a-z0-9]$/.test(raw) && !/^[a-z0-9]$/.test(raw)) {
+    return '';
+  }
+
+  if (raw.includes('://')) {
+    return '';
+  }
+
+  return raw;
+}
+
+function toReactShortcut(target) {
+  const raw = String(target || '').trim();
+
+  if (!raw) {
+    return 'reactprofile';
+  }
+
+  const lower = raw.toLowerCase();
+
+  if (BUILTIN_TARGETS.includes(lower)) {
+    return `react${lower}`;
+  }
+
+  if (lower.startsWith('crab://')) {
+    return `react:${raw}`;
+  }
+
+  if (lower.startsWith('b3:')) {
+    return `react:${raw}`;
+  }
+
+  return `react:${raw}`;
+}
+
+async function openCrabLinkPage(crabUrl, disposition = 'newForegroundTab', { lane = 'legacy' } = {}) {
+  const pagePrefix = lane === 'react' ? REACT_PAGE_PREFIX : LEGACY_PAGE_PREFIX;
+  const pageUrl = chrome.runtime.getURL(`${pagePrefix}${encodeURIComponent(crabUrl)}`);
+
+  if (disposition === 'currentTab') {
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    if (activeTab?.id) {
+      await chrome.tabs.update(activeTab.id, { url: pageUrl });
+      return;
+    }
+  }
 
   if (disposition === 'newBackgroundTab') {
     await chrome.tabs.create({ url: pageUrl, active: false });

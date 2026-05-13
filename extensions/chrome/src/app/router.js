@@ -47,11 +47,13 @@ export function parseRouteInput(input) {
         assetKind: 'image',
         cid: `b3:${hash}`,
         assetUrl: `crab://${hash}.image`,
+        typedRouteOwner: 'image',
       },
     });
   }
 
   const b3Match = rawInput.match(B3_RE);
+
   if (b3Match) {
     const hash = b3Match[1].toLowerCase();
 
@@ -65,6 +67,7 @@ export function parseRouteInput(input) {
         assetKind: 'image',
         cid: `b3:${hash}`,
         assetUrl: `crab://${hash}.image`,
+        typedRouteOwner: 'image',
       },
     });
   }
@@ -129,9 +132,13 @@ export function parseRouteInput(input) {
   }
 
   const typedAssetMatch = noQuery.match(TYPED_ASSET_RE);
+
   if (typedAssetMatch) {
     const hash = typedAssetMatch[1].toLowerCase();
     const assetKind = typedAssetMatch[2].toLowerCase();
+    const typedRouteOwner = {
+      kind: hasRouteKind(assetKind) ? assetKind : 'asset',
+    }.kind;
 
     return makeRoute({
       kind: 'asset',
@@ -143,7 +150,7 @@ export function parseRouteInput(input) {
         assetKind,
         cid: `b3:${hash}`,
         assetUrl: `crab://${hash}.${assetKind}`,
-        typedRouteOwner: hasRouteKind(assetKind) ? assetKind : '',
+        typedRouteOwner,
       },
     });
   }
