@@ -45975,3 +45975,1074 @@ no silent spend
 
 
 ### END NOTE - MAY 12 2026 - 20:05 CST
+
+
+
+### BEGIN NOTE - MAY 13 2026 - 15:00 CST
+
+Below is a **paste-ready carryover note** for the next session. It assumes the CrabLink React refactor is finished and the next work resumes from `NEXT_LEVEL.MD`.
+
+---
+
+# CrabLink / RustyOnions NEXT_LEVEL Carryover Notes — May 13, 2026
+
+## 0. Current checkpoint
+
+CrabLink has completed the React-primary refactor. The old active vanilla `page.js` / `page-*.js` browser lane has been removed from active source. The current codebundle tree shows the active Chrome extension source now centered around:
+
+```text
+extensions/chrome/src/react.html
+extensions/chrome/src/page.html
+extensions/chrome/src/app/
+extensions/chrome/src/pages/
+extensions/chrome/src/shared/
+```
+
+with no active `page.js`, `page.css`, `page-*.js`, `page-*.css`, or `extensions/chrome/src/legacy/` lane visible in the active file tree. `page.html` remains only as a compatibility redirect to the React app. The codebundle still shows some stale docs that describe older “plain JS / no React / scaffold placeholder” states, so documentation cleanup may still be useful, but **runtime refactor cleanup is done**. 
+
+The correct product interpretation now is:
+
+```text
+CrabLink = React-primary browser-client repo
+RustyOnions = backend/substrate/value-plane repo
+CrabLink calls svc-gateway only
+RustyOnions services remain backend truth
+```
+
+The next session should **not continue refactoring the old browser shell** unless a regression appears. It should resume `NEXT_LEVEL.MD`.
+
+---
+
+## 1. Current proven product foundation
+
+`NEXT_LEVEL.MD` explicitly begins from the concrete proof already achieved:
+
+```text
+paid image upload
++ crab://site proof
++ <crab-image> reference embed proof
+```
+
+The proven checkpoint is:
+
+```text
+1. Paid image asset path works.
+2. Site creation/open flow works.
+3. CrabLink renders named crab:// sites.
+4. CrabLink can render a site root HTML document.
+5. CrabLink can render <crab-image src="crab://<hash>.image">.
+6. Site root stores only an image reference.
+7. The image remains its own b3-backed asset.
+8. The guard prevents using an image CID as the site root CID.
+```
+
+`NEXT_LEVEL.MD` says the next layer must generalize this working pattern rather than inventing a parallel system. 
+
+Current successful pattern:
+
+```text
+prepare
+→ explicit ROC hold
+→ paid upload/create
+→ raw bytes stored by b3 CID
+→ manifest stored by b3 CID
+→ index pointer stored
+→ crab:// URL returned
+→ hydrated page resolves in CrabLink
+```
+
+Current successful site-reference pattern:
+
+```text
+HTML root stored as b3 object
+→ site manifest points at HTML root CID
+→ HTML root contains <crab-image src="crab://<hash>.image">
+→ CrabLink detects crab-image
+→ CrabLink fetches image bytes through gateway
+→ image renders inside the site page
+```
+
+Known-good current React image proof from this session:
+
+```text
+crab://ad1e9bef7834d7a37fde676abdf095c33c59de8e3d667fe99b5f091e6444e8d1.image
+```
+
+This was uploaded after legacy cleanup and successfully loaded with preview.
+
+---
+
+## 2. Current CrabLink repo state
+
+The latest codebundle shows a React route-owned architecture:
+
+```text
+extensions/chrome/src/app/
+  App.jsx
+  appContext.js
+  appEvents.js
+  appState.js
+  main.jsx
+  router.js
+  routeRegistry.js
+  settings.js
+  shell/
+
+extensions/chrome/src/pages/
+  ad/
+  algo/
+  article/
+  asset/
+  code/
+  comment/
+  game/
+  home/
+  image/
+  lyrics/
+  music/
+  notFound/
+  podcast/
+  post/
+  problem/
+  profile/
+  site/
+  stream/
+  video/
+
+extensions/chrome/src/shared/
+  api/
+  components/
+  embed/
+  hooks/
+  manifest/
+  styles/
+  theme/
+  utils/
+```
+
+The current bundle includes route pages for all expected built-ins:
+
+```text
+crab://home
+crab://site
+crab://image
+crab://profile
+crab://music
+crab://lyrics
+crab://article
+crab://post
+crab://comment
+crab://video
+crab://stream
+crab://podcast
+crab://ad
+crab://algo
+crab://code
+crab://game
+typed asset routes
+problem / notFound routes
+```
+
+`page.html` remains only for compatibility. The active browser UI is `react.html`. 
+
+Important note for next session: the codebundle header still reports the repo as dirty in the snippet and still lists stale docs like `extensions/chrome/docs/CRABLINK_REFACTOR.MD` and `REFACTOR_TODO.MD`. If the user already ran the docs cleanup and pushed afterward, verify with `git status` and a fresh codebundle. If not, the next session can either clean stale docs first or proceed to backend NEXT_LEVEL work.
+
+---
+
+## 3. Current green-gate expectations
+
+Before changing anything, from the CrabLink repo:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+bash scripts/green-gate-local.sh
+```
+
+With the RustyOnions stack running, the mutating proof is:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+CRABLINK_GREEN_MUTATING=1 bash scripts/green-gate-local.sh
+```
+
+Expected green output:
+
+```text
+React lane checks passed.
+CrabLink Chrome extension checks passed.
+paid image upload smoke passes
+site create/open smoke passes
+package/staging passes
+codebundle regenerates
+```
+
+Manual staged extension load path:
+
+```text
+/Users/mymac/Desktop/crablink/dist/chrome-extension-staging
+```
+
+Manual smoke routes:
+
+```text
+crab://site
+crab://image
+crab://profile
+crab://ad1e9bef7834d7a37fde676abdf095c33c59de8e3d667fe99b5f091e6444e8d1.image
+crab://definitely-missing-site
+```
+
+If those pass, do not reopen the refactor. Move to NEXT_LEVEL.
+
+---
+
+## 4. Non-negotiable invariants going forward
+
+These remain hard rules from `NEXT_LEVEL.MD` and the running notes:
+
+```text
+ROC remains internal only.
+No ROX.
+No Solana.
+No external settlement.
+No staking/liquidity/exchange-facing logic.
+No floating-point money math.
+All ROC amounts use integer minor units.
+All percentages use integer basis points.
+Wallet mutation must go through svc-wallet.
+ron-ledger remains durable economic truth.
+ron-accounting remains usage/metering snapshots, not balance truth.
+svc-rewarder computes deterministic payout plans but does not mutate ledger directly.
+Paid operations use hold → capture → release.
+Wallet actions require nonce + idempotency.
+No silent ROC spending.
+No fake receipts.
+No direct ledger mutation by gateway, omnigate, storage, index, CrabLink, SDKs, passport logic, moderation logic, or reputation logic.
+b3:<64 lowercase hex> is canonical internal content ID.
+crab://<64 lowercase hex>.<kind> is canonical public typed asset URL.
+crab://<site_name> is a human pointer.
+crab://@username is a human identity/discovery pointer.
+Passports are identity/capability records, not wallets.
+Public profile/passport manifests may be b3-addressed, but private passport material is not “just an asset.”
+No arbitrary executable code from crab links.
+```
+
+`NEXT_LEVEL.MD` specifically calls out that passports are identities/capability records, not wallets and not merely assets; public profile manifests may be b3-addressed, but private passport material remains private/local or service-internal. 
+
+---
+
+## 5. Strategic model for NEXT_LEVEL
+
+The key product thesis:
+
+```text
+Sites should be reference graphs, not centralized databases that permanently own every user object.
+```
+
+A RON-native site owns:
+
+```text
+route maps
+layout
+moderation policy
+payout policy
+reference graphs
+site identity
+site manifest
+site revision history
+```
+
+A RON-native site should reference assets rather than own all bytes. Every user-created content object should become a b3-addressed asset with its own manifest, attribution, ownership, payout, provenance, storage/provider data, and receipts. 
+
+Core object model:
+
+```text
+Site = manifest + routes + policies + references + revisions
+Post = b3 asset + manifest
+Comment = b3 asset + manifest
+Article = b3 asset + manifest
+Image = b3 asset + manifest
+Video = b3 asset + manifest + range/streaming plan
+Music = b3 asset + manifest + range/streaming plan
+Thread = reference collection / manifest
+Profile = passport-linked read-only page / public manifest
+Passport = identity/capability record + optional public profile manifest
+Alt Passport = separate pseudonymous identity + separate wallet/account + no public main linkage
+```
+
+Reference graph example:
+
+```text
+crab://myforum/thread/123
+  ├── crab://<64hex>.post
+  ├── crab://<64hex>.comment
+  ├── crab://<64hex>.comment
+  └── crab://<64hex>.image
+```
+
+---
+
+## 6. Active NEXT_LEVEL feature gates
+
+Important gates to preserve:
+
+```text
+next_level_assets_text
+next_level_assets_media_lite
+next_level_media_streaming
+next_level_reference_graph
+next_level_site_revisions
+next_level_paid_views
+next_level_provider_rewards
+next_level_hosting_placement
+next_level_passport_usernames
+next_level_passport_public_profiles
+next_level_passport_alts
+next_level_reputation
+next_level_site_moderation_roles
+next_level_alt_private_withdrawal
+next_level_clearnet_crossover
+next_level_free_impression_rewards
+next_level_executable_apps
+```
+
+Default-off / high-risk gates:
+
+```text
+next_level_alt_private_withdrawal = OFF
+next_level_clearnet_crossover = OFF
+next_level_free_impression_rewards = OFF
+next_level_executable_apps = OFF
+```
+
+The running notes emphasize that private alt→main ROC withdrawal must not be promised; direct alt→main transfers are traceable unless a real privacy protocol exists. The safer model is: passport = identity/capability record, public profile/passport manifest = optional b3-addressed public object. 
+
+---
+
+## 7. Recommended NEXT_LEVEL implementation order
+
+The running notes and `NEXT_LEVEL.MD` point to this order:
+
+### Phase 1 — CrabLink-only polish and embed registry
+
+Start with the browser-client layer only, because the React refactor is now clean and this is low risk.
+
+Goals:
+
+```text
+1. Make site content span the usable browser window.
+2. Keep Site Manifest proof available but not dominant.
+3. Keep <crab-image> green.
+4. Prepare a clean embed registry for future:
+   <crab-video>
+   <crab-audio>
+   <crab-article>
+   <crab-post>
+   <crab-comment>
+```
+
+The codebundle already contains shared embed files:
+
+```text
+extensions/chrome/src/shared/embed/crabArticleEmbed.jsx
+extensions/chrome/src/shared/embed/crabAudioEmbed.jsx
+extensions/chrome/src/shared/embed/crabCommentEmbed.jsx
+extensions/chrome/src/shared/embed/crabImageEmbed.jsx
+extensions/chrome/src/shared/embed/crabPostEmbed.jsx
+extensions/chrome/src/shared/embed/crabVideoEmbed.jsx
+extensions/chrome/src/shared/embed/embedRegistry.js
+extensions/chrome/src/shared/embed/safeHtml.js
+extensions/chrome/src/shared/embed/sandboxFrame.js
+```
+
+So the next CrabLink-side work should likely tighten those into the official future embed registry instead of adding ad hoc route code. 
+
+### Phase 2 — Thin backend DTO + naming batch
+
+Do this in RustyOnions, not CrabLink.
+
+Targets:
+
+```text
+ron-proto:
+  Public profile/passport manifest DTOs
+  Text asset DTOs for post/comment/article
+  Reference DTOs
+  Reputation/moderation summary DTOs
+
+ron-naming:
+  @username parser/normalizer
+  typed asset suffix support as features become real
+```
+
+Do **not** add `svc-passport` mutation yet in this batch. Keep it DTO/parser-level first.
+
+### Phase 3 — svc-passport username batch
+
+Once DTO/naming exists:
+
+```text
+first-passport creation with @username
+username normalization
+username uniqueness
+reserved names
+main passport only for site creation
+no public alt linkage
+```
+
+### Phase 4 — Omnigate/gateway read-only profile exposure
+
+Add:
+
+```text
+crab://@username resolution
+gateway profile route
+public profile manifest hydration
+read-only identity/profile view
+```
+
+### Phase 5 — CrabLink username/passport UX
+
+After backend read path exists:
+
+```text
+user chooses @username during first passport setup
+CrabLink displays @username in PassportDrawer
+profile page can open crab://@username
+site creator chip can eventually show @username + reputation/mod score
+```
+
+### Phase 6 — Text asset primitives
+
+Recommended first “real asset primitive” backend work:
+
+```text
+.post
+.comment
+.article
+```
+
+Reason: text primitives establish ownership, identity, moderation, manifest, receipts, and payout rules without media streaming complexity.
+
+### Phase 7 — Reference graph / thread / site revisions
+
+After text assets:
+
+```text
+thread/reference manifest
+site stores post/comment/article/image references
+site edit/revision route
+site reference graph hydration
+```
+
+### Phase 8 — Paid views and accounting/rewarder
+
+Only after publish/read flows are stable:
+
+```text
+paid view prepare/capture
+ron-accounting view/serve/storage events
+svc-rewarder deterministic payout planning
+provider/creator/site owner split planning
+```
+
+### Phase 9 — Media-lite, then streaming
+
+Media-lite first:
+
+```text
+.music metadata
+.video metadata
+.podcast metadata
+small-file proof only
+poster/cover references as .image assets
+lyrics as separate .lyrics asset
+```
+
+Streaming later:
+
+```text
+range/chunk delivery
+edge caching
+egress accounting
+stream sessions
+chat/mod/tips
+archive/VOD
+```
+
+---
+
+## 8. Recommended immediate next batch
+
+The next session should probably start with **Batch NEXT_LEVEL-1: CrabLink embed registry + site layout polish**.
+
+Why this first:
+
+```text
+- It is low risk.
+- It stays in the freshly refactored CrabLink React architecture.
+- It strengthens the proven <crab-image> reference graph.
+- It prepares future embeds without committing backend behavior.
+- It lets us validate the refactor is truly stable.
+```
+
+Suggested files to inspect/update:
+
+```text
+extensions/chrome/src/pages/site/SiteRender.jsx
+extensions/chrome/src/pages/site/SiteSandboxPreview.jsx
+extensions/chrome/src/pages/site/SiteManifestDrawer.jsx
+extensions/chrome/src/pages/site/SiteResolvedSummary.jsx
+extensions/chrome/src/pages/site/site.css
+
+extensions/chrome/src/shared/embed/embedRegistry.js
+extensions/chrome/src/shared/embed/crabImageEmbed.jsx
+extensions/chrome/src/shared/embed/crabVideoEmbed.jsx
+extensions/chrome/src/shared/embed/crabAudioEmbed.jsx
+extensions/chrome/src/shared/embed/crabArticleEmbed.jsx
+extensions/chrome/src/shared/embed/crabPostEmbed.jsx
+extensions/chrome/src/shared/embed/crabCommentEmbed.jsx
+extensions/chrome/src/shared/embed/safeHtml.js
+extensions/chrome/src/shared/embed/sandboxFrame.js
+
+extensions/chrome/src/shared/components/TruthBoundary.jsx
+extensions/chrome/src/shared/components/RouteTruthPanel.jsx
+extensions/chrome/src/shared/theme/
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/green-gate-local.sh
+```
+
+Acceptance criteria:
+
+```text
+crab://site still opens.
+A named site still renders full usable width.
+Site manifest/proof remains accessible but not dominant.
+<crab-image> still renders.
+Unsupported future embed tags show honest placeholder/truth boundary, not fake backend truth.
+No arbitrary site JS execution.
+No direct backend calls outside gateway client.
+Green gate passes.
+Mutating green gate passes if stack is running.
+```
+
+---
+
+## 9. Backend NEXT_LEVEL batch after CrabLink polish
+
+Once the site/embed UI is stable, switch to RustyOnions backend.
+
+Recommended **Batch NEXT_LEVEL-2: ron-proto + ron-naming thin DTO/parser foundation**.
+
+Files likely involved in RustyOnions:
+
+```text
+crates/ron-proto/
+crates/ron-naming/
+tests for DTO serde and username parsing
+```
+
+Add only stable DTOs/parsers. Do not wire full services yet.
+
+DTOs to start with:
+
+```text
+PassportPublicManifestV1
+PassportPublicProfileV1
+ReputationSummaryV1
+ModeratorSummaryV1
+SiteModeratorRoleV1
+
+TextAssetBodyV1
+PostAssetV1
+CommentAssetV1
+ArticleAssetV1
+
+AssetReferenceV1
+ReferenceGraphV1
+ThreadManifestV1
+SiteReferenceMapV1
+```
+
+ron-naming parser work:
+
+```text
+@username parse/normalize
+reserved names
+typed asset suffix list behind feature gates
+canonical crab://@username formatting
+canonical crab://<64hex>.<kind> formatting
+```
+
+Acceptance gates:
+
+```text
+cargo fmt
+cargo clippy -p ron-proto --no-deps -- -D warnings
+cargo test -p ron-proto --all-targets
+
+cargo clippy -p ron-naming --no-deps -- -D warnings
+cargo test -p ron-naming --all-targets
+```
+
+Important: before generating Rust code, review `CODECHECK.md` and use `CODECOMMENTS.MD` conventions for full paste-ready files.
+
+---
+
+## 10. Passport and username rules
+
+The next session must preserve the corrected passport model:
+
+```text
+passport = identity/capability record
+public profile/passport manifest = optional b3-addressed public object
+```
+
+Main passport:
+
+```text
+may create sites when policy allows
+may claim @username
+may have public profile manifest
+may link wallet permissions explicitly
+```
+
+Alt passport:
+
+```text
+separate pseudonymous identity
+separate wallet/account
+may browse/surf/comment
+must not create sites by default
+must not automatically inherit main wallet authority
+must not be publicly linked to main passport
+```
+
+@username rules:
+
+```text
+human pointer, not canonical identity
+passport_subject remains canonical
+normalized deterministically
+unique
+reserved names rejected
+main passport flow first
+```
+
+Suggested username validation:
+
+```text
+lowercase a-z
+0-9
+underscore
+hyphen
+starts with letter/number
+min length 3
+max length 32
+reserved names blocked:
+admin, root, ron, crab, system, wallet, passport, site, image, video, music, post, comment, article, mod, moderator
+```
+
+---
+
+## 11. 1776 ROC / wallet-backed passport state
+
+The running notes contain older and newer sections. The latest important product rule remains:
+
+```text
+Do not fake 1776 ROC in CrabLink.
+Starter ROC must come from backend truth.
+```
+
+Correct path:
+
+```text
+CrabLink
+→ POST /identity/passport/bootstrap through svc-gateway
+→ omnigate
+→ svc-passport creates/loads passport
+→ svc-wallet issues 1776 ROC
+→ ron-ledger commits issue event
+→ receipt returned
+→ CrabLink refreshes wallet balance
+→ popup displays 1776 ROC
+```
+
+The notes also record a later backend proof where CrabLink displayed:
+
+```text
+Gateway: http://127.0.0.1:8090
+Passport: passport:main:dev
+Wallet: acct_dev
+ROC: 1776 ROC
+Ledger: ledger-backed
+```
+
+and preserved the boundary that `svc-wallet` remains the mutation/read front-door and `ron-ledger` remains durable truth. 
+
+Known caveat:
+
+```text
+dev passport labels like passport:main:dev and acct_dev are still not production custody.
+real svc-passport identity/capability backing is still needed.
+```
+
+Potential next wallet/passport hardening after NEXT_LEVEL DTO work:
+
+```text
+smoke hardening:
+  issued=true
+  amount=1776
+  receipt_id exists
+  ledger_backed=true
+  source=svc_wallet.v1
+  can_spend=false
+
+idempotency proof:
+  same passport/wallet bootstrap twice
+  no double issue
+  balance remains expected
+```
+
+---
+
+## 12. Text asset primitive model
+
+Start with text because it is low payload and high product value.
+
+`.post` asset:
+
+```json
+{
+  "schema": "ron.post.v1",
+  "format": "text/markdown",
+  "body": "My post",
+  "relations": {
+    "site": "crab://myforum",
+    "thread": "crab://<64hex>.thread",
+    "reply_to": null
+  }
+}
+```
+
+`.comment` asset:
+
+```json
+{
+  "schema": "ron.comment.v1",
+  "format": "text/markdown",
+  "body": "My comment",
+  "relations": {
+    "target": "crab://<64hex>.post",
+    "site": "crab://myforum",
+    "thread": "crab://<64hex>.thread"
+  }
+}
+```
+
+`.article` asset:
+
+```json
+{
+  "schema": "ron.article.v1",
+  "format": "text/markdown",
+  "title": "My Article",
+  "body": "# Article body",
+  "relations": {
+    "site": "crab://myblog"
+  }
+}
+```
+
+MVP rule:
+
+```text
+Text body bytes should be canonical JSON or canonical UTF-8 envelope.
+Do not hash arbitrary UI state.
+Receipt and ownership live in manifest, not raw body.
+```
+
+---
+
+## 13. Manifest model to preserve
+
+Every published asset should eventually have:
+
+```text
+asset_kind
+asset_cid
+manifest_cid
+owner.passport_subject
+owner.username optional
+owner.wallet_account
+payout recipient/account
+metadata title/description/tags
+provenance created_at
+storage/provider data
+receipt refs
+relations/references
+versions/history
+rights/access policy
+```
+
+Image-like assets rule:
+
+```text
+All image-like assets are canonical .image assets.
+album covers, thumbnails, posters, profile avatars, ad creatives, game covers, article hero images → crab://<hash>.image
+```
+
+Lyrics rule:
+
+```text
+lyrics are separate .lyrics assets
+music/song manifests link to crab://<hash>.lyrics
+```
+
+Renditions rule:
+
+```text
+Each resolution/variant is its own b3-addressed asset.
+Manifests cross-link renditions through a shared rendition/version group.
+```
+
+---
+
+## 14. Embed primitive rules
+
+Current proof:
+
+```html
+<crab-image src="crab://<64hex>.image"></crab-image>
+```
+
+Future possible embed tags:
+
+```html
+<crab-image src="crab://<64hex>.image"></crab-image>
+<crab-article src="crab://<64hex>.article"></crab-article>
+<crab-post src="crab://<64hex>.post"></crab-post>
+<crab-comment src="crab://<64hex>.comment"></crab-comment>
+<crab-video src="crab://<64hex>.video"></crab-video>
+<crab-audio src="crab://<64hex>.music"></crab-audio>
+```
+
+Rules:
+
+```text
+Embed tags are declarative.
+Embed tags do not execute remote JS.
+Embed renderers are trusted CrabLink/client code.
+Embed resolution goes through svc-gateway only.
+Embed content retains its own asset manifest and ownership/payout metadata.
+Sites reference assets; sites do not own asset bytes.
+```
+
+---
+
+## 15. Code/facet hard rule
+
+Future `.code`, `.game`, and executable `.algo` work must preserve:
+
+```text
+b3hash.code is the address
+facet.toml is the contract
+svc-sandbox is the cage
+ron-policy is the judge
+CrabLink is the renderer/launcher, not the executor
+```
+
+Do **not** allow:
+
+```text
+crab://<hash>.code
+→ download arbitrary code
+→ execute in privileged extension page
+```
+
+CrabLink should only render code metadata, facet contracts, permissions, and sandbox launch UI when backend policy/sandbox support exists.
+
+---
+
+## 16. Paid/value rules
+
+For any paid publish/view/storage/access flow:
+
+```text
+integer minor units only
+no floating-point money
+explicit prepare
+explicit user confirmation
+wallet hold/capture/release semantics
+receipt-backed success
+clear failure
+nonce + idempotency
+no silent retry that changes economic state
+no direct ledger mutation outside wallet/ledger path
+```
+
+CrabLink can show rich previews, but backend DTOs and wallet request bodies must remain strict.
+
+---
+
+## 17. File ownership and repo boundaries
+
+### CrabLink owns
+
+```text
+React browser UX
+route rendering
+address/navigation
+PassportDrawer display
+wallet/balance display
+explicit paid prompts
+site rendering
+embed renderers
+safe manifest previews
+local creator workspaces
+developer JSON panels
+```
+
+### CrabLink does not own
+
+```text
+wallet truth
+ledger truth
+storage truth
+index truth
+reward computation
+passport truth
+direct internal service calls
+arbitrary code execution
+```
+
+### RustyOnions owns
+
+```text
+ron-proto DTOs
+ron-naming parsing
+svc-gateway public routes
+omnigate product hydration
+svc-storage bytes
+svc-index pointers
+svc-wallet wallet mutation/read
+ron-ledger durable truth
+svc-passport identity/capability truth
+ron-auth capability verification
+ron-policy pricing/feature gates
+ron-accounting usage snapshots
+svc-rewarder payout planning
+```
+
+---
+
+## 18. Known current documentation issue
+
+The latest codebundle still includes stale text in docs such as:
+
+```text
+plain JavaScript / no React / no Vite
+scaffold placeholder
+legacy-preserved
+old refactor TODO docs
+```
+
+This does not mean the runtime is still vanilla. It means docs may be stale. Before starting a large backend batch, it may be worth doing a quick docs cleanup commit if not already done.
+
+Candidate stale docs from codebundle:
+
+```text
+CHANGELOG.md
+CONTRIBUTING.md
+docs/CHROME_EXTENSION_BLUEPRINT.md
+docs/CRABLINK_REFACTOR_PLAN.md
+docs/MANIFEST_MODEL.md
+docs/ROUTE_CONTRACTS.md
+docs/SANDBOX_MODEL.md
+docs/TESTING_MATRIX.md
+docs/THEME_AND_AD_SLOT.md
+extensions/chrome/docs/blueprint.md
+extensions/chrome/docs/CRABLINK_REFACTOR.MD
+extensions/chrome/docs/REFACTOR_TODO.MD
+```
+
+Do not confuse stale docs with active runtime source. The active runtime source is React-primary. 
+
+---
+
+## 19. Suggested start-of-next-session commands
+
+### CrabLink repo
+
+```bash
+cd /Users/mymac/Desktop/crablink
+git status
+bash scripts/green-gate-local.sh
+```
+
+If RustyOnions stack is running:
+
+```bash
+CRABLINK_GREEN_MUTATING=1 bash scripts/green-gate-local.sh
+```
+
+Regenerate codebundle if anything changed:
+
+```bash
+scripts/make_codebundle.sh
+```
+
+### RustyOnions repo
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+cargo fmt
+```
+
+Before Rust code generation:
+
+```text
+Review CODECHECK.md.
+Use CODECOMMENTS.MD RO header conventions for full paste-ready files.
+Use CODEBUNDLE_RS.md for current code.
+Use ALLNOTES.MD for crate progress/carryover.
+Use ALL_DOCS_COMBINED.MD for crate docs/blueprints.
+```
+
+---
+
+## 20. Recommended next prompt to give the next instance
+
+Use this:
+
+```text
+We finished the CrabLink React-primary refactor. The old active vanilla page lane is removed, page.html is only a compatibility redirect, and the React route tree is active. The CrabLink green gate and mutating green gate passed. Now continue NEXT_LEVEL.MD.
+
+Start with the safest next batch:
+1. CrabLink-only site layout polish and embed registry cleanup, keeping <crab-image> green.
+2. Do not fake backend support for future embed tags.
+3. Keep CrabLink gateway-only and sandbox-first.
+4. Then prepare the RustyOnions backend DTO/naming batch for public profile/passport manifests, @username parsing, post/comment/article DTOs, and reference graph DTOs.
+
+Use CODEBUNDLE_CHROME_EXTENSION.md for CrabLink current code, NEXT_LEVEL.MD as the north star, and NOTES.MD for running context. Provide full paste-ready files only.
+```
+
+---
+
+## 21. Short version for memory
+
+```text
+CrabLink React refactor is complete.
+Old active vanilla page lane removed.
+page.html is compatibility redirect only.
+React app/pages/shared route tree is active.
+Known-good image: crab://ad1e9bef7834d7a37fde676abdf095c33c59de8e3d667fe99b5f091e6444e8d1.image
+NEXT_LEVEL resumes from paid image + site + crab-image embed proof.
+Next safest batch: CrabLink site layout polish + embed registry cleanup.
+Then backend: ron-proto + ron-naming DTO/parser foundation for public profile manifests, @username, post/comment/article, and reference graphs.
+Preserve all invariants: gateway-only CrabLink, no fake receipts, no fake b3, no silent ROC spend, svc-wallet as mutation front-door, ron-ledger as durable truth, passports are identity/capability records not wallets/assets.
+```
+
+
+### END NOTE - MAY 13 2026 - 15:00 CST
