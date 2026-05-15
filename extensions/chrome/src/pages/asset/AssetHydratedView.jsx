@@ -2,11 +2,11 @@
  * RO:WHAT — Read-only hydrated view for gateway-returned typed asset DTOs.
  * RO:WHY — Gives b3/crab asset pages a useful React UI while preserving backend-truth boundaries.
  * RO:INTERACTS — AssetResolver, gateway asset DTOs, JsonPreview, CopyButton, StatChip.
- * RO:INVARIANTS — display backend-returned fields only; image previews are gateway URLs; no unsafe HTML; no wallet mutation.
+ * RO:INVARIANTS — display backend-returned fields only; image/text previews are gateway reads; no unsafe HTML; no wallet mutation.
  * RO:METRICS — displays gateway correlation/status fields returned by GatewayClient.
  * RO:CONFIG — gateway base URL through assetClient.
  * RO:SECURITY — no script execution; JSON preview is redacted by shared component.
- * RO:TEST — known-good image asset smoke plus malformed/offline gateway smoke.
+ * RO:TEST — known-good image asset smoke, .post raw content smoke, malformed/offline gateway smoke.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -18,12 +18,24 @@ import JsonPreview from '../../shared/components/JsonPreview.jsx';
 import StatChip from '../../shared/components/StatChip.jsx';
 import TruthBoundary from '../../shared/components/TruthBoundary.jsx';
 
+const TEXT_ASSET_KINDS = new Set(['post', 'comment', 'article']);
+
+const TEXT_CONTENT_IDLE = Object.freeze({
+  status: 'idle',
+  response: null,
+  raw: '',
+  parsed: null,
+  summary: null,
+  error: null,
+});
+
 export default function AssetHydratedView({ route, result, assetClient, resolverState }) {
   const [imagePreviewOk, setImagePreviewOk] = useState(true);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewRevision, setPreviewRevision] = useState(0);
   const [failedPreviewSources, setFailedPreviewSources] = useState([]);
   const [developerOpen, setDeveloperOpen] = useState(false);
+  const [textContent, setTextContent] = useState(TEXT_CONTENT_IDLE);
 
   const summary = useMemo(() => summarizeAsset(result, route), [result, route]);
 
@@ -48,6 +60,72 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
     setPreviewRevision((value) => value + 1);
     setFailedPreviewSources([]);
   }, [summary.hash, summary.kind, summary.crabUrl]);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function run() {
+      if (!summary.isTextRoute || !summary.cid || !assetClient?.gateway?.request) {
+        setTextContent(TEXT_CONTENT_IDLE);
+        return;
+      }
+
+      setTextContent({
+        status: 'loading',
+        response: null,
+        raw: '',
+        parsed: null,
+        summary: null,
+        error: null,
+      });
+
+      try {
+        const response = await assetClient.gateway.request(`/o/${encodeURIComponent(summary.cid)}`, {
+          label: `${summary.kindLabel || 'Text asset'} content`,
+          parseAs: 'text',
+          headers: {
+            Accept: 'application/json,text/plain,*/*',
+          },
+        });
+
+        if (!alive) {
+          return;
+        }
+
+        const raw = String(response?.data || '');
+        const parsed = parseTextAssetEnvelope(raw);
+        const contentSummary = summarizeTextAssetContent(parsed, raw, summary);
+
+        setTextContent({
+          status: 'resolved',
+          response,
+          raw,
+          parsed,
+          summary: contentSummary,
+          error: null,
+        });
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+
+        setTextContent({
+          status: 'error',
+          response: null,
+          raw: '',
+          parsed: null,
+          summary: null,
+          error,
+        });
+      }
+    }
+
+    void run();
+
+    return () => {
+      alive = false;
+    };
+  }, [assetClient, summary.cid, summary.isTextRoute, summary.kindLabel]);
 
   function handlePreviewError() {
     const failed = previewSource
@@ -92,7 +170,7 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
       <section className="asset-overview-grid">
         <Card
           eyebrow="Resolved asset"
-          title={summary.title || `${summary.kindLabel} asset`}
+          title={summary.title || textContent.summary?.title || `${summary.kindLabel} asset`}
           className="asset-summary-card"
           actions={
             <div className="asset-copy-actions">
@@ -103,6 +181,7 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
         >
           <p className="asset-description">
             {summary.description ||
+              textContent.summary?.bodyPreview ||
               'The gateway returned this typed asset response without a public description field.'}
           </p>
 
@@ -160,6 +239,74 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
           <StatChip label="Attempts" value={summary.attempts.length} tone="neutral" />
         </aside>
       </section>
+
+      {summary.isTextRoute && (
+        <Card
+          eyebrow={`${summary.kindLabel} content`}
+          title={textContent.summary?.title || 'Text asset content'}
+          className="asset-text-content-card"
+          actions={
+            <div className="asset-copy-actions">
+              <CopyButton text={textContent.raw || ''} label="Copy raw content" />
+              <CopyButton text={textContent.summary?.body || ''} label="Copy body" />
+            </div>
+          }
+        >
+          {textContent.status === 'loading' && (
+            <div className="asset-preview-empty">
+              <strong>Loading post content…</strong>
+              <span>CrabLink is reading the b3-backed content object through the configured gateway.</span>
+            </div>
+          )}
+
+          {textContent.status === 'error' && (
+            <div className="asset-preview-empty">
+              <strong>Post content object was not readable from the gateway.</strong>
+              <span>
+                The asset page resolved, but `/o/{summary.cid}` did not return readable text content.
+                The manifest/index pointer exists, but the local dev storage may not have the raw content bytes.
+              </span>
+              <code>{String(textContent.error?.message || textContent.error || 'unknown error')}</code>
+            </div>
+          )}
+
+          {textContent.status === 'resolved' && (
+            <>
+              <div className="asset-fact-grid">
+                <Fact label="Content schema" value={textContent.summary?.schema || 'Not returned'} />
+                <Fact label="Content kind" value={textContent.summary?.kind || summary.kind} />
+                <Fact label="Language" value={textContent.summary?.language || 'Not returned'} />
+                <Fact label="Site" value={textContent.summary?.site || 'Not returned'} monospace />
+                <Fact label="Parent" value={textContent.summary?.parent || 'Not returned'} monospace />
+                <Fact label="HTTP" value={textContent.response?.status || 'n/a'} />
+              </div>
+
+              <div className="asset-text-body">
+                <span>Title</span>
+                <strong>{textContent.summary?.title || 'Untitled'}</strong>
+                <span>Body</span>
+                <p>{textContent.summary?.body || 'No body returned in the content object.'}</p>
+              </div>
+
+              {textContent.summary?.tags?.length > 0 && (
+                <div className="asset-tags" aria-label="Post content tags">
+                  {textContent.summary.tags.map((tag) => (
+                    <Badge key={tag} tone="neutral" uppercase={false}>
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              <TruthBoundary
+                tone="success"
+                title="Post content truth"
+                copy="The title and body above came from the b3-backed raw content object fetched through svc-gateway. CrabLink is not fabricating the post body from local draft state."
+              />
+            </>
+          )}
+        </Card>
+      )}
 
       {summary.isImageRoute && (
         <Card
@@ -248,7 +395,7 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
           <TruthBoundary
             tone="info"
             title="Hydration truth"
-            copy="Every field in this panel is derived from the gateway response or the parsed route. Missing fields stay missing instead of being fabricated by CrabLink."
+            copy="Every field in this panel is derived from the gateway response, the parsed route, or a gateway-read b3 object. Missing fields stay missing instead of being fabricated by CrabLink."
           />
         </Card>
 
@@ -289,6 +436,7 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
               data={{
                 route,
                 summary,
+                text_content: textContent,
                 preview_sources: previewSources,
                 failed_preview_sources: failedPreviewSources,
                 result,
@@ -400,6 +548,7 @@ function summarizeAsset(result, route) {
     routeKind,
     kindWasRouteCorrected,
     isImageRoute: kind === 'image' || routeKind === 'image',
+    isTextRoute: TEXT_ASSET_KINDS.has(kind) || TEXT_ASSET_KINDS.has(routeKind),
     kindLabel: labelFromKind(kind),
     hash: resolvedHash,
     cid,
@@ -479,6 +628,52 @@ function summarizeAsset(result, route) {
     attempts: Array.isArray(result?.attempts) ? result.attempts : [],
     receiptCount: receipts.length,
   };
+}
+
+function summarizeTextAssetContent(parsed, raw, summary) {
+  const content = firstObject(parsed);
+  const metadata = firstObject(content.metadata);
+  const siteConnection = firstObject(content.site_connection, content.siteConnection);
+  const parentReference = firstObject(content.parent_reference, content.parentReference);
+
+  const body = stringValue(content.body, content.text, content.content, raw);
+  const title = stringValue(content.title, metadata.title, summary.title, 'Untitled post');
+  const tags = normalizeTags(metadata.tags || content.tags);
+  const site = stringValue(siteConnection.crab_url, siteConnection.crabUrl, content.site_context_crab_url);
+  const parent = stringValue(parentReference.crab_url, parentReference.crabUrl, content.parent_crab_url);
+
+  return {
+    schema: stringValue(content.schema),
+    kind: stringValue(content.asset_kind, content.kind, summary.kind),
+    title,
+    body,
+    bodyPreview: body.length > 220 ? `${body.slice(0, 220)}…` : body,
+    language: stringValue(metadata.language, content.language),
+    postKind: stringValue(metadata.post_kind, metadata.postKind, content.post_kind),
+    site,
+    parent,
+    tags,
+  };
+}
+
+function parseTextAssetEnvelope(raw) {
+  const text = String(raw || '').trim();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (_error) {
+    return {
+      schema: 'text/plain',
+      kind: 'text',
+      title: 'Text asset',
+      body: text,
+    };
+  }
 }
 
 function chooseDisplayKind({ routeKind, dtoKind }) {

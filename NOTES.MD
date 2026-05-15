@@ -49269,3 +49269,4090 @@ The next session should be a RustyOnions backend wiring session, not another Cra
 
 
 ### END NOTE - MAY 13 2026 - 18:50 CST
+
+
+
+### BEGIN NOTE - MAY 14 2026 - 14:00 CST
+
+
+```text
+docs/CARRYOVER_2026-05-14_POST_COMMENT_SUCCESS.md
+```
+
+It covers **RustyOnions backend changes**, **CrabLink frontend changes**, **proof URLs**, **green gates**, **what worked**, **what broke and how we fixed it**, and **next-session priorities**. The latest Omnigate terminal output confirms the `.post` and `.comment` tests plus full `omnigate --all-targets` passed.  Your site HTML also confirms the `<crab-post>` embed path we tested inside the site root. 
+
+````markdown
+# CrabLink / RustyOnions Carryover Notes — 2026-05-14
+
+## 0. Session headline
+
+This was a major NEXT_LEVEL milestone session.
+
+We successfully moved RustyOnions + CrabLink beyond image/site-only proof and into the first real b3-backed social/text primitives:
+
+```text
+.post
+.comment
+````
+
+By the end of this session, the system proved:
+
+```text
+paid .post mint
+→ crab://<hash>.post typed asset URL
+→ b3-backed raw content object
+→ typed asset page rendering title/body
+→ <crab-post> embed inside a site preview
+
+paid .comment mint
+→ crab://<hash>.comment typed asset URL
+→ b3-backed raw content object
+→ typed asset page rendering body
+→ site context preserved
+→ parent post reference preserved
+```
+
+This is a big product proof because it shows RustyOnions/CrabLink can now support reusable b3-backed text/social primitives, not just images and sites.
+
+---
+
+## 1. Active blueprint alignment
+
+The active blueprint going forward remains:
+
+```text
+NEXT_LEVEL.MD
+CRABLINK_REFACTOR.MD
+WEB3.MD
+WEB3_2.MD
+```
+
+The key NEXT_LEVEL idea validated in this session:
+
+```text
+Every asset is content-addressed by b3.
+Sites do not “own” embedded content bytes.
+Sites reference typed b3-backed assets.
+Typed assets resolve as crab://<hash>.<kind>.
+Embeds hydrate through CrabLink only when backend truth exists.
+Unsupported embeds fail closed instead of faking hydration.
+```
+
+The practical proof:
+
+```text
+crab://site
+→ root HTML contains <crab-post src="crab://<hash>.post">
+→ CrabLink safe sandbox detects reference
+→ CrabLink fetches raw post content through svc-gateway
+→ sandbox renders post card with gateway-backed title/body
+```
+
+---
+
+## 2. Backend crates changed in RustyOnions
+
+The RustyOnions backend crates changed in this slice were:
+
+```text
+crates/svc-gateway
+crates/omnigate
+```
+
+No `Cargo.toml` changes were needed.
+
+CrabLink repo also changed, but CrabLink is a separate browser-client repo, not a RustyOnions crate.
+
+---
+
+## 3. RustyOnions crate 1: `svc-gateway`
+
+### 3.1 Purpose of the gateway batch
+
+`svc-gateway` was updated to expose public browser-facing text asset routes.
+
+The key new public routes:
+
+```text
+POST /assets/post/prepare
+POST /assets/post
+
+POST /assets/comment/prepare
+POST /assets/comment
+
+POST /assets/article/prepare
+POST /assets/article
+```
+
+These proxy to Omnigate:
+
+```text
+POST /v1/assets/post/prepare
+POST /v1/assets/post
+
+POST /v1/assets/comment/prepare
+POST /v1/assets/comment
+
+POST /v1/assets/article/prepare
+POST /v1/assets/article
+```
+
+Important: `svc-gateway` remains proxy-only.
+
+It does not:
+
+```text
+- parse text asset semantics
+- price assets
+- create holds
+- call ledger
+- mutate wallet
+- store content bytes
+- create manifests
+- write index pointers
+- fabricate CIDs
+- fabricate receipts
+```
+
+### 3.2 Main files changed in `svc-gateway`
+
+```text
+crates/svc-gateway/src/routes/product.rs
+crates/svc-gateway/tests/product_routes_proxy.rs
+```
+
+### 3.3 Gateway routes now exposed
+
+The relevant product route surface now includes:
+
+```text
+GET  /identity/me
+POST /identity/passport/bootstrap
+POST /identity/passport/profile/claim
+GET  /identity/passport/profile/:username
+
+GET  /wallet/:account/balance
+POST /wallet/hold
+
+GET  /crab/resolve?url=...
+GET  /b3/:asset
+
+POST /paid/o/prepare
+
+POST /assets/image/prepare
+POST /assets/image
+
+POST /assets/post/prepare
+POST /assets/post
+
+POST /assets/comment/prepare
+POST /assets/comment
+
+POST /assets/article/prepare
+POST /assets/article
+
+POST /sites/prepare
+POST /sites
+GET  /sites/:name
+```
+
+### 3.4 Header forwarding contract
+
+The gateway preserves the headers needed for paid asset flows.
+
+Forwarded headers include:
+
+```text
+Authorization
+Accept
+Content-Type
+Idempotency-Key
+x-correlation-id
+x-request-id
+x-ron-*
+```
+
+Hop-by-hop headers are filtered:
+
+```text
+Host
+Connection
+Transfer-Encoding
+Upgrade
+Content-Length
+Proxy-Authorization
+TE
+Trailer
+```
+
+This is important because paid publish flows depend on:
+
+```text
+x-ron-paid-op: hold
+x-ron-paid-asset: roc
+x-ron-paid-estimate-minor: <amount>
+x-ron-wallet-txid: <txid>
+x-ron-wallet-receipt-hash: <receipt_hash>
+x-ron-wallet-from: <payer>
+x-ron-wallet-to: <escrow>
+x-ron-asset-kind: post|comment|article
+```
+
+### 3.5 Gateway tests added/updated
+
+The test file:
+
+```text
+crates/svc-gateway/tests/product_routes_proxy.rs
+```
+
+now proves:
+
+```text
+- /crab/resolve preserves query and important headers.
+- /b3/:asset proxies to /v1/b3/:asset.
+- /paid/o/prepare preserves JSON body and idempotency.
+- image routes proxy to Omnigate.
+- site routes proxy to Omnigate.
+- text asset routes proxy to Omnigate.
+- post/comment/article publish routes preserve paid proof headers.
+- upstream connect failure maps to deterministic 502 Problem response.
+```
+
+### 3.6 Gateway green gates
+
+The final gateway gate passed earlier in the session:
+
+```bash
+cargo fmt -p svc-gateway
+cargo clippy -p svc-gateway --all-targets --no-deps -- -D warnings
+cargo test -p svc-gateway --test product_routes_proxy
+cargo test -p svc-gateway --all-targets
+```
+
+### 3.7 Current gateway status
+
+`svc-gateway` is done for the current text asset exposure layer.
+
+Status:
+
+```text
+.post      gateway exposed and Omnigate implemented
+.comment   gateway exposed and Omnigate implemented
+.article   gateway exposed but Omnigate implementation still pending
+```
+
+---
+
+## 4. RustyOnions crate 2: `omnigate`
+
+## 4.1 Purpose of the Omnigate batch
+
+`omnigate` was updated to implement real text asset prepare/publish flows for:
+
+```text
+.post
+.comment
+```
+
+This makes Omnigate the product coordinator for text asset creation.
+
+The implemented flow:
+
+```text
+CrabLink
+→ svc-gateway
+→ omnigate
+→ svc-storage paid estimate
+→ CrabLink explicit wallet hold
+→ omnigate paid publish
+→ svc-storage stores raw content object
+→ omnigate builds manifest
+→ svc-storage stores manifest object
+→ omnigate writes svc-index asset→manifest pointer
+→ typed crab URL returned
+```
+
+Omnigate does not mutate wallet/ledger directly.
+
+---
+
+## 4.2 Main Omnigate files changed
+
+```text
+crates/omnigate/src/routes/v1/mod.rs
+crates/omnigate/src/routes/v1/text_assets.rs
+crates/omnigate/tests/text_asset_publish.rs
+crates/omnigate/tests/comment_asset_publish.rs
+crates/omnigate/tests/passport_profile_routes.rs
+```
+
+`passport_profile_routes.rs` only needed a clippy cleanup.
+
+---
+
+## 4.3 Route aggregator change
+
+`crates/omnigate/src/routes/v1/mod.rs` now includes:
+
+```rust
+pub mod text_assets;
+```
+
+and mounts the text routes under:
+
+```text
+/v1/assets
+```
+
+Active Omnigate routes now include:
+
+```text
+POST /v1/assets/post/prepare
+POST /v1/assets/post
+
+POST /v1/assets/comment/prepare
+POST /v1/assets/comment
+```
+
+Article routes are intentionally not implemented yet.
+
+---
+
+## 4.4 `text_assets.rs` design
+
+The new/updated file:
+
+```text
+crates/omnigate/src/routes/v1/text_assets.rs
+```
+
+owns both post and comment asset flows.
+
+It uses an internal enum:
+
+```text
+TextAssetKind::Post
+TextAssetKind::Comment
+```
+
+Article is intentionally left out for the next backend batch.
+
+The implementation is staged:
+
+```text
+post → comment → article
+```
+
+This is important. We should not rush all text primitives into one untested blob.
+
+---
+
+## 4.5 `.post` backend contract
+
+### Prepare route
+
+```text
+POST /v1/assets/post/prepare
+```
+
+Strict JSON accepted fields:
+
+```text
+title
+body
+site_context_crab_url
+parent_crab_url
+creator_display
+language
+post_kind / postKind
+visibility
+rights_mode / rightsMode
+moderation_mode / moderationMode
+content_warning / contentWarning
+tags
+payer_account / payerAccount
+owner_passport_subject / ownerPassportSubject
+client_idempotency_key / clientIdempotencyKey
+```
+
+Post validation rules:
+
+```text
+title required
+body required
+site_context_crab_url required
+site_context_crab_url must be named crab://site URL
+parent_crab_url optional
+payer_account required
+owner_passport_subject required
+```
+
+### Publish route
+
+```text
+POST /v1/assets/post
+```
+
+Requires modern paid proof headers:
+
+```text
+x-ron-paid-op
+x-ron-paid-asset
+x-ron-paid-estimate-minor
+x-ron-wallet-txid
+x-ron-wallet-receipt-hash
+x-ron-wallet-from
+x-ron-wallet-to
+x-ron-asset-kind: post
+```
+
+The stored raw content envelope is JSON:
+
+```text
+schema: ron.post-content.v1
+kind: post
+asset_kind: post
+format: text/plain; charset=utf-8
+title
+body
+metadata
+relations
+site_connection
+parent_reference
+thread_reference
+creator_display
+created_at_ms
+```
+
+---
+
+## 4.6 `.comment` backend contract
+
+### Prepare route
+
+```text
+POST /v1/assets/comment/prepare
+```
+
+Strict JSON accepted fields:
+
+```text
+title
+body
+site_context_crab_url
+parent_crab_url / parentCrabUrl / target_crab_url / targetCrabUrl
+thread_context_crab_url / threadContextCrabUrl
+creator_display / creatorDisplay
+language
+comment_kind / commentKind
+visibility
+rights_mode / rightsMode
+moderation_mode / moderationMode
+content_warning / contentWarning
+tags
+payer_account / payerAccount
+owner_passport_subject / ownerPassportSubject
+client_idempotency_key / clientIdempotencyKey
+```
+
+Comment validation rules:
+
+```text
+body required
+site_context_crab_url required
+parent_crab_url required
+payer_account required
+owner_passport_subject required
+title optional, defaults to "Comment"
+site_context_crab_url must be named crab://site URL
+parent_crab_url must be typed crab://<hash>.<kind>
+```
+
+### Parent/target support
+
+For the first successful live comment test, the parent was a `.post`:
+
+```text
+crab://b23f4c579201e17ab391dd3bff54635718a0b4c1371782ef87115b50f80bb1d3.post
+```
+
+The backend currently allows these future parent kinds:
+
+```text
+post
+comment
+article
+image
+video
+music
+song
+podcast
+stream
+thread
+film
+```
+
+This is intentionally future-ready, but CrabLink should label unsupported parent types honestly until those typed assets are backend-proven.
+
+### Publish route
+
+```text
+POST /v1/assets/comment
+```
+
+Requires modern paid proof headers:
+
+```text
+x-ron-paid-op
+x-ron-paid-asset
+x-ron-paid-estimate-minor
+x-ron-wallet-txid
+x-ron-wallet-receipt-hash
+x-ron-wallet-from
+x-ron-wallet-to
+x-ron-asset-kind: comment
+```
+
+The stored raw content envelope is JSON:
+
+```text
+schema: ron.comment-content.v1
+kind: comment
+asset_kind: comment
+format: text/plain; charset=utf-8
+title
+body
+metadata.comment_kind
+metadata.language
+metadata.tags
+relations.site
+relations.parent
+relations.target
+site_connection
+parent_reference
+thread_reference
+creator_display
+created_at_ms
+```
+
+---
+
+## 4.7 Storage/index coordination
+
+Both `.post` and `.comment` follow this flow:
+
+```text
+1. Validate strict JSON.
+2. Build canonical JSON content envelope.
+3. Ask svc-storage for estimate:
+   GET /paid/o/estimate?bytes=<content_envelope_bytes>
+4. Return wallet hold template.
+5. On publish, require paid proof headers.
+6. Send content envelope to storage:
+   POST /paid/o
+7. Parse content CID from storage response.
+8. Require canonical b3:<64 lowercase hex>.
+9. Build manifest JSON.
+10. Store manifest through:
+    POST /o
+11. Parse manifest CID.
+12. Write index pointer:
+    PUT /v1/index/assets/<hash>/manifest
+13. Return:
+    crab://<hash>.post
+    or
+    crab://<hash>.comment
+```
+
+---
+
+## 4.8 Omnigate invariants preserved
+
+Omnigate still does not mutate ledger or wallet directly.
+
+The implementation does not:
+
+```text
+- call ron-ledger
+- directly mutate wallet balances
+- fake receipts
+- fabricate CIDs
+- silently charge ROC
+- store bytes outside svc-storage
+- write index state outside svc-index
+- skip paid proof headers on publish
+```
+
+The economic invariant remains:
+
+```text
+svc-wallet is the normal mutation front-door.
+ron-ledger is the durable economic truth.
+omnigate coordinates product flow only.
+```
+
+---
+
+## 4.9 Omnigate strict DTO behavior
+
+The backend uses strict JSON with deny-unknown-fields.
+
+This means CrabLink clients must not send local/debug/manifest fields to backend prepare/publish routes.
+
+Rejected fields included:
+
+```text
+schema
+asset_kind
+bytes
+content_type
+relations
+content
+manifest_hint
+body_preview
+```
+
+This caused the first `.post` frontend failure:
+
+```text
+post asset request must be strict JSON
+```
+
+We fixed it by updating the CrabLink post client.
+
+The same issue was expected for comments, so we updated the CrabLink comment client after backend `.comment` tests went green.
+
+---
+
+## 4.10 Omnigate clippy/test issues encountered and fixed
+
+During this session:
+
+### Issue 1 — clippy `result_large_err`
+
+Validation helpers returned:
+
+```rust
+Result<_, Response>
+```
+
+Clippy rejected this with `result_large_err`.
+
+Fix:
+
+```text
+Introduced small RouteProblemSpec.
+Validation helpers return Result<T, RouteProblemSpec>.
+Outer handlers convert errors to Axum Response only at the boundary.
+```
+
+### Issue 2 — unused `prepare_route`
+
+After generalizing text assets, `TextAssetKind::prepare_route()` was unused.
+
+Fix:
+
+```text
+Removed unused method.
+```
+
+### Issue 3 — `.post` tests rejected as strict JSON
+
+Existing post tests sent:
+
+```json
+"post_kind": "thread_starter"
+```
+
+The generalized DTO only accepted `postKind` initially.
+
+Fix:
+
+```text
+Added alias = "post_kind" to the text_kind field.
+```
+
+### Issue 4 — clippy in `passport_profile_routes.rs`
+
+Clippy flagged unnecessary filter_map in a test helper.
+
+Fix:
+
+```text
+Rewrote parse_query helper to use straightforward loop/map logic.
+```
+
+---
+
+## 4.11 Omnigate tests
+
+### Existing `.post` test suite
+
+```text
+crates/omnigate/tests/text_asset_publish.rs
+```
+
+Tests:
+
+```text
+post_asset_prepare_returns_hold_template
+post_asset_prepare_requires_site_context
+post_asset_publish_coordinates_paid_storage_manifest_and_index_pointer
+post_asset_publish_requires_paid_proof_headers
+post_asset_prepare_upstream_connect_failure_yields_problem_502
+```
+
+### New `.comment` test suite
+
+```text
+crates/omnigate/tests/comment_asset_publish.rs
+```
+
+Tests:
+
+```text
+comment_asset_prepare_returns_hold_template
+comment_asset_prepare_requires_parent_reference
+comment_asset_publish_coordinates_paid_storage_manifest_and_index_pointer
+comment_asset_publish_requires_paid_proof_headers
+```
+
+The comment tests prove:
+
+```text
+- strict JSON validation
+- site context required
+- parent/target reference required
+- paid proof headers required
+- storage paid write gets correct content bytes
+- manifest object is stored
+- index pointer is written
+- returned crab://<hash>.comment URL is correct
+```
+
+---
+
+## 4.12 Final Omnigate green gate
+
+Final backend command run:
+
+```bash
+cargo fmt -p omnigate
+cargo clippy -p omnigate --all-targets --no-deps -- -D warnings && \
+cargo test -p omnigate --test text_asset_publish && \
+cargo test -p omnigate --test comment_asset_publish && \
+cargo test -p omnigate --all-targets
+```
+
+Final result:
+
+```text
+clippy passed
+text_asset_publish passed: 5/5
+comment_asset_publish passed: 4/4
+full omnigate --all-targets passed
+```
+
+The full `omnigate --all-targets` run included many existing route and readiness tests, including:
+
+```text
+asset_page_resolver
+builtin_page_resolver
+image_asset_prepare
+named_site_crab_resolver
+paid_storage_prepare
+paid_storage_write_proxy
+paid_storage_estimate_proxy
+passport_profile_routes
+site_launch
+text_asset_publish
+comment_asset_publish
+readiness tests
+middleware tests
+policy tests
+zk tests
+bench smoke target
+```
+
+---
+
+## 5. CrabLink repo changes
+
+CrabLink changed in the separate `crablink` repo.
+
+The main frontend/browser-client work this session:
+
+```text
+- postAssetClient strict backend DTO fix
+- commentAssetClient strict backend DTO fix
+- typed text asset viewer raw content hydration
+- <crab-post> embed hydration inside site sandbox
+```
+
+---
+
+## 5.1 CrabLink file: post asset client
+
+Changed file:
+
+```text
+extensions/chrome/src/shared/api/postAssetClient.js
+```
+
+Problem:
+
+The first live `.post` prepare request failed with:
+
+```text
+post asset request must be strict JSON
+```
+
+Cause:
+
+The old client sent local/debug fields not accepted by the strict Rust backend DTO.
+
+Fix:
+
+`postAssetClient.js` now sends only accepted backend DTO fields:
+
+```text
+title
+body
+site_context_crab_url
+parent_crab_url
+creator_display
+language
+post_kind
+visibility
+rights_mode
+moderation_mode
+content_warning
+tags
+payer_account
+owner_passport_subject
+client_idempotency_key
+```
+
+It also publishes with correct paid proof headers:
+
+```text
+x-ron-paid-op
+x-ron-paid-asset
+x-ron-paid-estimate-minor
+x-ron-wallet-txid
+x-ron-wallet-receipt-hash
+x-ron-wallet-from
+x-ron-wallet-to
+x-ron-asset-kind: post
+```
+
+Result:
+
+`.post` mint succeeded.
+
+---
+
+## 5.2 CrabLink file: comment asset client
+
+Changed file:
+
+```text
+extensions/chrome/src/shared/api/commentAssetClient.js
+```
+
+Purpose:
+
+Align CrabLink comment prepare/publish calls with the new strict Omnigate `.comment` DTO.
+
+The client now sends only accepted fields:
+
+```text
+title
+body
+site_context_crab_url
+parent_crab_url
+thread_context_crab_url
+creator_display
+language
+comment_kind
+visibility
+rights_mode
+moderation_mode
+content_warning
+tags
+payer_account
+owner_passport_subject
+client_idempotency_key
+```
+
+It maps parent/target fields from UI aliases:
+
+```text
+parent_crab_url
+parentCrabUrl
+target_crab_url
+targetCrabUrl
+target
+parent
+relations.target
+relations.parent
+parent_reference.crab_url
+parentReference.crabUrl
+```
+
+It publishes with:
+
+```text
+x-ron-asset-kind: comment
+```
+
+Result:
+
+`.comment` mint succeeded.
+
+---
+
+## 5.3 CrabLink file: typed asset viewer
+
+Changed file:
+
+```text
+extensions/chrome/src/pages/asset/AssetHydratedView.jsx
+```
+
+Problem:
+
+After `.post` minted, the typed asset page resolved but did not show post title/body.
+
+What happened:
+
+The generic asset DTO page displayed manifest/CID/owner/receipt info, but it did not fetch the raw content object from storage.
+
+Fix:
+
+The asset viewer now treats text assets as readable raw content objects:
+
+```text
+post
+comment
+article
+```
+
+For text asset routes, it fetches:
+
+```text
+/o/b3:<hash>
+```
+
+through the configured gateway client.
+
+Then it parses the JSON envelope and displays:
+
+```text
+title
+body
+schema
+kind
+language
+site
+parent
+tags
+HTTP status
+```
+
+Important invariant:
+
+The page does not use local draft state to fill missing content. It reads the b3-backed content object from the gateway.
+
+Result:
+
+`.post` and `.comment` typed asset pages now display raw text content.
+
+Known polish issue:
+
+The truth panel currently says something like “Post content truth” even on comment pages. This should be generalized to:
+
+```text
+Text asset content truth
+```
+
+or kind-specific:
+
+```text
+Post content truth
+Comment content truth
+Article content truth
+```
+
+---
+
+## 5.4 CrabLink file: asset CSS
+
+Changed file:
+
+```text
+extensions/chrome/src/pages/asset/asset.css
+```
+
+Added styles for:
+
+```text
+asset text content card
+raw title/body block
+text asset error code display
+```
+
+The visual result is good enough for dev/proof. It shows the `.comment` body clearly.
+
+---
+
+## 5.5 CrabLink file: embed registry
+
+Changed file:
+
+```text
+extensions/chrome/src/shared/embed/embedRegistry.js
+```
+
+Problem:
+
+After `.post` was minted and a site root included:
+
+```html
+<crab-post src="crab://3023b0320fa0ef44c4e00370f06010b9b35ebf294b96c870c13d4be2f16654a5.post"></crab-post>
+```
+
+the site preview showed:
+
+```text
+Post embed is waiting on backend route contracts
+Future post embed; blocked until post assets are backend-supported.
+```
+
+This was correct fail-closed behavior from before `.post` backend existed, but it needed to be promoted after backend proof.
+
+Fix:
+
+`crab-post` was changed from feature-gated to active.
+
+The registry now supports:
+
+```text
+crab-image active
+crab-post active
+```
+
+Still feature-gated:
+
+```text
+crab-comment
+crab-article
+crab-video
+crab-audio
+```
+
+The registry renders `<crab-post>` as a safe inert HTML card when text content is available through the text asset cache.
+
+It does not execute scripts or inject unsafe HTML.
+
+---
+
+## 5.6 CrabLink file: site sandbox preview
+
+Changed file:
+
+```text
+extensions/chrome/src/pages/site/SiteSandboxPreview.jsx
+```
+
+Purpose:
+
+Hydrate post references before building the sandbox iframe `srcDoc`.
+
+Flow:
+
+```text
+1. Site root HTML is loaded.
+2. CrabLink scans for crab://<hash>.post references.
+3. For each post reference:
+   GET /o/b3:<hash> through gateway
+4. Raw JSON envelope is parsed.
+5. The parsed post content is passed to buildSandboxedSiteHtml as textAssetCache.
+6. embedRegistry renders a safe <crab-post> card into the sandbox.
+```
+
+Important security boundary:
+
+The site preview iframe remains scriptless and sandboxed.
+
+No extension APIs are exposed to the untrusted site document.
+
+Result:
+
+The user successfully saw a `<crab-post>` card render inside a site preview.
+
+---
+
+## 6. Live proof URLs from this session
+
+Because the stack was restarted during the session, older local dev objects may be gone.
+
+Fresh known-good proof URLs from the latest running stack:
+
+### Fresh post
+
+```text
+crab://b23f4c579201e17ab391dd3bff54635718a0b4c1371782ef87115b50f80bb1d3.post
+```
+
+### Fresh comment
+
+```text
+crab://ad0fd74aa4c20095c3a08ae9f8e111b68ccff6537ed5f8fb769fa43f782d8f63.comment
+```
+
+The comment was attached to the fresh post:
+
+```text
+parent:
+crab://b23f4c579201e17ab391dd3bff54635718a0b4c1371782ef87115b50f80bb1d3.post
+```
+
+The comment page showed:
+
+```text
+Comment Asset
+HTTP 200
+receipts: 1
+kind: comment
+content schema: ron.comment-content.v1
+content kind: comment
+language: en
+site: crab://ron2
+parent: crab://b23f4c579201e17ab391dd3bff54635718a0b4c1371782ef87115b50f80bb1d3.post
+body: test comment test test test comment test
+```
+
+---
+
+## 7. Live product proof sequence achieved
+
+## 7.1 `.post` proof
+
+We achieved:
+
+```text
+crab://post UI
+→ prepare request
+→ explicit ROC hold
+→ publish request
+→ returned crab://<hash>.post
+→ typed asset page loaded
+→ raw b3 content object displayed title/body
+```
+
+Then:
+
+```text
+site root HTML
+→ <crab-post src="crab://<hash>.post">
+→ site sandbox preview
+→ post card rendered with gateway-backed content
+```
+
+## 7.2 `.comment` proof
+
+We achieved:
+
+```text
+crab://comment UI
+→ body entered
+→ site context: crab://ron2
+→ parent target: crab://<hash>.post
+→ prepare request
+→ explicit ROC hold
+→ publish request
+→ returned crab://<hash>.comment
+→ typed asset page loaded
+→ raw b3 content object displayed body/site/parent
+```
+
+This proves comments are independent content-addressed assets with relation metadata.
+
+---
+
+## 8. Current running/testing stack notes
+
+For full live CrabLink testing, include wallet and passport.
+
+Terminal 1 — wallet:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+RUST_LOG=info SVC_WALLET_ADDR=127.0.0.1:8088 cargo run -p svc-wallet
+```
+
+Terminal 2 — passport:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+PASSPORT_CONFIG_FILE=crates/svc-passport/config/default.toml \
+RUST_LOG=info \
+cargo run -p svc-passport
+```
+
+Expected passport bind:
+
+```text
+127.0.0.1:5307
+```
+
+Terminal 3 — CrabLink dev stack:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+ECON_PATH="$(pwd)/configs/roc-economics.dev.toml"
+
+OMNIGATE_PASSPORT_BASE_URL=http://127.0.0.1:5307 \
+OMNIGATE_WALLET_BASE_URL=http://127.0.0.1:8088 \
+OMNIGATE_WALLET_BEARER=dev \
+RON_STORAGE_ROC_ECONOMICS_PATH="$ECON_PATH" \
+RON_STORAGE_ROC_ECONOMICS_ACTION=paid_storage_put \
+SVC_GATEWAY_STORAGE_BASE_URL=http://127.0.0.1:5303 \
+scripts/web3_crablink_dev_stack.sh
+```
+
+Terminal 4 — CrabLink build/package:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then reload Chrome extension:
+
+```text
+chrome://extensions
+→ CrabLink
+→ Reload
+→ Open React/full-tab CrabLink view
+```
+
+---
+
+## 9. Known local dev caveat
+
+Local dev stack storage/index data can be ephemeral.
+
+If the stack restarts, previous proof URLs may stop resolving because the local storage/index database was cleared or regenerated.
+
+This is expected in current local development.
+
+Fresh proof URLs should be recorded after each new successful stack run.
+
+Current fresh known-good proof URLs:
+
+```text
+Post:
+crab://b23f4c579201e17ab391dd3bff54635718a0b4c1371782ef87115b50f80bb1d3.post
+
+Comment:
+crab://ad0fd74aa4c20095c3a08ae9f8e111b68ccff6537ed5f8fb769fa43f782d8f63.comment
+```
+
+---
+
+## 10. Current UX notes
+
+## 10.1 Post typed page
+
+The post typed page now shows:
+
+```text
+title
+body
+schema
+kind
+language
+site
+parent if present
+tags
+CID
+manifest
+receipts
+```
+
+It is now useful and not just a generic asset DTO page.
+
+## 10.2 Comment typed page
+
+The comment typed page shows:
+
+```text
+body
+schema
+kind
+language
+site
+parent
+CID
+manifest
+receipts
+```
+
+The user saw “no title” in some UI spots for the comment.
+
+This is probably frontend display logic, not backend failure. Backend comment content defaults title to `"Comment"` if no title is supplied.
+
+Next session should check:
+
+```text
+extensions/chrome/src/pages/asset/AssetHydratedView.jsx
+```
+
+and make the text asset card title behavior kind-aware:
+
+```text
+post: use returned title, fallback "Untitled post"
+comment: use returned title, fallback "Comment"
+article: use returned title, fallback "Untitled article"
+```
+
+Also update truth copy:
+
+```text
+currently: "Post content truth"
+should become: "Comment content truth" on comment pages
+or generic: "Text asset content truth"
+```
+
+## 10.3 Post embed inside site
+
+The post embed card works.
+
+Current rendered card includes dev-oriented metadata:
+
+```text
+crab-post · gateway hydrated
+title
+body
+tags
+CID
+URL
+Site
+Parent
+Language
+```
+
+User is okay keeping extra info for dev purposes.
+
+Later production polish can hide advanced fields behind a dev toggle or compact manifest/details drawer.
+
+## 10.4 Comment embed not implemented yet
+
+`<crab-comment>` is still feature-gated.
+
+Next likely frontend step:
+
+```text
+add <crab-comment> embed hydration, same pattern as <crab-post>
+```
+
+Expected desired site HTML:
+
+```html
+<crab-post src="crab://b23f4c579201e17ab391dd3bff54635718a0b4c1371782ef87115b50f80bb1d3.post"></crab-post>
+
+<crab-comment src="crab://ad0fd74aa4c20095c3a08ae9f8e111b68ccff6537ed5f8fb769fa43f782d8f63.comment"></crab-comment>
+```
+
+The comment embed card should show:
+
+```text
+comment body
+site context
+parent target
+CID
+URL
+language
+tags
+```
+
+---
+
+## 11. Current architecture proof
+
+The current system now has this working shape:
+
+```text
+Creator mints post:
+CrabLink
+→ /assets/post/prepare
+→ /wallet/hold
+→ /assets/post
+→ storage/index
+→ crab://<hash>.post
+
+Creator mints comment:
+CrabLink
+→ /assets/comment/prepare
+→ /wallet/hold
+→ /assets/comment
+→ storage/index
+→ crab://<hash>.comment
+
+Reader views typed asset:
+CrabLink
+→ /crab/resolve?url=crab://<hash>.post|comment
+→ receives hydrated DTO
+→ fetches /o/b3:<hash>
+→ renders title/body from raw b3 object
+
+Site embeds post:
+CrabLink site preview
+→ scans root HTML for crab://<hash>.post
+→ fetches /o/b3:<hash>
+→ injects inert card into sandboxed iframe
+```
+
+This is the first working social/content graph.
+
+---
+
+## 12. Invariants preserved
+
+Throughout this session, the following invariants were preserved:
+
+```text
+- CrabLink calls svc-gateway only.
+- CrabLink does not call svc-wallet directly.
+- CrabLink does not call svc-storage directly.
+- CrabLink does not call svc-index directly.
+- CrabLink does not call omnigate directly.
+- CrabLink does not fake CIDs.
+- CrabLink does not fake receipts.
+- CrabLink does not fake post/comment body text.
+- CrabLink does not silently spend ROC.
+- Paid publish requires explicit hold proof.
+- Omnigate does not mutate ledger.
+- svc-gateway stays proxy-only.
+- storage stores bytes by content ID.
+- index owns asset→manifest pointers.
+- typed crab URLs remain crab://<64 lowercase hex>.<kind>.
+```
+
+---
+
+## 13. Important exact route contracts now active
+
+## 13.1 Post
+
+```text
+POST /assets/post/prepare
+POST /assets/post
+GET  /crab/resolve?url=crab://<hash>.post
+GET  /o/b3:<hash>
+```
+
+Gateway forwards to:
+
+```text
+POST /v1/assets/post/prepare
+POST /v1/assets/post
+GET  /v1/crab/resolve?url=...
+```
+
+## 13.2 Comment
+
+```text
+POST /assets/comment/prepare
+POST /assets/comment
+GET  /crab/resolve?url=crab://<hash>.comment
+GET  /o/b3:<hash>
+```
+
+Gateway forwards to:
+
+```text
+POST /v1/assets/comment/prepare
+POST /v1/assets/comment
+GET  /v1/crab/resolve?url=...
+```
+
+## 13.3 Article
+
+Gateway route exists:
+
+```text
+POST /assets/article/prepare
+POST /assets/article
+```
+
+but Omnigate implementation is not done yet.
+
+---
+
+## 14. Recommended next-session priorities
+
+## Priority 1 — Add `<crab-comment>` embed hydration
+
+Now that `.comment` mints and resolves, make it embeddable like `.post`.
+
+Likely files:
+
+```text
+extensions/chrome/src/shared/embed/embedRegistry.js
+extensions/chrome/src/pages/site/SiteSandboxPreview.jsx
+extensions/chrome/src/shared/embed/safeHtml.js if needed
+extensions/chrome/src/pages/site/site.css if visual polish needed
+```
+
+Expected behavior:
+
+```text
+<crab-comment src="crab://<hash>.comment"></crab-comment>
+→ fetch /o/b3:<hash>
+→ parse ron.comment-content.v1
+→ render inert comment card in site sandbox
+```
+
+Keep `crab-comment` gateway-only and fail-closed.
+
+## Priority 2 — Polish generic text asset viewer
+
+Likely file:
+
+```text
+extensions/chrome/src/pages/asset/AssetHydratedView.jsx
+```
+
+Fix wording:
+
+```text
+"Post content truth" should not appear on comment pages.
+```
+
+Possible replacement:
+
+```text
+"Text asset content truth"
+```
+
+or kind-specific:
+
+```text
+"Post content truth"
+"Comment content truth"
+"Article content truth"
+```
+
+Fix fallback title:
+
+```text
+comment fallback should be "Comment", not "no title"
+```
+
+## Priority 3 — Implement Omnigate `.article`
+
+Backend next.
+
+Likely files:
+
+```text
+crates/omnigate/src/routes/v1/text_assets.rs
+crates/omnigate/tests/article_asset_publish.rs
+```
+
+Gateway routes already exist.
+
+Article should probably support:
+
+```text
+title required
+body required
+site_context_crab_url required
+summary/excerpt optional
+hero_image_crab_url optional
+tags optional
+language optional
+payer_account required
+owner_passport_subject required
+client_idempotency_key optional
+```
+
+Possible article content envelope:
+
+```text
+schema: ron.article-content.v1
+kind: article
+asset_kind: article
+format: text/markdown or text/plain initially
+title
+body
+summary
+metadata
+relations.site
+linked_assets.hero_image
+site_connection
+creator_display
+created_at_ms
+```
+
+Important: do not overbuild article with all media/rights complexity yet. First prove the same chain:
+
+```text
+prepare → hold → publish → raw object → manifest → index pointer → typed asset page
+```
+
+## Priority 4 — Align CrabLink article client strict JSON
+
+After Omnigate `.article` lands, update:
+
+```text
+extensions/chrome/src/shared/api/articleAssetClient.js
+```
+
+Expected issue:
+
+The existing article client may send local/debug manifest fields just like post/comment did.
+
+Use strict DTO only.
+
+## Priority 5 — Article typed asset display
+
+`AssetHydratedView.jsx` already treats `article` as a text asset kind, so it may partially work after backend article lands.
+
+But likely polish needed:
+
+```text
+article title/body layout
+article summary/excerpt
+hero image if present
+site connection
+linked assets
+```
+
+---
+
+## 15. Suggested next-session order
+
+Recommended sequence:
+
+```text
+1. CrabLink: implement <crab-comment> embed hydration.
+2. CrabLink: fix generic text asset truth wording and comment fallback title.
+3. Test comment embed inside crab://site.
+4. RustyOnions: implement Omnigate .article prepare/publish.
+5. Run Omnigate clippy/tests.
+6. CrabLink: strict article client DTO.
+7. Live mint first crab://<hash>.article.
+8. Render article typed asset page.
+9. Optional: add <crab-article> embed hydration.
+```
+
+Reasoning:
+
+We should finish the comment proof loop before jumping to article:
+
+```text
+.comment mint
+→ .comment typed page
+→ <crab-comment> embed
+```
+
+This mirrors what we just did for `.post`.
+
+Then article can follow with much less uncertainty.
+
+---
+
+## 16. What to avoid next session
+
+Avoid:
+
+```text
+- jumping directly into video/music/podcast/stream backend
+- making CrabLink call storage/index/omnigate directly
+- storing fake local post/comment bodies in UI to make embeds look hydrated
+- loosening backend strict JSON too much
+- making comments depend on a central mutable site database
+- direct ledger/wallet calls from Omnigate
+- adding external-token/Solana/ROX/bridge logic
+- adding anti-adblock or invasive ad logic
+```
+
+The current architecture is strong because it is simple:
+
+```text
+content objects are immutable b3 objects
+manifests describe ownership/provenance/payout
+index maps assets to manifests
+CrabLink renders only gateway truth
+```
+
+---
+
+## 17. Current completion estimate
+
+For the NEXT_LEVEL text/social asset slice:
+
+```text
+.post backend:            done / proven
+.post typed page:         done / proven
+.post embed:              done / proven
+
+.comment backend:         done / proven
+.comment typed page:      done / proven
+.comment embed:           pending
+
+.article gateway route:   exposed
+.article backend:         pending
+.article typed page:      partially prepared by generic text viewer
+.article embed:           pending
+```
+
+Estimated completion for post/comment/article core primitive track:
+
+```text
+.post:      ~90–95%
+.comment:   ~70–80%
+.article:   ~20–30%
+```
+
+Estimated completion for the whole NEXT_LEVEL CrabLink refactor/product layer remains lower because many later asset types still remain:
+
+```text
+music
+video
+podcast
+stream
+game
+code/facet sandbox
+ads
+profiles/passports polish
+comments/threads UX
+article publishing
+```
+
+But this session substantially advanced the core b3 asset/social graph.
+
+---
+
+## 18. Final checkpoint summary
+
+The most important takeaway:
+
+```text
+RustyOnions/CrabLink now has working b3-backed social text assets.
+```
+
+Fresh live proofs:
+
+```text
+Post:
+crab://b23f4c579201e17ab391dd3bff54635718a0b4c1371782ef87115b50f80bb1d3.post
+
+Comment:
+crab://ad0fd74aa4c20095c3a08ae9f8e111b68ccff6537ed5f8fb769fa43f782d8f63.comment
+```
+
+Green backend proof:
+
+```text
+svc-gateway product proxy tests passed earlier in the session.
+omnigate clippy passed.
+omnigate text_asset_publish passed.
+omnigate comment_asset_publish passed.
+omnigate --all-targets passed.
+```
+
+CrabLink proof:
+
+```text
+.post minted
+.post resolved
+.post raw content displayed
+.post embedded into site with <crab-post>
+
+.comment minted
+.comment resolved
+.comment raw content displayed
+.comment preserved site context and parent post reference
+```
+
+Next ideal milestone:
+
+```text
+<crab-comment> embed works inside a site.
+```
+
+After that:
+
+```text
+Omnigate .article prepare/publish.
+```
+
+```
+```
+
+
+
+### END NOTE - MAY 14 2026 - 14:00 CST
+
+
+
+
+### BEGIN NOTE - MAY 14 2026 - 18:20 CST
+
+Below is a drop-in carryover note set for the next instance. It is focused on the next implementation target: **paid site visits where Visitor B pays 10 ROC and Creator A receives it when visiting `crab://ron3` or any paid site**.
+
+---
+
+# BEGIN CARRYOVER — Paid Site Visit / Creator Payout Implementation
+
+## 0. Current checkpoint
+
+We reached a major functional CrabLink/RustyOnions proof milestone.
+
+Proven in the current session:
+
+```text
+1. CrabLink React lane can create/use separate dev passport windows:
+   Creator A → passport:main:dev / acct_dev
+   Visitor B → passport:main:visitor-b / acct_visitor_b
+
+2. Both wallets can now hold real ROC when bootstrapped/funded.
+
+3. Image upload works through the real paid path.
+
+4. Post publish works.
+
+5. Comment publish works.
+
+6. Article publish works.
+
+7. crab://ron3 was created and successfully rendered a reference-graph site.
+
+8. The ron3 site embedded:
+   - one image
+   - one post
+   - one article
+   - one comment linked to the post
+   - one comment linked to the article
+
+9. Safe sandbox/embed rendering works functionally, although the cards are not polished yet.
+```
+
+The current `crab://ron3` proof assets were:
+
+```text
+Site:
+crab://ron3
+
+Image:
+crab://e3afd59f3d89a8b75938aa0c1dacafaadc24627b3127330b472352bc193cf22c.image
+
+Post:
+crab://9507498b94c7cd4373bd6aa98438b3473d8c80a4fede3bff2e662af937bd5ea9.post
+
+Comment for post:
+crab://bbe4f828bf589e9bc02e56cbf7c76af3091a31681d291accae7bc510504e9897.comment
+
+Article:
+crab://5d8694af57603a57da2b8e11f8d22dd8ff2cb2e474d0ebed067be43d1a59c668.article
+
+Comment for article:
+crab://d7b806f4fae6d4dfa230b69e2c9d9a0af24189dc8378c2012bb619b3b138e6fe.comment
+```
+
+Important cosmetic carryover: asset/embed cards should eventually support multiple numbered card/layout versions per asset/embed type, because different sites may want different visual formats. Defer this until the functional WEB3/NEXT_LEVEL flows are proven.
+
+---
+
+## 1. Current problem to solve next
+
+The user observed the correct gap:
+
+```text
+Creator A creates a site.
+Visitor B visits that site.
+No ROC is deducted from Visitor B.
+No ROC is credited to Creator A.
+```
+
+This is not a CrabLink UI bug by itself. The backend site visit path is currently read-only. Named site rendering is already proven through `/sites/:name` and `/crab/resolve?url=crab://<name>`, and site responses already carry ownership/payout metadata such as `payout.default_action = site_visit` and `payout.recipient_account = acct_dev` in prior notes. 
+
+The missing implementation is:
+
+```text
+paid site visit quote
+paid site visit payment
+wallet transfer from visitor to site owner
+receipt returned to CrabLink
+balance refresh proving debit and credit
+```
+
+---
+
+## 2. Architectural target
+
+Implement the first real **paid site visit** loop:
+
+```text
+Passport A / Creator:
+  passport:main:dev
+  wallet: acct_dev
+  creates crab://ron3
+
+Passport B / Visitor:
+  passport:main:visitor-b
+  wallet: acct_visitor_b
+  visits crab://ron3
+
+Expected payment:
+  acct_visitor_b pays 10 ROC
+  acct_dev receives 10 ROC
+```
+
+The intended flow:
+
+```text
+CrabLink Visitor B
+→ svc-gateway POST /sites/ron3/visit/quote
+→ omnigate POST /v1/sites/ron3/visit/quote
+→ ron-policy prices action site_visit at 10 ROC
+→ response says recipient is acct_dev
+
+CrabLink Visitor B explicitly confirms payment
+or uses explicit dev auto-pay cap
+
+CrabLink Visitor B
+→ svc-gateway POST /sites/ron3/visit/pay
+→ omnigate POST /v1/sites/ron3/visit/pay
+→ svc-wallet POST /v1/transfer
+→ ron-ledger commits transfer
+→ receipt returned
+
+CrabLink refreshes:
+  acct_visitor_b balance
+  acct_dev balance
+
+Proof:
+  Visitor B decreased by 10
+  Creator A increased by 10
+  wallet receipt op = transfer
+```
+
+Critical invariant: **do not fake the deduction or the creator payout in CrabLink**. CrabLink should display only backend truth. Existing notes say starter ROC must come from backend truth through `svc-wallet → ron-ledger → receipt → CrabLink display`, and that same rule applies to site visit payment. 
+
+---
+
+## 3. Why `ron-policy` matters here
+
+The user correctly noticed that `ron-policy` should participate in this.
+
+Current `ron-policy` status:
+
+```text
+ron-policy already has the ROC economics foundation.
+It has configs/roc-economics.toml.
+It exposes load_economics_toml / validate_economics_policy / EconomicsPolicy.
+It knows required beta actions including site_visit.
+It supports price_for(action, quantity).
+It supports validate_capture_plan(action, recipients, amount).
+It is side-effect-free and must not call wallet/ledger/storage itself.
+```
+
+The notes confirm that `site_visit` is already a required economics action, the policy API supports pricing and capture-plan validation, and dynamic recipients include `site_owner`. 
+
+Important boundary:
+
+```text
+ron-policy:
+  parses, validates, prices, validates capture/recipient plans
+
+omnigate / svc-gateway:
+  coordinate public product route flow and call policy
+
+svc-wallet:
+  performs the actual mutation
+
+ron-ledger:
+  stores durable truth
+```
+
+The notes explicitly warn that `ron-policy` is not wallet, ledger, accounting, storage, gateway, dashboard, or external-chain logic; services consume its decisions, and wallet/ledger remain mutation/truth boundaries. 
+
+---
+
+## 4. Pricing target
+
+For the next implementation, use:
+
+```text
+site_visit = 10 ROC
+```
+
+Current dev notes previously discussed cheap beta economics with low caps, and `site_visit` had been cheap in dev configs, but the user now wants 10 ROC for testing because it is obvious in wallet balances. 
+
+Recommended dev config change:
+
+```toml
+[actions.site_visit]
+enabled = true
+pricing_kind = "flat"
+price_minor = 10
+minimum_charge_minor = 10
+max_spend_minor = 50
+max_hold_multiplier_bps = 10000
+
+[[actions.site_visit.splits]]
+to = "site_owner"
+bps = 10000
+```
+
+Keep all money integer minor units only. No floats. No decimals. No negative values. Existing policy tests already enforce strict economics rules, including required actions, unknown-action rejection, disabled-action rejection, no float/negative money, and basis-point split totals. 
+
+---
+
+## 5. Route contract to implement
+
+### 5.1 Public gateway routes
+
+Add/confirm these in `svc-gateway`:
+
+```text
+POST /sites/:name/visit/quote
+POST /sites/:name/visit/pay
+```
+
+Gateway responsibilities:
+
+```text
+- public HTTP surface for CrabLink
+- forward request to omnigate
+- forward x-ron-passport, x-ron-wallet-account, authorization, idempotency-key, correlation headers
+- do not price
+- do not call svc-wallet
+- do not mutate ledger
+- do not fake payment result
+```
+
+Likely RustyOnions file:
+
+```text
+crates/svc-gateway/src/routes/product.rs
+```
+
+Likely tests:
+
+```text
+crates/svc-gateway/tests/product_routes_proxy.rs
+```
+
+### 5.2 Omnigate routes
+
+Add new module:
+
+```text
+crates/omnigate/src/routes/v1/site_visit.rs
+```
+
+Mount it from:
+
+```text
+crates/omnigate/src/routes/v1/mod.rs
+```
+
+Add endpoints:
+
+```text
+POST /v1/sites/:name/visit/quote
+POST /v1/sites/:name/visit/pay
+```
+
+Omnigate responsibilities:
+
+```text
+- resolve named site through existing site/index/storage path
+- extract owner/payout wallet account from site response/manifest
+- load economics policy using ron-policy
+- price site_visit
+- validate recipient map:
+    site_owner -> site owner payout wallet
+- quote amount = 10 ROC
+- on pay, forward wallet transfer to svc-wallet
+- return receipt and updated proof metadata
+- never mutate ledger directly
+```
+
+### 5.3 Wallet route to use
+
+Use `svc-wallet` transfer for the first proof:
+
+```text
+POST /v1/transfer
+```
+
+The current `svc-wallet` transfer handler exists and is the core account-to-account mutation endpoint. It requires bearer auth, transfer scope, strict DTO validation, nonce validation, idempotency handling, ledger commit, and records receipt/metrics. 
+
+Transfer request shape should be:
+
+```json
+{
+  "from": "acct_visitor_b",
+  "to": "acct_dev",
+  "asset": "roc",
+  "amount_minor": "10",
+  "nonce": 1,
+  "memo": "CrabLink site visit crab://ron3",
+  "idempotency_key": "crablink:site-visit:ron3:acct_visitor_b:<nonce-or-stable-key>"
+}
+```
+
+Wallet DTO constraints to remember:
+
+```text
+from and to must differ
+asset must validate
+amount must be > 0 and within config ceilings
+nonce must be >= 1
+idempotency key is required from header or body
+memo must be bounded/safe
+unknown fields reject
+```
+
+The codebundle confirms transfer DTO validation rejects `from == to`, validates asset/amount/nonce/idempotency/memo, and rejects unknown fields/zero/float amount cases.  
+
+---
+
+## 6. Important nonce issue
+
+`svc-wallet` currently enforces strict debit-side nonce. The transfer route reserves the strict next nonce before commit and rolls back on failure, then stores the receipt idempotently. 
+
+This is likely to surface again.
+
+Past symptoms:
+
+```text
+The user previously had to manually type nonce 8 / 9 during site creation flows.
+```
+
+Do not let paid site visit require the user to manually guess a nonce.
+
+Recommended short-term dev implementation options:
+
+### Option A — CrabLink tracks per-wallet nonce locally
+
+Not ideal, but fast for dev.
+
+Problem:
+
+```text
+If another window spends, local nonce can drift.
+```
+
+### Option B — Omnigate accepts nonce from caller but returns clear error
+
+Still painful.
+
+### Option C — Add/consume a wallet nonce route
+
+Best medium-term path.
+
+Possible future route:
+
+```text
+GET /wallet/:account/next-nonce
+GET /v1/wallet/:account/next-nonce
+```
+
+But this route may not exist yet. Next instance should inspect `svc-wallet` before coding.
+
+### Option D — For first proof, use user-provided nonce in UI but improve error handling
+
+Acceptable only for one batch if needed, but not a good UX.
+
+Recommended for next implementation:
+
+```text
+First backend tests can use explicit nonce = 1.
+Then decide whether to add a small next-nonce endpoint or extend omnigate wallet façade before final CrabLink UI polish.
+```
+
+Do not invent a fake nonce or bypass the wallet nonce table.
+
+---
+
+## 7. Quote response DTO
+
+Suggested quote response:
+
+```json
+{
+  "schema": "omnigate.site-visit-quote.v1",
+  "site_name": "ron3",
+  "crab_url": "crab://ron3",
+  "action": "site_visit",
+  "asset": "roc",
+  "amount_minor": "10",
+  "currency": "ROC",
+  "quantity": 1,
+  "payer": {
+    "passport_subject": "passport:main:visitor-b",
+    "wallet_account": "acct_visitor_b"
+  },
+  "recipient": {
+    "role": "site_owner",
+    "passport_subject": "passport:main:dev",
+    "wallet_account": "acct_dev"
+  },
+  "policy": {
+    "source": "configs/roc-economics.dev.toml",
+    "action": "site_visit",
+    "price_source": "ron-policy",
+    "split_validated": true
+  },
+  "next": {
+    "pay": "/v1/sites/ron3/visit/pay",
+    "gateway_pay": "/sites/ron3/visit/pay"
+  },
+  "warnings": []
+}
+```
+
+The quote endpoint must be read-only. It should not mutate wallet, ledger, storage, index, accounting, or rewarder.
+
+---
+
+## 8. Pay response DTO
+
+Suggested pay response:
+
+```json
+{
+  "schema": "omnigate.site-visit-pay.v1",
+  "site_name": "ron3",
+  "crab_url": "crab://ron3",
+  "action": "site_visit",
+  "asset": "roc",
+  "amount_minor": "10",
+  "payer": {
+    "passport_subject": "passport:main:visitor-b",
+    "wallet_account": "acct_visitor_b"
+  },
+  "recipient": {
+    "role": "site_owner",
+    "wallet_account": "acct_dev"
+  },
+  "wallet_transfer": {
+    "txid": "tx_...",
+    "op": "transfer",
+    "from": "acct_visitor_b",
+    "to": "acct_dev",
+    "asset": "roc",
+    "amount_minor": "10",
+    "nonce": 1,
+    "idem": "...",
+    "receipt_hash": "b3:..."
+  },
+  "receipt": {
+    "kind": "site_visit",
+    "source": "svc_wallet.v1",
+    "ledger_backed": true
+  },
+  "warnings": []
+}
+```
+
+The wallet receipt object already contains `op`, `from`, `to`, `asset`, `amount_minor`, `nonce`, `idem`, ledger sequence/root, and receipt hash. Existing wallet response DTOs are strict, amount strings are used, and receipts are the client-visible proof surface. 
+
+---
+
+## 9. RustyOnions files likely needed
+
+### `configs/roc-economics.dev.toml`
+
+Set `site_visit` to 10 ROC for dev testing.
+
+If no dev config path is currently loaded for omnigate, add an env var path for omnigate site visits similar to how storage uses economics config.
+
+Suggested env var:
+
+```text
+OMNIGATE_ROC_ECONOMICS_PATH=configs/roc-economics.dev.toml
+```
+
+or reuse a consistent existing naming scheme if one already exists.
+
+### `crates/omnigate/Cargo.toml`
+
+May need `ron-policy` as a dependency if `omnigate` does not already depend on it.
+
+### `crates/omnigate/src/routes/v1/site_visit.rs`
+
+New route module.
+
+Core logic:
+
+```text
+quote_site_visit(name, headers, body)
+pay_site_visit(name, headers, body)
+load economics policy
+resolve site owner
+price site_visit
+validate capture plan with site_owner
+forward wallet transfer on pay
+return deterministic response
+```
+
+### `crates/omnigate/src/routes/v1/mod.rs`
+
+Mount the new route.
+
+### `crates/omnigate/src/routes/v1/wallet.rs`
+
+May already have wallet façade forwarding for balance/hold/bootstrap. Use its existing patterns to call `svc-wallet` and preserve headers.
+
+Existing notes confirm omnigate wallet façade already forwards through public flow `CrabLink → svc-gateway → omnigate → svc-wallet`, and that `OMNIGATE_WALLET_BASE_URL` / `OMNIGATE_WALLET_BEARER` are the live knobs. 
+
+### `crates/omnigate/tests/site_visit_pay.rs`
+
+New integration test with fake storage/index/wallet or real dummy services.
+
+Test cases:
+
+```text
+quote returns 10 ROC and site_owner recipient
+pay forwards transfer to wallet
+pay response includes receipt
+missing site returns 404/problem
+missing visitor wallet rejects
+missing site owner/payout rejects fail-closed
+policy missing site_visit rejects fail-closed
+policy price over cap rejects
+wallet upstream unavailable returns 502/problem
+```
+
+### `crates/svc-gateway/src/routes/product.rs`
+
+Proxy:
+
+```text
+POST /sites/:name/visit/quote → /v1/sites/:name/visit/quote
+POST /sites/:name/visit/pay   → /v1/sites/:name/visit/pay
+```
+
+### `crates/svc-gateway/tests/product_routes_proxy.rs`
+
+Add proxy tests.
+
+---
+
+## 10. CrabLink files likely needed after backend routes pass
+
+Do backend first. Then CrabLink.
+
+Likely files:
+
+```text
+extensions/chrome/src/shared/api/siteClient.js
+extensions/chrome/src/pages/site/SiteRender.jsx
+extensions/chrome/src/pages/site/SitePage.jsx
+extensions/chrome/src/pages/site/SiteSandboxPreview.jsx
+extensions/chrome/src/app/shell/PassportDrawer.jsx
+extensions/chrome/src/app/settings.js
+extensions/chrome/src/shared/utils/devPassportSessions.js
+```
+
+CrabLink site visit UI should do:
+
+```text
+1. Resolve crab://ron3 as today.
+2. Detect site payout/default_action = site_visit.
+3. Ask quote route for amount.
+4. Show “Pay 10 ROC to visit this site?”
+5. On confirm, call pay route.
+6. Refresh visitor wallet.
+7. Optionally show creator wallet proof if known/dev mode.
+8. Render site after payment.
+```
+
+For dev speed, add explicit setting:
+
+```text
+Auto-pay dev site visits up to 10 ROC
+```
+
+But default should be explicit confirmation. No silent spend.
+
+Potential dev UX:
+
+```text
+Visitor B opens crab://ron3
+→ banner appears:
+  “This site costs 10 ROC to visit. Recipient: acct_dev.”
+→ button:
+  Pay 10 ROC and open site
+→ after success:
+  “Paid. Receipt tx_...”
+→ site renders
+→ balance chip refreshes
+```
+
+---
+
+## 11. “Automatic deduction” safety rule
+
+The user wants the visitor spend to happen when visiting the site. For dev testing, it can feel automatic only after an explicit opt-in.
+
+Allowed:
+
+```text
+User enables:
+  Auto-pay site visits up to 10 ROC
+
+Then:
+  crab://ron3 auto-quotes and auto-pays if amount <= 10
+```
+
+Not allowed:
+
+```text
+Silently spend ROC on page load with no setting, no cap, and no visible receipt.
+```
+
+This preserves the project invariant that CrabLink must not silently spend ROC.
+
+---
+
+## 12. Site owner / payout lookup
+
+Do not hardcode `acct_dev` for all sites.
+
+Correct source:
+
+```text
+site manifest / hydrated site page payout.recipient_account
+or owner.wallet_account if payout missing and policy allows fallback
+```
+
+Prior site manifest fixture includes:
+
+```text
+owner.wallet_account = acct_site_owner
+payout.default_action = site_visit
+payout.recipient_account = acct_site_owner
+```
+
+The codebundle shows site manifest JSON fixtures with owner wallet and payout recipient account for `site_visit`, which is exactly the metadata the paid visit route should use. 
+
+Fail closed if:
+
+```text
+site not found
+site manifest missing
+site owner wallet missing
+payout recipient missing
+recipient equals payer
+policy missing site_visit
+policy disabled site_visit
+price invalid
+wallet transfer fails
+```
+
+---
+
+## 13. Accounting and rewarder scope
+
+Do not block the first proof on full accounting/rewarder integration.
+
+First proof:
+
+```text
+svc-wallet transfer receipt proves debit/credit.
+balances prove debit/credit.
+```
+
+Later phase:
+
+```text
+ron-accounting records site_visit usage event.
+svc-rewarder consumes accounting/policy signals.
+creator/payout analytics show site visits.
+```
+
+This keeps the proof small while respecting architecture.
+
+---
+
+## 14. Transfer vs hold/capture decision
+
+For first paid site visit proof, use direct `transfer`.
+
+Reason:
+
+```text
+A site visit is immediate consumption.
+The proof target is visitor debit + creator credit.
+svc-wallet already has transfer.
+Direct transfer is simpler than hold/capture for this first route.
+```
+
+Longer-term model:
+
+```text
+- hold/capture/release for operations that can fail after reservation
+- direct transfer for immediate access after quote/pay
+- or hold→capture if site rendering/access receipt needs stronger lifecycle
+```
+
+Do not directly mutate ledger from omnigate. Always go through `svc-wallet`.
+
+---
+
+## 15. Test plan for backend
+
+### `ron-policy`
+
+```bash
+cargo fmt -p ron-policy
+cargo clippy -p ron-policy --all-targets -- -D warnings
+cargo test -p ron-policy --test economics_policy
+cargo test -p ron-policy --all-targets
+```
+
+Ron-policy gates and economics tests were already green previously, and the policy foundation is considered consumed by `svc-storage`; site visit should become the next consumer. 
+
+### `omnigate`
+
+```bash
+cargo fmt -p omnigate
+cargo test -p omnigate --test site_visit_pay
+cargo test -p omnigate --test site_launch
+cargo test -p omnigate --test named_site_crab_resolver
+cargo clippy -p omnigate --all-targets --no-deps -- -D warnings
+```
+
+### `svc-gateway`
+
+```bash
+cargo fmt -p svc-gateway
+cargo test -p svc-gateway --test product_routes_proxy
+cargo clippy -p svc-gateway --all-targets --no-deps -- -D warnings
+```
+
+### Full site-visit manual proof
+
+Start wallet first, then stack:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+RUST_LOG=info SVC_WALLET_ADDR=127.0.0.1:8088 cargo run -p svc-wallet
+```
+
+Then in another terminal:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+OMNIGATE_WALLET_BASE_URL=http://127.0.0.1:8088 \
+OMNIGATE_WALLET_BEARER=dev \
+OMNIGATE_ROC_ECONOMICS_PATH=configs/roc-economics.dev.toml \
+RON_STORAGE_ROC_ECONOMICS_PATH=configs/roc-economics.dev.toml \
+RON_STORAGE_ROC_ECONOMICS_ACTION=paid_storage_put \
+scripts/web3_crablink_dev_stack.sh
+```
+
+Existing notes emphasize starting with wallet upstream env vars so gateway/omnigate can route wallet calls correctly. 
+
+Proof commands after implementation:
+
+```bash
+curl -s http://127.0.0.1:8090/wallet/acct_visitor_b/balance \
+  -H 'Authorization: Bearer dev' \
+  -H 'x-ron-passport: passport:main:visitor-b' \
+  -H 'x-ron-wallet-account: acct_visitor_b' | jq .
+
+curl -s http://127.0.0.1:8090/wallet/acct_dev/balance \
+  -H 'Authorization: Bearer dev' \
+  -H 'x-ron-passport: passport:main:dev' \
+  -H 'x-ron-wallet-account: acct_dev' | jq .
+```
+
+Expected before:
+
+```text
+acct_visitor_b = 1776
+acct_dev       = whatever creator current balance is
+```
+
+Then quote:
+
+```bash
+curl -s -X POST http://127.0.0.1:8090/sites/ron3/visit/quote \
+  -H 'Authorization: Bearer dev' \
+  -H 'x-ron-passport: passport:main:visitor-b' \
+  -H 'x-ron-wallet-account: acct_visitor_b' \
+  -H 'Content-Type: application/json' \
+  -d '{"payer_account":"acct_visitor_b","payer_passport_subject":"passport:main:visitor-b"}' | jq .
+```
+
+Expected quote:
+
+```text
+action = site_visit
+amount_minor = "10"
+payer.wallet_account = acct_visitor_b
+recipient.wallet_account = acct_dev
+```
+
+Then pay, with explicit nonce:
+
+```bash
+curl -s -X POST http://127.0.0.1:8090/sites/ron3/visit/pay \
+  -H 'Authorization: Bearer dev' \
+  -H 'x-ron-passport: passport:main:visitor-b' \
+  -H 'x-ron-wallet-account: acct_visitor_b' \
+  -H 'Idempotency-Key: crablink-site-visit-ron3-acct-visitor-b-1' \
+  -H 'Content-Type: application/json' \
+  -d '{"payer_account":"acct_visitor_b","payer_passport_subject":"passport:main:visitor-b","nonce":1}' | jq .
+```
+
+Expected pay:
+
+```text
+schema = omnigate.site-visit-pay.v1
+wallet_transfer.op = transfer
+wallet_transfer.from = acct_visitor_b
+wallet_transfer.to = acct_dev
+wallet_transfer.amount_minor = "10"
+receipt_hash starts with b3:
+```
+
+Expected after:
+
+```text
+acct_visitor_b decreased by 10
+acct_dev increased by 10
+```
+
+---
+
+## 16. CrabLink test plan after frontend wiring
+
+After backend passes:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+```
+
+Reload extension:
+
+```text
+chrome://extensions
+→ reload CrabLink
+→ load unpacked from /Users/mymac/Desktop/crablink/dist/chrome-extension-staging
+```
+
+Manual proof:
+
+```text
+1. Open Creator A window.
+2. Confirm Creator A has ROC.
+3. Open Visitor B window.
+4. Confirm Visitor B has ROC.
+5. In Creator A, open or create crab://ron3.
+6. In Visitor B, open crab://ron3.
+7. Visitor B sees quote: 10 ROC.
+8. Visitor B confirms payment.
+9. Site renders.
+10. Visitor B balance decreases by 10.
+11. Creator A balance increases by 10.
+12. UI shows wallet transfer receipt.
+```
+
+For later dev-speed testing:
+
+```text
+Enable Auto-pay dev site visits up to 10 ROC.
+Then Visitor B can open crab://ron3 and pay automatically only because this explicit capped setting is enabled.
+```
+
+---
+
+## 17. Acceptance gates for the next implementation
+
+The next session is successful only if all of these are true:
+
+```text
+Backend:
+  - ron-policy config has site_visit = 10 ROC in dev config.
+  - omnigate quote route returns amount 10 and recipient acct_dev for crab://ron3.
+  - omnigate pay route calls svc-wallet transfer.
+  - svc-gateway proxies quote/pay without owning economics or wallet mutation.
+  - Wallet receipt is op=transfer.
+  - Visitor B balance decreases by 10.
+  - Creator A balance increases by 10.
+  - Replaying same idempotency key does not double-charge.
+  - Missing/invalid owner/payout/policy fails closed.
+
+CrabLink:
+  - Visitor B sees paid site quote.
+  - Visitor B explicitly confirms or has explicit auto-pay cap enabled.
+  - Payment receipt is visible.
+  - Balance chip refreshes after payment.
+  - Site renders only after payment succeeds, unless dev setting allows preview.
+  - No fake local balance.
+  - No silent spend by default.
+```
+
+---
+
+## 18. Pitfalls to avoid
+
+Do not:
+
+```text
+- Deduct ROC in CrabLink local state.
+- Credit Creator A in CrabLink local state.
+- Hardcode acct_dev except in tests/fixtures.
+- Bypass svc-wallet.
+- Mutate ron-ledger directly from omnigate or gateway.
+- Put ownership lookup inside ron-policy.
+- Use floating-point math.
+- Use decimal ROC values in DTOs.
+- Create public ROX/Solana/bridge logic.
+- Make site visits silently spend by default.
+- Let gateway become the economic authority.
+- Add browser extension permissions beyond what are needed.
+```
+
+Do:
+
+```text
+- Use integer minor units.
+- Use ron-policy for pricing and recipient validation.
+- Use svc-wallet transfer for mutation.
+- Return receipts.
+- Refresh both balances for proof.
+- Fail closed when policy/site/payout/wallet info is incomplete.
+- Keep all routes gateway-facing for CrabLink.
+- Add tests before UI wiring.
+```
+
+Existing project notes also preserve the major invariants: ROC stays internal, `svc-wallet` remains the mutation front door, `ron-ledger` remains durable truth, gateway/omnigate coordinate but do not directly mutate ledger, money is integer minor units only, and policy/capability gates fail closed. 
+
+---
+
+## 19. Recommended first prompt for next session
+
+Use this at the start of the next instance:
+
+```text
+We are continuing RustyOnions/CrabLink NEXT_LEVEL work. Current proof state: image, post, comment, article, site creation, safe embed rendering, and crab://ron3 reference-graph site are working. Creator A and Visitor B dev passport windows exist and both can have real ROC balances. The next implementation target is paid site visits: Visitor B opens crab://ron3 and pays 10 ROC to Creator A / site owner. Implement backend first.
+
+Use CODEBUNDLE_RS.md, ALLNOTES.MD, CODECHECK.md, CODECOMMENTS.MD, NEXT_LEVEL.MD, WEB3.MD, WEB3_2.MD, and the CrabLink codebundle. Preserve invariants: no fake ROC, no direct ledger mutation outside svc-wallet/ron-ledger, ron-policy is side-effect-free economics/policy authority, svc-gateway is proxy/public surface, omnigate is coordinator, svc-wallet is mutation front-door, integer minor units only, no silent spend.
+
+Build a paste-ready backend batch:
+- configs/roc-economics.dev.toml site_visit = 10
+- omnigate site_visit quote/pay routes
+- svc-gateway proxy routes
+- omnigate tests
+- svc-gateway proxy tests
+Then we will wire CrabLink UI after backend proof passes.
+```
+
+---
+
+## 20. Files to review before generating code next time
+
+RustyOnions:
+
+```text
+CODECHECK.md
+CODECOMMENTS.MD
+NEXT_LEVEL.MD
+WEB3.MD
+WEB3_2.MD
+ALLNOTES.MD
+ALL_DOCS_COMBINED.MD
+CODEBUNDLE_RS.md
+
+configs/roc-economics.toml
+configs/roc-economics.dev.toml
+
+crates/ron-policy/src/economics/mod.rs
+crates/ron-policy/src/economics/types.rs
+crates/ron-policy/src/economics/load.rs
+crates/ron-policy/src/economics/validate.rs
+crates/ron-policy/tests/economics_policy.rs
+
+crates/omnigate/src/routes/v1/sites.rs
+crates/omnigate/src/routes/v1/wallet.rs
+crates/omnigate/src/routes/v1/mod.rs
+crates/omnigate/tests/site_launch.rs
+crates/omnigate/tests/named_site_crab_resolver.rs
+
+crates/svc-gateway/src/routes/product.rs
+crates/svc-gateway/tests/product_routes_proxy.rs
+
+crates/svc-wallet/src/routes/v1/transfer.rs
+crates/svc-wallet/src/dto/requests.rs
+crates/svc-wallet/src/dto/responses.rs
+```
+
+CrabLink after backend:
+
+```text
+extensions/chrome/src/shared/api/siteClient.js
+extensions/chrome/src/shared/api/walletClient.js
+extensions/chrome/src/pages/site/SitePage.jsx
+extensions/chrome/src/pages/site/SiteRender.jsx
+extensions/chrome/src/pages/site/SiteSandboxPreview.jsx
+extensions/chrome/src/app/shell/BalanceChip.jsx
+extensions/chrome/src/app/shell/PassportDrawer.jsx
+extensions/chrome/src/app/settings.js
+extensions/chrome/src/shared/utils/devPassportSessions.js
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+```
+
+---
+
+## 21. Final strategic note
+
+This next feature is the first real **visitor → creator value loop**.
+
+Until now, most paid flows proved:
+
+```text
+creator/user pays storage/publishing costs
+```
+
+The next proof demonstrates:
+
+```text
+visitor pays creator/site owner for access/use
+```
+
+That is the first real internal economy loop for CrabLink:
+
+```text
+creation → ownership → site visit → ROC transfer → receipt → balance proof
+```
+
+Once that works, the same pattern can expand to:
+
+```text
+paid content view
+paid article view
+paid image view
+paid music/song play
+paid video view
+paid app/site access
+ad payout splits
+curator splits
+rewarder/accounting integration
+```
+
+This should be treated as a core NEXT_LEVEL milestone, not a cosmetic feature.
+
+
+### END NOTE - MAY 14 2026 - 18:20 CST
+
+
+
+### BEGIN NOTE - MAY 15 2026 - 13:40 CST
+
+
+Below is a **general carryover note set** for the next instance. It treats `NEXT_LEVEL.MD` as the active workstream and `QUICKCHAIN.MD` as a future-chain blueprint, not an immediate implementation target. That matches QUICKCHAIN’s own status language: it says it is a future-chain blueprint, not an instruction to implement blockchain logic now, and it lists several prerequisites before QuickChain implementation begins.  NEXT_LEVEL still says the immediate product layer is the b3/crab/ROC creator web: reusable asset primitives, reference-graph sites, passport/profile primitives, moderation/reputation surfaces, and creator-economy routing. 
+
+````markdown
+### BEGIN NOTE - MAY 15 2026 - GENERAL NEXT INSTANCE CARRYOVER
+
+# RustyOnions / CrabLink Carryover Notes — Paid Site Visit Proof, NEXT_LEVEL Continuation, and QuickChain Timing
+
+**Date:** 2026-05-15  
+**Primary active blueprint:** `NEXT_LEVEL.MD`  
+**New future blueprint:** `QUICKCHAIN.MD`  
+**Current recommendation:** Do **not** begin QuickChain implementation yet. Continue NEXT_LEVEL internal ROC/product proof work first. QuickChain should remain design doctrine until more internal ROC, accounting, rewarder, replay, and smoke gates are proven.
+
+---
+
+## 0. Executive summary
+
+This was a major RustyOnions/CrabLink success session.
+
+We proved the first real paid named-site visit loop:
+
+```text
+Visitor B / acct_visitor_b
+→ visits crab://ron7
+→ pays 10 ROC for site_visit
+→ Creator A / acct_dev receives 10 ROC
+→ svc-wallet returns a transfer receipt
+→ ron-ledger commits ledger/root truth
+→ browser confirms Passport B lost 10 ROC and Passport A received 10 ROC
+````
+
+This is the first confirmed visitor-to-creator ROC transfer for a named CrabLink site.
+
+This means RustyOnions now has a real local/internal creator-economy proof:
+
+```text
+create site
+attach payout recipient
+visitor pays to visit
+creator receives ROC
+wallet receipt exists
+ledger root exists
+CrabLink displays backend-derived balance movement
+```
+
+This is not a fake UI balance, not a mock payout, not a local-only CrabLink trick. It moved through the real backend path.
+
+The proven route chain:
+
+```text
+CrabLink / curl
+→ svc-gateway public route
+→ omnigate product route
+→ svc-index site pointer lookup
+→ svc-storage manifest load
+→ payout validation
+→ svc-wallet /v1/transfer
+→ ron-ledger commit
+→ receipt returned
+→ CrabLink/browser observes balance changes
+```
+
+The route pair is now live:
+
+```text
+POST /sites/:name/visit/quote
+POST /sites/:name/visit/pay
+```
+
+---
+
+## 1. Most important proof from this session
+
+### 1.1 Site setup proof
+
+`crab://ron7` resolved as a site with:
+
+```text
+schema = omnigate.site-page.v1
+site_name = ron7
+root_document_cid = b3:056cd088f6bb9ae45b11b1cd4786a2eb9b62f576e35f7132b33a74e4f07dac96
+manifest_cid = b3:918dad927484a43c2f716691794e24e7a608c951f38b9a6341a39f558284a4a9
+owner.passport_subject = passport:main:dev
+owner.wallet_account = acct_dev
+payout.default_action = site_visit
+payout.recipient_account = acct_dev
+metadata.title = Reference Graph Smoke Site
+```
+
+This proved the site manifest had the correct payout shape:
+
+```text
+site visit payer:      acct_visitor_b
+site visit recipient:  acct_dev
+site visit amount:     10 ROC
+```
+
+### 1.2 Quote proof
+
+The quote endpoint returned `200 OK`.
+
+Important fields:
+
+```text
+schema = omnigate.site-visit-quote.v1
+ok = true
+action = site_visit
+amount_minor = "10"
+asset = "roc"
+display_amount = "10 ROC"
+payer_account = "acct_visitor_b"
+visitor_wallet_account = "acct_visitor_b"
+visitor_passport_subject = "passport:main:visitor-b"
+recipient_account = "acct_dev"
+site_name = "ron7"
+crab_url = "crab://ron7"
+quote_id = "site-visit-b19f93aa1d951d55"
+quote_hash = "85e1c00714793cc3"
+```
+
+Nested policy fields confirmed:
+
+```text
+policy.source = omnigate.site_visit.v1
+policy.fixed_dev_price_minor = 10
+policy.price_env = OMNIGATE_SITE_VISIT_PRICE_MINOR
+policy.wallet_front_door = svc-wallet /v1/transfer
+```
+
+### 1.3 Pay proof
+
+The pay endpoint returned `200 OK`.
+
+Important fields:
+
+```text
+schema = omnigate.site-visit-payment.v1
+ok = true
+action = site_visit
+site_name = ron7
+crab_url = crab://ron7
+amount_minor = "10"
+asset = "roc"
+payer_account = "acct_visitor_b"
+visitor_wallet_account = "acct_visitor_b"
+recipient_account = "acct_dev"
+nonce = 1
+txid = tx_6f04012c31be95d392824308c440a6d2
+receipt_hash = b3:c02be0ecd068408ca18d7a5dd7bad7bf987b05ed0c3b6b15a222880f263aec8a
+```
+
+Wallet receipt:
+
+```text
+op = transfer
+from = acct_visitor_b
+to = acct_dev
+asset = roc
+amount_minor = 10
+nonce = 1
+idem = crablink-test-site-visit-pay-ron7d
+ledger_seq_start = 5
+ledger_seq_end = 6
+ledger_root = 3062a104f536661a279358cecb016d641ea77dff5990bd6a1dc4f2c762b36726
+txid = tx_6f04012c31be95d392824308c440a6d2
+receipt_hash = b3:c02be0ecd068408ca18d7a5dd7bad7bf987b05ed0c3b6b15a222880f263aec8a
+```
+
+Browser confirmation:
+
+```text
+Passport B / Visitor B lost 10 ROC.
+Passport A / Creator A received 10 ROC.
+```
+
+This is the main milestone to preserve.
+
+---
+
+## 2. Crates changed in this proof
+
+### 2.1 `omnigate`
+
+Important files:
+
+```text
+crates/omnigate/src/routes/v1/site_visit.rs
+crates/omnigate/src/routes/v1/mod.rs
+```
+
+What was added:
+
+```text
+POST /v1/sites/:name/visit/quote
+POST /v1/sites/:name/visit/pay
+```
+
+Responsibilities added to Omnigate:
+
+```text
+quote:
+  - validate route/body site name
+  - load site pointer from svc-index
+  - load site manifest from svc-storage
+  - validate manifest version/root
+  - validate payout.default_action == site_visit
+  - validate recipient_account matches manifest payout recipient
+  - return 10 ROC quote in dev mode
+
+pay:
+  - validate route/body site name
+  - load same site context
+  - reject self-payment
+  - validate payer account
+  - validate recipient against site manifest
+  - validate amount_minor == configured site_visit price
+  - call svc-wallet /v1/transfer
+  - wrap and return wallet receipt
+```
+
+Omnigate preserved its boundary:
+
+```text
+- Omnigate coordinates product flow.
+- Omnigate may resolve/hydrate product context.
+- Omnigate does not directly mutate ron-ledger.
+- Omnigate routes mutation through svc-wallet.
+- Omnigate does not become durable economic truth.
+```
+
+### 2.2 `svc-gateway`
+
+Important file:
+
+```text
+crates/svc-gateway/src/routes/product.rs
+```
+
+What was added:
+
+```text
+POST /sites/:name/visit/quote → /v1/sites/:name/visit/quote
+POST /sites/:name/visit/pay   → /v1/sites/:name/visit/pay
+```
+
+Gateway preserved its boundary:
+
+```text
+- Gateway is public route surface only.
+- Gateway proxies selected headers and body.
+- Gateway does not calculate price.
+- Gateway does not parse manifests.
+- Gateway does not choose payout recipients.
+- Gateway does not mutate wallet.
+- Gateway does not mutate ledger.
+```
+
+---
+
+## 3. Bugs encountered and lessons learned
+
+### 3.1 Initial missing route
+
+Initial quote curl returned:
+
+```text
+HTTP/1.1 404 Not Found
+```
+
+Meaning:
+
+```text
+svc-gateway public product route did not exist yet.
+```
+
+Fix:
+
+```text
+Add gateway product routes and Omnigate v1 routes.
+```
+
+### 3.2 Manifest parser issue
+
+After the route was registered, Omnigate returned:
+
+```json
+{
+  "code": "site_manifest_bad_json",
+  "message": "site manifest object was not valid JSON",
+  "retryable": true,
+  "reason": "site_manifest_bad_json"
+}
+```
+
+Root cause:
+
+```text
+site_visit.rs had a duplicate strict SiteManifestDocument parser that did not accept the actual generated site manifest fields.
+```
+
+Real site manifests include:
+
+```text
+asset_map
+route_map
+owner
+payout
+metadata
+provenance
+storage
+receipts
+```
+
+Fix:
+
+```text
+Update SiteManifestDocument in site_visit.rs to match/accept generated manifest fields.
+```
+
+Important future refactor:
+
+```text
+Avoid duplicate strict manifest DTOs in separate route files.
+Prefer shared manifest loading helper or parse manifest as serde_json::Value and extract only fields needed for site_visit.
+```
+
+### 3.3 Running process was stale
+
+`cargo test` and `cargo clippy` passed, but live curl still showed old behavior until the stack was restarted.
+
+Lesson:
+
+```text
+After route code changes, restart the RustyOnions dev stack.
+cargo test/clippy compile code but do not restart already-running svc-gateway/omnigate processes.
+```
+
+### 3.4 Dev stack may flush site data
+
+After stack restart, old sites may disappear depending on local artifact DB/storage config.
+
+Practical rule:
+
+```text
+After stack restart:
+  1. Check GET /sites/<name>.
+  2. If 404, recreate site in CrabLink as Creator A / acct_dev.
+  3. Then run Visitor B payment proof.
+```
+
+---
+
+## 4. Commands/gates run successfully
+
+Commands run during this milestone:
+
+```text
+cargo fmt -p omnigate
+cargo fmt -p svc-gateway
+cargo test -p omnigate --test site_launch
+cargo test -p svc-gateway --test product_routes_proxy
+cargo clippy -p omnigate --all-targets --no-deps -- -D warnings
+cargo clippy -p svc-gateway --all-targets --no-deps -- -D warnings
+```
+
+Observed proof:
+
+```text
+omnigate site_launch:
+  5 passed / 0 failed
+
+svc-gateway product_routes_proxy:
+  7 passed / 0 failed
+
+omnigate clippy:
+  clean
+
+svc-gateway clippy:
+  clean
+```
+
+Still needed:
+
+```text
+Dedicated tests for site_visit quote/pay.
+Dedicated gateway proxy tests for site_visit quote/pay.
+Dedicated smoke script for full quote → pay → balance delta.
+```
+
+---
+
+## 5. Current active blueprint interpretation
+
+### 5.1 NEXT_LEVEL remains active
+
+NEXT_LEVEL is still the active product blueprint.
+
+NEXT_LEVEL’s mission:
+
+```text
+Move from:
+  paid image upload
+  + crab://site proof
+  + <crab-image> reference embed proof
+
+Into:
+  content-addressed creator web
+  reusable asset primitives
+  reference-graph sites
+  manifest-backed attribution
+  RON Passports with @usernames
+  reputation and moderation summaries
+  anonymous/pseudonymous alt passports
+  ROC payout routing
+  developer UX
+```
+
+The newly proven paid site visit should be added mentally to the proven foundation.
+
+Current foundation now includes:
+
+```text
+- paid image asset path works
+- site creation/open flow works
+- named site rendering works
+- site root HTML rendering works
+- <crab-image> reference rendering works
+- post/comment/article embeds have been functionally proven in reference graph site flow
+- paid named-site visit quote works
+- paid named-site visit pay works
+- Visitor B pays Creator A 10 ROC
+- wallet receipt + ledger root returned
+```
+
+### 5.2 QUICKCHAIN is not active implementation yet
+
+QUICKCHAIN.MD is now an important future blueprint, but not the immediate coding target.
+
+Its thesis:
+
+```text
+QuickChain = receipt-first, epoch-settled, state-root verified, chunk-carried, passport-trusted, proof-prunable ROC ledger.
+```
+
+But it explicitly says not to implement until several prerequisites are complete.
+
+We have now completed or partially completed these QuickChain prerequisites:
+
+```text
+[x] paid site visit proof works end-to-end
+[x] Visitor B balance decreases
+[x] Creator A balance increases
+[partial] wallet receipt exists and is returned from backend
+```
+
+Still not complete enough to begin QuickChain implementation:
+
+```text
+[ ] wallet receipt displays cleanly in CrabLink paid site visit UI
+[ ] ron-ledger replay proves balances in an automated/checkpointed test
+[ ] ron-accounting has sealed usage snapshot proof for site_visit/view events
+[ ] svc-rewarder can compute deterministic payout plan from accounting/policy
+[ ] wallet/rewarder replay does not double issue
+[ ] product smoke scripts prove internal ROC loop automatically
+[ ] NEXT_LEVEL paid view patterns are stable enough to know transaction volume
+```
+
+Conclusion:
+
+```text
+Do not implement QuickChain yet.
+Do implement QuickChain-adjacent prerequisites:
+  - smoke scripts
+  - receipt display
+  - ledger replay checks
+  - accounting event snapshots
+  - rewarder deterministic payout planning
+  - product route hardening
+```
+
+---
+
+## 6. What should happen next, in order
+
+### Priority 1 — Freeze this success into reproducible proof
+
+Before building more features, make this paid site visit path reproducible.
+
+Add:
+
+```text
+scripts/web3_paid_site_visit_smoke.sh
+```
+
+Smoke script should prove:
+
+```text
+1. Stack is healthy.
+2. Site exists or script creates a test site.
+3. Site resolver returns payout.default_action = site_visit.
+4. Check acct_visitor_b balance before.
+5. Check acct_dev balance before.
+6. POST /sites/:name/visit/quote.
+7. Assert schema == omnigate.site-visit-quote.v1.
+8. Assert amount_minor == 10.
+9. Assert payer_account == acct_visitor_b.
+10. Assert recipient_account == acct_dev.
+11. POST /sites/:name/visit/pay.
+12. Assert schema == omnigate.site-visit-payment.v1.
+13. Assert wallet_receipt.op == transfer.
+14. Assert wallet_receipt.from == acct_visitor_b.
+15. Assert wallet_receipt.to == acct_dev.
+16. Assert wallet_receipt.amount_minor == 10.
+17. Check acct_visitor_b after = before - 10.
+18. Check acct_dev after = before + 10.
+19. Print txid, receipt_hash, ledger_root.
+```
+
+This is the most important immediate follow-up.
+
+Do not rely on one manual terminal success forever. Convert it into a script.
+
+### Priority 2 — Add tests to `omnigate`
+
+Suggested new file:
+
+```text
+crates/omnigate/tests/site_visit.rs
+```
+
+Test cases:
+
+```text
+site_visit_quote_returns_10_roc_for_paid_site
+site_visit_quote_rejects_recipient_mismatch
+site_visit_quote_rejects_missing_payer
+site_visit_quote_rejects_bad_site_name
+site_visit_quote_rejects_non_site_visit_payout
+site_visit_pay_rejects_self_payment
+site_visit_pay_rejects_amount_mismatch
+site_visit_pay_uses_wallet_transfer
+site_visit_pay_returns_wallet_receipt
+site_visit_pay_preserves_idempotency_key
+```
+
+### Priority 3 — Add gateway proxy tests
+
+Extend:
+
+```text
+crates/svc-gateway/tests/product_routes_proxy.rs
+```
+
+Add:
+
+```text
+site_visit_quote_proxy_targets_omnigate_v1
+site_visit_pay_proxy_targets_omnigate_v1
+site_visit_quote_preserves_headers_and_body
+site_visit_pay_preserves_idempotency_key
+```
+
+Gateway must remain proxy-only.
+
+### Priority 4 — Update route-contract docs
+
+Update:
+
+```text
+docs/WEB3_2_PRODUCT_ROUTE_CONTRACTS.md
+```
+
+Add:
+
+```text
+POST /sites/:name/visit/quote
+POST /sites/:name/visit/pay
+```
+
+Document schemas:
+
+```text
+omnigate.site-visit-quote.v1
+omnigate.site-visit-payment.v1
+```
+
+Document proof fields:
+
+```text
+amount_minor
+payer_account
+recipient_account
+quote_id
+quote_hash
+wallet_receipt
+txid
+receipt_hash
+ledger_root
+```
+
+### Priority 5 — Ensure CrabLink paid-site UI uses the route end-to-end
+
+CrabLink frontend gate already mounted and detected paid access earlier. It quoted or attempted to quote through gateway.
+
+Now that backend route works, verify full UI path:
+
+```text
+1. Restart stack.
+2. Recreate or verify crab://ron7 as Creator A.
+3. Reload packaged CrabLink extension.
+4. Switch to Visitor B.
+5. Open crab://ron7.
+6. Paid access card should quote 10 ROC.
+7. User clicks pay.
+8. CrabLink calls /sites/ron7/visit/pay through gateway.
+9. Site unlocks only after backend payment receipt.
+10. Balance chip refreshes.
+11. Receipt proof panel shows txid/receipt_hash.
+12. Creator A balance shows +10 after refresh.
+```
+
+If terminal curl works but UI does not, inspect:
+
+```text
+extensions/chrome/src/shared/api/siteVisitClient.js
+extensions/chrome/src/pages/site/SiteVisitAccess.jsx
+extensions/chrome/src/pages/site/SiteRender.jsx
+extensions/chrome/src/pages/site/SitePage.jsx
+```
+
+Do not fake unlock. Do not fake receipt. Do not locally edit balances.
+
+### Priority 6 — Polish paid receipt display
+
+CrabLink should display:
+
+```text
+Paid site visit confirmed
+Amount: 10 ROC
+From: acct_visitor_b
+To: acct_dev
+txid: ...
+receipt_hash: ...
+ledger_root: ...
+site: crab://ron7
+```
+
+Potential UI locations:
+
+```text
+- paid access card
+- site manifest/proof drawer
+- wallet receipt drawer/history
+- developer JSON details
+```
+
+Important:
+
+```text
+Receipt display is not wallet truth itself; backend remains truth.
+```
+
+### Priority 7 — Move site_visit price into policy/economics config later
+
+Current route uses:
+
+```text
+OMNIGATE_SITE_VISIT_PRICE_MINOR = 10
+```
+
+This is acceptable for proof/dev.
+
+Future target:
+
+```text
+configs/roc-economics.toml
+or configs/roc-economics.dev.toml
+
+[action.site_visit]
+base_price_minor = 10
+asset = "roc"
+splits...
+```
+
+But do not immediately overbuild splits until the simple site_visit smoke is locked.
+
+---
+
+## 7. NEXT_LEVEL project path after paid site visit
+
+After the paid site visit route is smoke-tested and UI-confirmed, return to NEXT_LEVEL order.
+
+Recommended order:
+
+```text
+1. Lock paid site_visit smoke.
+2. Ensure CrabLink UI pay/unlock works.
+3. Update docs/contracts.
+4. Add tests.
+5. Improve receipt display.
+6. Then choose between:
+   A. CrabLink polish / embed registry cleanup
+   B. Passport @username/profile foundation
+   C. Text primitive backend hardening/post-comment-article next batch
+```
+
+Given current project state, the most strategically useful next major product step is:
+
+```text
+Passport/profile identity foundation:
+  - @username parser/normalizer
+  - public profile/passport DTOs
+  - read-only profile route
+  - site creator hydration
+```
+
+Why?
+
+Because paid sites now exist. Users need to know who they are paying.
+
+The site page should eventually show:
+
+```text
+site creator: @alice
+rep: 842
+mod: 77
+payout: acct_dev
+```
+
+This turns paid visits from “pay an account label” into “pay a visible creator identity.”
+
+However, do not jump directly into full passport mutation across five crates. Follow NEXT_LEVEL anti-spaghetti order:
+
+```text
+1. ron-proto + ron-naming DTO/parser foundation
+2. svc-passport username claim
+3. omnigate read-only profile hydration
+4. svc-gateway proxy exposure
+5. CrabLink profile/creator UI
+```
+
+---
+
+## 8. QuickChain timing decision
+
+### 8.1 Do not start full QuickChain now
+
+QuickChain is the future settlement spine, but starting it now would distract from proving the internal economy thoroughly.
+
+We now have a huge proof, but QuickChain still depends on several missing layers:
+
+```text
+- automated paid site visit smoke
+- complete receipt UI
+- deterministic ledger replay proof from the paid-site flow
+- accounting event emission for site_visit/view
+- sealed accounting windows
+- rewarder deterministic payout plans
+- proof that wallet/rewarder replay does not double issue
+- paid asset/content view patterns beyond site_visit
+- policy/economics config integration
+```
+
+### 8.2 What QuickChain work is allowed now
+
+Allowed now:
+
+```text
+- keep QUICKCHAIN.MD as blueprint
+- add it to docs / project notes
+- reference it in carryover notes
+- add TODO comments or planning notes only
+- design future DTOs on paper
+- avoid external settlement code
+```
+
+Not allowed now:
+
+```text
+- no QuickChain crate
+- no Solana/ROX anchor implementation
+- no validator committee code
+- no public bridge
+- no staking/bonding/slashing code
+- no chain logic in CrabLink
+- no chain mutation in gateway/omnigate
+```
+
+### 8.3 What should be proven before QuickChain Phase 1
+
+Before QuickChain implementation begins, prove:
+
+```text
+1. Paid site visit is smoke-scripted and repeatable.
+2. Paid image/site/post/comment/article flows are stable.
+3. Paid content view route shape is known.
+4. ron-ledger replay can reproduce balances and roots.
+5. receipt hashes are canonical and deterministic.
+6. ron-accounting can ingest and seal usage snapshots.
+7. svc-rewarder can create deterministic payout manifests.
+8. wallet/rewarder replay cannot double-issue.
+9. policy/economics config drives at least one payout split.
+10. CrabLink displays receipts and backend truth cleanly.
+```
+
+After that, begin QuickChain Phase 1 only:
+
+```text
+Local checkpoint roots:
+  - canonical receipt hashing
+  - account state tree
+  - state root generation
+  - receipt root generation
+  - local checkpoint DTO
+  - replay proves same roots
+```
+
+No distributed validators yet.
+
+---
+
+## 9. Current rough completion estimate
+
+These are practical estimates for local/internal beta, not production internet.
+
+```text
+RustyOnions core substrate/service foundation:
+  92–94%
+
+RustyOnions internal ROC / WEB3 beta loop:
+  88–91%
+  Reason: paid storage/image/site foundations plus real paid named-site visit now proven.
+
+RustyOnions WEB3_2 / NEXT_LEVEL backend product layer:
+  72–78%
+  Reason: image/site/post/comment/article/reference graph proof is strong, but identity, paid views, policy splits, accounting/rewarder, media, and hosting remain.
+
+CrabLink Chrome extension / React browser client:
+  91–94%
+  Reason: React lane, site/image/social primitives, passport/balance, paid site gate, and backend truth display are now strong.
+
+CrabLink production-grade browser UX:
+  76–82%
+  Reason: works well locally, but receipts/history, profile truth, packaging hardening, smoke coverage, and polish remain.
+
+Combined RustyOnions + CrabLink internal WEB3 beta:
+  87–90%
+  Reason: the first real visitor-to-creator ROC payment loop is now proven.
+
+Full NEXT_LEVEL blueprint:
+  62–68%
+  Reason: the core economic proof is strong, but full blueprint includes passports/usernames, reputation/moderation, alts, text/media primitives, paid views, revisions, provider payouts, hosting placement, policy hardening, and accounting/rewarder productization.
+
+QuickChain implementation readiness:
+  15–20%
+  Reason: blueprint exists and the hot receipt path is now partially proven, but required replay/accounting/rewarder/checkpoint foundations are not ready yet.
+```
+
+---
+
+## 10. Current known-good proof artifacts
+
+Paid site:
+
+```text
+crab://ron7
+```
+
+Root document CID:
+
+```text
+b3:056cd088f6bb9ae45b11b1cd4786a2eb9b62f576e35f7132b33a74e4f07dac96
+```
+
+Manifest CID:
+
+```text
+b3:918dad927484a43c2f716691794e24e7a608c951f38b9a6341a39f558284a4a9
+```
+
+Quote:
+
+```text
+schema = omnigate.site-visit-quote.v1
+action = site_visit
+amount_minor = 10
+payer_account = acct_visitor_b
+recipient_account = acct_dev
+quote_id = site-visit-b19f93aa1d951d55
+quote_hash = 85e1c00714793cc3
+```
+
+Payment:
+
+```text
+schema = omnigate.site-visit-payment.v1
+op = transfer
+from = acct_visitor_b
+to = acct_dev
+amount_minor = 10
+nonce = 1
+txid = tx_6f04012c31be95d392824308c440a6d2
+receipt_hash = b3:c02be0ecd068408ca18d7a5dd7bad7bf987b05ed0c3b6b15a222880f263aec8a
+ledger_root = 3062a104f536661a279358cecb016d641ea77dff5990bd6a1dc4f2c762b36726
+```
+
+Browser confirmation:
+
+```text
+Visitor B / Passport B lost 10 ROC.
+Creator A / Passport A received 10 ROC.
+```
+
+---
+
+## 11. Manual reproduction commands
+
+Health:
+
+```bash
+curl -sS http://127.0.0.1:8090/healthz
+curl -sS http://127.0.0.1:9090/healthz
+```
+
+Check site:
+
+```bash
+curl -i -sS "http://127.0.0.1:8090/sites/ron7"
+```
+
+Quote:
+
+```bash
+curl -i -sS \
+  -X POST "http://127.0.0.1:8090/sites/ron7/visit/quote" \
+  -H "Authorization: Bearer dev" \
+  -H "Content-Type: application/json" \
+  -H "x-ron-passport: passport:main:visitor-b" \
+  -H "x-ron-wallet-account: acct_visitor_b" \
+  -H "Idempotency-Key: crablink-test-site-visit-quote-ron7d" \
+  --data '{"site_name":"ron7","crab_url":"crab://ron7","action":"site_visit","quantity":1,"payer_account":"acct_visitor_b","visitor_wallet_account":"acct_visitor_b","visitor_passport_subject":"passport:main:visitor-b","recipient_account":"acct_dev","max_amount_minor":"10","client_idempotency_key":"crablink-test-site-visit-quote-ron7d"}'
+```
+
+Pay:
+
+```bash
+curl -i -sS \
+  -X POST "http://127.0.0.1:8090/sites/ron7/visit/pay" \
+  -H "Authorization: Bearer dev" \
+  -H "Content-Type: application/json" \
+  -H "x-ron-passport: passport:main:visitor-b" \
+  -H "x-ron-wallet-account: acct_visitor_b" \
+  -H "Idempotency-Key: crablink-test-site-visit-pay-ron7d" \
+  --data '{"site_name":"ron7","crab_url":"crab://ron7","action":"site_visit","payer_account":"acct_visitor_b","visitor_wallet_account":"acct_visitor_b","visitor_passport_subject":"passport:main:visitor-b","recipient_account":"acct_dev","amount_minor":"10","asset":"roc","client_idempotency_key":"crablink-test-site-visit-pay-ron7d"}'
+```
+
+Balance check:
+
+```bash
+curl -sS "http://127.0.0.1:8090/wallet/acct_visitor_b/balance" | python3 -m json.tool
+curl -sS "http://127.0.0.1:8090/wallet/acct_dev/balance" | python3 -m json.tool
+```
+
+Expected:
+
+```text
+acct_visitor_b decreases by 10 ROC.
+acct_dev increases by 10 ROC.
+```
+
+---
+
+## 12. Invariants to preserve going forward
+
+### 12.1 Economic invariants
+
+```text
+- ROC remains internal.
+- No ROX/Solana/external settlement yet.
+- No staking/liquidity/exchange-facing logic.
+- No floating-point money math.
+- Integer minor units only.
+- Basis points only for percentages.
+- Conservation must hold except explicit issue/burn.
+- Wallet mutation goes through svc-wallet.
+- ron-ledger is durable truth.
+- ron-accounting is not balance truth.
+- svc-rewarder does not directly mutate ledger.
+- No fake balances.
+- No fake receipts.
+- No silent spend.
+```
+
+### 12.2 Service boundary invariants
+
+```text
+svc-gateway:
+  public route surface/proxy only
+  no wallet mutation
+  no ledger mutation
+  no pricing
+  no manifest business logic
+
+omnigate:
+  product coordinator/hydrator
+  quote/access coordinator
+  no durable economic truth
+  no direct ledger mutation
+
+svc-wallet:
+  economic mutation front-door
+  receipt producer
+  nonce/idempotency gate
+
+ron-ledger:
+  append-only/replayable durable truth
+
+ron-accounting:
+  usage/metering snapshots
+
+svc-rewarder:
+  deterministic payout planning only
+
+CrabLink:
+  gateway-only browser client
+  no direct internal service calls
+  no wallet engine
+  no ledger truth
+  no fake unlocks
+```
+
+### 12.3 Asset/site invariants
+
+```text
+- b3:<64 lowercase hex> is canonical internal content ID.
+- crab://<64hex>.<kind> is canonical public typed asset URL.
+- crab://<site_name> is a human pointer.
+- Sites store references, not owned copies of every content object.
+- Storage stores bytes by CID only.
+- Index stores pointers and lookup metadata.
+- Manifests are declarative.
+- No arbitrary code execution from crab links.
+```
+
+### 12.4 Passport/privacy invariants
+
+```text
+- Passports are identities/capability records, not wallets.
+- @username is a human pointer, not the canonical identity.
+- passport_subject remains canonical identity.
+- Main passports may create sites when policy allows.
+- Anonymous/pseudonymous alts may browse/comment but must not create sites by default.
+- Alt accounts/balances are separate.
+- Public profile/passport manifests must not expose private alt↔main linkage.
+- Do not promise privacy that is not implemented.
+```
+
+---
+
+## 13. Recommended next session plan
+
+### Best next session plan
+
+```text
+1. Build scripts/web3_paid_site_visit_smoke.sh.
+2. Add gateway proxy tests for site_visit.
+3. Add omnigate site_visit tests.
+4. Update WEB3_2_PRODUCT_ROUTE_CONTRACTS.md.
+5. Verify CrabLink UI pay/unlock flow using Visitor B.
+6. Add receipt display polish in CrabLink.
+7. Then decide whether to begin:
+   A. passport/profile @username foundation, or
+   B. paid views for assets, or
+   C. text primitive hardening, depending on momentum.
+```
+
+### Strong recommendation
+
+Do not jump to QuickChain implementation next.
+
+The better path is:
+
+```text
+NEXT_LEVEL product proof
+→ route tests
+→ smoke automation
+→ receipt UI
+→ ledger replay proof
+→ accounting snapshots
+→ rewarder deterministic payout proof
+→ then QuickChain Phase 1 local roots
+```
+
+---
+
+## 14. QuickChain preflight checklist
+
+Before opening QuickChain implementation files, verify:
+
+```text
+[ ] `scripts/web3_paid_site_visit_smoke.sh` exists and passes.
+[ ] CrabLink UI can perform paid site visit without terminal curl.
+[ ] CrabLink displays txid/receipt_hash/ledger_root.
+[ ] site_visit event is emitted into accounting or a planned accounting emitter exists.
+[ ] ron-ledger has deterministic replay test for the exact paid transfer.
+[ ] receipt hash canonicalization is documented.
+[ ] account balance replay/root format is known.
+[ ] svc-rewarder can produce deterministic payout manifest from accounting input.
+[ ] wallet/rewarder replay cannot double-issue or double-pay.
+[ ] paid content view route shape exists beyond site_visit.
+[ ] policy/economics config controls price/splits for at least one action.
+```
+
+Only after those are done should QuickChain Phase 1 begin.
+
+---
+
+## 15. QuickChain future implementation order when ready
+
+When prerequisites are met, start with the least dangerous QuickChain slice:
+
+```text
+Phase 1 — Local checkpoint roots only
+```
+
+Do not start with validators.
+
+Phase 1 tasks:
+
+```text
+ron-ledger:
+  canonical receipt bytes
+  receipt hash vectors
+  account state representation
+  account state root
+  receipt batch root
+  checkpoint DTO
+  replay produces same state root
+  replay produces same receipt root
+```
+
+Only after Phase 1 is green:
+
+```text
+Phase 2 — Epoch sealing
+  accounting window root
+  reward manifest root
+  policy hash
+  net delta root
+  conservation proof
+
+Phase 3 — Replicated committee
+  validator identities
+  signatures
+  quorum verification
+  fork detection
+
+Phase 4+ — Carrier/archive/pruning/ROX anchor
+```
+
+ROX/Solana anchor remains late and optional:
+
+```text
+ROC stores the facts.
+ROX anchors proof that the facts existed.
+```
+
+Do not store raw ROC history in Solana transactions.
+
+---
+
+## 16. One-sentence status for next instance
+
+```text
+RustyOnions/CrabLink has now proven the first real paid named-site visit loop: crab://ron7 quoted 10 ROC, acct_visitor_b paid acct_dev, svc-wallet returned a transfer receipt, ron-ledger returned a ledger root, and the browser confirmed Passport B lost 10 ROC while Passport A received 10 ROC. Next: turn this proof into automated tests/smoke and CrabLink receipt UI, then continue NEXT_LEVEL; keep QUICKCHAIN.MD as future doctrine until ledger replay, accounting snapshots, rewarder plans, and product smokes are proven.
+```
+
+
+
+### END NOTE - MAY 15 2026 - 13:40 CST

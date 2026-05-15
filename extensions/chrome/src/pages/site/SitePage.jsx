@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — Route owner for crab://site and named crab://<site_name> views.
- * RO:WHY — Keeps site creation product-clean: guided launch first, preview second, diagnostics collapsed.
+ * RO:WHY — Keeps site creation and paid named-site visits product-clean while diagnostics stay collapsed.
  * RO:INTERACTS — SiteLaunchFlow, SiteRender, SiteManifestDrawer, current passport/wallet app context.
- * RO:INVARIANTS — no silent ROC spend; current passport creates own sites; unsafe site HTML stays sandboxed.
+ * RO:INVARIANTS — no silent ROC spend; paid site visits require quote/pay confirmation; unsafe site HTML stays sandboxed.
  * RO:METRICS — gateway resolve/fetch/mutation calls carry correlation IDs through GatewayClient.
  * RO:CONFIG — app settings supply current passport/wallet hints only; no make-on-behalf fields.
  * RO:SECURITY — no direct storage/index/wallet/ledger calls; no scripts in preview iframe.
- * RO:TEST — crab://site guided launch + preview smoke; crab://<site_name> resolve smoke.
+ * RO:TEST — crab://site guided launch smoke; crab://<site_name> resolve and paid site_visit smoke.
  */
 
 import { useCallback } from 'react';
@@ -64,12 +64,12 @@ export default function SitePage({ app, route }) {
         <PageHeader
           eyebrow="Named site"
           title={`crab://${siteName}`}
-          copy="Resolve a named CrabLink site through the gateway, fetch its root document bytes, and render the page inside a scriptless sandbox."
+          copy="Resolve a named CrabLink site through the gateway, quote/pay site_visit when required, then render the page inside a scriptless sandbox."
           meta={
             <>
               <Badge tone="info">gateway read</Badge>
               <Badge tone="success">root preview</Badge>
-              <Badge tone="neutral">no mutation</Badge>
+              <Badge tone="warning">paid access ready</Badge>
             </>
           }
           actions={
@@ -88,18 +88,20 @@ export default function SitePage({ app, route }) {
           routeKind="site"
           tone="info"
           title="Named site truth boundary"
-          copy="This React route is read-only. It can resolve the site DTO, fetch the root document through the gateway, and render static content in a sandbox."
+          copy="This React route is read-mostly. It can resolve the site DTO, quote/pay a backend site_visit charge when the site manifest requires it, fetch the root document through the gateway, and render static content in a sandbox."
           allowed={[
             'gateway resolve',
             'manifest display',
             'root document fetch',
-            'sandbox preview',
+            'sandbox preview after access proof',
             'crab-image static preview',
+            'site_visit quote/pay through gateway when required',
             'copy proof fields',
           ]}
           blocked={[
             'no site creation from named view',
-            'no wallet mutation from named view',
+            'no silent wallet mutation',
+            'no local balance edit',
             'no fake receipt',
             'no direct storage/index call',
             'no script execution in preview',

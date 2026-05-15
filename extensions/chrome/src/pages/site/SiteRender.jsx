@@ -1,8 +1,8 @@
 /**
  * RO:WHAT — Safe site renderer for local drafts and named gateway-resolved sites.
  * RO:WHY — Keeps site rendering focused: resolve/fetch root, render sandbox, show one consolidated proof panel.
- * RO:INTERACTS — siteClient, SiteSandboxPreview, SiteResolvedProof, shared safe renderer.
- * RO:INVARIANTS — gateway-only named resolution; no direct storage/index; iframe preview has no scripts; no fake proof.
+ * RO:INTERACTS — siteClient, SiteVisitAccess, SiteSandboxPreview, SiteResolvedProof, shared safe renderer.
+ * RO:INVARIANTS — gateway-only named resolution; no direct storage/index; iframe preview has no scripts; no fake proof or silent spend.
  * RO:METRICS — displays gateway status, root fetch status, correlation IDs, sandbox policy, and embed render summary.
  * RO:CONFIG — gateway client from app context.
  * RO:SECURITY — untrusted HTML goes through shared sanitizer and strict sandbox iframe props.
@@ -15,6 +15,7 @@ import RouteProblemPanel from '../../shared/components/RouteProblemPanel.jsx';
 import { createSiteClient } from '../../shared/api/siteClient.js';
 import SiteResolvedProof from './SiteResolvedProof.jsx';
 import SiteSandboxPreview from './SiteSandboxPreview.jsx';
+import SiteVisitAccess, { siteVisitCanRender } from './SiteVisitAccess.jsx';
 
 const EMPTY_STATE = Object.freeze({
   status: 'idle',
@@ -174,18 +175,38 @@ function ResolvedSiteView({ app, result, rootHtml, rootStatus, rootResponse, roo
   const rootUrl = siteClient.rootDocumentUrl(summary.rootDocumentCid);
   const previewHtml = rootHtml || '';
   const developer = Boolean(app?.settings?.devMode || app?.state?.developerMode || app?.state?.viewMode === 'developer');
+  const [visitAccess, setVisitAccess] = useState(null);
+  const canRenderPreview = siteVisitCanRender(visitAccess || { requiresPayment: false, canRender: true }, app);
 
   return (
     <section className="site-render-stack">
-      <SiteSandboxPreview
-        mode="gateway"
-        summary={summary}
-        rootHtml={previewHtml}
-        rootStatus={rootStatus}
-        rootError={rootError}
+      <SiteVisitAccess
+        app={app}
+        result={result}
         siteClient={siteClient}
-        developer={developer}
+        onAccessChange={setVisitAccess}
       />
+
+      {canRenderPreview ? (
+        <SiteSandboxPreview
+          mode="gateway"
+          summary={summary}
+          rootHtml={previewHtml}
+          rootStatus={rootStatus}
+          rootError={rootError}
+          siteClient={siteClient}
+          developer={developer}
+        />
+      ) : (
+        <section className="site-preview-locked" aria-label="Paid site preview locked">
+          <p className="cl-eyebrow">Preview locked</p>
+          <h2>Pay the site visit quote to render this page</h2>
+          <p>
+            CrabLink has the site bytes, but it will not render paid content until the backend returns a
+            payment receipt. This prevents fake creator payouts and silent wallet deductions.
+          </p>
+        </section>
+      )}
 
       <SiteResolvedProof
         app={app}

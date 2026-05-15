@@ -1,18 +1,17 @@
 /**
- * RO:WHAT — Gateway-only client for future crab://<hash>.post publish flows.
- * RO:WHY — Lets CrabLink wire the post page to the same prepare → hold → publish shape proven by image/site without pretending backend support exists.
- * RO:INTERACTS — PostPublishFlow.jsx, gatewayClient.js, walletClient.js, future svc-gateway /assets/post routes.
+ * RO:WHAT — Gateway-only client for crab://<hash>.post prepare/publish flows.
+ * RO:WHY — Keeps CrabLink aligned with the strict Omnigate post DTO instead of sending local manifest/debug fields.
+ * RO:INTERACTS — PostPublishFlow.jsx, gatewayClient.js, walletClient.js, svc-gateway /assets/post/prepare and /assets/post.
  * RO:INVARIANTS — no fake CIDs; no fake receipts; no direct storage/index/wallet/ledger calls; no silent ROC spend.
  * RO:METRICS — gateway client supplies x-correlation-id for backend trace correlation.
  * RO:CONFIG — configured gateway client base URL, passport, wallet, timeout, and bearer token.
  * RO:SECURITY — mutating publish requires caller-supplied paid hold proof; JSON body is sent only to configured svc-gateway.
- * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://post prepare/hold/publish smoke after backend routes exist.
+ * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://post prepare/hold/publish smoke.
  */
 
 import { normalizePaidProof } from './assetClient.js';
 import { compactIdempotencyKey, stableIdempotencyKey } from './walletClient.js';
 
-const MAX_IDEMPOTENCY_KEY_BYTES = 64;
 const POST_CONTENT_TYPE = 'application/json; charset=utf-8';
 
 export function createPostAssetClient(gateway) {
@@ -39,6 +38,7 @@ export class PostAssetClient {
       label: 'Post prepare',
       mutation: true,
       headers: {
+        'Content-Type': POST_CONTENT_TYPE,
         'Idempotency-Key': request.client_idempotency_key,
       },
       idempotencyKey: request.client_idempotency_key,
@@ -53,7 +53,13 @@ export class PostAssetClient {
     const idem = compactIdempotencyKey(
       idempotencyKey ||
         body.client_idempotency_key ||
-        stableIdempotencyKey('post-publish', proof.txid, proof.receipt_hash, body.title, body.relations?.site),
+        stableIdempotencyKey(
+          'post-publish',
+          proof.txid,
+          proof.receipt_hash,
+          body.title,
+          body.site_context_crab_url,
+        ),
       'post-publish',
     );
 
@@ -71,7 +77,7 @@ export class PostAssetClient {
     };
 
     if (body.title) headers['x-ron-asset-title'] = body.title;
-    if (body.summary) headers['x-ron-asset-description'] = body.summary;
+    if (body.body) headers['x-ron-asset-description'] = body.body.slice(0, 240);
     if (Array.isArray(body.tags) && body.tags.length > 0) {
       headers['x-ron-asset-tags'] = body.tags.join(',');
     }
@@ -96,8 +102,8 @@ export class PostAssetClient {
         route: '/assets/post',
         content_type: POST_CONTENT_TYPE,
         title: body.title,
-        site: body.relations?.site || '',
-        bytes: body.bytes || measureJsonBytes(body.content),
+        site: body.site_context_crab_url || '',
+        bytes: measureJsonBytes(body),
         headers: redactProofHeaders(headers),
         idempotency_key: idem,
       },
@@ -109,16 +115,52 @@ export class PostAssetClient {
 
   assertGateway() {
     if (!this.gateway || typeof this.gateway.request !== 'function') {
-      throw makePostAssetError('Post asset request requires the configured gateway client.', 'missing_gateway_client');
+      throw makePostAssetError(
+        'Post asset request requires the configured gateway client.',
+        'missing_gateway_client',
+      );
     }
   }
 }
 
 export function normalizePostPrepareRequest(payload = {}) {
-  const title = stringValue(payload.title, 'Untitled post').slice(0, 160);
+  return normalizeStrictPostRequest(payload, 'post-prepare');
+}
+
+export function normalizePostPublishRequest(payload = {}) {
+  return normalizeStrictPostRequest(payload, 'post-publish');
+}
+
+/**
+ * Build the exact DTO accepted by Omnigate `PostAssetRequest`.
+ *
+ * Do not add local manifest/debug fields here. The Rust route uses strict JSON
+ * and intentionally rejects unknown fields. Accepted fields are:
+ *
+ * title, body, site_context_crab_url, parent_crab_url, creator_display,
+ * language, post_kind, visibility, rights_mode, moderation_mode,
+ * content_warning, tags, payer_account, owner_passport_subject,
+ * client_idempotency_key.
+ */
+function normalizeStrictPostRequest(payload = {}, scope = 'post-prepare') {
+  const title = stringValue(payload.title, payload.content?.title, 'Untitled post').slice(0, 180);
   const body = stringValue(payload.body, payload.text, payload.content?.body);
-  const site = stringValue(payload.site_context_crab_url, payload.siteContextCrabUrl, payload.site, payload.relations?.site);
-  const parent = stringValue(payload.parent_crab_url, payload.parentCrabUrl, payload.parent, payload.relations?.parent);
+  const site = stringValue(
+    payload.site_context_crab_url,
+    payload.siteContextCrabUrl,
+    payload.site,
+    payload.relations?.site,
+    payload.site_connection?.crab_url,
+    payload.siteConnection?.crabUrl,
+  );
+  const parent = stringValue(
+    payload.parent_crab_url,
+    payload.parentCrabUrl,
+    payload.parent,
+    payload.relations?.parent,
+    payload.parent_reference?.crab_url,
+    payload.parentReference?.crabUrl,
+  );
   const payerAccount = stringValue(
     payload.payer_account,
     payload.payerAccount,
@@ -129,141 +171,114 @@ export function normalizePostPrepareRequest(payload = {}) {
   const ownerPassport = stringValue(
     payload.owner_passport_subject,
     payload.ownerPassportSubject,
-    payload.passport,
     payload.passportSubject,
+    payload.passport,
   );
-  const tags = normalizeTags(payload.tags);
-  const content = normalizePostContentEnvelope({
-    title,
-    body,
-    language: payload.language,
-    postKind: payload.post_kind || payload.postKind,
-    contentWarning: payload.content_warning || payload.contentWarning,
-    tags,
-    site,
-    parent,
-  });
-  const bytes = normalizePositiveInteger(payload.bytes, payload.content_bytes, payload.contentBytes) || String(measureJsonBytes(content));
-  const idempotency = compactIdempotencyKey(
-    payload.client_idempotency_key ||
-      payload.clientIdempotencyKey ||
-      payload.idempotency_key ||
-      stableIdempotencyKey('post-prepare', payerAccount, ownerPassport, bytes, title, site),
-    'post-prepare',
+  const creatorDisplay = stringValue(
+    payload.creator_display,
+    payload.creatorDisplay,
+    payload.creator,
+    payload.author,
   );
-
-  if (!body) {
-    throw makePostAssetError('Post prepare requires a non-empty body.', 'missing_post_body');
-  }
-
-  if (!site) {
-    throw makePostAssetError('Post prepare requires a site connection crab URL.', 'missing_site_connection');
-  }
-
-  if (!payerAccount) {
-    throw makePostAssetError('Post prepare requires a payer wallet account.', 'missing_payer_account');
-  }
-
-  if (!ownerPassport) {
-    throw makePostAssetError('Post prepare requires an owner passport subject.', 'missing_owner_passport');
-  }
-
-  return stripEmpty({
-    schema: 'crablink.post-prepare.v1',
-    asset_kind: 'post',
-    bytes: Number(bytes),
-    payer_account: payerAccount,
-    owner_passport_subject: ownerPassport,
-    content_type: POST_CONTENT_TYPE,
-    title,
-    body_preview: body.slice(0, 280),
-    tags,
-    site_context_crab_url: site,
-    parent_crab_url: parent || undefined,
-    relations: stripEmpty({
-      site,
-      parent: parent || undefined,
-    }),
-    client_idempotency_key: idempotency,
-  });
-}
-
-export function normalizePostPublishRequest(payload = {}) {
-  const title = stringValue(payload.title, payload.content?.title, 'Untitled post').slice(0, 160);
-  const body = stringValue(payload.body, payload.text, payload.content?.body);
-  const site = stringValue(payload.site_context_crab_url, payload.siteContextCrabUrl, payload.site, payload.relations?.site);
-  const parent = stringValue(payload.parent_crab_url, payload.parentCrabUrl, payload.parent, payload.relations?.parent);
-  const payerAccount = stringValue(payload.payer_account, payload.payerAccount, payload.wallet_account, payload.walletAccount, payload.from);
-  const ownerPassport = stringValue(payload.owner_passport_subject, payload.ownerPassportSubject, payload.passportSubject, payload.passport);
-  const tags = normalizeTags(payload.tags || payload.metadata?.tags);
   const language = stringValue(payload.language, payload.metadata?.language, 'en');
-  const postKind = stringValue(payload.post_kind, payload.postKind, payload.metadata?.post_kind, payload.metadata?.postKind, 'short_text');
-  const contentWarning = stringValue(payload.content_warning, payload.contentWarning, payload.metadata?.content_warning, payload.metadata?.contentWarning);
-  const content = normalizePostContentEnvelope({
-    title,
-    body,
-    language,
-    postKind,
-    contentWarning,
-    tags,
-    site,
-    parent,
-  });
-  const bytes = Number(normalizePositiveInteger(payload.bytes, payload.content_bytes, payload.contentBytes) || measureJsonBytes(content));
+  const postKind = stringValue(
+    payload.post_kind,
+    payload.postKind,
+    payload.metadata?.post_kind,
+    payload.metadata?.postKind,
+    'short_text',
+  );
+  const visibility = stringValue(
+    payload.visibility,
+    payload.metadata?.visibility,
+    'public_preview',
+  );
+  const rightsMode = stringValue(
+    payload.rights_mode,
+    payload.rightsMode,
+    payload.metadata?.rights_mode,
+    payload.metadata?.rightsMode,
+    'creator_owned_original',
+  );
+  const moderationMode = stringValue(
+    payload.moderation_mode,
+    payload.moderationMode,
+    payload.metadata?.moderation_mode,
+    payload.metadata?.moderationMode,
+    'site_policy_or_creator_default',
+  );
+  const contentWarning = stringValue(
+    payload.content_warning,
+    payload.contentWarning,
+    payload.metadata?.content_warning,
+    payload.metadata?.contentWarning,
+  );
+  const tags = normalizeTags(payload.tags || payload.metadata?.tags);
+  const bytes = measureJsonBytes(
+    normalizePostContentEnvelope({
+      title,
+      body,
+      language,
+      postKind,
+      contentWarning,
+      tags,
+      site,
+      parent,
+    }),
+  );
   const idempotency = compactIdempotencyKey(
     payload.client_idempotency_key ||
       payload.clientIdempotencyKey ||
       payload.idempotency_key ||
-      stableIdempotencyKey('post-publish', payerAccount, ownerPassport, bytes, title, site),
-    'post-publish',
+      stableIdempotencyKey(scope, payerAccount, ownerPassport, bytes, title, site),
+    scope,
   );
 
   if (!body) {
-    throw makePostAssetError('Post publish requires a non-empty body.', 'missing_post_body');
+    throw makePostAssetError('Post request requires a non-empty body.', 'missing_post_body');
   }
 
   if (!site) {
-    throw makePostAssetError('Post publish requires a site connection crab URL.', 'missing_site_connection');
+    throw makePostAssetError('Post request requires a site connection crab URL.', 'missing_site_connection');
   }
 
   if (!payerAccount) {
-    throw makePostAssetError('Post publish requires a payer wallet account.', 'missing_payer_account');
+    throw makePostAssetError('Post request requires a payer wallet account.', 'missing_payer_account');
   }
 
   if (!ownerPassport) {
-    throw makePostAssetError('Post publish requires an owner passport subject.', 'missing_owner_passport');
+    throw makePostAssetError('Post request requires an owner passport subject.', 'missing_owner_passport');
   }
 
   return stripEmpty({
-    schema: 'crablink.post-publish-request.v1',
-    asset_kind: 'post',
-    content_type: POST_CONTENT_TYPE,
-    bytes,
-    payer_account: payerAccount,
-    owner_passport_subject: ownerPassport,
     title,
-    summary: stringValue(payload.summary, payload.description, payload.manifest_draft?.metadata?.body_preview),
     body,
-    tags,
-    metadata: stripEmpty({
-      post_kind: postKind,
-      language,
-      content_warning: contentWarning || undefined,
-      body_preview: body.slice(0, 280),
-    }),
-    relations: stripEmpty({
-      site,
-      parent: parent || undefined,
-    }),
     site_context_crab_url: site,
     parent_crab_url: parent || undefined,
-    content,
-    manifest_hint: payload.manifest_hint || payload.manifestDraft || payload.manifest_draft || undefined,
+    creator_display: creatorDisplay || undefined,
+    language,
+    post_kind: postKind,
+    visibility,
+    rights_mode: rightsMode,
+    moderation_mode: moderationMode,
+    content_warning: contentWarning || undefined,
+    tags,
+    payer_account: payerAccount,
+    owner_passport_subject: ownerPassport,
     client_idempotency_key: idempotency,
   });
 }
 
-export function normalizePostContentEnvelope({ title, body, language, postKind, contentWarning, tags, site, parent }) {
+export function normalizePostContentEnvelope({
+  title,
+  body,
+  language,
+  postKind,
+  contentWarning,
+  tags,
+  site,
+  parent,
+}) {
   return stripEmpty({
     schema: 'ron.text-asset.v1',
     kind: 'post',
@@ -307,6 +322,7 @@ export function extractPostAssetUrl(data = {}) {
     source.post_url,
     source.postUrl,
     source.url,
+    source.links?.crab,
   );
 
   if (/^crab:\/\/[0-9a-f]{64}\.post$/i.test(direct)) {
@@ -342,7 +358,12 @@ export function extractPostAssetCid(data = {}) {
     return normalized;
   }
 
-  const nested = objectValue(source.asset) || objectValue(source.post) || objectValue(source.object) || objectValue(source.manifest);
+  const nested =
+    objectValue(source.asset) ||
+    objectValue(source.post) ||
+    objectValue(source.object) ||
+    objectValue(source.manifest) ||
+    objectValue(source.storage_upload);
 
   if (nested) {
     return extractPostAssetCid(nested);
@@ -370,7 +391,10 @@ function redactProofHeaders(headers) {
 
 function normalizeTags(value) {
   if (Array.isArray(value)) {
-    return value.map((tag) => String(tag || '').trim().replace(/^#/, '')).filter(Boolean).slice(0, 24);
+    return value
+      .map((tag) => String(tag || '').trim().replace(/^#/, ''))
+      .filter(Boolean)
+      .slice(0, 24);
   }
 
   return String(value || '')
@@ -381,26 +405,18 @@ function normalizeTags(value) {
 }
 
 function normalizeCid(value) {
-  const hash = String(value || '')
-    .trim()
-    .replace(/^b3:/i, '')
-    .toLowerCase();
+  const raw = stringValue(value);
 
-  return /^[0-9a-f]{64}$/.test(hash) ? `b3:${hash}` : '';
-}
+  if (/^b3:[0-9a-f]{64}$/i.test(raw)) {
+    return raw.toLowerCase();
+  }
 
-function normalizePositiveInteger(...values) {
-  for (const value of values) {
-    const raw = String(value ?? '').trim();
+  if (/^[0-9a-f]{64}$/i.test(raw)) {
+    return `b3:${raw.toLowerCase()}`;
+  }
 
-    if (/^[0-9]+$/.test(raw) && raw !== '0') {
-      return raw;
-    }
-
-    const n = Number(raw);
-    if (Number.isSafeInteger(n) && n > 0) {
-      return String(n);
-    }
+  if (/^crab:\/\/[0-9a-f]{64}\.post$/i.test(raw)) {
+    return `b3:${raw.slice('crab://'.length, 'crab://'.length + 64).toLowerCase()}`;
   }
 
   return '';
@@ -425,19 +441,26 @@ function stringValue(...values) {
 function stripEmpty(value) {
   return Object.fromEntries(
     Object.entries(value || {}).filter(([, child]) => {
-      if (child === undefined || child === null) return false;
-      if (typeof child === 'string' && !child.trim()) return false;
-      if (Array.isArray(child) && child.length === 0) return false;
+      if (child === undefined || child === null || child === '') {
+        return false;
+      }
+
+      if (Array.isArray(child)) {
+        return child.length > 0;
+      }
+
+      if (child && typeof child === 'object') {
+        return Object.keys(child).length > 0;
+      }
+
       return true;
     }),
   );
 }
 
-function makePostAssetError(message, reason = 'post_asset_client_error') {
+function makePostAssetError(message, code = 'post_asset_error') {
   const error = new Error(message);
-  error.name = 'PostAssetClientError';
-  error.reason = reason;
-  error.status = 0;
-  error.retryable = false;
+  error.code = code;
+  error.kind = code;
   return error;
 }

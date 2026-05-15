@@ -1,10 +1,10 @@
 /**
  * RO:WHAT — Polished local HTML templates for the React crab://site workspace.
- * RO:WHY — Replaces rough demo root HTML with professional reference-graph site templates.
- * RO:INTERACTS — SiteRootUpload.jsx, siteDraftModel.js, SiteRender.jsx sandbox preview.
+ * RO:WHY — Gives dev/test users prebaked reference-graph roots for fast image/post/comment/article embed smoke.
+ * RO:INTERACTS — SiteGuidedSetup.jsx, siteDraftModel.js, SiteRender.jsx, SiteSandboxPreview.jsx.
  * RO:INVARIANTS — local template only; no fake b3 CID; no fake site launch; no wallet/ROC mutation.
  * RO:METRICS — none.
- * RO:CONFIG — none.
+ * RO:CONFIG — known-good local-dev proof URLs may be refreshed after stack restarts.
  * RO:SECURITY — templates are static HTML/CSS; scripts are not included or required.
  * RO:TEST — manual crab://site template insert + sandbox preview smoke.
  */
@@ -12,7 +12,114 @@
 export const KNOWN_GOOD_IMAGE_URL =
   'crab://2e24f045f01a1bc77c57a94d622365e6b291936fcdd3ae64b45b0578e99c2058.image';
 
+export const KNOWN_GOOD_POST_URL =
+  'crab://b23f4c579201e17ab391dd3bff54635718a0b4c1371782ef87115b50f80bb1d3.post';
+
+export const KNOWN_GOOD_COMMENT_URL =
+  'crab://ad0fd74aa4c20095c3a08ae9f8e111b68ccff6537ed5f8fb769fa43f782d8f63.comment';
+
+export const KNOWN_GOOD_ARTICLE_URL =
+  'crab://35f307de7f34f0115420306703bf0d227404dbe91cc0743be7119b9b32b8af82.article';
+
 export const SITE_TEMPLATES = Object.freeze([
+  {
+    id: 'reference_graph_smoke',
+    name: 'Reference Graph Smoke',
+    tone: 'Image + post + comments + article',
+    description:
+      'Prebaked dev template for quickly testing crab-image, crab-post, crab-comment, and crab-article embeds after a stack run.',
+    patch: {
+      title: 'Reference Graph Smoke Site',
+      description: 'A fast test root for b3-backed social/content embeds.',
+      tags: 'site, reference-graph, post, comment, article, image',
+      routeMapJson: '{\n  "/": "local-root-draft",\n  "/post": "known-good-post",\n  "/article": "known-good-article"\n}',
+      assetMapJson: `{\n  "hero_image": "${KNOWN_GOOD_IMAGE_URL}",\n  "featured_post": "${KNOWN_GOOD_POST_URL}",\n  "featured_comment": "${KNOWN_GOOD_COMMENT_URL}",\n  "featured_article": "${KNOWN_GOOD_ARTICLE_URL}"\n}`,
+      renderPolicy: 'safe_embeds_only',
+    },
+    buildHtml: ({ title, description, creatorDisplay }) =>
+      baseDocument({
+        title: title || 'Reference Graph Smoke Site',
+        body: `
+          <main class="ro-site">
+            <section class="hero">
+              <p class="eyebrow">RON SITE · REFERENCE GRAPH SMOKE</p>
+              <h1>${escapeHtml(title || 'Everything is a b3-backed reference.')}</h1>
+              <p class="lede">${escapeHtml(
+                description ||
+                  'This root is a prebaked test page. It references separate image, post, comment, and article assets instead of owning their bytes.',
+              )}</p>
+              <div class="actions">
+                <a href="#social">View social embeds</a>
+                <a href="#article" class="secondary">View article</a>
+              </div>
+            </section>
+
+            <section class="asset-card">
+              <div>
+                <p class="eyebrow">B3 IMAGE</p>
+                <h2>Image bytes stay independent.</h2>
+                <p>
+                  The root stores only a <code>&lt;crab-image&gt;</code> reference.
+                  CrabLink resolves it through the gateway inside a scriptless sandbox.
+                </p>
+              </div>
+              <div class="image-frame">
+                <crab-image src="${KNOWN_GOOD_IMAGE_URL}" alt="Known good CrabLink image"></crab-image>
+                <p class="embed-note">${KNOWN_GOOD_IMAGE_URL}</p>
+              </div>
+            </section>
+
+            <section id="social" class="asset-card social-card">
+              <div>
+                <p class="eyebrow">POST + COMMENT THREAD</p>
+                <h2>Post and comments are reusable content objects.</h2>
+                <p>
+                  The post is its own <code>.post</code> asset. The comment is its own
+                  <code>.comment</code> asset. The embed renderer groups comments under their
+                  parent when the raw comment envelope points back to the post.
+                </p>
+              </div>
+              <div class="embed-stack">
+                <crab-post src="${KNOWN_GOOD_POST_URL}"></crab-post>
+                <crab-comment src="${KNOWN_GOOD_COMMENT_URL}"></crab-comment>
+              </div>
+            </section>
+
+            <section id="article" class="asset-card article-card">
+              <div>
+                <p class="eyebrow">ARTICLE</p>
+                <h2>Long-form text now resolves as a typed asset.</h2>
+                <p>
+                  This template can quickly confirm <code>crab://&lt;hash&gt;.article</code>
+                  renders inside the same safe embed path as post/comment.
+                </p>
+              </div>
+              <div class="embed-stack">
+                <crab-article src="${KNOWN_GOOD_ARTICLE_URL}"></crab-article>
+              </div>
+            </section>
+
+            <section id="about" class="about-grid">
+              <article>
+                <p class="eyebrow">OWNER</p>
+                <h3>${escapeHtml(creatorDisplay || '@current-passport')}</h3>
+                <p>Creator identity still comes from passport/backend truth, not this local template.</p>
+              </article>
+              <article>
+                <p class="eyebrow">SAFETY</p>
+                <h3>Scriptless by design</h3>
+                <p>The sandbox strips scripts/events/forms and only lets CrabLink render known declarative embeds.</p>
+              </article>
+              <article>
+                <p class="eyebrow">NEXT_LEVEL</p>
+                <h3>Reference graph sites</h3>
+                <p>Sites store layout and references. Assets keep their own ownership, payouts, manifests, and receipts.</p>
+              </article>
+            </section>
+          </main>
+        `,
+      }),
+  },
   {
     id: 'creator_landing',
     name: 'Creator Landing',
@@ -59,28 +166,23 @@ export const SITE_TEMPLATES = Object.freeze([
               </div>
             </section>
 
-            <section id="about" class="grid">
+            <section id="about" class="about-grid">
               <article>
-                <span>01</span>
-                <h3>Canonical content</h3>
-                <p>Every object can be addressed by a BLAKE3 content ID.</p>
+                <p class="eyebrow">CREATOR</p>
+                <h3>${escapeHtml(creatorDisplay || '@current-passport')}</h3>
+                <p>Creator identity should be confirmed by the active passport and backend response.</p>
               </article>
               <article>
-                <span>02</span>
-                <h3>Creator owned</h3>
-                <p>Ownership, payout, provenance, and receipts belong in manifests.</p>
+                <p class="eyebrow">ROOT</p>
+                <h3>HTML only</h3>
+                <p>Launch stores this root as a b3 object. It should never use an image CID as the site root CID.</p>
               </article>
               <article>
-                <span>03</span>
-                <h3>Reference graph</h3>
-                <p>Sites can reference images, posts, comments, music, videos, and more.</p>
+                <p class="eyebrow">SAFETY</p>
+                <h3>Sandboxed preview</h3>
+                <p>Scripts are stripped. Declarative crab embeds are rendered by CrabLink, not by untrusted page code.</p>
               </article>
             </section>
-
-            <footer>
-              <strong>${escapeHtml(creatorDisplay || 'CrabLink Creator')}</strong>
-              <span>Built for a b3-native web.</span>
-            </footer>
           </main>
         `,
       }),
@@ -88,39 +190,32 @@ export const SITE_TEMPLATES = Object.freeze([
   {
     id: 'image_showcase',
     name: 'Image Showcase',
-    tone: 'Asset-first gallery page',
-    description: 'A focused page for showing how a site references an independently owned image asset.',
+    tone: 'Gallery-style image reference',
+    description: 'A visual template for proving that images are independent assets referenced from a site root.',
     patch: {
-      title: 'B3 Image Showcase',
-      description: 'A site root that references an image asset without storing image bytes.',
-      tags: 'site, image, showcase',
+      title: 'Image Showcase',
+      description: 'A b3-backed gallery where the site references image assets.',
+      tags: 'site, image, gallery',
       routeMapJson: '{\n  "/": "local-root-draft",\n  "/gallery": "local-gallery-section"\n}',
-      assetMapJson: `{\n  "featured_image": "${KNOWN_GOOD_IMAGE_URL}",\n  "thumbnail": "${KNOWN_GOOD_IMAGE_URL}"\n}`,
+      assetMapJson: `{\n  "featured_image": "${KNOWN_GOOD_IMAGE_URL}"\n}`,
       renderPolicy: 'safe_embeds_only',
     },
     buildHtml: ({ title, description }) =>
       baseDocument({
-        title: title || 'B3 Image Showcase',
+        title: title || 'Image Showcase',
         body: `
-          <main class="ro-site showcase">
+          <main class="ro-site ro-gallery">
             <section class="hero compact">
-              <p class="eyebrow">CRABLINK IMAGE PRIMITIVE</p>
-              <h1>${escapeHtml(title || 'One image. One canonical address.')}</h1>
-              <p class="lede">${escapeHtml(
-                description ||
-                  'The page below references a separate b3-backed image asset through a safe CrabLink embed.',
-              )}</p>
+              <p class="eyebrow">CRAB IMAGE</p>
+              <h1>${escapeHtml(title || 'A gallery made from references.')}</h1>
+              <p class="lede">${escapeHtml(description || 'The image below is fetched from its own b3-backed asset page.')}</p>
             </section>
 
-            <section class="asset-card full">
-              <div class="image-frame large">
-                <crab-image src="${KNOWN_GOOD_IMAGE_URL}" alt="Featured CrabLink image"></crab-image>
-                <p class="embed-note">${KNOWN_GOOD_IMAGE_URL}</p>
-              </div>
-              <div class="proof-list">
-                <div><span>Kind</span><strong>.image</strong></div>
-                <div><span>Address</span><strong>b3-backed crab URL</strong></div>
-                <div><span>Site behavior</span><strong>references, not copies</strong></div>
+            <section class="gallery-panel">
+              <crab-image src="${KNOWN_GOOD_IMAGE_URL}" alt="Known good CrabLink image"></crab-image>
+              <div class="caption-card">
+                <p class="eyebrow">ASSET URL</p>
+                <p>${KNOWN_GOOD_IMAGE_URL}</p>
               </div>
             </section>
           </main>
@@ -130,42 +225,45 @@ export const SITE_TEMPLATES = Object.freeze([
   {
     id: 'minimal_article',
     name: 'Minimal Article',
-    tone: 'Readable post/article page',
-    description: 'A clean static page for writing an article-style site root.',
+    tone: 'Text-first article page',
+    description: 'A simple article-style root with optional image and typed article references.',
     patch: {
-      title: 'A New CrabLink Article',
-      description: 'A readable static article root for a named CrabLink site.',
+      title: 'The Dusty Onion Dispatch',
+      description: 'A simple article shell for testing future post/article embeds.',
       tags: 'site, article, writing',
       routeMapJson: '{\n  "/": "local-root-draft",\n  "/article": "local-article-section"\n}',
-      assetMapJson: '{}',
-      renderPolicy: 'static_html_no_scripts',
+      assetMapJson: `{\n  "cover_image": "${KNOWN_GOOD_IMAGE_URL}",\n  "article": "${KNOWN_GOOD_ARTICLE_URL}"\n}`,
+      renderPolicy: 'safe_embeds_only',
     },
     buildHtml: ({ title, description, creatorDisplay }) =>
       baseDocument({
-        title: title || 'A New CrabLink Article',
+        title: title || 'The Dusty Onion Dispatch',
         body: `
-          <main class="ro-site article">
-            <article class="article-card">
-              <p class="eyebrow">RON ARTICLE · STATIC ROOT</p>
-              <h1>${escapeHtml(title || 'A better web starts with owned primitives.')}</h1>
-              <p class="byline">By ${escapeHtml(creatorDisplay || 'a CrabLink creator')}</p>
+          <main class="ro-site ro-article">
+            <article class="article-shell">
+              <p class="eyebrow">ARTICLE ROOT · LOCAL DRAFT</p>
+              <h1>${escapeHtml(title || 'A reference-native article shell.')}</h1>
+              <p class="byline">By ${escapeHtml(creatorDisplay || '@current-passport')} · local template preview</p>
               <p class="lede">${escapeHtml(
                 description ||
-                  'This article is a static site root today. Later, article assets should become their own b3-addressed primitives.',
+                  'This local article root can later reference b3-backed articles, comments, images, lyrics, and other assets.',
               )}</p>
 
-              <hr />
+              <crab-image src="${KNOWN_GOOD_IMAGE_URL}" alt="Article cover image"></crab-image>
 
-              <p>
-                RustyOnions sites can become reference graphs instead of centralized content silos.
-                A site can own the route map, layout, moderation policy, and payout policy while each
-                image, post, comment, song, article, or video remains independently addressable.
-              </p>
+              <section>
+                <h2>Typed article embed</h2>
+                <p>The card below should hydrate from gateway-backed raw article content if the local dev stack still has this object.</p>
+                <crab-article src="${KNOWN_GOOD_ARTICLE_URL}"></crab-article>
+              </section>
 
-              <p>
-                That means attribution, provenance, payout routing, and receipts can follow the asset,
-                not just the platform where it appears.
-              </p>
+              <section>
+                <h2>Why this matters</h2>
+                <p>
+                  The root HTML can evolve independently from the assets it references.
+                  Each referenced asset keeps its own canonical hash, manifest, owner, payout, and provenance chain.
+                </p>
+              </section>
             </article>
           </main>
         `,
@@ -175,285 +273,254 @@ export const SITE_TEMPLATES = Object.freeze([
 
 export const DEFAULT_SITE_TEMPLATE = SITE_TEMPLATES[0];
 
-export function getSiteTemplate(templateId) {
-  return SITE_TEMPLATES.find((template) => template.id === templateId) || DEFAULT_SITE_TEMPLATE;
+export function getSiteTemplateById(id) {
+  const safeId = String(id || '').trim();
+  return SITE_TEMPLATES.find((template) => template.id === safeId) || DEFAULT_SITE_TEMPLATE;
 }
 
-export function buildSiteTemplatePatch(templateId, draft = {}) {
-  const template = getSiteTemplate(templateId);
-  const nextDraft = {
-    ...draft,
-    ...template.patch,
+export function buildSiteTemplatePatch(templateId, currentDraft = {}) {
+  const template = getSiteTemplateById(templateId);
+  const patch = template.patch || {};
+  const next = {
+    ...currentDraft,
+    ...patch,
+    rootDocumentCid: '',
   };
 
-  nextDraft.rootHtml = template.buildHtml({
-    title: nextDraft.title,
-    description: nextDraft.description,
-    creatorDisplay: nextDraft.creatorDisplay,
-    siteName: nextDraft.siteName,
-  });
-
-  return nextDraft;
+  return {
+    ...next,
+    rootHtml: template.buildHtml({
+      ...next,
+      title: next.title,
+      description: next.description,
+      creatorDisplay: next.creatorDisplay,
+    }),
+  };
 }
 
 function baseDocument({ title, body }) {
   return `<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>${escapeHtml(title || 'CrabLink Site')}</title>
-    <style>
-      :root {
-        color-scheme: light;
-        --bg: #f7f4ee;
-        --ink: #111111;
-        --muted: #5e5a52;
-        --card: rgba(255, 255, 255, 0.78);
-        --line: rgba(17, 17, 17, 0.12);
-        --accent: #18a06a;
-        --accent-soft: rgba(24, 160, 106, 0.14);
-        --shadow: 0 30px 90px rgba(42, 34, 22, 0.16);
-      }
+<head>
+  <meta charset="utf-8">
+  <title>${escapeHtml(title || 'CrabLink Site')}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #111111;
+      --muted: #625f57;
+      --paper: #f8f6f1;
+      --card: rgba(255, 255, 255, 0.86);
+      --line: rgba(25, 25, 25, 0.14);
+      --accent: #111111;
+      --soft: #ece7dc;
+    }
 
-      * { box-sizing: border-box; }
+    * { box-sizing: border-box; }
 
-      body {
-        margin: 0;
-        min-height: 100vh;
-        background:
-          radial-gradient(circle at 18% 12%, rgba(24, 160, 106, 0.22), transparent 34%),
-          radial-gradient(circle at 84% 8%, rgba(60, 90, 190, 0.16), transparent 30%),
-          linear-gradient(135deg, #fbfaf6 0%, var(--bg) 48%, #ece7dc 100%);
-        color: var(--ink);
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(255,255,255,0.86), transparent 34rem),
+        linear-gradient(135deg, #f8f6f1, #ece7dc);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
 
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    code {
+      border: 1px solid var(--line);
+      border-radius: 0.45rem;
+      background: rgba(255,255,255,0.72);
+      padding: 0.12rem 0.35rem;
+      font-size: 0.92em;
+    }
+
+    .ro-site {
+      width: min(1120px, calc(100vw - 36px));
+      margin: 0 auto;
+      padding: 56px 0;
+      display: grid;
+      gap: 28px;
+    }
+
+    .hero,
+    .asset-card,
+    .gallery-panel,
+    .article-shell,
+    .about-grid article,
+    .caption-card {
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      background: var(--card);
+      box-shadow: 0 24px 80px rgba(40, 34, 22, 0.08);
+    }
+
+    .hero {
+      min-height: 420px;
+      display: grid;
+      align-content: center;
+      gap: 18px;
+      padding: 48px;
+    }
+
+    .hero.compact {
+      min-height: 260px;
+    }
+
+    .hero h1,
+    .article-shell h1 {
+      margin: 0;
+      max-width: 880px;
+      font-size: clamp(3rem, 9vw, 7.5rem);
+      line-height: 0.86;
+      letter-spacing: -0.085em;
+    }
+
+    .article-shell h1 {
+      font-size: clamp(2.7rem, 7vw, 5.8rem);
+    }
+
+    .lede {
+      max-width: 720px;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(1.05rem, 2vw, 1.45rem);
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 1000;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .actions a {
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--accent);
+      border-radius: 999px;
+      background: var(--accent);
+      color: #ffffff;
+      padding: 0 18px;
+      font-size: 0.86rem;
+      font-weight: 950;
+    }
+
+    .actions a.secondary {
+      background: transparent;
+      color: var(--accent);
+    }
+
+    .asset-card {
+      display: grid;
+      grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
+      gap: 24px;
+      align-items: start;
+      padding: 28px;
+    }
+
+    .asset-card h2,
+    .article-shell h2,
+    .about-grid h3 {
+      margin: 0.2rem 0 0.6rem;
+      letter-spacing: -0.04em;
+      line-height: 0.96;
+    }
+
+    .asset-card h2 {
+      font-size: clamp(1.9rem, 4vw, 3.8rem);
+    }
+
+    .image-frame,
+    .embed-stack {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .embed-note,
+    .byline {
+      color: var(--muted);
+      font-size: 0.88rem;
+      overflow-wrap: anywhere;
+    }
+
+    .about-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .about-grid article,
+    .caption-card {
+      padding: 22px;
+    }
+
+    .gallery-panel,
+    .article-shell {
+      display: grid;
+      gap: 24px;
+      padding: 28px;
+    }
+
+    .article-shell {
+      width: min(900px, 100%);
+      margin: 0 auto;
+    }
+
+    .article-shell p {
+      color: var(--muted);
+    }
+
+    .social-card,
+    .article-card {
+      grid-template-columns: minmax(0, 0.62fr) minmax(0, 1.38fr);
+    }
+
+    @media (max-width: 820px) {
       .ro-site {
-        width: min(1120px, calc(100vw - 36px));
-        margin: 0 auto;
-        padding: 64px 0;
+        width: min(100%, calc(100vw - 20px));
+        padding: 32px 0;
       }
 
-      .hero {
-        display: grid;
-        gap: 22px;
-        padding: clamp(36px, 6vw, 74px);
-        border: 1px solid var(--line);
-        border-radius: 36px;
-        background: var(--card);
-        box-shadow: var(--shadow);
-        backdrop-filter: blur(18px);
-      }
-
-      .hero.compact { padding: clamp(28px, 5vw, 56px); }
-
-      .eyebrow {
-        width: fit-content;
-        margin: 0;
-        padding: 8px 12px;
-        border-radius: 999px;
-        background: var(--accent-soft);
-        color: #08754a;
-        font-size: 12px;
-        font-weight: 900;
-        letter-spacing: 0.13em;
-      }
-
-      h1 {
-        max-width: 980px;
-        margin: 0;
-        font-size: clamp(48px, 9vw, 112px);
-        line-height: 0.88;
-        letter-spacing: -0.09em;
-      }
-
-      h2 {
-        margin: 0;
-        font-size: clamp(30px, 5vw, 58px);
-        line-height: 0.96;
-        letter-spacing: -0.06em;
-      }
-
-      h3 {
-        margin: 8px 0;
-        font-size: 22px;
-        letter-spacing: -0.03em;
-      }
-
-      p {
-        color: var(--muted);
-        font-size: 18px;
-        line-height: 1.65;
-      }
-
-      .lede {
-        max-width: 760px;
-        margin: 0;
-        font-size: clamp(18px, 2.1vw, 24px);
-      }
-
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-      }
-
-      .actions a {
-        display: inline-flex;
-        min-height: 44px;
-        align-items: center;
-        justify-content: center;
-        padding: 0 18px;
-        border-radius: 999px;
-        background: var(--ink);
-        color: white;
-        font-weight: 900;
-        text-decoration: none;
-      }
-
-      .actions a.secondary {
-        border: 1px solid var(--line);
-        background: white;
-        color: var(--ink);
+      .hero,
+      .asset-card,
+      .gallery-panel,
+      .article-shell {
+        padding: 22px;
+        border-radius: 24px;
       }
 
       .asset-card,
-      .article-card {
-        display: grid;
-        gap: 28px;
-        margin-top: 22px;
-        padding: clamp(24px, 5vw, 46px);
-        border: 1px solid var(--line);
-        border-radius: 32px;
-        background: rgba(255, 255, 255, 0.66);
-        box-shadow: 0 18px 60px rgba(42, 34, 22, 0.09);
-      }
-
-      .asset-card {
-        grid-template-columns: minmax(0, 0.95fr) minmax(280px, 1.05fr);
-        align-items: center;
-      }
-
-      .asset-card.full {
+      .social-card,
+      .article-card,
+      .about-grid {
         grid-template-columns: 1fr;
       }
-
-      .image-frame {
-        min-height: 260px;
-        display: grid;
-        place-items: center;
-        overflow: hidden;
-        border: 1px solid var(--line);
-        border-radius: 28px;
-        background:
-          linear-gradient(135deg, rgba(24, 160, 106, 0.12), transparent),
-          #f0ece3;
-      }
-
-      .image-frame.large { min-height: 420px; }
-
-      crab-image {
-        display: block;
-        width: 100%;
-        min-height: 240px;
-      }
-
-      .embed-note {
-        width: 100%;
-        margin: 0;
-        padding: 14px;
-        color: var(--muted);
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-        font-size: 12px;
-        overflow-wrap: anywhere;
-        text-align: center;
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 16px;
-        margin-top: 22px;
-      }
-
-      .grid article,
-      .proof-list div {
-        border: 1px solid var(--line);
-        border-radius: 26px;
-        background: rgba(255, 255, 255, 0.68);
-        padding: 22px;
-      }
-
-      .grid span,
-      .proof-list span {
-        color: var(--accent);
-        font-size: 12px;
-        font-weight: 950;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
-
-      .proof-list {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 14px;
-      }
-
-      .proof-list strong {
-        display: block;
-        margin-top: 8px;
-        overflow-wrap: anywhere;
-      }
-
-      .article .article-card {
-        max-width: 860px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      .byline {
-        margin-top: -8px;
-        font-size: 15px;
-        font-weight: 800;
-      }
-
-      hr {
-        width: 100%;
-        border: 0;
-        border-top: 1px solid var(--line);
-      }
-
-      footer {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        justify-content: space-between;
-        margin-top: 22px;
-        padding: 18px 4px;
-        color: var(--muted);
-      }
-
-      footer strong { color: var(--ink); }
-
-      code {
-        padding: 2px 6px;
-        border-radius: 8px;
-        background: rgba(17, 17, 17, 0.06);
-      }
-
-      @media (max-width: 800px) {
-        .ro-site { width: min(100vw - 24px, 1120px); padding: 28px 0; }
-        .asset-card,
-        .grid,
-        .proof-list { grid-template-columns: 1fr; }
-        h1 { font-size: clamp(42px, 15vw, 72px); }
-      }
-    </style>
-  </head>
-  <body>
-${body}
-  </body>
+    }
+  </style>
+</head>
+<body>
+${body || ''}
+</body>
 </html>`;
 }
 

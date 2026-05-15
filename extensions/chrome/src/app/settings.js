@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — React-shell settings bridge for CrabLink's shared extension storage adapter.
  * RO:WHY — App Integration; Concerns: DX/SEC/RES; lets Vite/dev mode and Chrome extension mode share one safe settings path.
- * RO:INTERACTS — ../storage.js, App.jsx, GatewayClient, future ThemeProvider/profile routes.
+ * RO:INTERACTS — ../storage.js, App.jsx, GatewayClient, devPassportSessions.js, future ThemeProvider/profile routes.
  * RO:INVARIANTS — local settings are not backend truth; no private keys; no spend authority; no fake balances/receipts/CIDs.
  * RO:METRICS — none.
- * RO:CONFIG — gatewayUrl, requestTimeoutMs, passport/wallet display labels, devMode.
- * RO:SECURITY — dev token stays local-only; do not log or render secrets.
- * RO:TEST — npm run build; scripts/check-chrome.sh; Vite route smoke and loaded-extension smoke.
+ * RO:CONFIG — gatewayUrl, requestTimeoutMs, passport/wallet display labels, devMode, optional per-window dev session URL.
+ * RO:SECURITY — dev token stays local-only; do not log or render secrets; URL sessions are labels only.
+ * RO:TEST — npm run build; scripts/check-chrome.sh; Vite route smoke and loaded-extension multi-passport smoke.
  */
 
 import {
@@ -17,42 +17,51 @@ import {
   saveSettings,
   storageBackendName,
 } from '../storage.js';
+import {
+  applyDevPassportSessionToSettings,
+  getDevPassportSessionFromLocation,
+} from '../shared/utils/devPassportSessions.js';
 
 export { DEFAULT_SETTINGS };
 
 export async function loadAppSettings() {
-  const settings = await getSettings();
+  const loaded = await getSettings();
+  const sessionResult = applyDevPassportSessionToSettings(loaded);
 
   return {
-    settings,
-    storage: storageStatus(),
+    settings: sessionResult.settings,
+    storage: storageStatus(sessionResult.session),
   };
 }
 
 export async function saveAppSettings(next) {
-  const settings = await saveSettings(next);
+  const saved = await saveSettings(next);
+  const sessionResult = applyDevPassportSessionToSettings(saved);
 
   return {
-    settings,
-    storage: storageStatus(),
+    settings: sessionResult.settings,
+    storage: storageStatus(sessionResult.session),
   };
 }
 
 export async function resetAppSettings() {
-  const settings = await resetSettings();
+  const reset = await resetSettings();
+  const sessionResult = applyDevPassportSessionToSettings(reset);
 
   return {
-    settings,
-    storage: storageStatus(),
+    settings: sessionResult.settings,
+    storage: storageStatus(sessionResult.session),
   };
 }
 
-export function storageStatus() {
+export function storageStatus(activeSession = getDevPassportSessionFromLocation()) {
   return {
     backend: storageBackendName(),
     chromeLocal: hasChromeLocalStorage(),
     isExtensionContext: Boolean(globalThis.chrome?.runtime?.id),
     isDevFallback: !hasChromeLocalStorage(),
+    devPassportSession: activeSession,
+    hasDevPassportSession: Boolean(activeSession),
   };
 }
 

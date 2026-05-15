@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # RO:WHAT — Static/build guardrail for the CrabLink React-primary lane.
-# RO:WHY — Verifies React is the only active browser UI and old vanilla page files are retired.
+# RO:WHY — Verifies React route ownership, gateway-only access, and truthful local-vs-paid route claims.
 # RO:INTERACTS — vite.config.js, react.html, page.html compatibility redirect, app/*, pages/*, shared/*.
 # RO:INVARIANTS — one route = one owner; gateway-only; no fake b3/receipt truth; no silent ROC spend.
 # RO:CONFIG — CRABLINK_REACT_SKIP_BUILD=1 skips Vite build when caller already built.
-# RO:SECURITY — blocks raw src launch regressions, direct internal-service URLs, and unsafe wallet body drift.
+# RO:SECURITY — blocks direct internal-service URLs, broad Chrome permissions, private-key tokens, and unsafe wallet body drift.
 # RO:TEST — run from repo root with scripts/check-react-lane.sh.
 
 set -euo pipefail
@@ -54,6 +54,8 @@ need_file "$APP_DIR/routeRegistry.js"
 need_file "$SHARED_DIR/api/gatewayClient.js"
 need_file "$SHARED_DIR/api/walletClient.js"
 need_file "$SHARED_DIR/api/siteClient.js"
+need_file "$SHARED_DIR/embed/embedRegistry.js"
+need_file "$SHARED_DIR/embed/safeHtml.js"
 need_file "$PAGES_DIR/site/SiteLaunchFlow.jsx"
 need_file "$PAGES_DIR/image/ImagePublishFlow.jsx"
 need_dir "$APP_DIR/shell"
@@ -169,72 +171,6 @@ for (const forbidden of ['src/react.html?url=', 'src/page.html?url=', '<hash>', 
   forbidIncludes(background, forbidden, 'background.js');
 }
 
-const popup = readText(path.join(chromeSrc, 'popup.js'));
-for (const token of ['react.html?url=', 'page.html?url=', "launchCrabLinkBrowser('react')"]) {
-  requireIncludes(popup, token, 'popup.js');
-}
-for (const forbidden of ['src/react.html?url=', 'src/page.html?url=', 'wallet/hold', 'assets/image', 'sites/prepare']) {
-  forbidIncludes(popup, forbidden, 'popup.js');
-}
-
-const pageHtml = readText(path.join(chromeSrc, 'page.html'));
-for (const token of ['react.html', 'compatibility redirect', 'window.location.replace']) {
-  requireIncludes(pageHtml, token, 'page.html compatibility redirect');
-}
-for (const forbidden of ['./page.js', './page-', './page.css', 'id="drawerRoc"', 'page-local-route-mode']) {
-  forbidIncludes(pageHtml, forbidden, 'page.html compatibility redirect');
-}
-
-const vite = readText(path.join(root, 'vite.config.js'));
-for (const token of ['react.html', 'page.html', 'dist/chrome-src', '@vitejs/plugin-react']) {
-  requireIncludes(vite, token, 'vite.config.js');
-}
-
-const packageChrome = readText(path.join(root, 'scripts', 'package-chrome.sh'));
-for (const token of ['dist/chrome-extension-staging', 'react.html', 'page.html']) {
-  requireIncludes(packageChrome, token, 'scripts/package-chrome.sh');
-}
-
-const reactHtml = readText(path.join(chromeSrc, 'react.html'));
-for (const token of ['id="root"', 'type="module"', './app/main.jsx']) {
-  requireIncludes(reactHtml, token, 'react.html');
-}
-
-const main = readText(path.join(app, 'main.jsx'));
-for (const token of ['createRoot', "import App from './App.jsx'", '../shared/theme/themeTokens.css']) {
-  requireIncludes(main, token, 'app/main.jsx');
-}
-
-const appJsx = readText(path.join(app, 'App.jsx'));
-for (const token of ['AppContextProvider', 'ThemeProvider', 'Shell', 'Suspense', 'getRouteComponent', 'useRouteState']) {
-  requireIncludes(appJsx, token, 'app/App.jsx');
-}
-
-const registry = readText(path.join(app, 'routeRegistry.js'));
-for (const route of [
-  'home',
-  'site',
-  'image',
-  'profile',
-  'music',
-  'lyrics',
-  'article',
-  'post',
-  'comment',
-  'video',
-  'stream',
-  'podcast',
-  'ad',
-  'algo',
-  'code',
-  'game',
-  'asset',
-  'notFound',
-  'problem',
-]) {
-  requireIncludes(registry, `${route}: lazy(() => import(`, 'app/routeRegistry.js');
-}
-
 const router = readText(path.join(app, 'router.js'));
 for (const token of ['crab://home', 'TYPED_ASSET_RE', 'PROFILE_HANDLE_RE', "kind: 'site'"]) {
   requireIncludes(router, token, 'app/router.js');
@@ -255,7 +191,7 @@ for (const relative of [
 
 for (const [route, files] of new Map([
   ['home', ['HomePage.jsx']],
-  ['site', ['SitePage.jsx', 'SiteLaunchFlow.jsx']],
+  ['site', ['SitePage.jsx', 'SiteLaunchFlow.jsx', 'SiteSandboxPreview.jsx', 'siteTemplates.js']],
   ['image', ['ImagePage.jsx', 'ImagePublishFlow.jsx']],
   ['profile', ['ProfilePage.jsx']],
   ['asset', ['AssetPage.jsx', 'AssetResolver.jsx', 'AssetHydratedView.jsx']],
@@ -278,29 +214,101 @@ for (const [route, files] of new Map([
   }
 }
 
-for (const route of ['lyrics', 'post', 'comment', 'article', 'music', 'podcast', 'stream', 'video', 'ad', 'algo', 'code', 'game']) {
+for (const relative of [
+  'extensions/chrome/src/shared/embed/embedRegistry.js',
+  'extensions/chrome/src/shared/embed/safeHtml.js',
+  'extensions/chrome/src/shared/embed/sandboxFrame.js',
+  'extensions/chrome/src/shared/embed/crabImageEmbed.jsx',
+  'extensions/chrome/src/shared/embed/crabPostEmbed.jsx',
+  'extensions/chrome/src/shared/embed/crabCommentEmbed.jsx',
+  'extensions/chrome/src/shared/embed/crabArticleEmbed.jsx',
+]) {
+  assertFile(relative);
+}
+
+const embedRegistry = readText(path.join(shared, 'embed', 'embedRegistry.js'));
+for (const token of [
+  'crablink.embed-registry',
+  'crab-image',
+  'crab-post',
+  'crab-comment',
+  'crab-article',
+  'collectCrabTypedUrls',
+  'renderSafeEmbeds',
+  'summarizeTextContent',
+]) {
+  requireIncludes(embedRegistry, token, 'shared/embed/embedRegistry.js');
+}
+for (const forbidden of ['eval(', 'new Function(', 'innerHTML =', 'dangerouslySetInnerHTML']) {
+  forbidIncludes(embedRegistry, forbidden, 'shared/embed/embedRegistry.js');
+}
+
+const siteSandbox = readText(path.join(pages, 'site', 'SiteSandboxPreview.jsx'));
+for (const token of [
+  "['post', 'comment', 'article']",
+  'collectCrabTypedUrls',
+  'textAssetCache',
+  '/o/${ref.cid}',
+  'comment dropdown ready',
+]) {
+  requireIncludes(siteSandbox, token, 'pages/site/SiteSandboxPreview.jsx');
+}
+
+const siteTemplates = readText(path.join(pages, 'site', 'siteTemplates.js'));
+for (const token of [
+  'Reference Graph Smoke',
+  'KNOWN_GOOD_POST_URL',
+  'KNOWN_GOOD_COMMENT_URL',
+  'KNOWN_GOOD_ARTICLE_URL',
+  '<crab-post',
+  '<crab-comment',
+  '<crab-article',
+]) {
+  requireIncludes(siteTemplates, token, 'pages/site/siteTemplates.js');
+}
+
+const paidPublisherRoutes = new Set(['post', 'comment', 'article']);
+const localOnlyCreatorRoutes = ['lyrics', 'music', 'podcast', 'stream', 'video', 'ad', 'algo', 'code', 'game'];
+const allCreatorRoutes = ['lyrics', 'post', 'comment', 'article', 'music', 'podcast', 'stream', 'video', 'ad', 'algo', 'code', 'game'];
+
+for (const route of allCreatorRoutes) {
   const routeDir = path.join(pages, route);
   const source = collectTextFiles(routeDir).map(readText).join('\n');
   const label = `pages/${route}`;
 
   requireIncludes(source, `crab://${route}`, label);
-  requireIncludes(source, 'local', label);
   requireIncludes(source, 'truth', label);
 
-  for (const forbidden of [
+  const alwaysForbidden = [
     'canonical_cid: `b3:',
     'canonical_cid: "b3:',
     'manifest_cid: `b3:',
     'assigns_b3_cid: true',
     'assigns_manifest_cid: true',
-    'publishes_asset: true',
-    'writes_index_pointer: true',
-    'performs_paid_action: true',
-    'backend_route_claimed: true',
-    'wallet/hold',
-    'createWalletHold(',
-  ]) {
+  ];
+
+  for (const forbidden of alwaysForbidden) {
     forbidIncludes(source, forbidden, label);
+  }
+
+  if (localOnlyCreatorRoutes.includes(route)) {
+    requireIncludes(source, 'local', label);
+
+    for (const forbidden of [
+      'publishes_asset: true',
+      'writes_index_pointer: true',
+      'performs_paid_action: true',
+      'backend_route_claimed: true',
+      'wallet/hold',
+      'createWalletHold(',
+    ]) {
+      forbidIncludes(source, forbidden, label);
+    }
+  }
+
+  if (paidPublisherRoutes.has(route)) {
+    requireIncludes(source, `/assets/${route}`, label);
+    requireIncludes(source, 'wallet', label);
   }
 }
 

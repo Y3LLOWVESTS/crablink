@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — Passport drawer for the CrabLink React shell.
- * RO:WHY — Brings the old lane's passport-drawer UX shape into React without claiming backend truth prematurely.
- * RO:INTERACTS — appContext, identityClient, walletClient, PassportSummary, PassportActions, JsonPreview.
- * RO:INVARIANTS — no fake identity, balance, receipt, CID, or permission truth; gateway-only reads; no wallet mutation.
- * RO:METRICS — identity/wallet refresh calls inherit gateway x-correlation-id behavior.
- * RO:CONFIG — gatewayUrl, passportSubject, walletAccount, local storage backend.
+ * RO:WHY — Brings passport/session testing into React without claiming backend truth prematurely.
+ * RO:INTERACTS — appContext, identityClient, walletClient, PassportSummary, PassportActions, devPassportSessions, JsonPreview.
+ * RO:INVARIANTS — no fake identity, balance, receipt, CID, or permission truth; gateway-only reads; no direct wallet/ledger calls.
+ * RO:METRICS — identity/wallet/bootstrap calls inherit gateway x-correlation-id behavior.
+ * RO:CONFIG — gatewayUrl, passportSubject, walletAccount, local storage backend, optional dev session URL params.
  * RO:SECURITY — no private keys, seed phrases, private alt mappings, or spend authority are requested/rendered.
- * RO:TEST — manual drawer open/close, refresh identity, refresh balance, dev-label, HTTP fallback smoke.
+ * RO:TEST — manual drawer open/close, bootstrap starter ROC, refresh identity, refresh balance, multi-window Creator A/Visitor B smoke.
  */
 
 import { useMemo, useState } from 'react';
@@ -14,6 +14,13 @@ import { useAppContext } from '../appContext.js';
 import JsonPreview from '../../shared/components/JsonPreview.jsx';
 import PassportActions from './PassportActions.jsx';
 import PassportSummary, { buildPassportView } from './PassportSummary.jsx';
+import {
+  DEFAULT_DEV_STARTER_GRANT_MINOR,
+  listDevPassportSessions,
+  openDevPassportSessionWindow,
+  sessionLabel,
+  sessionTargetFromNavigation,
+} from '../../shared/utils/devPassportSessions.js';
 
 const EMPTY_REFRESH_STATE = Object.freeze({
   status: 'idle',
@@ -31,9 +38,13 @@ export default function PassportDrawer({ id, navigation, onClose }) {
   const context = useAppContext();
   const [localIdentityState, setLocalIdentityState] = useState(EMPTY_REFRESH_STATE);
   const [localWalletState, setLocalWalletState] = useState(EMPTY_REFRESH_STATE);
+  const [openingSessionId, setOpeningSessionId] = useState('');
+  const [bootstrapState, setBootstrapState] = useState(EMPTY_REFRESH_STATE);
 
   const identityState = context.identityState || localIdentityState;
   const walletState = context.walletState || localWalletState;
+  const activeDevSession = context.storage?.devPassportSession || null;
+  const devSessions = useMemo(() => listDevPassportSessions(), []);
 
   const view = useMemo(
     () =>
@@ -46,10 +57,16 @@ export default function PassportDrawer({ id, navigation, onClose }) {
     [context.settings, context.storage, identityState.data, walletState.data],
   );
 
+  const activePassportSubject = String(context.settings?.passportSubject || view?.passportSubject || '').trim();
+  const activeWalletAccount = String(context.settings?.walletAccount || view?.walletAccount || '').trim();
+  const activeStarterGrantMinor =
+    String(activeDevSession?.starterGrantMinor || '').trim() || DEFAULT_DEV_STARTER_GRANT_MINOR;
+
   const canUseDevLabels = Boolean(
     context.settings?.devMode !== false &&
       (!context.settings?.passportSubject || !context.settings?.walletAccount),
   );
+  const canBootstrapStarter = Boolean(activePassportSubject && activeWalletAccount);
 
   async function refreshIdentity() {
     if (typeof context.refreshIdentity === 'function') {
@@ -206,6 +223,102 @@ export default function PassportDrawer({ id, navigation, onClose }) {
     }
   }
 
+  async function bootstrapStarterGrant() {
+    if (!canBootstrapStarter) {
+      context.notify?.({
+        title: 'Passport/wallet labels missing',
+        message: 'Open Creator A or Visitor B first, or configure a passport and wallet account.',
+        tone: 'warning',
+      });
+      return null;
+    }
+
+    const client = context.clients?.identity;
+
+    if (!client?.bootstrapPassport) {
+      context.notify?.({
+        title: 'Bootstrap unavailable',
+        message: 'Identity client is not ready.',
+        tone: 'warning',
+      });
+      return null;
+    }
+
+    const payload = {
+      kind: 'main',
+      display_name: activeDevSession?.label
+        ? `CrabLink ${activeDevSession.label}`
+        : 'CrabLink dev passport',
+      label: activeDevSession?.label || 'CrabLink dev passport',
+      client: 'crablink-react',
+      create_wallet: true,
+      starter_grant: true,
+      passport_subject: activePassportSubject,
+      wallet_account: activeWalletAccount,
+      desired_starting_balance_minor_units: activeStarterGrantMinor,
+      requested_username: activeDevSession?.handle || context.settings?.handle || '',
+    };
+
+    const checking = {
+      status: 'checking',
+      checkedAt: new Date().toISOString(),
+      account: activeWalletAccount,
+      data: null,
+      response: null,
+      error: null,
+    };
+
+    setBootstrapState(checking);
+
+    try {
+      const response = await client.bootstrapPassport(payload, {
+        confirmed: true,
+      });
+      const data = unwrapGatewayData(response);
+      const next = {
+        status: 'ok',
+        checkedAt: new Date().toISOString(),
+        account: activeWalletAccount,
+        data,
+        response,
+        error: null,
+      };
+
+      setBootstrapState(next);
+
+      context.notify?.({
+        title: 'Starter ROC bootstrap complete',
+        message: starterGrantMessage(data, activeWalletAccount),
+        tone: data?.starter_grant?.issued === false ? 'warning' : 'success',
+      });
+
+      await Promise.allSettled([
+        refreshIdentity(),
+        refreshWallet(activeWalletAccount),
+      ]);
+
+      return next;
+    } catch (error) {
+      const next = {
+        status: 'error',
+        checkedAt: new Date().toISOString(),
+        account: activeWalletAccount,
+        data: null,
+        response: null,
+        error,
+      };
+
+      setBootstrapState(next);
+      context.notify?.({
+        title: 'Starter ROC bootstrap failed',
+        message: fallbackAwareMessage(error, context.storage),
+        tone: 'warning',
+      });
+
+      return next;
+    }
+  }
+
   async function useDevLabels() {
     if (typeof context.updateSettings !== 'function') {
       context.notify?.({
@@ -230,6 +343,34 @@ export default function PassportDrawer({ id, navigation, onClose }) {
     return result;
   }
 
+  async function openSession(sessionId) {
+    const target = sessionTargetFromNavigation(navigation);
+
+    setOpeningSessionId(sessionId);
+
+    try {
+      await openDevPassportSessionWindow({
+        sessionId,
+        target,
+        lane: 'react',
+      });
+
+      context.notify?.({
+        title: 'Dev session window opened',
+        message: `${sessionId} opened at ${target}. Labels are URL-scoped and do not fake backend truth.`,
+        tone: 'success',
+      });
+    } catch (error) {
+      context.notify?.({
+        title: 'Could not open dev session',
+        message: error?.message || String(error),
+        tone: 'warning',
+      });
+    } finally {
+      setOpeningSessionId('');
+    }
+  }
+
   return (
     <section
       id={id}
@@ -246,6 +387,99 @@ export default function PassportDrawer({ id, navigation, onClose }) {
           ×
         </button>
       </header>
+
+      {activeDevSession && (
+        <section className="cl-passport-truth" aria-label="Active dev passport window session">
+          <strong>Active dev window session</strong>
+          <p>
+            {sessionLabel(activeDevSession)}. These are per-window URL labels for testing
+            creator/visitor flows. They do not create a passport, mint ROC, or grant spend authority.
+          </p>
+        </section>
+      )}
+
+      <section className="cl-passport-truth" aria-label="Starter ROC bootstrap">
+        <strong>Starter ROC bootstrap</strong>
+        <p>
+          Use this explicit dev action to give the active passport/window a ledger-backed starter
+          balance through <code>/identity/passport/bootstrap</code>. This calls the gateway/backend
+          path and must return a backend receipt; it does not fake a local balance.
+        </p>
+
+        <div className="cl-passport-actions">
+          <button
+            type="button"
+            onClick={bootstrapStarterGrant}
+            disabled={!canBootstrapStarter || bootstrapState.status === 'checking'}
+            title={
+              canBootstrapStarter
+                ? `${activePassportSubject} / ${activeWalletAccount}`
+                : 'Open Creator A or Visitor B first'
+            }
+          >
+            {bootstrapState.status === 'checking'
+              ? 'Bootstrapping starter ROC…'
+              : `Bootstrap ${activeStarterGrantMinor} ROC for this window`}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => refreshWallet(activeWalletAccount)}
+            disabled={!activeWalletAccount || walletState.status === 'checking'}
+          >
+            {walletState.status === 'checking' ? 'Refreshing wallet…' : 'Refresh active wallet'}
+          </button>
+        </div>
+
+        <JsonPreview
+          label="Starter bootstrap state"
+          data={{
+            active_session: activeDevSession,
+            request_target: {
+              passport_subject: activePassportSubject,
+              wallet_account: activeWalletAccount,
+              desired_starting_balance_minor_units: activeStarterGrantMinor,
+            },
+            state: refreshStateForPreview(bootstrapState),
+            truth_boundary:
+              'Starter ROC must be issued by backend/svc-wallet and then verified through wallet balance.',
+          }}
+        />
+      </section>
+
+      <section className="cl-passport-truth" aria-label="Multi-passport dev testing">
+        <strong>Multi-passport dev windows</strong>
+        <p>
+          Open separate CrabLink windows with different local labels so Passport A can create content
+          while Passport B visits it. This is a testing bridge until real local passport vaults and
+          backend-confirmed alt/passport sessions are implemented.
+        </p>
+
+        <div className="cl-passport-actions">
+          {devSessions.map((session) => (
+            <button
+              key={session.id}
+              type="button"
+              onClick={() => openSession(session.id)}
+              disabled={openingSessionId === session.id}
+              title={`${session.passportSubject} / ${session.walletAccount}`}
+            >
+              {openingSessionId === session.id ? `Opening ${session.label}…` : `Open ${session.label}`}
+            </button>
+          ))}
+        </div>
+
+        <JsonPreview
+          label="Dev passport sessions"
+          data={{
+            active: activeDevSession,
+            available: devSessions,
+            target: sessionTargetFromNavigation(navigation),
+            truth_boundary:
+              'URL-scoped local labels only; backend wallet/identity responses remain source of truth.',
+          }}
+        />
+      </section>
 
       {canUseDevLabels && (
         <section className="cl-passport-truth" aria-label="Local dev label setup">
@@ -296,17 +530,18 @@ export default function PassportDrawer({ id, navigation, onClose }) {
         <p>
           This drawer reads local settings and optional gateway responses. It does not create a
           passport, mint ROC, sign wallet actions, expose private alt mappings, or publish profile
-          data.
+          data. Starter bootstrap is explicit and backend-routed through the public gateway.
         </p>
       </section>
 
-      {(identityState.data || identityState.error || walletState.data || walletState.error) && (
+      {(identityState.data || identityState.error || walletState.data || walletState.error || bootstrapState.data || bootstrapState.error) && (
         <section className="cl-passport-dev">
           <JsonPreview
             label="Drawer refresh state"
             data={{
               identity: refreshStateForPreview(identityState),
               wallet: refreshStateForPreview(walletState),
+              bootstrap: refreshStateForPreview(bootstrapState),
             }}
           />
         </section>
@@ -321,6 +556,23 @@ function unwrapGatewayData(response) {
   }
 
   return response || null;
+}
+
+function starterGrantMessage(data, walletAccount) {
+  const grant = data?.starter_grant || data?.starterGrant || {};
+  const issued = grant.issued === true;
+  const amount = String(grant.amount_minor_units || grant.amountMinorUnits || grant.amount_minor || '').trim();
+  const receipt = String(grant.receipt_id || grant.receiptId || grant.txid || '').trim();
+
+  if (issued) {
+    return receipt
+      ? `Issued ${amount || 'starter'} ROC to ${walletAccount}; receipt ${receipt}.`
+      : `Issued ${amount || 'starter'} ROC to ${walletAccount}.`;
+  }
+
+  return grant.reason
+    ? `Starter grant response returned without a new issue: ${grant.reason}. Refresh wallet to verify balance.`
+    : 'Starter grant response returned. Refresh wallet to verify ledger-backed balance.';
 }
 
 function refreshStateForPreview(state) {

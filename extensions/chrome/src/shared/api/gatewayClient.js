@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — Gateway-only HTTP client for the React CrabLink route shell.
  * RO:WHY — App Integration; Concerns: DX/SEC/RES; centralizes public svc-gateway calls for refactored UI.
- * RO:INTERACTS — app/settings.js, identityClient.js, walletClient.js, route-owned pages, svc-gateway public routes.
- * RO:INVARIANTS — no direct omnigate/storage/index/wallet/ledger calls; no fake backend truth; no silent ROC spend.
+ * RO:INTERACTS — app/settings.js, identityClient.js, walletClient.js, route-owned pages, public gateway routes.
+ * RO:INVARIANTS — no direct internal-service calls; no fake backend truth; no silent ROC spend.
  * RO:METRICS — sends x-correlation-id headers for backend trace correlation.
  * RO:CONFIG — baseUrl/gatewayUrl, requestTimeoutMs, optional dev auth/passport/wallet labels.
- * RO:SECURITY — redacts tokens from errors; never logs secrets; mutation helpers require explicit caller confirmation.
- * RO:TEST — npm run build; gateway health/readiness manual smoke; future React route smoke.
+ * RO:SECURITY — redacts tokens from errors; sanitizes header values before fetch; never logs secrets.
+ * RO:TEST — npm run build; gateway health/readiness manual smoke; post/article publish smoke.
  */
 
 export class GatewayClientError extends Error {
@@ -152,6 +152,7 @@ export class GatewayClient {
       }
 
       const aborted = error?.name === 'AbortError';
+      const invalidHeader = String(error?.message || '').includes('Invalid value');
 
       throw new GatewayClientError(
         `${options.label || 'Gateway request'} failed: ${
@@ -160,9 +161,9 @@ export class GatewayClient {
         {
           route,
           status: 0,
-          reason: aborted ? 'timeout' : 'network_error',
+          reason: aborted ? 'timeout' : invalidHeader ? 'invalid_request_header_value' : 'network_error',
           correlationId,
-          retryable: true,
+          retryable: !invalidHeader,
         },
       );
     } finally {
@@ -179,7 +180,7 @@ function buildHeaders({ authToken, passportSubject, walletAccount, correlationId
   const next = {
     Accept: 'application/json',
     'x-correlation-id': correlationId,
-    ...headers,
+    ...normalizeInputHeaders(headers),
   };
 
   if (authToken) {
@@ -198,7 +199,95 @@ function buildHeaders({ authToken, passportSubject, walletAccount, correlationId
     next['Content-Type'] = 'application/json';
   }
 
-  return next;
+  return sanitizeHeaders(next);
+}
+
+function normalizeInputHeaders(headers) {
+  if (!headers) {
+    return {};
+  }
+
+  if (headers instanceof Headers) {
+    return Object.fromEntries(headers.entries());
+  }
+
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers);
+  }
+
+  if (headers instanceof Map) {
+    return Object.fromEntries(headers.entries());
+  }
+
+  if (typeof headers === 'object') {
+    return { ...headers };
+  }
+
+  return {};
+}
+
+function sanitizeHeaders(headers) {
+  const safe = {};
+
+  for (const [rawName, rawValue] of Object.entries(headers || {})) {
+    const name = sanitizeHeaderName(rawName);
+
+    if (!name || rawValue === undefined || rawValue === null) {
+      continue;
+    }
+
+    const value = sanitizeHeaderValue(rawValue);
+
+    if (!value) {
+      continue;
+    }
+
+    safe[name] = value;
+  }
+
+  return safe;
+}
+
+function sanitizeHeaderName(value) {
+  const name = String(value || '').trim();
+
+  if (!/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(name)) {
+    return '';
+  }
+
+  return name;
+}
+
+function sanitizeHeaderValue(value) {
+  const raw = String(value ?? '');
+
+  const withoutForbiddenControls = raw
+    .replace(/\r\n|\r|\n/g, ' ')
+    .replace(/[\u0000-\u0008\u000A-\u001F\u007F]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!withoutForbiddenControls) {
+    return '';
+  }
+
+  return Array.from(withoutForbiddenControls)
+    .map((char) => {
+      const code = char.codePointAt(0) || 0;
+
+      if (code >= 0x20 && code <= 0x7e) {
+        return char;
+      }
+
+      if (code >= 0xa0 && code <= 0xff) {
+        return char;
+      }
+
+      return '-';
+    })
+    .join('')
+    .slice(0, 2048)
+    .trim();
 }
 
 function shouldSetJsonContentType(body, headers) {
