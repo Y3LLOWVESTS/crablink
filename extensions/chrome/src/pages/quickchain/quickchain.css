@@ -1,0 +1,275 @@
+/**
+ * RO:WHAT — Styles for CrabLink QuickChain readiness dashboard.
+ * RO:WHY — Makes deferred chain readiness visible without making fake chain claims.
+ * RO:INTERACTS — QuickchainReadinessPage.jsx and shared theme tokens.
+ * RO:INVARIANTS — readable light/dark; long hashes wrap; locked states remain visually distinct.
+ * RO:TEST — crab://quickchain in light/dark mode with/without local receipts.
+ */
+
+.quickchain-page {
+  display: grid;
+  gap: 18px;
+}
+
+.quickchain-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.quickchain-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.quickchain-progress-card {
+  min-width: 0;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 24px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--cl-accent, #111) 8%, transparent), transparent 44%),
+    var(--cl-card, #ffffff);
+  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.06));
+}
+
+.quickchain-progress-card span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quickchain-progress-card strong {
+  display: block;
+  margin-top: 10px;
+  color: var(--cl-text, #111111);
+  font-size: clamp(32px, 6vw, 58px);
+  font-weight: 950;
+  line-height: 0.92;
+  letter-spacing: -0.08em;
+  overflow-wrap: anywhere;
+}
+
+.quickchain-progress-card p {
+  margin: 10px 0 0;
+  color: var(--cl-muted, #626262);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.quickchain-progress-card.is-success {
+  border-color: color-mix(in srgb, var(--cl-success, #166534) 40%, var(--cl-border, #d9d6cf));
+}
+
+.quickchain-progress-card.is-warning {
+  border-color: color-mix(in srgb, var(--cl-warning, #8a4b00) 40%, var(--cl-border, #d9d6cf));
+}
+
+.quickchain-progress-card.is-locked strong {
+  letter-spacing: -0.03em;
+}
+
+.quickchain-next-grid,
+.quickchain-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.quickchain-mini-list {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding-left: 18px;
+  color: var(--cl-muted, #626262);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.quickchain-milestone-list {
+  display: grid;
+  gap: 12px;
+}
+
+.quickchain-milestone-card {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.24));
+  border-radius: 22px;
+  padding: 16px;
+  background: var(--cl-card, #ffffff);
+  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.05));
+}
+
+.quickchain-milestone-card.is-proven {
+  border-color: color-mix(in srgb, var(--cl-success, #166534) 34%, var(--cl-border, #d9d6cf));
+}
+
+.quickchain-milestone-card.is-partial,
+.quickchain-milestone-card.is-missing {
+  border-color: color-mix(in srgb, var(--cl-warning, #8a4b00) 28%, var(--cl-border, #d9d6cf));
+}
+
+.quickchain-milestone-card.is-locked {
+  border-style: dashed;
+}
+
+.quickchain-milestone-card header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.quickchain-milestone-card header span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quickchain-milestone-card header strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--cl-text, #111111);
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.quickchain-milestone-card p {
+  margin: 0;
+  color: var(--cl-muted, #626262);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.quickchain-milestone-next {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--cl-border, #d9d6cf) 80%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--cl-surface, #f7f5ef) 78%, transparent);
+}
+
+.quickchain-milestone-next span {
+  color: var(--cl-muted, #626262);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quickchain-milestone-next strong {
+  color: var(--cl-text, #111111);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.quickchain-milestone-card footer,
+.quickchain-proof-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.quickchain-proof-card {
+  min-width: 0;
+}
+
+.quickchain-proof-row {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--cl-border, #d9d6cf) 75%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--cl-surface, #f7f5ef) 78%, transparent);
+}
+
+.quickchain-proof-row span {
+  color: var(--cl-muted, #626262);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quickchain-proof-row strong {
+  min-width: 0;
+  color: var(--cl-text, #111111);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.quickchain-proof-row .is-monospace {
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    monospace;
+  font-size: 11px;
+}
+
+.quickchain-proof-actions {
+  margin-top: 12px;
+}
+
+.quickchain-dev-json {
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.24));
+  border-radius: 20px;
+  padding: 14px;
+  background: var(--cl-card, #ffffff);
+}
+
+.quickchain-dev-json summary {
+  cursor: pointer;
+  color: var(--cl-text, #111111);
+  font-weight: 950;
+}
+
+@media (max-width: 1120px) {
+  .quickchain-progress-grid,
+  .quickchain-next-grid,
+  .quickchain-proof-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .quickchain-header-actions,
+  .quickchain-milestone-card footer,
+  .quickchain-proof-actions {
+    justify-content: stretch;
+  }
+
+  .quickchain-header-actions .cl-button,
+  .quickchain-milestone-card footer .cl-button,
+  .quickchain-proof-actions .cl-button {
+    width: 100%;
+  }
+
+  .quickchain-milestone-card header,
+  .quickchain-milestone-next,
+  .quickchain-proof-row {
+    grid-template-columns: 1fr;
+  }
+}

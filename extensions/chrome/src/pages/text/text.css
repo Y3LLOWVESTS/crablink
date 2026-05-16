@@ -1,0 +1,246 @@
+/**
+ * RO:WHAT — Styles for the CrabLink text primitive readiness route.
+ * RO:WHY — Makes post/comment/article proof progress visible before QuickChain work.
+ * RO:INTERACTS — TextPrimitiveReadinessPage.jsx and shared theme tokens.
+ * RO:INVARIANTS — readable light/dark; long hashes wrap; missing proof stays obvious.
+ * RO:TEST — crab://text in light/dark mode with and without text asset proof entries.
+ */
+
+.text-page {
+  display: grid;
+  gap: 18px;
+}
+
+.text-header-actions,
+.text-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.text-copy-state {
+  margin: 0;
+  color: var(--cl-success, #166534);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.text-progress-grid,
+.text-primitive-grid,
+.text-next-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.text-progress-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.text-progress-card,
+.text-primitive-card,
+.text-proof-card {
+  min-width: 0;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 24px;
+  padding: 18px;
+  background: var(--cl-card, #ffffff);
+  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.06));
+}
+
+.text-progress-card {
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--cl-accent, #111) 8%, transparent), transparent 44%),
+    var(--cl-card, #ffffff);
+}
+
+.text-progress-card span,
+.text-primitive-card header span,
+.text-proof-card header span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.text-progress-card strong {
+  display: block;
+  margin-top: 10px;
+  color: var(--cl-text, #111111);
+  font-size: clamp(32px, 6vw, 58px);
+  font-weight: 950;
+  line-height: 0.92;
+  letter-spacing: -0.08em;
+  overflow-wrap: anywhere;
+}
+
+.text-progress-card p,
+.text-primitive-card p,
+.text-proof-list p {
+  margin: 10px 0 0;
+  color: var(--cl-muted, #626262);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.text-progress-card.is-success,
+.text-primitive-card.is-proven {
+  border-color: color-mix(in srgb, var(--cl-success, #166534) 38%, var(--cl-border, #d9d6cf));
+}
+
+.text-progress-card.is-warning,
+.text-primitive-card.is-open {
+  border-color: color-mix(in srgb, var(--cl-warning, #8a4b00) 34%, var(--cl-border, #d9d6cf));
+}
+
+.text-primitive-card,
+.text-proof-card {
+  display: grid;
+  gap: 14px;
+}
+
+.text-primitive-card header,
+.text-proof-card header,
+.text-proof-list > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.text-primitive-card header strong,
+.text-proof-card header strong,
+.text-proof-list h2 {
+  display: block;
+  margin: 4px 0 0;
+  color: var(--cl-text, #111111);
+  font-size: 18px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.text-fact-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.text-fact {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--cl-border, #d9d6cf) 75%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--cl-surface, #f7f5ef) 78%, transparent);
+}
+
+.text-fact span {
+  color: var(--cl-muted, #626262);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.text-fact strong {
+  min-width: 0;
+  color: var(--cl-text, #111111);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.text-fact .is-monospace {
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    monospace;
+  font-size: 11px;
+}
+
+.text-ordered-list {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding-left: 18px;
+  color: var(--cl-muted, #626262);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.text-proof-list {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.24));
+  border-radius: 24px;
+  padding: 18px;
+  background: var(--cl-card, #ffffff);
+  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.05));
+}
+
+.text-proof-list > header {
+  padding-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--cl-border, #d9d6cf) 70%, transparent);
+}
+
+.text-proof-list .cl-eyebrow {
+  margin: 0;
+}
+
+.text-proof-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.text-dev-json {
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.24));
+  border-radius: 20px;
+  padding: 14px;
+  background: var(--cl-card, #ffffff);
+}
+
+.text-dev-json summary {
+  cursor: pointer;
+  color: var(--cl-text, #111111);
+  font-weight: 950;
+}
+
+@media (max-width: 1120px) {
+  .text-progress-grid,
+  .text-primitive-grid,
+  .text-next-grid,
+  .text-proof-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .text-header-actions,
+  .text-card-actions {
+    justify-content: stretch;
+  }
+
+  .text-header-actions .cl-button,
+  .text-card-actions .cl-button {
+    width: 100%;
+  }
+
+  .text-primitive-card header,
+  .text-proof-card header,
+  .text-proof-list > header,
+  .text-fact {
+    grid-template-columns: 1fr;
+  }
+}

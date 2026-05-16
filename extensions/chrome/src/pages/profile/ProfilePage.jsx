@@ -1,12 +1,12 @@
 /**
- * RO:WHAT — Route owner for the React crab://profile page.
+ * RO:WHAT — Route owner for the React crab://profile and public @username profile pages.
  * RO:WHY — CrabLink refactor; profile is a protected identity route and must look real without faking backend truth.
- * RO:INTERACTS — ProfileHome, ProfileEditor, ProfileAvatar, ProfileAssets, ProfileGateway, AltVault, useCreatorDraft.
+ * RO:INTERACTS — ProfileHome, ProfileEditor, ProfileAvatar, ProfileAssets, ProfileGateway, ProfilePublicView, AltVault, useCreatorDraft.
  * RO:INVARIANTS — no fake backend publication; no fake username/reputation/mod truth; no public main↔alt linkage leak.
- * RO:METRICS — none; future profile publish must use gateway correlation IDs.
+ * RO:METRICS — public profile reads and future profile publication use gateway correlation IDs.
  * RO:CONFIG — app settings can supply display-only passport/wallet hints.
  * RO:SECURITY — no keys, no seed phrases, no direct internal services, no wallet mutation.
- * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://profile route smoke.
+ * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://profile and crab://@username route smoke.
  */
 
 import { useCallback } from 'react';
@@ -21,6 +21,7 @@ import ProfileAssets from './ProfileAssets.jsx';
 import ProfileEditor from './ProfileEditor.jsx';
 import ProfileGateway from './ProfileGateway.jsx';
 import ProfileHome from './ProfileHome.jsx';
+import ProfilePublicView from './ProfilePublicView.jsx';
 import {
   DEFAULT_PROFILE_DRAFT,
   buildProfileManifestDraft,
@@ -30,6 +31,16 @@ import {
 import './profile.css';
 
 export default function ProfilePage({ app, route }) {
+  const publicHandle = String(route?.params?.handle || '').trim();
+
+  if (publicHandle) {
+    return <ProfilePublicView app={app} route={route} />;
+  }
+
+  return <ProfileWorkspace app={app} route={route} />;
+}
+
+function ProfileWorkspace({ app, route }) {
   const buildManifest = useCallback(
     (draft) => buildProfileManifestDraft(draft, { app, route }),
     [app, route],
@@ -64,7 +75,7 @@ export default function ProfilePage({ app, route }) {
       <TruthBoundary
         tone="warning"
         title="Profile truth boundary"
-        copy="This React profile route is a local identity/profile draft. It does not claim backend profile publication, a reserved username, real reputation, real moderator score, public discovery, or public main↔alt linkage."
+        copy="This React profile workspace can claim/read backend @username profile truth through the gateway, but local draft fields remain display hints. It does not fake profile publication, real reputation, real moderator score, public discovery, or public main↔alt linkage."
       />
 
       <section className="profile-dashboard-grid" aria-label="Profile workspace">
@@ -101,6 +112,7 @@ export default function ProfilePage({ app, route }) {
               <li>Main RON Passport identity is the future site-creation authority.</li>
               <li>Anonymous alts are for browsing/commenting unless policy later grants more.</li>
               <li>Profile, REP, MOD, and @username truth must come from gateway-backed services.</li>
+              <li>Final live usernames should be effectively permanent after claim.</li>
             </ul>
           </Card>
         </aside>

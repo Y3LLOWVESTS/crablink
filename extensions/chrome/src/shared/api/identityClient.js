@@ -6,10 +6,22 @@
  * RO:METRICS — inherits x-correlation-id behavior from GatewayClient.
  * RO:CONFIG — gateway client settings and configured x-ron-passport/x-ron-wallet-account headers.
  * RO:SECURITY — no private keys, seed phrases, private alt mappings, or spend authority handled here.
- * RO:TEST — identity route smoke; PassportDrawer bootstrap starter ROC smoke.
+ * RO:TEST — identity route smoke; PassportDrawer bootstrap starter ROC smoke; profile claim/read route smoke.
  */
 
 const MAX_IDEMPOTENCY_KEY_BYTES = 64;
+const DEFAULT_PASSPORT_SUBJECT = 'passport:main:dev';
+const DEFAULT_WALLET_ACCOUNT = 'acct_dev';
+const DEFAULT_STARTER_GRANT_MINOR = '1776';
+
+const USERNAME_STATUS_LABELS = Object.freeze({
+  local_draft: 'Local draft',
+  requested: 'Requested',
+  confirmed: 'Confirmed',
+  rejected: 'Rejected',
+  unavailable: 'Unavailable',
+  backend_unknown: 'Backend unknown',
+});
 
 export function createIdentityClient(gateway) {
   return new IdentityClient(gateway);
@@ -83,6 +95,68 @@ export class IdentityClient {
     });
   }
 
+  async claimPassportProfile(payload = {}, options = {}) {
+    this.assertGateway();
+
+    if (options.confirmed !== true) {
+      throw makeIdentityError(
+        'Public profile claim requires explicit caller confirmation.',
+        'confirmation_required',
+      );
+    }
+
+    const request = normalizeProfileClaimRequest(payload, this.gateway);
+    const idempotencyKey = compactIdempotencyKey(
+      options.idempotencyKey ||
+        payload.idempotency_key ||
+        payload.idempotencyKey ||
+        stableIdempotencyKey(
+          'profile-claim',
+          request.passport_subject,
+          request.requested_username,
+          request.display_name,
+        ),
+      'profile-claim',
+    );
+
+    return this.gateway.request('/identity/passport/profile/claim', {
+      method: 'POST',
+      body: request,
+      label: 'Public profile claim',
+      mutation: true,
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
+        'x-ron-passport': request.passport_subject,
+        'x-ron-wallet-account': normalizeWalletAccount(payload, this.gateway),
+      },
+      idempotencyKey,
+    });
+  }
+
+  async getPassportProfile(usernameOrHandle, options = {}) {
+    this.assertGateway();
+
+    const username = normalizeProfileUsername(usernameOrHandle);
+
+    if (!username) {
+      throw makeIdentityError(
+        'Profile lookup requires a username or @handle.',
+        'missing_username',
+      );
+    }
+
+    return this.gateway.request(`/identity/passport/profile/${encodeURIComponent(username)}`, {
+      method: 'GET',
+      label: options.label || `Public profile ${username}`,
+      headers: {
+        Accept: 'application/json',
+        'x-ron-passport': stringValue(options.passportSubject, this.gateway.passportSubject),
+        'x-ron-wallet-account': stringValue(options.walletAccount, this.gateway.walletAccount),
+      },
+    });
+  }
+
   assertGateway() {
     if (!this.gateway) {
       throw makeIdentityError(
@@ -105,165 +179,281 @@ export function normalizePassportBootstrapRequest(payload = {}, gateway = {}) {
     payload.passport_subject,
     payload.passportSubject,
     gateway.passportSubject,
-    'passport:main:dev',
+    gateway.passport_subject,
+    DEFAULT_PASSPORT_SUBJECT,
   );
   const walletAccount = stringValue(
     payload.wallet_account,
     payload.walletAccount,
     gateway.walletAccount,
-    'acct_dev',
+    gateway.wallet_account,
+    DEFAULT_WALLET_ACCOUNT,
   );
-  const displayName = stringValue(
-    payload.display_name,
-    payload.displayName,
-    payload.label,
-    labelFromPassport(passportSubject),
-  );
-  const desiredAmount = normalizeAmountMinor(
+  const desiredGrant = stringValue(
     payload.desired_starting_balance_minor_units,
     payload.desiredStartingBalanceMinorUnits,
-    payload.amount_minor,
-    payload.amountMinor,
-    '1776',
-  );
-  const requestedUsername = normalizeUsername(
-    payload.requested_username ||
-      payload.requestedUsername ||
-      payload.username ||
-      payload.handle ||
-      '',
+    payload.starting_balance_minor_units,
+    payload.startingBalanceMinorUnits,
+    DEFAULT_STARTER_GRANT_MINOR,
   );
 
-  if (!passportSubject) {
-    throw makeIdentityError('Passport bootstrap requires a passport subject.', 'missing_passport_subject');
-  }
+  return {
+    kind: stringValue(payload.kind, 'main'),
+    display_name: stringValue(payload.display_name, payload.displayName, payload.label, 'Local Dev Passport'),
+    label: stringValue(payload.label, payload.display_name, payload.displayName, 'Local Dev Passport'),
+    client: stringValue(payload.client, 'crablink-react'),
+    create_wallet: booleanValue(payload.create_wallet, payload.createWallet, true),
+    starter_grant: booleanValue(payload.starter_grant, payload.starterGrant, payload.request_starter_grant, true),
+    request_starter_grant: booleanValue(payload.request_starter_grant, payload.requestStarterGrant, payload.starter_grant, true),
+    passport_subject: passportSubject,
+    wallet_account: walletAccount,
+    desired_starting_balance_minor_units: desiredGrant,
+  };
+}
 
-  if (!walletAccount) {
-    throw makeIdentityError('Passport bootstrap requires a wallet account.', 'missing_wallet_account');
-  }
+export function normalizeProfileClaimRequest(payload = {}, gateway = {}) {
+  const passportSubject = stringValue(
+    payload.passport_subject,
+    payload.passportSubject,
+    gateway.passportSubject,
+    gateway.passport_subject,
+    DEFAULT_PASSPORT_SUBJECT,
+  );
+  const requestedUsername = normalizeHandle(
+    stringValue(
+      payload.requested_username,
+      payload.requestedUsername,
+      payload.handle,
+      payload.username,
+    ),
+  );
 
-  if (!desiredAmount) {
-    throw makeIdentityError('Passport bootstrap requires a positive starter grant amount.', 'missing_starter_amount');
+  if (!requestedUsername) {
+    throw makeIdentityError(
+      'Profile claim requires a requested @username.',
+      'missing_requested_username',
+    );
   }
 
   const request = {
-    kind: stringValue(payload.kind, 'main'),
-    display_name: displayName,
-    label: stringValue(payload.label, displayName),
-    client: stringValue(payload.client, 'crablink-react'),
-    create_wallet: payload.create_wallet !== false && payload.createWallet !== false,
-    starter_grant: payload.starter_grant !== false && payload.starterGrant !== false,
     passport_subject: passportSubject,
-    wallet_account: walletAccount,
-    desired_starting_balance_minor_units: desiredAmount,
+    requested_username: requestedUsername,
   };
 
-  if (requestedUsername) {
-    request.requested_username = requestedUsername;
+  const displayName = stringValue(payload.display_name, payload.displayName, payload.name);
+  const bio = stringValue(payload.bio, payload.description);
+  const avatarImage = stringValue(payload.avatar_image, payload.avatarImage, payload.avatar_url, payload.avatarUrl);
+
+  if (displayName) {
+    request.display_name = displayName;
+  }
+
+  if (bio) {
+    request.bio = bio;
+  }
+
+  if (avatarImage) {
+    request.avatar_image = avatarImage;
   }
 
   return request;
 }
 
-export function stableIdempotencyKey(...parts) {
-  const joined = parts
-    .map((part) => String(part ?? '').trim().toLowerCase())
+export function normalizePublicProfileResponse(value = {}) {
+  const profile = objectValue(value);
+  const username = normalizeProfileUsername(profile.username || profile.handle);
+  const handle = normalizeHandle(profile.handle || username);
+  const usernameStatus = normalizeUsernameStatus(profile.username_status || profile.usernameStatus);
+
+  return {
+    schema: stringValue(profile.schema, 'svc-passport.public-profile.v1'),
+    passportSubject: stringValue(profile.passport_subject, profile.passportSubject),
+    passportKind: stringValue(profile.passport_kind, profile.passportKind),
+    username,
+    handle,
+    usernameStatus,
+    usernameStatusLabel: USERNAME_STATUS_LABELS[usernameStatus] || USERNAME_STATUS_LABELS.backend_unknown,
+    displayName: nullableString(profile.display_name, profile.displayName),
+    bio: nullableString(profile.bio),
+    avatarImage: nullableString(profile.avatar_image, profile.avatarImage),
+    profileCrabUrl: stringValue(profile.profile_crab_url, profile.profileCrabUrl, handle ? `crab://${handle}` : ''),
+    publicProfileCid: nullableString(profile.public_profile_cid, profile.publicProfileCid),
+    reputationScore: nullableNumber(profile.reputation_score, profile.reputationScore),
+    moderatorScore: nullableNumber(profile.moderator_score, profile.moderatorScore),
+    warnings: arrayStrings(profile.warnings),
+    backendConfirmed: usernameStatus === 'confirmed',
+    raw: profile,
+  };
+}
+
+export function normalizeUsernameStatus(value) {
+  const status = String(value || '').trim().toLowerCase();
+
+  if (USERNAME_STATUS_LABELS[status]) {
+    return status;
+  }
+
+  return 'backend_unknown';
+}
+
+export function normalizeProfileUsername(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^crab:\/\/@?/i, '')
+    .replace(/^profile\/@?/i, '')
+    .replace(/^@/, '')
+    .trim()
+    .toLowerCase();
+}
+
+export function normalizeHandle(value) {
+  const username = normalizeProfileUsername(value);
+
+  return username ? `@${username}` : '';
+}
+
+export function unwrapIdentityResponse(response) {
+  if (!response) {
+    return null;
+  }
+
+  return response.data || response.body || response;
+}
+
+export function unwrapPublicProfileResponse(response) {
+  return normalizePublicProfileResponse(unwrapIdentityResponse(response));
+}
+
+export function makeIdentityError(message, reason = 'identity_error', extra = {}) {
+  const error = new Error(message);
+  error.reason = reason;
+  error.code = reason;
+  error.retryable = Boolean(extra.retryable);
+  error.status = Number(extra.status || 0);
+  error.details = extra;
+  return error;
+}
+
+function normalizeWalletAccount(payload = {}, gateway = {}) {
+  return stringValue(
+    payload.wallet_account,
+    payload.walletAccount,
+    gateway.walletAccount,
+    gateway.wallet_account,
+    DEFAULT_WALLET_ACCOUNT,
+  );
+}
+
+function stableIdempotencyKey(scope, ...parts) {
+  const cleanScope = String(scope || 'identity').trim() || 'identity';
+  const cleanParts = parts
+    .map((part) => String(part ?? '').trim())
     .filter(Boolean)
     .join(':');
 
-  return `crablink:${fnv1aHex(joined)}:${joined}`;
+  const seed = cleanParts || `${Date.now()}:${Math.random().toString(16).slice(2)}`;
+  const hash = smallStableHash(`${cleanScope}:${seed}`);
+
+  return compactIdempotencyKey(`${cleanScope}:${hash}`, cleanScope);
 }
 
-export function compactIdempotencyKey(value, prefix = 'crablink') {
-  const normalized = String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_.:-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '');
+function compactIdempotencyKey(value, fallbackPrefix = 'identity') {
+  const clean = String(value || '').trim().replace(/\s+/g, '-');
 
-  if (normalized.length > 0 && normalized.length <= MAX_IDEMPOTENCY_KEY_BYTES) {
-    return normalized;
+  if (!clean) {
+    return `${fallbackPrefix}:${Date.now().toString(36)}`;
   }
 
-  const hash = fnv1aHex(normalized || `${Date.now()}:${Math.random()}`);
-  const safePrefix = String(prefix || 'crablink').replace(/[^a-z0-9_.:-]+/gi, '-').slice(0, 24);
-  const budget = MAX_IDEMPOTENCY_KEY_BYTES - safePrefix.length - hash.length - 2;
-  const suffix = normalized.slice(0, Math.max(0, budget));
+  if (byteLength(clean) <= MAX_IDEMPOTENCY_KEY_BYTES) {
+    return clean;
+  }
 
-  return suffix ? `${safePrefix}:${hash}:${suffix}` : `${safePrefix}:${hash}`;
+  const prefix = String(fallbackPrefix || 'identity').trim() || 'identity';
+  return `${prefix}:${smallStableHash(clean)}`.slice(0, MAX_IDEMPOTENCY_KEY_BYTES);
 }
 
-function normalizeUsername(value) {
-  const raw = String(value || '').trim().toLowerCase().replace(/^@+/, '');
+function smallStableHash(value) {
+  let hash = 2166136261;
 
-  if (!raw) {
-    return '';
-  }
-
-  return raw.replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
-}
-
-function normalizeAmountMinor(...values) {
-  for (const value of values) {
-    const raw = String(value ?? '').trim();
-
-    if (/^[0-9]+$/.test(raw) && raw !== '0') {
-      return raw;
-    }
-
-    const n = Number(raw);
-    if (Number.isSafeInteger(n) && n > 0) {
-      return String(n);
-    }
-  }
-
-  return '';
-}
-
-function labelFromPassport(passportSubject) {
-  const raw = String(passportSubject || '').trim();
-
-  if (raw.includes('visitor')) {
-    return 'CrabLink Visitor Passport';
-  }
-
-  if (raw.includes('creator')) {
-    return 'CrabLink Creator Passport';
-  }
-
-  return 'CrabLink main passport';
-}
-
-function stringValue(...values) {
-  for (const value of values) {
-    const safe = String(value ?? '').trim();
-
-    if (safe) {
-      return safe;
-    }
-  }
-
-  return '';
-}
-
-function fnv1aHex(value) {
-  let hash = 0x811c9dc5;
-  const text = String(value || '');
-
-  for (let i = 0; i < text.length; i += 1) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
+  for (const ch of String(value || '')) {
+    hash ^= ch.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
   }
 
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
-function makeIdentityError(message, reason) {
-  const error = new Error(message);
-  error.name = 'IdentityClientError';
-  error.reason = reason;
-  error.status = 0;
-  error.retryable = false;
-  return error;
+function booleanValue(...values) {
+  for (const value of values) {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const clean = value.trim().toLowerCase();
+
+      if (clean === 'true' || clean === '1' || clean === 'yes') {
+        return true;
+      }
+
+      if (clean === 'false' || clean === '0' || clean === 'no') {
+        return false;
+      }
+    }
+  }
+
+  return false;
+}
+
+function stringValue(...values) {
+  for (const value of values) {
+    const clean = String(value ?? '').trim();
+
+    if (clean) {
+      return clean;
+    }
+  }
+
+  return '';
+}
+
+function nullableString(...values) {
+  const clean = stringValue(...values);
+  return clean || null;
+}
+
+function nullableNumber(...values) {
+  for (const value of values) {
+    if (value === null || value === undefined || value === '') {
+      continue;
+    }
+
+    const n = Number(value);
+
+    if (Number.isFinite(n)) {
+      return n;
+    }
+  }
+
+  return null;
+}
+
+function objectValue(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function arrayStrings(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((item) => String(item || '').trim()).filter(Boolean);
+}
+
+function byteLength(value) {
+  try {
+    return new TextEncoder().encode(String(value || '')).length;
+  } catch (_error) {
+    return String(value || '').length;
+  }
 }

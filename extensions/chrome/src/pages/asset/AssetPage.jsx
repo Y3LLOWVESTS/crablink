@@ -1,19 +1,21 @@
 /**
  * RO:WHAT — Route-owned React page for typed crab://<hash>.<kind> asset views.
  * RO:WHY — CrabLink refactor; keeps generic b3 asset reading polished while preserving gateway-only truth.
- * RO:INTERACTS — AssetResolver, AssetHydratedView, assetClient, gatewayClient, shared route components.
+ * RO:INTERACTS — AssetResolver, AssetHydratedView, assetClient, gatewayClient, localCatalog.
  * RO:INVARIANTS — b3 hash is canonical; gateway-only reads; no fake manifests; no fake receipts; no silent ROC spend.
  * RO:METRICS — backend calls carry gateway correlation IDs through GatewayClient.
  * RO:CONFIG — uses configured gateway URL and request timeout.
  * RO:SECURITY — trusted shell UI only; untrusted asset/site content must stay in sandboxed/render-safe surfaces.
- * RO:TEST — npm run build; React extension smoke for crab://<hash>.image and b3:<hash>.
+ * RO:TEST — npm run build; React extension smoke for crab://<hash>.image and b3:<hash>; drawer asset catalog.
  */
 
+import { useEffect } from 'react';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import CopyButton from '../../shared/components/CopyButton.jsx';
 import PageHeader from '../../shared/components/PageHeader.jsx';
 import TruthBoundary from '../../shared/components/TruthBoundary.jsx';
+import { writeLocalCatalogEntry } from '../../shared/catalog/localCatalog.js';
 import AssetResolver from './AssetResolver.jsx';
 import './asset.css';
 
@@ -23,6 +25,15 @@ export default function AssetPage({ route, app }) {
   const hash = cleanHash(target.hash);
   const cid = cleanCid(target.cid || (hash ? `b3:${hash}` : ''));
   const crabUrl = route?.normalizedInput || target.assetUrl || (hash ? `crab://${hash}.${assetKind}` : '');
+
+  useEffect(() => {
+    writeSeenAssetCatalogEntry({
+      assetKind,
+      hash,
+      cid,
+      crabUrl,
+    });
+  }, [assetKind, cid, crabUrl, hash]);
 
   return (
     <section className="cl-page asset-page">
@@ -87,6 +98,37 @@ function AssetRouteFact({ label, value, monospace = false }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function writeSeenAssetCatalogEntry({ assetKind, hash, cid, crabUrl }) {
+  if (!crabUrl || !cid || !hash) {
+    return;
+  }
+
+  try {
+    writeLocalCatalogEntry({
+      schema: 'crablink.local-catalog-entry.v1',
+      kind: assetKind,
+      crabUrl,
+      title: `${labelFromKind(assetKind)} asset`,
+      status: 'gateway asset route seen',
+      detail: cid,
+      source: 'asset_page_route',
+      cid,
+      hash,
+      createdAt: new Date().toISOString(),
+      raw: {
+        asset_kind: assetKind,
+        crab_url: crabUrl,
+        cid,
+        hash,
+        truth_boundary:
+          'This is a local seen-asset catalog entry. Backend ownership/public catalog truth must come from gateway-backed routes.',
+      },
+    });
+  } catch (_error) {
+    // Local catalog is optional display memory. Asset resolution remains gateway truth.
+  }
 }
 
 function cleanHash(value) {

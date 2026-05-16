@@ -2,7 +2,7 @@
  * RO:WHAT — Home quick-action route cards for CrabLink React built-ins.
  * RO:WHY — App Integration; Concerns: DX; makes route smoke testing fast, visible, and honest.
  * RO:INTERACTS — app.navigate, built-in page owners, extension-origin React, local HTTP fallback preview.
- * RO:INVARIANTS — navigation/copy only; no backend mutation; no fake publication; no ROC action.
+ * RO:INVARIANTS — navigation/copy only; no backend mutation; no fake publication; no ROC action; no chain action.
  * RO:METRICS — none.
  * RO:CONFIG — built-in route list below plus optional proof routes from HomePage.
  * RO:SECURITY — no paid or privileged action; copied URLs are test helpers only.
@@ -16,7 +16,7 @@ import Card from '../../shared/components/Card.jsx';
 const LOCAL_PREVIEW_ORIGIN = 'http://127.0.0.1:4173';
 const DEFAULT_PROOF_IMAGE =
   'crab://6e343cbcbcd233a72ce45b197d1c45caea862480221ef0f7e4e4360f17e1fce0.image';
-const DEFAULT_PROOF_SITE = 'crab://ron6';
+const DEFAULT_PROOF_SITE = 'crab://ron7';
 
 function routeGroups({ proofSite, proofImage }) {
   return [
@@ -25,7 +25,7 @@ function routeGroups({ proofSite, proofImage }) {
       eyebrow: 'Regression anchors',
       status: 'protected',
       copy:
-        'Use these first after every build. They prove named-site resolving, typed asset resolving, and profile route ownership without deleting the protected old lane.',
+        'Use these first after every build. They prove named-site resolving, typed asset resolving, profile route ownership, local library display, text readiness, and QuickChain gating.',
       routes: [
         {
           kind: 'site-proof',
@@ -51,6 +51,27 @@ function routeGroups({ proofSite, proofImage }) {
           risk: 'identity truth',
         },
         {
+          kind: 'library',
+          label: 'Library',
+          displayRoute: 'crab://library',
+          purpose: 'local profiles, sites, assets, and receipts display cache',
+          risk: 'display cache only',
+        },
+        {
+          kind: 'text',
+          label: 'Text Primitive Readiness',
+          displayRoute: 'crab://text',
+          purpose: 'post/comment/article proof tracking before QuickChain is allowed to begin',
+          risk: 'pre-QuickChain checklist',
+        },
+        {
+          kind: 'quickchain',
+          label: 'QuickChain Readiness',
+          displayRoute: 'crab://quickchain',
+          purpose: 'readiness checklist proving QuickChain is correctly deferred until internal ROC gates are done',
+          risk: 'future blueprint only',
+        },
+        {
           kind: 'home',
           label: 'Home',
           displayRoute: 'crab://home',
@@ -64,7 +85,7 @@ function routeGroups({ proofSite, proofImage }) {
       eyebrow: 'Parity routes',
       status: 'protected',
       copy:
-        'These routes touch proven product flows or identity surfaces. Keep the old lane available until React parity is repeatedly green from extension origin.',
+        'These routes touch proven product flows or identity surfaces. Keep them protected while NEXT_LEVEL backend primitives are added one at a time.',
       routes: [
         {
           kind: 'site',
@@ -101,30 +122,30 @@ function routeGroups({ proofSite, proofImage }) {
       eyebrow: 'Local draft routes',
       status: 'local',
       copy:
-        'Low-risk creator surfaces. These remain local-only until backend post/comment/article/lyrics contracts exist.',
+        'Low-risk creator surfaces. Post/comment/article have frontend gateway lanes, but only backend responses may create CIDs, receipts, manifests, and index pointers.',
       routes: [
         {
-          kind: 'lyrics',
-          label: 'Lyrics',
-          purpose: 'standalone lyrics asset, rights/versioning boundary',
-          risk: 'local draft',
+          kind: 'post',
+          label: 'Post',
+          purpose: 'short text/social post asset draft and publish lane',
+          risk: 'backend proof required',
+        },
+        {
+          kind: 'comment',
+          label: 'Comment',
+          purpose: 'comment asset draft with parent/thread/site relationship',
+          risk: 'backend proof required',
         },
         {
           kind: 'article',
           label: 'Article',
           purpose: 'long-form article manifest, hero image, tags, access',
-          risk: 'local draft',
+          risk: 'backend proof required',
         },
         {
-          kind: 'post',
-          label: 'Post',
-          purpose: 'short/social post asset, feed/profile/thread references',
-          risk: 'local draft',
-        },
-        {
-          kind: 'comment',
-          label: 'Comment',
-          purpose: 'comment asset, target/parent/moderation/site policy',
+          kind: 'lyrics',
+          label: 'Lyrics',
+          purpose: 'standalone lyrics asset, rights/versioning boundary',
           risk: 'local draft',
         },
       ],
@@ -240,7 +261,7 @@ export default function HomeQuickActions({ app, proofSite = DEFAULT_PROOF_SITE, 
       'scripts/package-chrome.sh',
       'scripts/make_codebundle.sh',
       '',
-      'Then reload the unpacked extension staging folder and click the React button.',
+      'Then reload the unpacked extension staging folder and click/open the React lane.',
       '',
       'Optional HTTP fallback preview:',
       'cd /Users/mymac/Desktop/crablink/dist/chrome-src',
@@ -261,14 +282,14 @@ export default function HomeQuickActions({ app, proofSite = DEFAULT_PROOF_SITE, 
   }
 
   return (
-    <section className="cl-home-actions" aria-label="CrabLink route quick actions">
+    <section className="cl-home-actions" aria-label="Route quick actions">
       <div className="cl-home-actions-head">
         <div>
           <p className="cl-eyebrow">Route quick actions</p>
           <h2>Built-in crab:// routes</h2>
           <p>
-            Open each route from here and confirm one clear page owner mounts. Copy HTTP fallback
-            URLs only when you need local preview debugging outside extension origin.
+            Open each route from here and confirm one clear page owner mounts. Copy HTTP fallback URLs only when
+            you need local preview debugging outside extension origin.
           </p>
         </div>
 
@@ -280,43 +301,41 @@ export default function HomeQuickActions({ app, proofSite = DEFAULT_PROOF_SITE, 
         </div>
       </div>
 
-      <div className="cl-home-route-groups">
-        {groups.map((group) => (
-          <Card key={group.title} eyebrow={group.eyebrow} title={group.title}>
-            <p className="cl-home-group-copy">{group.copy}</p>
+      {groups.map((group) => (
+        <Card
+          key={group.title}
+          eyebrow={group.eyebrow}
+          title={group.title}
+          className="cl-scaffold-card"
+        >
+          <p>{group.copy}</p>
 
-            <div className="cl-home-route-list">
-              {group.routes.map((route) => {
-                const crabRoute = route.route || `crab://${route.kind}`;
-                const displayRoute = route.displayRoute || crabRoute;
+          <div className="cl-home-route-list">
+            {group.routes.map((route) => (
+              <article key={`${group.title}:${route.kind}:${route.route || ''}`} className="cl-home-route-card">
+                <header className="cl-home-route-card-head">
+                  <div>
+                    <code>{route.displayRoute || route.route || `crab://${route.kind}`}</code>
+                    <strong>{route.label}</strong>
+                  </div>
+                  <span>{route.risk}</span>
+                </header>
 
-                return (
-                  <article key={`${group.title}-${route.kind}`} className={`cl-home-route-card is-${group.status}`}>
-                    <div className="cl-home-route-card-head">
-                      <div>
-                        <span className="cl-home-route-kind">{displayRoute}</span>
-                        <h3>{route.label}</h3>
-                      </div>
-                      <span className="cl-home-route-risk">{route.risk}</span>
-                    </div>
+                <p>{route.purpose}</p>
 
-                    <p>{route.purpose}</p>
-
-                    <div className="cl-home-route-actions">
-                      <Button variant="secondary" onClick={() => open(route)}>
-                        Open
-                      </Button>
-                      <Button variant="secondary" onClick={() => copyPreviewUrl(route)}>
-                        Copy HTTP fallback
-                      </Button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </Card>
-        ))}
-      </div>
+                <div className="cl-home-route-actions">
+                  <Button variant="primary" onClick={() => open(route)}>
+                    Open
+                  </Button>
+                  <Button variant="secondary" onClick={() => copyPreviewUrl(route)}>
+                    Copy HTTP fallback
+                  </Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </Card>
+      ))}
     </section>
   );
 }

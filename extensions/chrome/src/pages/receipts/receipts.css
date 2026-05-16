@@ -1,0 +1,297 @@
+/**
+ * RO:WHAT — Styles for the dedicated CrabLink receipt history page.
+ * RO:WHY — Keeps receipt details readable outside the compact Passport drawer.
+ * RO:INTERACTS — ReceiptsPage.jsx and shared CrabLink theme tokens.
+ * RO:INVARIANTS — readable long hashes; display-only truth visible; no hidden receipt fields.
+ * RO:TEST — crab://receipts in light/dark mode with site_visit and asset publish receipts.
+ */
+
+.receipts-page {
+  display: grid;
+  gap: 18px;
+}
+
+.receipts-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.receipts-copy-state {
+  margin: -4px 0 0;
+  color: var(--cl-muted, #626262);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.receipts-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.receipts-stat-card {
+  min-width: 0;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 22px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--cl-accent, #111) 9%, transparent), transparent 44%),
+    var(--cl-card, #ffffff);
+  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.06));
+}
+
+.receipts-stat-card span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.receipts-stat-card strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--cl-text, #111111);
+  font-size: clamp(34px, 6vw, 58px);
+  font-weight: 950;
+  line-height: 0.92;
+  letter-spacing: -0.08em;
+}
+
+.receipts-stat-card p {
+  margin: 8px 0 0;
+  color: var(--cl-muted, #626262);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.receipts-toolbar {
+  display: grid;
+  gap: 12px;
+}
+
+.receipts-tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.receipts-tab-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.28));
+  border-radius: 999px;
+  padding: 0 11px;
+  background: var(--cl-card, #ffffff);
+  color: var(--cl-text, #111111);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+}
+
+.receipts-tab-row button strong {
+  display: inline-grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cl-text, #111111) 8%, transparent);
+  font-size: 11px;
+}
+
+.receipts-tab-row button.is-active {
+  background: var(--cl-text, #111111);
+  color: var(--cl-bg, #ffffff);
+  border-color: var(--cl-text, #111111);
+}
+
+.receipts-tab-row button.is-active strong {
+  background: color-mix(in srgb, var(--cl-bg, #ffffff) 18%, transparent);
+}
+
+.receipts-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.receipts-list {
+  display: grid;
+  gap: 14px;
+}
+
+.receipts-card {
+  min-width: 0;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 22px;
+  padding: 16px;
+  background: var(--cl-card, #ffffff);
+  box-shadow: var(--cl-shadow-soft, 0 12px 28px rgba(0, 0, 0, 0.05));
+}
+
+.receipts-card.is-site_visit {
+  border-color: color-mix(in srgb, var(--cl-success, #16703d) 45%, var(--cl-border, #dddddd));
+}
+
+.receipts-card header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.receipts-card header span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.receipts-card header strong {
+  display: block;
+  min-width: 0;
+  margin-top: 3px;
+  color: var(--cl-text, #111111);
+  font-size: 20px;
+  font-weight: 950;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+}
+
+.receipts-proof-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.receipts-mini {
+  border: 1px solid color-mix(in srgb, var(--cl-border, #dddddd) 75%, transparent);
+  border-radius: 16px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--cl-surface, #f7f5ef) 78%, transparent);
+}
+
+.receipts-mini span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.receipts-mini strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--cl-text, #111111);
+  font-size: 18px;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.receipts-fact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.receipts-fact {
+  display: grid;
+  grid-template-columns: 126px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--cl-border, #dddddd) 75%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--cl-surface, #f7f5ef) 78%, transparent);
+}
+
+.receipts-fact span {
+  color: var(--cl-muted, #626262);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.receipts-fact strong {
+  min-width: 0;
+  color: var(--cl-text, #111111);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.receipts-fact strong.is-monospace {
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    monospace;
+  font-size: 11px;
+}
+
+.receipts-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.receipts-dev-json {
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.24));
+  border-radius: 20px;
+  padding: 14px;
+  background: var(--cl-card, #ffffff);
+}
+
+.receipts-dev-json summary {
+  cursor: pointer;
+  color: var(--cl-text, #111111);
+  font-weight: 950;
+}
+
+@media (max-width: 980px) {
+  .receipts-stat-grid,
+  .receipts-proof-strip,
+  .receipts-fact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .receipts-card header,
+  .receipts-fact {
+    grid-template-columns: 1fr;
+  }
+
+  .receipts-header-actions,
+  .receipts-toolbar-actions,
+  .receipts-card-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .receipts-header-actions .cl-button,
+  .receipts-toolbar-actions .cl-button,
+  .receipts-card-actions .cl-button {
+    width: 100%;
+  }
+}

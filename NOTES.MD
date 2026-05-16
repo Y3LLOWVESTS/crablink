@@ -53356,3 +53356,3295 @@ RustyOnions/CrabLink has now proven the first real paid named-site visit loop: c
 
 
 ### END NOTE - MAY 15 2026 - 13:40 CST
+
+
+
+### BEGIN NOTE - MAY 15 2026 - 19:35 CST
+
+Below is a copy-ready carryover note set for the next instance.
+
+# RustyOnions / CrabLink Carryover Notes — Public Profile, Paid Site Visit, Site Creator Proof, Receipts, and Local Catalog
+
+## 0. Current session verdict
+
+This was a **major CrabLink React / NEXT_LEVEL continuation session**. We did **not** need to change RustyOnions Rust crates during the latest CrabLink batches. We built on the already-proven RustyOnions backend path and moved the CrabLink browser client much closer to a coherent RON Passport / site / receipt / catalog product surface.
+
+The current active direction remains:
+
+```text
+NEXT_LEVEL.MD first
+QUICKCHAIN.MD later
+WEB3 / WEB3_2 invariants always preserved
+```
+
+`NEXT_LEVEL.MD` defines the current product layer: content-addressed creator web, reusable asset primitives, reference-graph sites, RON Passports with @usernames, reputation/moderation surfaces, alt passports, ROC payout routing, and CrabLink developer UX. It also keeps the hard boundaries: ROC internal, b3 canonical, sites store references, wallet remains backend-owned, storage stores bytes only, and CrabLink remains a browser client. 
+
+The current CrabLink codebundle was regenerated on `2026-05-16T00:17:26Z`, shows the React lane and new files in place, and includes the current app shell, profile, site, receipt, catalog, and shared helper modules. 
+
+---
+
+## 1. What is now working
+
+### 1.1 Paid named-site visit proof is already locked in
+
+The strongest backend proof remains:
+
+```text
+crab://ron7
+→ quote site_visit
+→ pay 10 ROC
+→ Visitor B / acct_visitor_b loses 10 ROC
+→ Creator A / acct_dev receives 10 ROC
+→ svc-wallet returns txid / receipt_hash / ledger_root
+→ ron-ledger commits durable truth
+→ CrabLink displays backend-derived balance movement
+```
+
+Known stable proof from RustyOnions terminal smoke:
+
+```text
+site: crab://ron7
+amount_minor: 10
+payer: acct_visitor_b
+recipient: acct_dev
+txid: tx_b4aace9ac721d7fb1e27c79fef271f72
+receipt_hash: b3:3429d5367f54011bfe07fd0c1cd5628c4dc1a69ee1843947ceb8115c76f9d78a
+ledger_root: 9d6d1e11d83f65b34240c16d8847a5ef24f63b3bad3e5f1e99116c03fe741bbe
+visitor before/after: 1766 → 1756
+creator before/after: 1761 → 1771
+```
+
+The important conclusion: this is not a fake UI balance and not a mock payout. It proves a real local/internal creator-economy loop.
+
+### 1.2 `crab://ron7` current known-good site state
+
+The current known-good named site is:
+
+```text
+crab://ron7
+title: Reference Graph Smoke Site
+owner/passport: passport:main:dev
+wallet/payout recipient: acct_dev
+```
+
+Known site CIDs:
+
+```text
+root_document_cid:
+b3:056cd088f6bb9ae45b11b1cd4786a2eb9b62f576e35f7132b33a74e4f07dac96
+
+manifest_cid:
+b3:918dad927484a43c2f716691794e24e7a608c951f38b9a6341a39f558284a4a9
+```
+
+CrabLink can now:
+
+```text
+resolve crab://ron7
+quote/pay site_visit when needed
+lock preview until backend receipt exists
+remember paid receipt for the session
+render the sandboxed root site after payment
+show root/document/manifest proof
+show creator proof
+write the site into the local catalog
+```
+
+### 1.3 Site preview/root rendering works again
+
+We fixed the earlier state where the sandbox preview stayed blank. Current behavior:
+
+```text
+site root fetch: works
+sandbox preview: renders
+image embed: renders
+post/comment/article text embeds: fail honestly if referenced objects are missing
+```
+
+The post/comment/article embed failures are acceptable right now because the stack was restarted and the referenced b3 text objects were no longer available. The UI now displays that honestly instead of silently failing or pretending the embeds exist.
+
+Current expected degraded embed state:
+
+```text
+1 image embed rendered
+0/3 text embeds hydrated
+post/comment/article unavailable with explicit gateway/object-not-found style messages
+```
+
+### 1.4 Public profile claim/read works
+
+We completed the CrabLink public profile integration through gateway-only routes:
+
+```text
+POST /identity/passport/profile/claim
+GET  /identity/passport/profile/:username
+```
+
+Confirmed UI behavior:
+
+```text
+@skinnycrabby can be claimed/read
+username_status = confirmed
+profile_crab_url = crab://@skinnycrabby
+passport subject = passport:main:dev
+wallet account = acct_dev
+public_profile_cid = null for now
+reputation = not computed
+moderation = not computed
+```
+
+Important: CrabLink only treats the username as confirmed when the backend returns `username_status="confirmed"`. This matches the existing carryover rule that profile status is backend truth only. 
+
+### 1.5 Passport drawer now picks up backend-confirmed public profile
+
+We added a shared public profile cache bridge:
+
+```text
+extensions/chrome/src/shared/profile/publicProfileCache.js
+```
+
+The profile page writes backend-confirmed public profile responses into a local/session cache, and the passport drawer subscribes to it.
+
+Confirmed result:
+
+```text
+Passport drawer shows:
+Gateway-confirmed public profile
+@skinnycrabby
+Handle: @skinnycrabby
+Public profile: @skinnycrabby confirmed
+Ledger status: Ledger-backed
+ROC source: svc_wallet.v1
+```
+
+Important truth boundary:
+
+```text
+The public profile cache is display cache only.
+It is not authorization truth.
+It must not be used to authorize site creation, wallet actions, or spend authority.
+```
+
+### 1.6 Read-only `crab://@skinnycrabby` public profile page works
+
+We added:
+
+```text
+extensions/chrome/src/pages/profile/ProfilePublicView.jsx
+```
+
+and updated `ProfilePage.jsx` / `PassportActions.jsx` so the drawer’s “Open @skinnycrabby” button opens:
+
+```text
+crab://@skinnycrabby
+```
+
+Current behavior:
+
+```text
+address becomes crab://@skinnycrabby
+page auto-reads GET /identity/passport/profile/skinnycrabby
+renders read-only public profile
+shows confirmed username
+shows profile CID null
+shows REP/MOD not computed
+shares backend-confirmed response back to passport drawer cache
+```
+
+This is still a CrabLink route using direct profile HTTP route under the hood. Full backend `/crab/resolve?url=crab://@username` integration remains a future RustyOnions task.
+
+### 1.7 Site creator identity proof works
+
+We added:
+
+```text
+extensions/chrome/src/pages/site/SiteCreatorProfileProof.jsx
+```
+
+and updated:
+
+```text
+extensions/chrome/src/pages/site/SiteResolvedProof.jsx
+```
+
+Current behavior:
+
+```text
+crab://ron7 site owner = passport:main:dev / acct_dev
+cached backend-confirmed profile = @skinnycrabby / passport:main:dev
+CrabLink matches cached profile to site owner
+site creator proof panel shows @skinnycrabby
+Open profile opens crab://@skinnycrabby
+REP/MOD remain not computed
+profile CID remains null
+```
+
+Important truth boundary:
+
+```text
+This is still a display bridge because the site DTO does not yet natively include creator @username/profile fields.
+CrabLink may match cached backend-confirmed profile to owner labels for display.
+CrabLink must not rewrite the site manifest or claim backend site DTO identity truth unless the backend returns those fields.
+```
+
+NEXT_LEVEL already says CrabLink should show site creator @username when backend provides it, and reputation/moderation when backend provides those summaries; it also says CrabLink owns browser UX but not wallet/ledger/storage/index/passport truth. 
+
+### 1.8 Recent receipts panel exists
+
+We added:
+
+```text
+extensions/chrome/src/shared/receipts/recentReceipts.js
+extensions/chrome/src/app/shell/RecentReceiptsPanel.jsx
+```
+
+The receipt panel can show site_visit receipts with:
+
+```text
+kind/action
+title
+amount
+payer
+recipient
+txid
+receipt_hash
+ledger_root
+nonce
+created timestamp
+copy proof
+developer JSON
+```
+
+It did show a receipt earlier. In the latest screenshot it showed:
+
+```text
+No local receipts yet
+```
+
+That likely means the paid site receipt was in session-scoped storage or was cleared/reloaded. This is not a backend failure. It is a frontend persistence gap.
+
+Next recommended fix:
+
+```text
+On successful site_visit pay, call writeRecentReceipt(...)
+from SiteVisitAccess / site payment success path.
+```
+
+That will make recent receipts persist more reliably across drawer reloads and route switches.
+
+### 1.9 Local catalog now works for profiles and sites
+
+We added:
+
+```text
+extensions/chrome/src/shared/catalog/localCatalog.js
+extensions/chrome/src/app/shell/LocalCatalogPanel.jsx
+```
+
+Initial issue:
+
+```text
+Catalog only showed @skinnycrabby profile.
+crab://ron7 did not appear because no durable local catalog entry was written when a named site resolved.
+```
+
+Fix:
+
+```text
+localCatalog.js now supports persistent catalog entries.
+SiteResolvedProof.jsx now writes a display-only local catalog entry when a site resolves.
+```
+
+Confirmed current UI:
+
+```text
+Profiles:
+- crab://@skinnycrabby
+- title Skinnycrabby
+- status backend-confirmed display cache
+- source svc-gateway public profile route
+
+My Sites / seen sites:
+- crab://ron7
+- title Reference Graph Smoke Site
+- status gateway-resolved site
+- source site_resolved_proof
+- cid b3:918dad927484a43c2f716691794e24e7a608c951f38b9a6341a39f558284a4a9
+```
+
+Truth boundary:
+
+```text
+Local catalog is browser memory only.
+It is not a backend public catalog.
+It is not an ownership index.
+It is not publication proof.
+It must not be used for authorization.
+```
+
+---
+
+## 2. Files changed or created in this workstream
+
+### Shared profile cache
+
+```text
+extensions/chrome/src/shared/profile/publicProfileCache.js
+```
+
+Purpose:
+
+```text
+Store/read/subscribe to backend-confirmed public profile display cache.
+Bridge ProfileGateway/ProfilePublicView responses into PassportDrawer.
+```
+
+### Shared receipt cache
+
+```text
+extensions/chrome/src/shared/receipts/recentReceipts.js
+```
+
+Purpose:
+
+```text
+Collect recent backend-returned receipts from local/session storage.
+Normalize site_visit receipts.
+Provide drawer display data.
+```
+
+### Shared local catalog
+
+```text
+extensions/chrome/src/shared/catalog/localCatalog.js
+```
+
+Purpose:
+
+```text
+Display-only local catalog for profiles, seen sites, and seen assets.
+Now supports persistent entries under crablink.local_catalog.v1.
+```
+
+### Passport drawer and shell panels
+
+```text
+extensions/chrome/src/app/shell/PassportDrawer.jsx
+extensions/chrome/src/app/shell/PassportSummary.jsx
+extensions/chrome/src/app/shell/PassportActions.jsx
+extensions/chrome/src/app/shell/RecentReceiptsPanel.jsx
+extensions/chrome/src/app/shell/LocalCatalogPanel.jsx
+```
+
+Current drawer now includes:
+
+```text
+public profile cache
+dev passport session controls
+starter ROC bootstrap
+passport summary
+local catalog
+recent receipts
+profile workspace / public handle buttons
+developer JSON
+```
+
+The latest codebundle confirms the drawer imports and subscribes to profile cache, receipt cache, and local catalog helpers. 
+
+### Profile page files
+
+```text
+extensions/chrome/src/pages/profile/ProfileGateway.jsx
+extensions/chrome/src/pages/profile/ProfilePublicView.jsx
+extensions/chrome/src/pages/profile/ProfilePage.jsx
+```
+
+Current behavior:
+
+```text
+crab://profile = editable/workspace + profile claim/read
+crab://@username = read-only public profile view
+```
+
+### Site page files
+
+```text
+extensions/chrome/src/pages/site/SiteCreatorProfileProof.jsx
+extensions/chrome/src/pages/site/SiteResolvedProof.jsx
+extensions/chrome/src/pages/site/SiteSandboxPreview.jsx
+```
+
+Current behavior:
+
+```text
+creator identity proof panel
+local catalog write when site resolves
+sandbox preview with safe/fallback embed behavior
+```
+
+### API helper touched
+
+```text
+extensions/chrome/src/shared/api/identityClient.js
+```
+
+Current responsibilities include:
+
+```text
+getMe
+bootstrapPassport
+claimPassportProfile
+getPassportProfile
+normalize profile responses
+strict explicit confirmation for profile mutation
+```
+
+---
+
+## 3. Current proof artifacts and known-good values
+
+### Current known-good profile
+
+```text
+handle: @skinnycrabby
+username: skinnycrabby
+profile URL: crab://@skinnycrabby
+passport subject: passport:main:dev
+wallet account: acct_dev
+public_profile_cid: null
+reputation: null / not computed
+moderation: null / not computed
+```
+
+### Current known-good paid site
+
+```text
+site: crab://ron7
+title: Reference Graph Smoke Site
+owner passport: passport:main:dev
+owner wallet: acct_dev
+payout recipient: acct_dev
+price: 10 ROC minor for site_visit
+```
+
+### Current known-good CIDs
+
+```text
+root_document_cid:
+b3:056cd088f6bb9ae45b11b1cd4786a2eb9b62f576e35f7132b33a74e4f07dac96
+
+manifest_cid:
+b3:918dad927484a43c2f716691794e24e7a608c951f38b9a6341a39f558284a4a9
+```
+
+### Current local catalog proof
+
+```text
+Profiles:
+crab://@skinnycrabby
+
+Sites:
+crab://ron7
+```
+
+---
+
+## 4. Verification state
+
+Manual browser verification succeeded for:
+
+```text
+profile claim/read
+passport drawer profile cache
+public profile route crab://@skinnycrabby
+site creator proof matching cached profile to site owner
+paid site preview unlock after site_visit receipt
+site root sandbox preview rendering
+local catalog showing profile
+local catalog showing crab://ron7 after site resolve
+```
+
+Before the next code changes, run the static/package gates again:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Then reload:
+
+```text
+/Users/mymac/Desktop/crablink/dist/chrome-extension-staging
+```
+
+Backend smoke commands that remain useful:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+RON_PAID_SITE_VISIT_ALLOW_SPEND=1 scripts/web3_paid_site_visit_smoke.sh
+```
+
+Profile/backend recheck commands from earlier notes remain useful:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+cargo test -p svc-passport --test profile_routes
+cargo test -p omnigate --test passport_profile_routes
+cargo test -p svc-gateway --test identity_routes_proxy
+cargo clippy -p svc-gateway --all-targets --no-deps -- -D warnings
+```
+
+Use safe cleanup only if disk space gets tight:
+
+```bash
+cargo clean
+```
+
+---
+
+## 5. Important invariants to preserve
+
+### CrabLink boundary
+
+```text
+CrabLink is a browser client.
+CrabLink calls svc-gateway public routes only.
+CrabLink must not call svc-wallet, ron-ledger, svc-storage, svc-index, svc-passport, or omnigate directly.
+CrabLink displays backend truth; it does not create backend truth.
+```
+
+### Wallet / ROC
+
+```text
+No fake balances.
+No fake receipts.
+No silent ROC spending.
+No local wallet truth.
+No local ledger truth.
+Paid operations require explicit user confirmation.
+Displayed receipts are backend-returned proof copies only.
+```
+
+### Profile / passport
+
+```text
+@username is confirmed only if backend says username_status="confirmed".
+Profile cache is display cache only.
+Public profile cache must not authorize anything.
+Profile is not wallet authority.
+Passport is identity/capability record, not wallet itself.
+Final/live usernames should be effectively immutable after claim.
+Dev mode can remain flexible for testing.
+```
+
+### Local catalog
+
+```text
+Local catalog is browser memory only.
+It is not backend catalogue truth.
+It is not an ownership index.
+It is not publication proof.
+It must not authorize site creation, asset ownership, or wallet actions.
+```
+
+### Site creator proof
+
+```text
+Cached profile matching site owner is acceptable as display bridge.
+Backend site DTO creator fields are still preferred long-term.
+Do not pretend rep/mod/profile CID exists while backend returns null.
+```
+
+### Asset URLs
+
+```text
+Canonical public typed asset URL:
+crab://<64 lowercase hex>.<asset_kind>
+
+Canonical internal content ID:
+b3:<64 lowercase hex>
+
+Canonical public profile URL in current CrabLink:
+crab://@username
+```
+
+---
+
+## 6. Known limitations / gaps after this session
+
+### 6.1 Receipt persistence still needs a small fix
+
+Latest screenshot showed:
+
+```text
+Recent receipts → No local receipts yet
+```
+
+even though paid site_visit receipts were proven earlier.
+
+Likely reason:
+
+```text
+The receipt display code can read existing session receipt data, but successful pay does not yet always write durable generic receipt cache.
+```
+
+Recommended next small frontend fix:
+
+```text
+When SiteVisitAccess confirms successful payment, call writeRecentReceipt(...)
+with action=site_visit, crabUrl, amount, payer, recipient, txid, receiptHash, ledgerRoot, nonce, manifest/root CIDs.
+```
+
+### 6.2 Public profile CID is still null
+
+Current profile route returns:
+
+```text
+public_profile_cid = null
+```
+
+This is honest. Future backend work should publish/store a profile manifest as b3 content and return a real `public_profile_cid`.
+
+### 6.3 REP/MOD are still not computed
+
+Current UI correctly shows:
+
+```text
+REP not computed
+MOD not computed
+```
+
+Do not fake scores. Null means not computed. Zero must eventually mean computed score of 0.
+
+### 6.4 Site creator hydration is a display bridge, not true site DTO identity yet
+
+The current UI can show `@skinnycrabby` for `crab://ron7` because:
+
+```text
+site owner passport/wallet matches cached backend-confirmed profile
+```
+
+The better future backend path is:
+
+```text
+site manifest / site DTO includes creator username/profile pointer
+omnigate hydrates it
+svc-gateway exposes it
+CrabLink displays it as backend site DTO truth
+```
+
+### 6.5 `/crab/resolve?url=crab://@username` is still future work
+
+CrabLink now handles:
+
+```text
+crab://@skinnycrabby
+```
+
+in the React route and reads:
+
+```text
+GET /identity/passport/profile/skinnycrabby
+```
+
+But true backend resolver support should eventually be:
+
+```text
+GET /crab/resolve?url=crab://@skinnycrabby
+→ gateway
+→ omnigate
+→ svc-passport/profile hydration
+→ public profile DTO
+```
+
+### 6.6 Text asset embeds still need backend object freshness
+
+The root site can reference post/comment/article objects, but after local stack restarts those referenced text objects may disappear. The UI handles this honestly, but the future backend should make `.post`, `.comment`, and `.article` full b3-backed assets with durable manifests/index pointers.
+
+---
+
+## 7. Completion estimate after this session
+
+Practical estimate:
+
+```text
+CrabLink React browser client / extension-origin product proof: 94–96%
+CrabLink Chrome MVP overall: 92–95%
+CrabLink NEXT_LEVEL client UX slice: 88–92%
+RustyOnions + CrabLink internal WEB3 beta: 88–91%
+Full NEXT_LEVEL blueprint overall: 70–74%
+QuickChain implementation readiness: 15–20%
+```
+
+Why full NEXT_LEVEL is not higher:
+
+```text
+Still missing:
+- b3-published profile manifests
+- public_profile_cid population
+- real reputation scores
+- real moderator scores
+- backend-native site creator profile fields
+- true crab://@username resolver through /crab/resolve
+- backend alt passport semantics
+- privacy-honest alt wallet movement
+- .post backend asset publish/resolve
+- .comment backend asset publish/resolve
+- .article backend asset publish/resolve
+- video/media-lite backend publish flow
+- music/podcast backend publish flow
+- paid content views
+- site revision history
+- provider/curator/moderator payout splits
+- accounting/rewarder productization for views/serves/storage/moderation
+- QuickChain durable distributed ledger design
+```
+
+Why the practical beta estimate is high:
+
+```text
+Already proven:
+- paid image upload
+- image asset page
+- named site creation/open/render
+- paid site_visit transfer
+- wallet/ledger receipt proof
+- sandboxed site root rendering
+- reference graph image embed
+- public profile claim/read
+- passport drawer profile truth
+- public profile route
+- site creator proof bridge
+- local receipts panel
+- local catalog panel
+```
+
+---
+
+## 8. Recommended next session path
+
+### Best immediate CrabLink-only batch
+
+I recommend starting next session with a **small CrabLink polish/persistence batch** before touching Rust again:
+
+```text
+Batch title:
+CrabLink receipt/catalog persistence and drawer polish
+```
+
+Goals:
+
+```text
+1. Persist recent site_visit receipts reliably after successful pay.
+2. Ensure Recent receipts survives route switches and reloads when appropriate.
+3. Improve LocalCatalogPanel / RecentReceiptsPanel layout so long hashes do not overflow.
+4. Add an AssetPage local catalog writer so typed assets visited by CrabLink also appear under My Assets / seen assets.
+5. Add a small static check token for local catalog / receipt truth boundaries if useful.
+```
+
+Suggested files:
+
+```text
+extensions/chrome/src/pages/site/SiteVisitAccess.jsx
+extensions/chrome/src/shared/receipts/recentReceipts.js
+extensions/chrome/src/app/shell/RecentReceiptsPanel.jsx
+extensions/chrome/src/app/shell/LocalCatalogPanel.jsx
+extensions/chrome/src/pages/asset/AssetHydratedView.jsx or AssetPage.jsx
+extensions/chrome/src/shared/catalog/localCatalog.js
+extensions/chrome/src/app/shell/Shell.css or shared style file
+```
+
+Acceptance:
+
+```text
+Pay crab://ron7.
+Open passport drawer.
+Recent receipts shows site_visit receipt.
+Reload extension.
+Recent receipts still shows durable local display copy if intended.
+Visit crab://@skinnycrabby.
+Visit crab://ron7.
+Visit a known .image asset.
+Local catalog shows Profile, Site, and Asset groups.
+No fake backend ownership claims.
+Checks/package pass.
+```
+
+### Best next RustyOnions backend batch
+
+After the small CrabLink polish batch, the next high-value backend batch is:
+
+```text
+Batch title:
+Backend-native public profile resolver and site creator DTO hydration
+```
+
+Goals:
+
+```text
+1. Wire /crab/resolve?url=crab://@username through gateway/omnigate to profile DTO.
+2. Add creator profile fields to the site page DTO when backend truth exists.
+3. Return creator_handle / creator_profile_crab_url / public_profile_cid / rep / mod as nullable fields.
+4. Keep null values honest.
+5. Add route-contract tests in omnigate and svc-gateway.
+```
+
+Likely RustyOnions crates:
+
+```text
+ron-naming only if route parsing gaps remain
+ron-proto if DTO fields are formalized there
+svc-passport only if profile read DTO needs expansion
+omnigate for hydration
+svc-gateway for proxy/public exposure
+```
+
+Do **not** touch:
+
+```text
+svc-wallet
+ron-ledger
+svc-storage semantics
+ron-kernel
+QuickChain
+ROX/Solana/external settlement
+```
+
+### Next product leap after that
+
+Once profile resolver + creator DTO fields are backend-native, move to:
+
+```text
+.post backend asset primitive
+```
+
+NEXT_LEVEL’s own staged order says Omnigate should sequence from passport/profile hydration into post prepare/create/resolve, then comment, then article, then reference graph/media-lite. 
+
+---
+
+## 9. Suggested next-session opening prompt
+
+Use this in the next ChatGPT instance:
+
+```text
+We are continuing RustyOnions / CrabLink NEXT_LEVEL work. In the last session we completed the CrabLink React public profile and passport drawer integration: @skinnycrabby is backend-confirmed through gateway profile claim/read, the passport drawer consumes publicProfileCache, crab://@skinnycrabby opens a read-only public profile page, crab://ron7 paid site visits are proven, the site creator proof panel can display @skinnycrabby by matching backend-confirmed cached profile to site owner passport/wallet, RecentReceiptsPanel exists, and LocalCatalogPanel now shows both crab://@skinnycrabby and crab://ron7 after site resolve.
+
+Current known-good site:
+crab://ron7
+root CID b3:056cd088f6bb9ae45b11b1cd4786a2eb9b62f576e35f7132b33a74e4f07dac96
+manifest CID b3:918dad927484a43c2f716691794e24e7a608c951f38b9a6341a39f558284a4a9
+
+Important caveats:
+- public_profile_cid is still null.
+- rep/mod are not computed.
+- Recent receipts may not persist reliably after reload yet.
+- local catalog is display-only browser memory, not backend catalog/ownership truth.
+- site creator proof currently uses cached profile matching, not backend-native site DTO creator fields.
+- /crab/resolve?url=crab://@username is still a future backend task.
+
+Please review the latest CODEBUNDLE_CHROME_EXTENSION.md plus NEXT_LEVEL.MD and recommend the next focused batch. Prefer a small CrabLink batch first to persist site_visit receipts and polish the drawer/local catalog, then a backend batch for true crab://@username resolver and backend-native site creator DTO hydration. Provide full paste-ready files only, with exact paths.
+```
+
+---
+
+## 10. One-sentence status
+
+CrabLink now feels like a real RON browser surface for paid sites, backend-confirmed public profiles, creator identity proof, receipts, and local discovery memory; the next work is to make those display bridges more durable and then move the remaining profile/site-creator truth from CrabLink cache matching into backend-native DTOs and resolvers.
+
+
+### END NOTE - MAY 15 2026 - 19:35 CST
+
+
+
+### BEGIN NOTE - MAY 15 2026 - 21:15 CST
+
+# Carryover Notes — RustyOnions / CrabLink NEXT_LEVEL Session
+
+## 0. Executive checkpoint
+
+This was a very productive CrabLink/NEXT_LEVEL session. We did **not** start QuickChain, and that was the correct decision. Instead, we built the frontend proof surfaces that make it clear **why** QuickChain is still locked and **what remains before it can begin**.
+
+The highest-level result:
+
+```text
+CrabLink now has a proof-oriented product shell:
+
+crab://home        = route smoke dashboard / engineering control room
+crab://library     = user-facing local profile/site/asset/receipt library
+crab://quickchain  = honest QuickChain readiness gate
+crab://text        = post/comment/article prerequisite tracker
+```
+
+This is exactly the right stopping point because the next serious work should move back into RustyOnions backend crates, especially Omnigate `.article` if the latest RustyOnions code still matches the current notes showing `.post` and `.comment` already proven while `.article` remains pending. The QuickChain blueprint explicitly remains future work and says not to implement chain logic until internal ROC, paid content flows, ledger replay, accounting, and rewarder gates are proven. 
+
+---
+
+## 1. Active doctrine going into the next session
+
+The next instance should treat these documents as the active order of operations:
+
+```text
+1. NEXT_LEVEL.MD
+2. QUICKCHAIN.MD
+3. CODEBUNDLE_RS.md
+4. ALLNOTES.MD
+5. CODECHECK.md
+6. CODECOMMENTS.MD
+7. CODEBUNDLE_CHROME_EXTENSION.md
+```
+
+`QUICKCHAIN.MD` is now a visible north-star blueprint, but **not** an active coding target. It explicitly says QuickChain is a future-chain blueprint, not an instruction to implement blockchain logic immediately, and preserves the order: internal ROC loop, paid storage/pinning, paid image/site/post/comment/article, Visitor B → Creator A proof, wallet receipt/ledger replay/balance truth, accounting → rewarder → wallet hardening, and only then QuickChain research/prototype. 
+
+The forbidden scope remains:
+
+```text
+- No ROX in the active ROC MVP.
+- No Solana in the active ROC MVP.
+- No external settlement.
+- No staking/liquidity/exchange-facing logic.
+- No public bridge.
+- No chain logic inside CrabLink.
+- No gateway-side economic mutation.
+- No Omnigate direct ledger mutation.
+```
+
+QuickChain’s correct role right now is as a readiness checklist and future design spine, not something to implement in CrabLink or backend services yet.
+
+---
+
+## 2. What we accomplished this session
+
+### 2.1 Fixed the receipt/catalog persistence batch
+
+We started by trying to persist recent receipts and catalog entries from successful paid site visits and asset visits. The first replacement for `SiteVisitAccess.jsx` was too small and accidentally removed the existing public component contract. The build caught this because `SiteRender.jsx` still expected named exports:
+
+```text
+deriveSiteVisitPolicy
+siteVisitCanRender
+```
+
+We corrected the mistake by restoring the larger original `SiteVisitAccess.jsx` shape and adding persistent receipt/catalog writes inside the successful pay path instead of replacing the old component contract.
+
+Current behavior after the fix:
+
+```text
+- Paid site visit flow still works.
+- Site render access gate still has its expected exports.
+- Successful site_visit payment writes a recent receipt display cache.
+- Successful site_visit payment writes/refreshes local site catalog memory.
+- Wallet refresh notification remains best-effort.
+- CrabLink still does not mutate wallet/ledger state locally.
+```
+
+This was important because the old file size mattered: it carried contract exports and state/session behavior that other route owners depended on.
+
+### 2.2 Confirmed local catalog now works for profile/site/assets
+
+The user confirmed:
+
+```text
+- Profile appears in local catalog.
+- Site appears in local catalog.
+- Newly minted image appears in assets.
+```
+
+This means the display-memory layer is now doing useful product work. It is not backend ownership truth, but it is now a reliable browser-local proof surface.
+
+The current CrabLink codebundle confirms the active React tree includes the shell panels and cache helpers needed for this: `LocalCatalogPanel.jsx`, `RecentReceiptsPanel.jsx`, `localCatalog.js`, `recentReceipts.js`, route-owned pages, and shared browser-client helpers. 
+
+### 2.3 Created `crab://home` route smoke dashboard
+
+We replaced `HomePage.jsx` to turn `crab://home` into a real route smoke/proof dashboard.
+
+Confirmed screenshot result:
+
+```text
+Profiles: 1
+Sites:    1
+Assets:   3
+Receipts: 1
+```
+
+Visible proof anchors:
+
+```text
+Profile proof:
+  crab://@skinnycrabby
+
+Site proof:
+  crab://ron7
+
+Image asset proof:
+  newest .image asset from current local stack
+
+Latest receipt:
+  Paid visit: crab://ron7
+```
+
+The dashboard now has:
+
+```text
+- local proof counters
+- profile/site/image/receipt proof cards
+- route quick actions
+- protected routes
+- local draft routes
+- media draft routes
+- advanced primitive routes
+- manual route-switching smoke sequence
+```
+
+Important design decision:
+
+```text
+crab://home = engineering/control-room dashboard
+crab://library = user-facing local library
+```
+
+Do not collapse these into one page. They serve different purposes.
+
+### 2.4 Created `crab://library`
+
+We added the route and page for:
+
+```text
+crab://library
+```
+
+Files created/updated:
+
+```text
+extensions/chrome/src/app/routeRegistry.js
+extensions/chrome/src/pages/library/LibraryPage.jsx
+extensions/chrome/src/pages/library/library.css
+extensions/chrome/src/pages/home/HomeQuickActions.jsx
+```
+
+Confirmed screenshot result:
+
+```text
+Profiles: 1
+Sites:    1
+Assets:   3
+Receipts: 1
+```
+
+The page showed entries like:
+
+```text
+Profile:
+  Skinnycrabby / crab://@skinnycrabby
+
+Site:
+  Reference Graph Smoke Site / crab://ron7
+
+Image:
+  Image asset / crab://<hash>.image
+
+Manifest:
+  Manifest for crab://ron7
+
+Root:
+  Root document for crab://ron7
+
+Receipt:
+  Paid visit: crab://ron7
+```
+
+The Open buttons worked and loaded the respective asset/site/profile routes.
+
+Important truth boundary:
+
+```text
+The library is browser-local display memory only.
+It is not a backend public catalog.
+It is not authorization.
+It is not wallet truth.
+It is not ownership truth.
+```
+
+### 2.5 Enhanced `crab://library` for text primitive readiness
+
+After QuickChain readiness was added, we enhanced the library so it is more useful for the next backend phase.
+
+The library now separates:
+
+```text
+Profiles
+Sites
+Images
+Text assets
+Manifests / roots
+Other assets
+Receipts
+```
+
+It also tracks:
+
+```text
+Posts
+Comments
+Articles
+Text proof READY / OPEN
+```
+
+This matters because `post/comment/article` proof is one of the big missing prerequisites before QuickChain should move beyond design.
+
+Expected behavior now:
+
+```text
+- Existing profile/site/image/receipt entries remain visible.
+- Images tab shows .image assets.
+- Text tab remains empty until .post/.comment/.article assets are opened or minted.
+- Manifest/root entries are separated from user-facing assets.
+- Copy summary includes post/comment/article readiness.
+```
+
+### 2.6 Created `crab://quickchain` readiness dashboard
+
+We added:
+
+```text
+crab://quickchain
+```
+
+Files created/updated:
+
+```text
+extensions/chrome/src/app/routeRegistry.js
+extensions/chrome/src/pages/quickchain/QuickchainReadinessPage.jsx
+extensions/chrome/src/pages/quickchain/quickchain.css
+extensions/chrome/src/pages/home/HomeQuickActions.jsx
+```
+
+Confirmed screenshot result:
+
+```text
+Readiness:           40%
+Local proof memory:  5
+site_visit receipts: 1
+QuickChain state:    LOCKED
+```
+
+The page correctly showed:
+
+```text
+Proven:
+- Internal ROC closed loop
+- Paid storage/image/site flows
+- Visitor B → Creator A site_visit
+- CrabLink receipt/library UX
+
+Missing:
+- Paid post/comment/article backend flows
+- Paid content view route shape
+- Ledger replay and root proof gates
+- Accounting sealed snapshots
+- Rewarder deterministic payout planning
+
+Locked:
+- QuickChain Phase 1: local checkpoint roots
+```
+
+This page is extremely important because it prevents project drift. It makes clear that QuickChain is not active implementation yet and that the next work is still backend economy proof work.
+
+### 2.7 Created `crab://text` readiness dashboard
+
+We then added a dedicated text primitive prerequisite page:
+
+```text
+crab://text
+```
+
+Files provided:
+
+```text
+extensions/chrome/src/app/routeRegistry.js
+extensions/chrome/src/pages/text/TextPrimitiveReadinessPage.jsx
+extensions/chrome/src/pages/text/text.css
+extensions/chrome/src/pages/home/HomeQuickActions.jsx
+```
+
+Purpose:
+
+```text
+Track post/comment/article readiness before QuickChain.
+```
+
+Expected behavior:
+
+```text
+- Opens as its own route owner.
+- Shows readiness percentage for post/comment/article.
+- Shows counts for .post, .comment, .article local proof entries.
+- Buttons open crab://post, crab://comment, crab://article.
+- Does not claim backend publication if no text assets exist.
+- Home includes Text Primitive Readiness as a proof route.
+```
+
+This is probably the last frontend-only readiness page we needed before going back to backend work.
+
+---
+
+## 3. Current CrabLink route state
+
+Current important built-in routes:
+
+```text
+crab://home
+crab://library
+crab://quickchain
+crab://text
+crab://site
+crab://image
+crab://profile
+crab://post
+crab://comment
+crab://article
+crab://lyrics
+crab://music
+crab://video
+crab://stream
+crab://podcast
+crab://ad
+crab://algo
+crab://code
+crab://game
+```
+
+Current proof/product routes that matter most:
+
+```text
+crab://home
+  Route smoke dashboard.
+
+crab://library
+  User-facing local library for profiles/sites/images/text/manifests/receipts.
+
+crab://quickchain
+  Honest future-chain readiness gate.
+
+crab://text
+  Post/comment/article prerequisite tracker.
+
+crab://ron7
+  Current known-good paid named-site proof.
+
+crab://@skinnycrabby
+  Current known-good public profile display/cache proof.
+
+crab://<hash>.image
+  Current known-good typed image asset proof.
+```
+
+The current codebundle tree shows the React route-owned architecture is now broad and mature: route registry, shell components, home/library/site/image/profile/post/comment/article pages, shared API clients, local catalog, recent receipts, embed helpers, uniform manifest helpers, and test/package scripts are all present. 
+
+---
+
+## 4. Current proof artifacts from this session
+
+### 4.1 Local catalog / home proof
+
+The screenshot of `crab://home` showed:
+
+```text
+Profiles: 1
+Sites:    1
+Assets:   3
+Receipts: 1
+```
+
+Profile:
+
+```text
+crab://@skinnycrabby
+```
+
+Site:
+
+```text
+crab://ron7
+```
+
+Image:
+
+```text
+A current-stack .image asset appears in the Assets count and proof card.
+```
+
+Receipt:
+
+```text
+Paid visit: crab://ron7
+```
+
+### 4.2 Library proof
+
+The screenshot of `crab://library` showed:
+
+```text
+Profiles: 1
+Sites:    1
+Assets:   3
+Receipts: 1
+```
+
+Notable entries:
+
+```text
+Profile:
+  Skinnycrabby
+
+Site:
+  Reference Graph Smoke Site
+
+Image:
+  Image asset
+
+Manifest:
+  Manifest for crab://ron7
+
+Root:
+  Root document for crab://ron7
+
+Receipt:
+  Paid visit: crab://ron7
+```
+
+Open buttons were confirmed to load their respective routes.
+
+### 4.3 QuickChain proof
+
+The screenshot of `crab://quickchain` showed:
+
+```text
+Readiness:           40%
+Local proof memory:  5
+site_visit receipts: 1
+QuickChain state:    LOCKED
+```
+
+This is correct. The page is not meant to show 100%; it is meant to block premature QuickChain implementation.
+
+---
+
+## 5. Backend status and what must be checked next
+
+The current notes indicate that RustyOnions already has backend work for `.post` and `.comment`, while `.article` remains pending. Specifically, prior crate notes state that `svc-gateway` already exposes text asset routes, and that `.post` and `.comment` were implemented/proven while `.article` gateway exposure exists but Omnigate implementation remains pending.  
+
+However, the next session should **not assume blindly**. It should start by checking the latest RustyOnions `CODEBUNDLE_RS.md`.
+
+Verify these files first:
+
+```text
+crates/omnigate/src/routes/v1/text_assets.rs
+crates/omnigate/src/routes/v1/mod.rs
+crates/omnigate/tests/text_asset_publish.rs
+crates/omnigate/tests/comment_asset_publish.rs
+crates/omnigate/tests/article_asset_publish.rs  <-- likely missing / next target
+
+crates/svc-gateway/src/routes/product.rs
+crates/svc-gateway/tests/product_routes_proxy.rs
+```
+
+The key backend question for next session:
+
+```text
+Are .post and .comment still implemented and green in the current RustyOnions codebundle?
+```
+
+If yes:
+
+```text
+Next backend batch = implement Omnigate .article.
+```
+
+If no:
+
+```text
+Follow NEXT_LEVEL order strictly:
+1. .post
+2. .comment
+3. .article
+```
+
+NEXT_LEVEL itself states that `.post` must work before `.comment`, and `.comment` must be green before `.article`. 
+
+---
+
+## 6. Recommended next session plan
+
+### Step 1 — Attach / review latest RustyOnions backend codebundle
+
+The next session should begin with:
+
+```text
+CODEBUNDLE_RS.md
+ALLNOTES.MD
+NEXT_LEVEL.MD
+QUICKCHAIN.MD
+CODECHECK.md
+CODECOMMENTS.MD
+```
+
+Before code generation, review:
+
+```text
+CODECHECK.md
+CODECOMMENTS.MD
+```
+
+Use full paste-ready files with exact paths.
+
+No partial snippets for compile-fix work.
+
+No terminal cleanup with `rm`.
+
+### Step 2 — Confirm text backend status
+
+Run or inspect:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+cargo test -p svc-gateway --test product_routes_proxy
+cargo test -p omnigate --test text_asset_publish
+cargo test -p omnigate --test comment_asset_publish
+```
+
+If article test already exists:
+
+```bash
+cargo test -p omnigate --test article_asset_publish
+```
+
+If it does not exist, that is likely the next file to add.
+
+### Step 3 — Implement Omnigate `.article`
+
+Assuming `.post` and `.comment` are green, next backend implementation should be:
+
+```text
+Omnigate .article prepare/publish/resolve path
+```
+
+Likely files:
+
+```text
+crates/omnigate/src/routes/v1/text_assets.rs
+crates/omnigate/src/routes/v1/mod.rs
+crates/omnigate/tests/article_asset_publish.rs
+```
+
+Maybe no gateway changes are needed if gateway route exposure already exists. The notes say gateway already exposes:
+
+```text
+POST /assets/article/prepare
+POST /assets/article
+```
+
+but Omnigate article implementation is not done yet. 
+
+### Step 4 — Article validation rules
+
+Article should follow the generalized text asset pattern, but with article-specific rules:
+
+```text
+Required:
+- title
+- body
+- site_context_crab_url
+- payer_account
+- owner_passport_subject
+
+Optional:
+- subtitle
+- excerpt / summary
+- hero image reference
+- tags
+- language
+- license / rights_mode
+- canonical source
+- content warning
+- moderation mode
+- visibility
+- linked assets
+- parent/thread relation if needed
+```
+
+Article route should reject:
+
+```text
+- missing title
+- missing body
+- missing named site context
+- invalid crab URL
+- missing payer
+- missing owner passport subject
+- wrong x-ron-asset-kind
+- missing paid proof headers on publish
+- oversized body/title/tags
+- unknown fields if strict DTOs are intended
+```
+
+### Step 5 — Paid proof headers for article publish
+
+Use the modern paid proof header contract:
+
+```text
+x-ron-paid-op: hold
+x-ron-paid-asset: roc
+x-ron-paid-estimate-minor: <amount>
+x-ron-wallet-txid: <txid>
+x-ron-wallet-receipt-hash: <receipt_hash>
+x-ron-wallet-from: <payer>
+x-ron-wallet-to: <escrow>
+x-ron-asset-kind: article
+```
+
+Optional metadata headers:
+
+```text
+x-ron-asset-title
+x-ron-asset-description
+x-ron-asset-tags
+```
+
+Do **not** rely on old `x-ron-wallet-hold-txid` in new code.
+
+### Step 6 — Article storage/manifest/index behavior
+
+Publish chain should mirror the existing image/post/comment pattern:
+
+```text
+CrabLink
+→ svc-gateway
+→ omnigate
+→ svc-storage paid content write
+→ storage returns content b3 CID
+→ omnigate builds article manifest
+→ svc-storage stores manifest bytes
+→ omnigate writes asset CID → manifest CID pointer to svc-index
+→ response returns crab://<hash>.article
+→ CrabLink opens typed article asset page
+→ CrabLink local library records .article proof
+```
+
+Omnigate must not mutate wallet/ledger directly.
+
+Gateway must remain proxy-only.
+
+Storage must remain byte storage only.
+
+Index must remain pointer storage only.
+
+### Step 7 — Add article test
+
+Recommended new test file:
+
+```text
+crates/omnigate/tests/article_asset_publish.rs
+```
+
+Test cases should include:
+
+```text
+article_prepare_accepts_strict_minimal_payload
+article_prepare_rejects_missing_title
+article_prepare_rejects_missing_body
+article_prepare_rejects_missing_site_context
+article_prepare_rejects_invalid_site_context
+article_publish_requires_paid_proof_headers
+article_publish_rejects_wrong_asset_kind_header
+article_publish_stores_content_and_manifest
+article_publish_writes_index_pointer
+article_publish_returns_typed_crab_url
+article_resolve_returns_asset_page
+```
+
+Then run:
+
+```bash
+cargo fmt -p omnigate
+cargo clippy -p omnigate --all-targets --no-deps -- -D warnings
+cargo test -p omnigate --test article_asset_publish
+cargo test -p omnigate --all-targets
+```
+
+### Step 8 — Verify gateway article exposure
+
+If gateway tests already include article, run:
+
+```bash
+cargo fmt -p svc-gateway
+cargo clippy -p svc-gateway --all-targets --no-deps -- -D warnings
+cargo test -p svc-gateway --test product_routes_proxy
+cargo test -p svc-gateway --all-targets
+```
+
+If article contract changes, update:
+
+```text
+crates/svc-gateway/tests/product_routes_proxy.rs
+```
+
+But do not make gateway semantic. Gateway should still only proxy/preserve headers and map upstream errors.
+
+### Step 9 — Add terminal smoke for article
+
+Once Omnigate and gateway are green, add or extend a smoke script:
+
+```text
+scripts/web3_article_asset_smoke.sh
+```
+
+or add feature flag to an existing product stack smoke:
+
+```text
+RON_RUN_ARTICLE_CREATE=1
+```
+
+Smoke flow:
+
+```text
+1. Start stack.
+2. Check gateway readiness.
+3. Prepare article.
+4. Create explicit wallet hold.
+5. Publish article with paid proof headers.
+6. Resolve returned crab://<hash>.article.
+7. Assert omnigate.asset-page.v1.
+8. Assert manifest hydrated.
+9. Assert owner/payout/receipt present.
+10. Print article URL, content CID, manifest CID, txid, receipt_hash, ledger_root if returned.
+```
+
+### Step 10 — Test CrabLink UI
+
+After backend article is green:
+
+```text
+crab://article
+```
+
+Expected:
+
+```text
+- Build article draft.
+- Prepare through gateway.
+- Explicit hold.
+- Publish.
+- Receive crab://<hash>.article.
+- Auto-open typed article page if current UI supports it.
+- Local library should show article under Text.
+- crab://text should show Articles > 0.
+- crab://quickchain should reflect text progress after all three text primitives exist in local proof memory.
+```
+
+---
+
+## 7. What remains before QuickChain can start
+
+QuickChain remains locked until these are true:
+
+```text
+[x] Paid site visit proof works end-to-end.
+[x] Visitor B balance decreases.
+[x] Creator A balance increases.
+[x] Wallet receipt exists and is returned.
+[x] CrabLink displays receipt/library proof.
+[partial] Paid image/site flows are proven.
+[partial] Paid post/comment flows may already be proven in backend notes.
+[ ] Paid article flow proven in current stack.
+[ ] Paid content view route shape proven.
+[ ] ron-ledger replay proves balances and roots.
+[ ] ron-accounting emits sealed usage snapshots.
+[ ] svc-rewarder computes deterministic payout plans.
+[ ] wallet/rewarder replay does not double issue.
+[ ] product smoke scripts prove internal ROC loop automatically.
+[ ] NEXT_LEVEL paid view patterns are stable enough to know transaction volume.
+```
+
+`QUICKCHAIN.MD` also says genesis should start from a signed snapshot of replayed ron-ledger balances, nonces, holds, supply, policy hash, validator set, and timestamp, so the project cannot responsibly start QuickChain until replay/accounting/rewarder proof exists. 
+
+---
+
+## 8. CrabLink-specific files changed or created this session
+
+The next instance should know these were the frontend surfaces touched or provided in this session:
+
+```text
+extensions/chrome/src/pages/site/SiteVisitAccess.jsx
+  Restored old component contract and added recent receipt / catalog persistence.
+
+extensions/chrome/src/pages/asset/AssetPage.jsx
+  Added seen-asset catalog entry behavior for typed assets.
+
+extensions/chrome/src/app/shell/RecentReceiptsPanel.jsx
+  Improved receipt display panel.
+
+extensions/chrome/src/app/shell/LocalCatalogPanel.jsx
+  Improved local catalog display panel.
+
+extensions/chrome/src/pages/home/HomePage.jsx
+  Created route smoke dashboard with local proof anchors.
+
+extensions/chrome/src/pages/home/HomeQuickActions.jsx
+  Updated multiple times to include Library, QuickChain, and Text readiness routes.
+
+extensions/chrome/src/app/routeRegistry.js
+  Added route owners:
+  - library
+  - quickchain
+  - text
+
+extensions/chrome/src/pages/library/LibraryPage.jsx
+  Created and then enhanced into user-facing local proof library.
+
+extensions/chrome/src/pages/library/library.css
+  Created Library page styles.
+
+extensions/chrome/src/pages/quickchain/QuickchainReadinessPage.jsx
+  Created QuickChain readiness dashboard.
+
+extensions/chrome/src/pages/quickchain/quickchain.css
+  Created QuickChain readiness styles.
+
+extensions/chrome/src/pages/text/TextPrimitiveReadinessPage.jsx
+  Created post/comment/article readiness dashboard.
+
+extensions/chrome/src/pages/text/text.css
+  Created Text readiness styles.
+```
+
+Important caveat:
+
+```text
+The latest uploaded CrabLink codebundle was generated around 2026-05-16T01:27:06Z. If the user did not regenerate/upload after the final crab://text batch, the final text page may not be reflected in the uploaded CODEBUNDLE_CHROME_EXTENSION.md yet.
+```
+
+Next CrabLink command if needed:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+bash scripts/check-react-lane.sh
+bash scripts/check-chrome.sh
+bash scripts/package-chrome.sh
+bash scripts/make_codebundle.sh
+```
+
+Then upload the regenerated codebundle if the next session needs to review the final text page.
+
+---
+
+## 9. Manual smoke list for next CrabLink verification
+
+Before backend work, or after backend work, verify:
+
+```text
+crab://home
+crab://library
+crab://quickchain
+crab://text
+crab://profile
+crab://@skinnycrabby
+crab://ron7
+crab://image
+newest crab://<hash>.image
+crab://post
+crab://comment
+crab://article
+crab://definitely-missing-site
+```
+
+Expected:
+
+```text
+- Each route mounts exactly one route owner.
+- No stale previous page remains visible.
+- Library still shows profile/site/image/receipt memory.
+- QuickChain stays locked.
+- Text readiness does not fake .post/.comment/.article if they are not in local proof memory.
+- Post/comment/article workspaces do not claim backend publication unless backend returns real URLs/receipts.
+```
+
+---
+
+## 10. Important architectural invariants to preserve
+
+### 10.1 CrabLink invariants
+
+```text
+- CrabLink calls public svc-gateway routes only.
+- CrabLink does not call svc-wallet, svc-storage, svc-index, omnigate, or ron-ledger directly.
+- CrabLink does not mutate wallet or ledger.
+- CrabLink does not fake receipts.
+- CrabLink does not fake CIDs.
+- CrabLink does not fake backend publication.
+- CrabLink local catalog and recent receipts are display caches only.
+- CrabLink route pages must clearly label local draft vs backend truth.
+- CrabLink must not execute arbitrary crab:// code.
+```
+
+### 10.2 Backend invariants
+
+```text
+- svc-wallet remains the mutation front-door.
+- ron-ledger remains append-only durable economic truth.
+- ron-accounting is usage/metering snapshots, not balance truth.
+- svc-rewarder plans deterministic rewards but does not mutate ledger directly.
+- svc-gateway remains public proxy/edge; no business logic.
+- omnigate coordinates product flows but must not directly mutate ledger.
+- svc-storage stores bytes by CID only; no semantic asset logic.
+- svc-index stores pointers/metadata; no economics.
+- All ROC money math is integer minor units.
+- Percentages use basis points.
+- Paid flows must be explicit and receipt-backed.
+- Policy/capability checks fail closed.
+```
+
+### 10.3 QuickChain invariants
+
+```text
+- QuickChain remains future design.
+- No chain logic in CrabLink.
+- No ROX/Solana/external settlement now.
+- No validator/consensus/checkpoint code now.
+- No public bridge.
+- No staking/liquidity/exchange logic.
+- No privacy claims without a real protocol.
+```
+
+---
+
+## 11. Recommended backend implementation shape for `.article`
+
+### 11.1 Start from existing `text_assets.rs`
+
+If current code has:
+
+```text
+TextAssetKind::Post
+TextAssetKind::Comment
+```
+
+add:
+
+```text
+TextAssetKind::Article
+```
+
+Article-specific route family:
+
+```text
+POST /v1/assets/article/prepare
+POST /v1/assets/article
+```
+
+Public gateway should expose:
+
+```text
+POST /assets/article/prepare
+POST /assets/article
+```
+
+### 11.2 Strict accepted JSON
+
+Article prepare/publish JSON should probably accept:
+
+```text
+title
+subtitle
+excerpt
+body
+site_context_crab_url
+parent_crab_url
+hero_image_crab_url
+creator_display
+language
+article_kind
+visibility
+rights_mode
+moderation_mode
+content_warning
+tags
+payer_account
+owner_passport_subject
+client_idempotency_key
+```
+
+Use camelCase aliases only if existing post/comment DTOs already support them:
+
+```text
+siteContextCrabUrl
+heroImageCrabUrl
+rightsMode
+moderationMode
+contentWarning
+payerAccount
+ownerPassportSubject
+clientIdempotencyKey
+```
+
+### 11.3 Stored content envelope
+
+Suggested content envelope:
+
+```text
+schema: ron.article-content.v1
+kind: article
+asset_kind: article
+format: text/markdown or text/plain; charset=utf-8
+title
+subtitle
+excerpt
+body
+metadata
+relations
+site_connection
+hero_image_reference
+linked_assets
+creator_display
+created_at_ms
+```
+
+### 11.4 Manifest requirements
+
+Article manifest should include:
+
+```text
+asset_kind: article
+asset_cid
+manifest_cid
+owner_passport_subject
+owner_wallet_account / payout account
+title
+description/excerpt
+tags
+site_context
+hero_image reference if present
+receipt refs
+storage/provider refs
+provenance
+```
+
+### 11.5 Tests should enforce no fake success
+
+Reject publish if:
+
+```text
+- x-ron-wallet-txid missing
+- x-ron-wallet-receipt-hash missing
+- x-ron-wallet-from missing
+- x-ron-wallet-to missing
+- x-ron-paid-estimate-minor missing
+- x-ron-asset-kind != article
+```
+
+---
+
+## 12. After article is proven
+
+Once `.article` is proven end-to-end:
+
+```text
+1. Open returned crab://<hash>.article in CrabLink.
+2. Confirm typed asset page renders article content properly.
+3. Confirm Library > Text shows article.
+4. Confirm crab://text Articles count increments.
+5. Confirm crab://quickchain no longer says paid post/comment/article is fully missing, if local proof has all three.
+6. Create a carryover checkpoint with the fresh article URL.
+```
+
+Only after post/comment/article are all proven should the project consider:
+
+```text
+- Reference graph MVP
+- Site refs to posts/comments/articles
+- Paid content views
+- Accounting events
+- Rewarder payout plans
+```
+
+NEXT_LEVEL explicitly says reference graph work begins after `.post`, `.comment`, and `.article` create/resolve are green, then paid views, accounting events, and rewarder planning follow later. 
+
+---
+
+## 13. Current progress estimate
+
+### CrabLink React refactor / browser client
+
+```text
+Estimated: 92–94% for current protected React route layer
+```
+
+Reason:
+
+```text
+- React shell is active.
+- Home dashboard works.
+- Library works.
+- QuickChain readiness works.
+- Text readiness route was provided.
+- Profile/site/image/library/receipt display cache is working.
+- Major protected flows are no longer old vanilla-only.
+```
+
+Still remaining:
+
+```text
+- Confirm final crab://text route after codebundle regeneration if not already done.
+- Keep polishing typed text asset displays.
+- Keep adding backend-backed proof paths when backend routes land.
+- Avoid over-polishing local-only pages before backend catches up.
+```
+
+### Internal WEB3/NEXT_LEVEL product loop
+
+```text
+Estimated: 88–91%
+```
+
+Reason:
+
+```text
+- Paid image/site flows proven.
+- Paid site_visit proven.
+- Profile/site/asset/receipt display proof works.
+- Post/comment likely implemented/proven in backend notes.
+- Article still pending.
+- Paid views/accounting/rewarder still pending.
+```
+
+### QuickChain readiness
+
+```text
+Estimated: 40% visible readiness in CrabLink dashboard
+```
+
+This is correct and intentionally conservative.
+
+QuickChain implementation itself:
+
+```text
+0% implementation started.
+Correct status: LOCKED / future blueprint.
+```
+
+---
+
+## 14. Strong recommendation for next session
+
+The next session should be a backend implementation session, not more frontend readiness UI.
+
+Recommended opening move:
+
+```text
+“Review CODEBUNDLE_RS.md, ALLNOTES.MD, NEXT_LEVEL.MD, QUICKCHAIN.MD, CODECHECK.md, and CODECOMMENTS.MD. Confirm whether .post and .comment are currently implemented and green. If yes, implement Omnigate .article prepare/publish/resolve using the existing text_assets.rs pattern, with full paste-ready files and tests.”
+```
+
+The next assistant should not start with `crab://video`, `crab://music`, QuickChain, Solana, ROX, bridge, validators, or chain roots.
+
+The next real win is:
+
+```text
+crab://<hash>.article minted from backend
+→ displayed in CrabLink
+→ visible in Library Text tab
+→ visible in crab://text
+→ QuickChain readiness improves honestly
+```
+
+---
+
+## 15. Final state to preserve
+
+Plain-English summary for the next instance:
+
+```text
+We finished a strong CrabLink proof/readiness session.
+
+CrabLink now has:
+- crab://home as route smoke dashboard
+- crab://library as user-facing local library
+- crab://quickchain as locked readiness dashboard
+- crab://text as post/comment/article prerequisite tracker
+- profile/site/image/receipt display memory working
+- paid site_visit receipt visible from local cache
+- QuickChain explicitly blocked until backend economy gates are complete
+
+Next: stop frontend-only work and implement backend article support in RustyOnions, assuming post/comment are still green in the latest codebundle. If post/comment are not green, restore NEXT_LEVEL order: post first, comment second, article third.
+```
+
+This is a clean stopping point.
+
+
+### END NOTE - MAY 15 2026 - 21:15 CST
+
+
+
+### BEGIN NOTE - MAY 16 2026 - 12:05 CST
+
+## Completion estimate
+
+Here is my honest current estimate after this session:
+
+```text
+RustyOnions core substrate / service foundation:
+  92–94%
+
+RustyOnions internal ROC value plane:
+  88–91%
+
+RustyOnions WEB3 / WEB3_2 backend product layer:
+  76–82%
+
+CrabLink Chrome React browser client:
+  93–95%
+
+CrabLink production-grade browser UX:
+  80–84%
+
+Combined RustyOnions + CrabLink internal WEB3 beta:
+  88–91%
+
+Full NEXT_LEVEL blueprint:
+  68–74%
+
+QuickChain implementation readiness:
+  20–25%
+```
+
+The biggest jump this session was in **CrabLink + text primitives**. We moved post/comment/article from “backend route surface exists” into a full proof loop: prepare, wallet hold, publish, resolve, raw b3 read, UI import, Library grouping, and typed page rendering. Your latest green gate proved automatic nonce recovery and full text publish flow, including post/comment/article wallet holds and typed b3 reads. 
+
+The reason the full project is not higher than ~90% is that the remaining work is not just UI polish. The next backend work includes **Visitor B funding, site_visit repeatability after restart, paid content views, ledger replay proofs, accounting snapshots, rewarder plans, and only then QuickChain preflight**. The QuickChain document itself says it is a future-chain blueprint, not an instruction to implement blockchain logic immediately, and it explicitly keeps ROX/Solana/external settlement out of the active MVP. 
+
+---
+
+# Carryover notes for next session
+
+## 0. Current session verdict
+
+This was a **major frontend/product proof session**. CrabLink is now in a very strong stopping state, and the next session should shift back to RustyOnions backend work.
+
+We finished several important frontend and smoke-proof gates:
+
+```text
+crab://text proof page: working
+post/comment/article terminal smoke: working
+automatic wallet nonce recovery: working
+green gate with live text publish: passing
+typed .post/.comment/.article URLs: working
+crab://library grouped proof UI: working
+Passport drawer cleanup direction: correct
+receipt/debug surfaces moved toward pages instead of drawer clutter
+QuickChain: still correctly locked
+```
+
+The latest green-gate run with `CRABLINK_GREEN_RUN_TEXT_PUBLISH=1` proved:
+
+```text
+post prepare → nonce recovery → wallet hold → publish → resolve → raw b3 read
+comment prepare → wallet hold → publish → resolve → raw b3 read
+article prepare → wallet hold → publish → resolve → raw b3 read
+Vite build → React checks → Chrome checks → package → codebundle
+```
+
+Fresh latest green-gate text URLs:
+
+```text
+post:
+crab://9cc5319d0e41a760b90592278fba1fd55b7ff82069bfc865b11311baea02f819.post
+
+comment:
+crab://a398906bf17baae32895632f2a64640928507703f80499f237d488189325cc88.comment
+
+article:
+crab://827eaa017d85235efce172bbc90b9d0bd589b62f6fb6fe795e7ecf71e5ae2af3.article
+```
+
+These are the freshest known-good text primitive URLs from this session. The proof log shows the post hold recovered to nonce 8, then comment/article used nonces 9 and 10, and all three publish/resolve/raw-read steps passed. 
+
+---
+
+## 1. What we accomplished in CrabLink
+
+### 1.1 Text publish smoke matured from prepare-only to full live publish
+
+We started with a prepare-only smoke for:
+
+```text
+/assets/post/prepare
+/assets/comment/prepare
+/assets/article/prepare
+```
+
+That passed against the running RustyOnions stack.
+
+Then we extended the smoke to support explicit publish mode:
+
+```bash
+CRABLINK_TEXT_RUN_PUBLISH=1 bash scripts/smoke-text-assets-local.sh
+```
+
+The publish mode now performs:
+
+```text
+prepare
+→ /wallet/hold
+→ publish
+→ /crab/resolve
+→ /o/b3:<hash> raw read
+```
+
+It is still safe by default:
+
+```text
+bash scripts/smoke-text-assets-local.sh
+```
+
+only does prepare checks and does not spend ROC.
+
+### 1.2 Wallet DTO mismatches were fixed
+
+During the first publish attempt, `/wallet/hold` rejected the script because the wallet DTO is strict. We fixed:
+
+```text
+amount_minor must be a string, not JSON integer
+client_idempotency_key must be idempotency_key
+```
+
+This was a good sign: the backend strict DTO rules are working.
+
+### 1.3 Automatic nonce recovery was proven
+
+The script originally failed with:
+
+```text
+NONCE_CONFLICT expected 2, got 1
+```
+
+Then we added parser/retry behavior. The final proof showed:
+
+```text
+start nonce: 1
+NONCE_CONFLICT
+retrying with expected nonce 8
+wallet hold OK nonce 8 recovered
+```
+
+Then it continued with nonces 9 and 10 for comment/article. This matters because wallet nonces are part of the economic safety boundary.
+
+### 1.4 `crab://text` became a real proof dashboard
+
+We added/imported terminal smoke proof into local display catalog. The text page now shows:
+
+```text
+Readiness: 100%
+Posts: 2
+Comments: 1
+Articles: 1
+Text proof complete
+```
+
+The extra post count is not a bug. It means the browser remembered another `.post` from a prior opened/seen route. This is local display memory only.
+
+### 1.5 Typed `.post`, `.comment`, `.article` links work
+
+The latest typed links load and render. We also polished the typed asset viewer so:
+
+```text
+.post says Post content truth
+.comment says Comment content truth
+.article says Article content truth
+comment fallback title is Comment
+```
+
+This avoids misleading “Post content truth” on comment/article pages.
+
+### 1.6 `crab://library` is now much cleaner
+
+Library now groups local display proof into:
+
+```text
+Profiles
+Sites
+Images
+Text assets
+  Posts
+  Comments
+  Articles
+Manifests / roots
+Other assets
+Receipts
+```
+
+It now clearly shows:
+
+```text
+Profiles: 1
+Sites: 1
+Images: 1
+Text assets: 4
+Receipts: 1
+Text proof ready
+```
+
+This is exactly the right UI shape: Library is the local proof/cata­log page, not the passport drawer.
+
+### 1.7 Passport drawer clutter was identified and corrected in direction
+
+You correctly objected to the receipt/debug clutter in the passport dropdown. The right product decision is:
+
+```text
+Passport drawer = compact account/control surface
+crab://library = local catalog/proof surface
+crab://receipts = receipt/debug/proof surface
+crab://text = text primitive proof surface
+crab://quickchain = locked readiness surface
+```
+
+This is important. Passport should not become a dumping ground for every dev/debug panel.
+
+---
+
+## 2. Current known-good CrabLink commands
+
+### Normal frontend gate
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+bash scripts/check-react-lane.sh
+bash scripts/check-chrome.sh
+bash scripts/package-chrome.sh
+bash scripts/make_codebundle.sh
+```
+
+### Text prepare smoke
+
+```bash
+cd /Users/mymac/Desktop/crablink
+bash scripts/smoke-text-assets-local.sh
+```
+
+### Text publish smoke
+
+```bash
+cd /Users/mymac/Desktop/crablink
+CRABLINK_TEXT_RUN_PUBLISH=1 bash scripts/smoke-text-assets-local.sh
+```
+
+### Full green gate with live text publish
+
+```bash
+cd /Users/mymac/Desktop/crablink
+CRABLINK_GREEN_RUN_TEXT_PUBLISH=1 bash scripts/green-gate-local.sh
+```
+
+### Load latest generated URLs
+
+```bash
+cd /Users/mymac/Desktop/crablink
+source dist/text-asset-smoke/last-text-assets.env
+```
+
+### Resolve-only proof after source
+
+```bash
+cd /Users/mymac/Desktop/crablink
+source dist/text-asset-smoke/last-text-assets.env
+CRABLINK_TEXT_RUN_RESOLVE=1 bash scripts/smoke-text-assets-local.sh
+```
+
+---
+
+## 3. Current frontend stopping point
+
+Frontend is safe to pause now.
+
+The final frontend state should be considered:
+
+```text
+CrabLink React lane: strong
+Text primitives: proven
+Library: clean
+Passport drawer: should remain compact
+Receipts: should live on crab://receipts
+QuickChain: locked
+```
+
+Recommended final manual checks before pushing, if not already done:
+
+```text
+crab://home
+crab://text
+crab://library
+crab://receipts
+crab://quickchain
+latest .post URL
+latest .comment URL
+latest .article URL
+Passport drawer compactness
+```
+
+---
+
+## 4. Backend next session: top priority list
+
+The next session should be backend-first.
+
+### Priority 1 — Fund/bootstrap Visitor B / `acct_visitor_b`
+
+This is the top backend blocker.
+
+After restarting the stack, Visitor B had:
+
+```text
+passport:main:visitor-b
+acct_visitor_b
+ROC 0
+```
+
+Then `crab://ron7` site_visit failed because the wallet transfer was correctly rejected.
+
+This is not a CrabLink bug. This is backend truth. But for testing the visitor-to-creator economy, we need Visitor B funded reliably after stack restart.
+
+Backend target:
+
+```text
+Visitor B / acct_visitor_b receives starter/dev ROC through proper svc-wallet path.
+No fake frontend balance.
+No direct ledger mutation outside wallet.
+No hidden minting.
+No local balance edit.
+```
+
+Likely places to inspect:
+
+```text
+svc-wallet issue/bootstrap routes
+svc-passport bootstrap behavior
+svc-gateway identity/bootstrap route
+omnigate identity/bootstrap route
+dev session / starter grant helpers
+```
+
+Expected result:
+
+```text
+Account B can pay 10 ROC for crab://ron7 site_visit after restart.
+CrabLink balance chip shows backend-derived nonzero balance.
+```
+
+### Priority 2 — Re-prove Visitor B pays Creator A for `crab://ron7`
+
+Before the stack restart, this had been proven:
+
+```text
+Visitor B / acct_visitor_b pays 10 ROC
+Creator A / acct_dev receives 10 ROC
+site_visit receipt returned
+ledger root returned
+browser shows balance movement
+```
+
+ALLNOTES records the prior quote/pay proof for `crab://ron7`, including:
+
+```text
+amount_minor = "10"
+asset = "roc"
+payer_account = "acct_visitor_b"
+recipient_account = "acct_dev"
+site_name = "ron7"
+crab_url = "crab://ron7"
+wallet_front_door = svc-wallet /v1/transfer
+```
+
+and the earlier payment proof returned txid, receipt hash, and ledger root. 
+
+Next backend session should recreate this after funding B.
+
+Expected proof chain:
+
+```text
+create/resolve crab://ron7 if needed
+quote site_visit as Visitor B
+pay site_visit as Visitor B
+verify Account B decreases
+verify Account A increases
+verify receipt_hash and ledger_root returned
+verify CrabLink unlocks only after receipt
+```
+
+### Priority 3 — Make `site_visit` smoke repeatable
+
+We need a backend script equivalent to the successful text smoke.
+
+Recommended script:
+
+```text
+scripts/web3_paid_site_visit_smoke.sh
+```
+
+Expected behavior:
+
+```text
+check gateway health/ready
+ensure/fund Visitor B if configured
+resolve crab://ron7
+quote site_visit
+pay site_visit
+read Account B balance before/after
+read Account A balance before/after
+assert B decreased by 10
+assert A increased by 10
+print txid / receipt_hash / ledger_root
+```
+
+The notes already identify this as a QuickChain preflight requirement: `scripts/web3_paid_site_visit_smoke.sh` must exist and pass before QuickChain starts. 
+
+### Priority 4 — Durable site_visit receipt persistence
+
+CrabLink has a UI path for receipts now, but backend/frontend need to make sure successful receipts are consistently stored/displayed.
+
+Backend/API result should include:
+
+```text
+action = site_visit
+site_name
+crab_url
+amount_minor
+asset
+payer_account
+recipient_account
+nonce
+txid
+receipt_hash
+ledger_root
+quote_id / quote_hash if available
+```
+
+CrabLink should write that into display cache only after successful backend pay.
+
+Important boundary:
+
+```text
+Receipt cache is display-only.
+It is not wallet truth.
+It is not ledger replay truth.
+It is not authorization.
+```
+
+### Priority 5 — Add/lock paid content-view route shape
+
+Now that text assets are proven, we need the backend route shape for paying to view content beyond a named site.
+
+Candidate actions:
+
+```text
+content_view
+asset_view
+post_view
+article_view
+image_view
+```
+
+Candidate route family:
+
+```text
+POST /assets/:kind/:hash/view/quote
+POST /assets/:kind/:hash/view/pay
+```
+
+or generic:
+
+```text
+POST /content/view/quote
+POST /content/view/pay
+```
+
+Do not overbuild. First target should be one paid view type.
+
+Recommended first paid content view:
+
+```text
+article_view
+```
+
+Reason: article is long-form and naturally monetizable, and text assets are now proven.
+
+Required invariants:
+
+```text
+integer minor units only
+no silent spend
+quote before pay
+payer/recipient explicit
+policy/economics config source clear
+wallet mutation through svc-wallet only
+gateway/omnigate do not mutate ledger directly
+receipt returned
+receipt stored/displayed only after success
+```
+
+### Priority 6 — Ledger replay proof for exact paid flows
+
+Before QuickChain, we need deterministic replay from ledger events.
+
+Minimum replay tests:
+
+```text
+site_visit transfer replay:
+  before balances
+  transfer receipt
+  after balances
+  ledger_root deterministic
+
+text publish holds replay:
+  hold receipts for post/comment/article
+  nonces advance deterministically
+  balances/holds nonnegative
+  receipt hashes stable
+```
+
+QuickChain’s blueprint says Phase 1 starts only after local replay/root foundations exist: canonical receipt hashing, account state tree, state root, receipt root, checkpoint DTO, and replay proving the same roots. 
+
+### Priority 7 — Accounting snapshots
+
+`ron-accounting` must begin ingesting usage/metering events for:
+
+```text
+site_visit
+content_view
+storage/pinning
+asset publish
+future article/image/music/video events
+```
+
+At this stage, accounting is not balance truth. It is usage truth.
+
+Expected first target:
+
+```text
+site_visit accounting event emitted/planned
+snapshot DTO exists
+snapshot can be sealed/deterministically hashed
+```
+
+### Priority 8 — Rewarder payout planning
+
+`svc-rewarder` should not mutate the ledger directly. It should produce deterministic payout plans/manifests from accounting and policy signals.
+
+Expected first target:
+
+```text
+input: sealed accounting snapshot + policy/economics config
+output: deterministic payout plan
+wallet commits payout later through svc-wallet
+```
+
+No direct ledger mutation from rewarder.
+
+### Priority 9 — Policy/economics config for `site_visit`
+
+Right now site_visit proof uses a fixed dev price pattern:
+
+```text
+OMNIGATE_SITE_VISIT_PRICE_MINOR = 10
+```
+
+This is fine for proof.
+
+Eventually move toward:
+
+```toml
+[action.site_visit]
+asset = "roc"
+base_price_minor = "10"
+recipient_source = "site_manifest_payout"
+```
+
+Do not overbuild splits yet. Keep a small, testable config first.
+
+---
+
+## 5. Backend crates likely involved next
+
+### `svc-wallet`
+
+Main target for Visitor B funding/bootstrap.
+
+Responsibilities:
+
+```text
+issue
+transfer
+hold
+nonce/idempotency
+balance
+receipt
+ledger front-door
+```
+
+### `ron-ledger`
+
+Needed for:
+
+```text
+deterministic replay
+receipt hash stability
+ledger root proof
+future QuickChain roots
+```
+
+### `omnigate`
+
+Needed for:
+
+```text
+site_visit quote/pay coordination
+paid content-view quote/pay route shape
+asset/site/product route coordination
+policy/economics interpretation
+```
+
+But must not directly mutate ledger.
+
+### `svc-gateway`
+
+Needed for:
+
+```text
+public proxy routes
+CrabLink-facing API shape
+header preservation
+site/content view route exposure
+```
+
+### `ron-accounting`
+
+Needed after paid route proof:
+
+```text
+usage events
+metering snapshots
+sealed accounting windows
+```
+
+### `svc-rewarder`
+
+Needed after accounting:
+
+```text
+deterministic payout plans
+reward manifests
+no direct wallet mutation
+```
+
+### `ron-policy`
+
+Needed for:
+
+```text
+fail-closed paid action policy
+capability gates
+economics config validation
+```
+
+### `ron-proto`
+
+Needed if new DTOs are added for:
+
+```text
+content view quote/pay
+accounting event/snapshot
+reward plan/manifest
+QuickChain checkpoint later
+```
+
+---
+
+## 6. Files/scripts to bring forward
+
+### CrabLink repo
+
+Current working repo:
+
+```text
+/Users/mymac/Desktop/crablink
+```
+
+Important scripts:
+
+```text
+scripts/smoke-text-assets-local.sh
+scripts/green-gate-local.sh
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Important frontend routes:
+
+```text
+crab://home
+crab://text
+crab://library
+crab://receipts
+crab://quickchain
+crab://site
+crab://image
+crab://post
+crab://comment
+crab://article
+```
+
+Important latest files changed:
+
+```text
+extensions/chrome/src/pages/text/TextPrimitiveReadinessPage.jsx
+extensions/chrome/src/pages/library/LibraryPage.jsx
+extensions/chrome/src/pages/library/library.css
+extensions/chrome/src/pages/asset/AssetHydratedView.jsx
+extensions/chrome/src/shared/receipts/recentReceipts.js
+extensions/chrome/src/app/shell/PassportDrawer.jsx
+extensions/chrome/src/pages/receipts/ReceiptsPage.jsx
+extensions/chrome/src/pages/receipts/receipts.css
+extensions/chrome/src/app/routeRegistry.js
+scripts/smoke-text-assets-local.sh
+scripts/green-gate-local.sh
+```
+
+### RustyOnions repo
+
+Current working repo:
+
+```text
+/Users/mymac/Desktop/RustyOnions
+```
+
+Important backend scripts to run/extend:
+
+```text
+scripts/web3_crablink_dev_stack.sh
+scripts/web3_paid_site_visit_smoke.sh  (to create or lock)
+scripts/web3_product_stack_smoke.sh
+scripts/web3_identity_stack_smoke.sh
+```
+
+Important backend crates for next session:
+
+```text
+crates/svc-wallet
+crates/ron-ledger
+crates/omnigate
+crates/svc-gateway
+crates/ron-accounting
+crates/svc-rewarder
+crates/ron-policy
+crates/ron-proto
+```
+
+---
+
+## 7. Current known problems / blockers
+
+### 7.1 Visitor B has no ROC after stack restart
+
+Problem:
+
+```text
+passport:main:visitor-b / acct_visitor_b has ROC 0
+```
+
+Observed effect:
+
+```text
+crab://ron7 paid site visit fails with wallet transfer rejected
+```
+
+Expected backend fix:
+
+```text
+fund/bootstrap acct_visitor_b through proper svc-wallet route
+```
+
+Do not fix this by changing CrabLink UI balance.
+
+### 7.2 `crab://ron7` may need recreation after stack restart
+
+You recreated `crab://ron7` this session. After future restarts, local dev storage/index may lose assets/sites depending on stack config.
+
+For backend smoke repeatability, either:
+
+```text
+A. script creates a fresh paid site each run
+B. script verifies/repairs crab://ron7 before pay
+C. dev stack persists site/index DB across restarts
+```
+
+Best short-term path:
+
+```text
+script verifies/creates required test site
+```
+
+### 7.3 Receipt UI is display-only, not replay proof
+
+Even though `crab://receipts` is now the right UX surface, it does not prove ledger replay. It displays backend-returned metadata.
+
+Next backend layer must prove:
+
+```text
+ledger replay recreates the same balances and roots
+```
+
+### 7.4 QuickChain temptation
+
+Do not begin QuickChain implementation yet.
+
+QuickChain’s own status section says the current active order is:
+
+```text
+finish internal ROC loop
+prove paid storage/pinning
+prove paid image/site/post/comment/article flows
+prove Visitor B pays Creator A
+prove wallet receipts, ledger replay, balance truth
+harden accounting → rewarder → wallet loop
+only then begin QuickChain research/prototype
+```
+
+It also forbids active ROX/Solana/external settlement/staking/public bridge/chain logic in CrabLink. 
+
+---
+
+## 8. What is now “done enough” on frontend
+
+These can be treated as completed for this phase:
+
+```text
+React shell route structure
+crab://text readiness
+text smoke import
+post/comment/article typed page rendering
+automatic text publish nonce recovery
+CrabLink Library grouping
+Passport drawer compact direction
+Receipts page direction
+QuickChain readiness page locked state
+```
+
+Do not spend the next session tweaking frontend unless a backend change requires it.
+
+Frontend only needs follow-up if:
+
+```text
+backend receipt shape changes
+new paid content view route shape needs UI
+Visitor B funding flow needs a button
+site_visit smoke returns new fields to display
+```
+
+---
+
+## 9. Recommended next session execution plan
+
+### Phase A — Boot backend and inspect balances
+
+Start RustyOnions stack.
+
+Check:
+
+```text
+gateway /healthz
+gateway /readyz
+wallet health
+balance acct_dev
+balance acct_visitor_b
+```
+
+Expected:
+
+```text
+acct_dev has ROC
+acct_visitor_b may be 0 before fix
+```
+
+### Phase B — Fix/fund Visitor B
+
+Implement or use backend-routed funding.
+
+Possible dev command/script target:
+
+```text
+issue starter ROC to acct_visitor_b
+```
+
+But keep mutation through svc-wallet. No direct ledger mutation.
+
+Expected:
+
+```text
+acct_visitor_b balance > 10
+```
+
+### Phase C — Re-prove `crab://ron7` site_visit
+
+Run UI and/or terminal proof:
+
+```text
+resolve crab://ron7
+quote 10 ROC site_visit
+pay as visitor-b
+unlock site
+receipt returned
+A balance +10
+B balance -10
+```
+
+### Phase D — Script it
+
+Create/update:
+
+```text
+scripts/web3_paid_site_visit_smoke.sh
+```
+
+Smoke should be repeatable after stack restart.
+
+### Phase E — Add tests
+
+Backend tests to add/lock:
+
+```text
+omnigate site_visit quote test
+omnigate site_visit pay test
+gateway route proxy/preserve header test
+wallet transfer/nonce/idempotency test if missing
+```
+
+### Phase F — Receipt persistence path
+
+Make sure successful site_visit pay writes enough data for CrabLink:
+
+```text
+txid
+receipt_hash
+ledger_root
+nonce
+amount_minor
+payer
+recipient
+site
+quote hash
+```
+
+### Phase G — Paid content view blueprint/route
+
+After `site_visit` is repeatable:
+
+```text
+define paid content view quote/pay route
+pick article_view first
+add DTOs/tests
+wire gateway/omnigate
+then CrabLink UI
+```
+
+### Phase H — Ledger replay/accounting/rewarder
+
+Begin the chain toward QuickChain preflight:
+
+```text
+ron-ledger replay exact paid flows
+ron-accounting snapshot for site_visit/content_view
+svc-rewarder deterministic payout plan
+wallet commits reward payout via svc-wallet
+```
+
+Only after that should QuickChain files be opened for implementation.
+
+---
+
+## 10. Updated project status by layer
+
+### CrabLink frontend
+
+```text
+Status: strong internal beta
+Estimate: 93–95%
+```
+
+Strong:
+
+```text
+React shell
+built-in routes
+site/image/text/profile/library/receipts/quickchain pages
+typed text asset rendering
+proof dashboards
+green gates
+packaging
+local display catalog
+receipt display surfaces
+```
+
+Remaining:
+
+```text
+polish first-run passport flow
+production-grade profile/edit flows
+improve settings and dev session UX
+cross-browser packaging later
+paid content-view UI after backend
+```
+
+### RustyOnions internal ROC
+
+```text
+Status: strong but backend repeatability still needed
+Estimate: 88–91%
+```
+
+Strong:
+
+```text
+wallet/ledger holds/transfers
+paid image/site/text flows
+nonce/idempotency enforcement
+site_visit route exists/proven previously
+text publish route proven this session
+```
+
+Remaining:
+
+```text
+fund Visitor B reliably
+site_visit smoke repeatability
+ledger replay proof
+accounting snapshots
+rewarder payout plan
+policy config integration
+```
+
+### WEB3_2 / NEXT_LEVEL product layer
+
+```text
+Status: good local proof, still not full blueprint
+Estimate: 76–82%
+```
+
+Strong:
+
+```text
+b3 typed assets
+named sites
+public profile/display cache
+post/comment/article primitives
+library
+receipts surface
+visitor/creator loop partially proven
+```
+
+Remaining:
+
+```text
+paid content views
+site revisions
+public profile manifests
+alts
+moderation/reputation
+rewarder/accounting
+media-lite
+hosting placement
+provider payouts
+```
+
+### QuickChain
+
+```text
+Status: blueprint only
+Implementation readiness: 20–25%
+```
+
+Allowed now:
+
+```text
+read blueprint
+prepare prerequisites
+think about receipt roots
+document replay requirements
+```
+
+Not allowed now:
+
+```text
+new chain crate
+validators
+bridge
+ROX/Solana anchor
+staking
+liquidity
+public settlement
+CrabLink chain logic
+```
+
+QuickChain later starts with local checkpoint roots only, not validators. 
+
+---
+
+## 11. Current north-star order
+
+Use this order in the next session:
+
+```text
+1. Fund/bootstrap Visitor B / acct_visitor_b.
+2. Re-prove crab://ron7 site_visit.
+3. Automate paid site_visit smoke.
+4. Ensure receipt persistence/display from successful site_visit.
+5. Define paid content-view route shape.
+6. Add ledger replay proof for site_visit/text publish receipts.
+7. Add accounting event/snapshot proof.
+8. Add rewarder deterministic payout plan.
+9. Only then begin QuickChain Phase 1 local roots.
+```
+
+---
+
+## 12. Critical invariants to preserve
+
+```text
+No fake ROC.
+No fake receipts.
+No silent spend.
+No frontend balance editing.
+No direct ledger mutation outside svc-wallet/ron-ledger path.
+No direct wallet/storage/index/omnigate calls from CrabLink.
+CrabLink calls svc-gateway only.
+Gateway/omnigate coordinate, but do not own ledger truth.
+svc-wallet remains mutation front-door.
+ron-ledger remains durable truth.
+ron-accounting is usage/snapshot truth, not wallet balance truth.
+svc-rewarder plans payouts but does not mutate ledger directly.
+Integer minor units only.
+Basis points for percentages.
+Capability/policy checks fail closed.
+QuickChain stays locked until prerequisites are real.
+```
+
+---
+
+## 13. One-sentence handoff
+
+```text
+We finished a major CrabLink frontend proof session: text publish smoke with automatic nonce recovery passes, .post/.comment/.article typed links work, crab://text is 100% proof-ready, crab://library is cleanly grouped, and Passport/Receipts UX has the right separation; next session should switch to RustyOnions backend, starting with funding acct_visitor_b and re-proving Visitor B pays Creator A for crab://ron7, then automate site_visit smoke and begin replay/accounting/rewarder prerequisites before QuickChain.
+```
+
+
+### END NOTE - MAY 16 2026 - 12:05 CST

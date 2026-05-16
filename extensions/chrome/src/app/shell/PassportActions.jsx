@@ -4,9 +4,9 @@
  * RO:INTERACTS — PassportDrawer, app navigation, identity/wallet clients through caller callbacks.
  * RO:INVARIANTS — read-only gateway refreshes only; no passport creation, no wallet mutation, no fake receipts.
  * RO:METRICS — refresh callbacks inherit gateway correlation IDs.
- * RO:CONFIG — walletAccount/handle presence controls enabled states; dev mode may offer local labels.
+ * RO:CONFIG — walletAccount/handle/profileCrabUrl presence controls enabled states; dev mode may offer local labels.
  * RO:SECURITY — no private keys, seed phrases, private alt mappings, or spend authority.
- * RO:TEST — manual refresh, dev-label, and navigation smoke.
+ * RO:TEST — manual refresh, dev-label, public-handle navigation, and profile workspace navigation smoke.
  */
 
 export default function PassportActions({
@@ -22,7 +22,8 @@ export default function PassportActions({
 }) {
   const canNavigate = typeof navigation?.navigate === 'function';
   const hasWallet = Boolean(view?.walletAccount);
-  const publicHandleRoute = view?.handle ? `crab://${view.handle}` : '';
+  const publicHandleRoute = publicProfileRouteFor(view);
+  const publicHandleLabel = view?.handle ? `Open ${view.handle}` : 'Open public handle';
 
   function navigateTo(route) {
     if (!canNavigate || !route) {
@@ -63,8 +64,28 @@ export default function PassportActions({
         disabled={!canNavigate || !publicHandleRoute}
         title={publicHandleRoute ? publicHandleRoute : 'No backend-confirmed handle is loaded'}
       >
-        Open public handle
+        {publicHandleLabel}
       </button>
     </section>
   );
+}
+
+function publicProfileRouteFor(view = {}) {
+  const profileCrabUrl = String(view.profileCrabUrl || '').trim();
+
+  if (profileCrabUrl.startsWith('crab://@')) {
+    return profileCrabUrl;
+  }
+
+  const handle = String(view.handle || '').trim();
+
+  if (handle.startsWith('@')) {
+    return `crab://${handle}`;
+  }
+
+  if (handle) {
+    return `crab://@${handle.replace(/^@/, '')}`;
+  }
+
+  return '';
 }

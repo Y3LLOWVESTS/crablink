@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — Safe site renderer for local drafts and named gateway-resolved sites.
- * RO:WHY — Keeps site rendering focused: resolve/fetch root, render sandbox, show one consolidated proof panel.
+ * RO:WHY — Keeps site rendering focused: resolve/fetch root, paid access proof, sandbox render, and proof panel.
  * RO:INTERACTS — siteClient, SiteVisitAccess, SiteSandboxPreview, SiteResolvedProof, shared safe renderer.
  * RO:INVARIANTS — gateway-only named resolution; no direct storage/index; iframe preview has no scripts; no fake proof or silent spend.
  * RO:METRICS — displays gateway status, root fetch status, correlation IDs, sandbox policy, and embed render summary.
  * RO:CONFIG — gateway client from app context.
  * RO:SECURITY — untrusted HTML goes through shared sanitizer and strict sandbox iframe props.
- * RO:TEST — crab://site local preview; crab://<site_name> gateway preview; <crab-image> embed preview.
+ * RO:TEST — crab://site local preview; crab://<site_name> gateway preview; paid site_visit unlock; <crab-image> embed preview.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -15,7 +15,7 @@ import RouteProblemPanel from '../../shared/components/RouteProblemPanel.jsx';
 import { createSiteClient } from '../../shared/api/siteClient.js';
 import SiteResolvedProof from './SiteResolvedProof.jsx';
 import SiteSandboxPreview from './SiteSandboxPreview.jsx';
-import SiteVisitAccess, { siteVisitCanRender } from './SiteVisitAccess.jsx';
+import SiteVisitAccess, { deriveSiteVisitPolicy, siteVisitCanRender } from './SiteVisitAccess.jsx';
 
 const EMPTY_STATE = Object.freeze({
   status: 'idle',
@@ -111,61 +111,48 @@ export default function SiteRender({
     return () => {
       alive = false;
     };
-  }, [mode, siteName, route?.refreshTick, siteClient]);
+  }, [mode, siteName, siteClient]);
 
-  if (mode === 'named') {
-    if (state.status === 'loading') {
-      return (
-        <LoadingState
-          title="Resolving named site"
-          copy="CrabLink is asking the configured gateway for this site manifest and root document."
-          detail={`crab://${siteName}`}
-        />
-      );
-    }
-
-    if (state.status === 'error') {
-      return (
-        <RouteProblemPanel
-          title="Site could not be resolved"
-          copy="The gateway did not return a hydrated site response. React is showing the failure instead of inventing a site."
-          error={state.error}
-          route={route}
-          target={{
-            siteName,
-            crabUrl: `crab://${siteName}`,
-            route_kind: 'named_site',
-          }}
-          remediation="If this site was just created, refresh after the gateway/index is ready. Otherwise open crab://site and create the named pointer first."
-          onRetry={app?.refreshRoute}
-          onWorkspace={() => app?.navigate?.('crab://site')}
-          workspaceLabel="Open Site Workspace"
-          jsonLabel="Named site problem JSON"
-          attemptTitle="Named site gateway attempt"
-        />
-      );
-    }
-
+  if (mode !== 'named') {
     return (
-      <ResolvedSiteView
+      <SiteSandboxPreview
+        mode="local"
+        draftState={draftState}
         app={app}
-        result={state.result}
-        rootHtml={state.rootHtml}
-        rootStatus={state.rootStatus}
-        rootResponse={state.rootResponse}
-        rootError={state.rootError}
         siteClient={siteClient}
+        developer={draftState?.viewMode === 'developer'}
+      />
+    );
+  }
+
+  if (state.status === 'loading') {
+    return <LoadingState title="Resolving named site" copy={`Fetching crab://${siteName} through the configured gateway…`} />;
+  }
+
+  if (state.status === 'error') {
+    return (
+      <RouteProblemPanel
+        title="Unable to resolve named site"
+        copy={`CrabLink could not resolve crab://${siteName} through the configured gateway.`}
+        error={state.error}
+        actions={
+          <button className="cl-button cl-button-secondary" type="button" onClick={app?.refreshRoute}>
+            Retry
+          </button>
+        }
       />
     );
   }
 
   return (
-    <SiteSandboxPreview
-      mode="local"
-      draftState={draftState}
+    <ResolvedSiteView
       app={app}
+      result={state.result}
+      rootHtml={state.rootHtml}
+      rootStatus={state.rootStatus}
+      rootResponse={state.rootResponse}
+      rootError={state.rootError}
       siteClient={siteClient}
-      developer={draftState?.viewMode === 'developer'}
     />
   );
 }
@@ -176,7 +163,14 @@ function ResolvedSiteView({ app, result, rootHtml, rootStatus, rootResponse, roo
   const previewHtml = rootHtml || '';
   const developer = Boolean(app?.settings?.devMode || app?.state?.developerMode || app?.state?.viewMode === 'developer');
   const [visitAccess, setVisitAccess] = useState(null);
-  const canRenderPreview = siteVisitCanRender(visitAccess || { requiresPayment: false, canRender: true }, app);
+
+  const initialPolicy = deriveSiteVisitPolicy(summary, {
+    walletAccount: app?.settings?.walletAccount || app?.state?.walletAccount || '',
+    passportSubject: app?.settings?.passportSubject || app?.state?.passportSubject || '',
+  });
+
+  const pendingPaidAccess = initialPolicy.requiresPayment && !visitAccess;
+  const canRenderPreview = !pendingPaidAccess && siteVisitCanRender(visitAccess || { requiresPayment: false, canRender: true }, app);
 
   return (
     <section className="site-render-stack">
@@ -194,6 +188,7 @@ function ResolvedSiteView({ app, result, rootHtml, rootStatus, rootResponse, roo
           rootHtml={previewHtml}
           rootStatus={rootStatus}
           rootError={rootError}
+          app={app}
           siteClient={siteClient}
           developer={developer}
         />

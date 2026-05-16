@@ -5,7 +5,7 @@
  * RO:INVARIANTS — every built-in route maps to one owner; no late DOM rescue scripts; no backend truth invented here.
  * RO:METRICS — none.
  * RO:CONFIG — built-in route module map.
- * RO:SECURITY — route registry does not grant capabilities, spend authority, or internal-service access.
+ * RO:SECURITY — route registry does not grant capabilities, spend authority, chain authority, or internal-service access.
  * RO:TEST — npm run build; manual route smoke for all built-in crab:// routes.
  */
 
@@ -13,6 +13,10 @@ import { lazy } from 'react';
 
 export const ROUTES = Object.freeze({
   home: lazy(() => import('../pages/home/HomePage.jsx')),
+  library: lazy(() => import('../pages/library/LibraryPage.jsx')),
+  receipts: lazy(() => import('../pages/receipts/ReceiptsPage.jsx')),
+  quickchain: lazy(() => import('../pages/quickchain/QuickchainReadinessPage.jsx')),
+  text: lazy(() => import('../pages/text/TextPrimitiveReadinessPage.jsx')),
   site: lazy(() => import('../pages/site/SitePage.jsx')),
   image: lazy(() => import('../pages/image/ImagePage.jsx')),
   profile: lazy(() => import('../pages/profile/ProfilePage.jsx')),
@@ -67,6 +71,20 @@ export const PROVEN_FLOW_ROUTE_KINDS = Object.freeze([
   'site',
   'image',
   'profile',
+  'library',
+  'receipts',
+  'quickchain',
+  'text',
+]);
+
+export const PREREQUISITE_ROUTE_KINDS = Object.freeze([
+  'text',
+  'post',
+  'comment',
+  'article',
+  'library',
+  'receipts',
+  'quickchain',
 ]);
 
 export function hasRouteKind(kind) {

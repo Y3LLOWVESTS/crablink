@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # RO:WHAT — One-command local green-gate runner for CrabLink React-primary extension.
-# RO:WHY — Locks the refactor completion gate before deeper NEXT_LEVEL product work resumes.
+# RO:WHY — Locks the refactor/product proof gate before deeper NEXT_LEVEL and QuickChain prerequisite work resumes.
 # RO:INTERACTS — npm build, check-react-lane.sh, check-chrome.sh, package-chrome.sh, smoke scripts, make_codebundle.sh.
-# RO:INVARIANTS — default path is non-mutating; paid image/site/profile/bootstrap smokes require explicit opt-in.
+# RO:INVARIANTS — default path is non-mutating; paid image/site/profile/bootstrap/text publish smokes require explicit opt-in.
 # RO:METRICS — child smoke scripts carry gateway correlation/request IDs where applicable.
 # RO:CONFIG — CRABLINK_GREEN_RUN_*, CRABLINK_GREEN_MUTATING, CRABLINK_GREEN_MAKE_CODEBUNDLE, GATEWAY_URL.
 # RO:SECURITY — no silent ROC spend; no token persistence; no direct internal-service calls from browser code.
@@ -20,6 +20,8 @@ CRABLINK_GREEN_RUN_UPLOAD="${CRABLINK_GREEN_RUN_UPLOAD:-0}"
 CRABLINK_GREEN_RUN_SITE="${CRABLINK_GREEN_RUN_SITE:-0}"
 CRABLINK_GREEN_RUN_PROFILE_CLAIM="${CRABLINK_GREEN_RUN_PROFILE_CLAIM:-0}"
 CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE="${CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE:-0}"
+CRABLINK_GREEN_RUN_TEXT_ASSETS="${CRABLINK_GREEN_RUN_TEXT_ASSETS:-0}"
+CRABLINK_GREEN_RUN_TEXT_PUBLISH="${CRABLINK_GREEN_RUN_TEXT_PUBLISH:-0}"
 CRABLINK_GREEN_MAKE_CODEBUNDLE="${CRABLINK_GREEN_MAKE_CODEBUNDLE:-1}"
 
 CRABLINK_GREEN_IMAGE_PRICE="${CRABLINK_GREEN_IMAGE_PRICE:-25}"
@@ -28,6 +30,10 @@ CRABLINK_GREEN_SITE_REQUIRE_CRAB_RESOLVE="${CRABLINK_GREEN_SITE_REQUIRE_CRAB_RES
 if [[ "$CRABLINK_GREEN_MUTATING" == "1" ]]; then
   CRABLINK_GREEN_RUN_UPLOAD="1"
   CRABLINK_GREEN_RUN_SITE="1"
+fi
+
+if [[ "$CRABLINK_GREEN_RUN_TEXT_PUBLISH" == "1" ]]; then
+  CRABLINK_GREEN_RUN_TEXT_ASSETS="1"
 fi
 
 need_file() {
@@ -69,6 +75,7 @@ need_file "scripts/smoke-local-gateway.sh"
 need_file "scripts/smoke-profile-gateway.sh"
 need_file "scripts/smoke-first-run-profile.sh"
 need_file "scripts/smoke-site-create-local.sh"
+need_file "scripts/smoke-text-assets-local.sh"
 
 echo "CrabLink React-primary green gate"
 echo "root:                         $ROOT"
@@ -80,6 +87,8 @@ echo "paid image upload smoke:      $CRABLINK_GREEN_RUN_UPLOAD"
 echo "site create smoke:            $CRABLINK_GREEN_RUN_SITE"
 echo "profile claim smoke:          $CRABLINK_GREEN_RUN_PROFILE_CLAIM"
 echo "first-run profile smoke:      $CRABLINK_GREEN_RUN_FIRST_RUN_PROFILE"
+echo "text asset prepare smoke:     $CRABLINK_GREEN_RUN_TEXT_ASSETS"
+echo "text asset publish smoke:     $CRABLINK_GREEN_RUN_TEXT_PUBLISH"
 echo "make codebundle:              $CRABLINK_GREEN_MAKE_CODEBUNDLE"
 
 step "Vite build" npm run build
@@ -92,6 +101,16 @@ if [[ "$CRABLINK_GREEN_RUN_GATEWAY" == "1" ]]; then
   step "Gateway smoke" bash scripts/smoke-local-gateway.sh
 else
   skip "Gateway smoke" "set CRABLINK_GREEN_RUN_GATEWAY=1 when the RustyOnions stack is running"
+fi
+
+if [[ "$CRABLINK_GREEN_RUN_TEXT_ASSETS" == "1" ]]; then
+  if [[ "$CRABLINK_GREEN_RUN_TEXT_PUBLISH" == "1" ]]; then
+    step "Text asset publish smoke" env CRABLINK_TEXT_RUN_PUBLISH=1 bash scripts/smoke-text-assets-local.sh
+  else
+    step "Text asset prepare smoke" bash scripts/smoke-text-assets-local.sh
+  fi
+else
+  skip "Text asset smoke" "set CRABLINK_GREEN_RUN_TEXT_ASSETS=1 for prepare, or CRABLINK_GREEN_RUN_TEXT_PUBLISH=1 for publish"
 fi
 
 if [[ "$CRABLINK_GREEN_RUN_KNOWN_GOOD" == "1" ]]; then
@@ -152,6 +171,9 @@ echo "  $ROOT/dist/chrome-extension-staging"
 echo
 echo "Manual staged-extension smoke routes:"
 echo "  crab://home"
+echo "  crab://library"
+echo "  crab://quickchain"
+echo "  crab://text"
 echo "  crab://site"
 echo "  crab://image"
 echo "  crab://profile"
@@ -169,10 +191,9 @@ echo "  crab://code"
 echo "  crab://game"
 echo "  crab://definitely-missing-site"
 echo
-echo "Final manual proof items before deleting more legacy files:"
+echo "Final manual proof items:"
 echo "  1. Toolbar opens root react.html, not src/react.html."
 echo "  2. Passport drawer opens."
 echo "  3. Balance chip refreshes without fake ledger truth."
-echo "  4. Image upload still returns and previews crab://<hash>.image."
-echo "  5. Site create/open still works."
-echo "  6. Legacy fallback page.html still opens if intentionally selected."
+echo "  4. crab://text tracks post/comment/article local proof only after real typed URLs exist."
+echo "  5. crab://quickchain remains LOCKED until replay/accounting/rewarder gates are proven."

@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — Read-only passport summary for the React passport drawer.
- * RO:WHY — Keeps identity/wallet display logic explicit, honest, and reusable.
- * RO:INTERACTS — PassportDrawer, appContext settings/storage, gateway identity/wallet DTOs.
+ * RO:WHY — Keeps identity/wallet/public-profile display logic explicit, honest, and reusable.
+ * RO:INTERACTS — PassportDrawer, appContext settings/storage, gateway identity/wallet DTOs, publicProfileCache.
  * RO:INVARIANTS — local settings are labels/preferences, not backend truth; no fake balance or username confirmation.
  * RO:METRICS — none.
  * RO:CONFIG — passportSubject, walletAccount, handle, usernameStatus, storage backend.
  * RO:SECURITY — no private keys, seed phrases, private alt mappings, or spend authority.
- * RO:TEST — visual drawer smoke across no-passport, HTTP fallback, local labels, and gateway response states.
+ * RO:TEST — visual drawer smoke across no-passport, HTTP fallback, local labels, and gateway profile claim states.
  */
 
 export default function PassportSummary({ view, identityState, walletState }) {
@@ -33,6 +33,8 @@ export default function PassportSummary({ view, identityState, walletState }) {
         <PassportRow label="Requested handle" value={view.requestedHandle || 'None'} />
         <PassportRow label="Passport subject" value={view.passportSubject || 'Not configured'} />
         <PassportRow label="Wallet account" value={view.walletAccount || 'Not configured'} />
+        <PassportRow label="Public profile" value={view.publicProfileLabel} />
+        <PassportRow label="Profile CID" value={view.publicProfileCid || 'Not published yet'} />
         <PassportRow label="Ledger status" value={view.ledgerStatus} />
         <PassportRow label="Extension origin" value={view.extensionOriginLabel} />
         <PassportRow label="Identity refresh" value={refreshLabel(identityState)} />
@@ -85,10 +87,17 @@ function refreshLabel(state) {
   return 'Unavailable';
 }
 
-export function buildPassportView({ settings = {}, storage = {}, identity = null, wallet = null } = {}) {
+export function buildPassportView({
+  settings = {},
+  storage = {},
+  identity = null,
+  wallet = null,
+  publicProfile = null,
+} = {}) {
   const identityPassport = objectOrEmpty(identity?.passport || identity?.profile || identity?.identity);
   const identityWallet = objectOrEmpty(identity?.wallet);
   const walletBody = objectOrEmpty(wallet?.wallet || wallet?.balance || wallet);
+  const profileTruth = normalizePublicProfile(publicProfile);
 
   const settingsHandle = normalizeHandle(settings.handle);
   const requestedHandle = normalizeHandle(settings.requestedHandle);
@@ -102,9 +111,11 @@ export function buildPassportView({ settings = {}, storage = {}, identity = null
       identity?.profile?.username,
     ),
   );
+  const publicHandle = profileTruth.backendConfirmed ? profileTruth.handle : '';
 
   const identityStatus = normalizeStatus(
     firstPresent(
+      profileTruth.usernameStatus,
       identityPassport.username_status,
       identityPassport.usernameStatus,
       identityPassport.status,
@@ -115,13 +126,15 @@ export function buildPassportView({ settings = {}, storage = {}, identity = null
     ),
   );
 
-  const backendConfirmed = Boolean(identity && (identityStatus === 'confirmed' || identityPassport.confirmed === true));
+  const backendIdentityConfirmed = Boolean(identity && (identityStatus === 'confirmed' || identityPassport.confirmed === true));
+  const publicProfileConfirmed = Boolean(publicHandle && profileTruth.usernameStatus === 'confirmed');
   const localConfirmed = Boolean(settingsHandle && settings.usernameStatus === 'confirmed');
-  const confirmed = backendConfirmed || localConfirmed;
+  const confirmed = publicProfileConfirmed || backendIdentityConfirmed || localConfirmed;
 
-  const handle = confirmed ? identityHandle || settingsHandle : '';
+  const handle = confirmed ? publicHandle || identityHandle || settingsHandle : '';
   const passportSubject = String(
     firstPresent(
+      profileTruth.passportSubject,
       identityPassport.passport_subject,
       identityPassport.passportSubject,
       identity?.passport_subject,
@@ -190,9 +203,11 @@ export function buildPassportView({ settings = {}, storage = {}, identity = null
           : 'No passport';
 
   const identityStatusLabel = confirmed
-    ? backendConfirmed
-      ? 'Gateway-confirmed identity'
-      : 'Confirmed local setting'
+    ? publicProfileConfirmed
+      ? 'Gateway-confirmed public profile'
+      : backendIdentityConfirmed
+        ? 'Gateway-confirmed identity'
+        : 'Confirmed local setting'
     : requestedHandle
       ? 'Local handle draft'
       : passportSubject
@@ -202,10 +217,12 @@ export function buildPassportView({ settings = {}, storage = {}, identity = null
           : 'No passport loaded';
 
   const subtitle = confirmed
-    ? 'Identity display is confirmed by settings or gateway response.'
+    ? publicProfileConfirmed
+      ? 'Public @username claim returned by the gateway profile route.'
+      : 'Identity display is confirmed by settings or gateway response.'
     : httpFallback
       ? 'React is outside the extension origin and cannot read loaded extension storage.'
-      : 'Passport display is local or unavailable until gateway identity is wired.';
+      : 'Passport display is local or unavailable until gateway identity/profile is wired.';
 
   return {
     displayName,
@@ -219,17 +236,44 @@ export function buildPassportView({ settings = {}, storage = {}, identity = null
     walletLabel: walletAccount || 'Not set',
     balanceLabel: balanceLabel || '—',
     ledgerStatus: ledgerBacked ? 'Ledger-backed' : 'Unavailable / display-only',
-    identitySourceLabel: backendConfirmed
-      ? 'Gateway response'
-      : localConfirmed
-        ? 'Local confirmed setting'
-        : httpFallback
-          ? 'HTTP preview fallback'
-          : 'Local label / unavailable',
+    publicProfileLabel: publicProfileConfirmed
+      ? `${profileTruth.handle} confirmed`
+      : profileTruth.handle
+        ? `${profileTruth.handle} ${profileTruth.usernameStatus || 'not confirmed'}`
+        : 'Not loaded',
+    publicProfileCid: profileTruth.publicProfileCid || '',
+    profileCrabUrl: profileTruth.profileCrabUrl || (handle ? `crab://${handle}` : ''),
+    identitySourceLabel: publicProfileConfirmed
+      ? 'Gateway public profile route'
+      : backendIdentityConfirmed
+        ? 'Gateway response'
+        : localConfirmed
+          ? 'Local confirmed setting'
+          : httpFallback
+            ? 'HTTP preview fallback'
+            : 'Local label / unavailable',
     walletSourceLabel: walletBody.source || (wallet ? 'Gateway response' : settings.rocBalanceSource || 'No gateway wallet response yet'),
     storageLabel,
     gatewayLabel: settings.gatewayUrl || 'Default local gateway',
     extensionOriginLabel,
+  };
+}
+
+function normalizePublicProfile(value) {
+  const raw = objectOrEmpty(value?.profile || value);
+
+  const username = normalizeUsername(firstPresent(raw.username, raw.handle));
+  const handle = normalizeHandle(firstPresent(raw.handle, username));
+  const usernameStatus = normalizeStatus(firstPresent(raw.usernameStatus, raw.username_status, raw.status));
+
+  return {
+    handle,
+    username,
+    usernameStatus,
+    backendConfirmed: usernameStatus === 'confirmed' && Boolean(handle),
+    passportSubject: String(firstPresent(raw.passportSubject, raw.passport_subject) || '').trim(),
+    profileCrabUrl: String(firstPresent(raw.profileCrabUrl, raw.profile_crab_url, handle ? `crab://${handle}` : '') || '').trim(),
+    publicProfileCid: String(firstPresent(raw.publicProfileCid, raw.public_profile_cid) || '').trim(),
   };
 }
 
@@ -239,6 +283,16 @@ function objectOrEmpty(value) {
 
 function firstPresent(...values) {
   return values.find((value) => value !== undefined && value !== null && String(value).trim() !== '');
+}
+
+function normalizeUsername(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^crab:\/\/@?/i, '')
+    .replace(/^profile\/@?/i, '')
+    .replace(/^@/, '')
+    .trim()
+    .toLowerCase();
 }
 
 function normalizeHandle(value) {
@@ -256,7 +310,8 @@ function normalizeHandle(value) {
     return `@${raw}`;
   }
 
-  return raw;
+  const username = normalizeUsername(raw);
+  return username ? `@${username}` : '';
 }
 
 function normalizeStatus(value) {

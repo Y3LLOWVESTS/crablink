@@ -6,7 +6,7 @@
  * RO:METRICS — displays gateway correlation/status fields returned by GatewayClient.
  * RO:CONFIG — gateway base URL through assetClient.
  * RO:SECURITY — no script execution; JSON preview is redacted by shared component.
- * RO:TEST — known-good image asset smoke, .post raw content smoke, malformed/offline gateway smoke.
+ * RO:TEST — known-good image asset smoke, .post/.comment/.article raw content smoke, malformed/offline gateway smoke.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -29,6 +29,49 @@ const TEXT_CONTENT_IDLE = Object.freeze({
   error: null,
 });
 
+const KIND_COPY = Object.freeze({
+  post: {
+    singular: 'Post',
+    titleFallback: 'Untitled post',
+    loadingTitle: 'Loading post content…',
+    errorTitle: 'Post content object was not readable from the gateway.',
+    truthTitle: 'Post content truth',
+    truthCopy:
+      'The title and body above came from the b3-backed raw post content object fetched through svc-gateway. CrabLink is not fabricating the post body from local draft state.',
+    tagLabel: 'Post content tags',
+  },
+  comment: {
+    singular: 'Comment',
+    titleFallback: 'Comment',
+    loadingTitle: 'Loading comment content…',
+    errorTitle: 'Comment content object was not readable from the gateway.',
+    truthTitle: 'Comment content truth',
+    truthCopy:
+      'The title and body above came from the b3-backed raw comment content object fetched through svc-gateway. CrabLink is not fabricating the comment body from local draft state.',
+    tagLabel: 'Comment content tags',
+  },
+  article: {
+    singular: 'Article',
+    titleFallback: 'Untitled article',
+    loadingTitle: 'Loading article content…',
+    errorTitle: 'Article content object was not readable from the gateway.',
+    truthTitle: 'Article content truth',
+    truthCopy:
+      'The title and body above came from the b3-backed raw article content object fetched through svc-gateway. CrabLink is not fabricating the article body from local draft state.',
+    tagLabel: 'Article content tags',
+  },
+  asset: {
+    singular: 'Text asset',
+    titleFallback: 'Text asset',
+    loadingTitle: 'Loading text asset content…',
+    errorTitle: 'Text asset content object was not readable from the gateway.',
+    truthTitle: 'Text asset content truth',
+    truthCopy:
+      'The title and body above came from the b3-backed raw content object fetched through svc-gateway. CrabLink is not fabricating the content from local draft state.',
+    tagLabel: 'Text asset tags',
+  },
+});
+
 export default function AssetHydratedView({ route, result, assetClient, resolverState }) {
   const [imagePreviewOk, setImagePreviewOk] = useState(true);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -38,6 +81,7 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
   const [textContent, setTextContent] = useState(TEXT_CONTENT_IDLE);
 
   const summary = useMemo(() => summarizeAsset(result, route), [result, route]);
+  const copy = copyForKind(summary.kind);
 
   const previewSources = useMemo(() => {
     if (!summary.isImageRoute || !summary.hash || !assetClient?.previewSources) {
@@ -81,7 +125,7 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
 
       try {
         const response = await assetClient.gateway.request(`/o/${encodeURIComponent(summary.cid)}`, {
-          label: `${summary.kindLabel || 'Text asset'} content`,
+          label: `${copy.singular} content`,
           parseAs: 'text',
           headers: {
             Accept: 'application/json,text/plain,*/*',
@@ -125,7 +169,7 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
     return () => {
       alive = false;
     };
-  }, [assetClient, summary.cid, summary.isTextRoute, summary.kindLabel]);
+  }, [assetClient, copy.singular, summary.cid, summary.isTextRoute, summary.kind]);
 
   function handlePreviewError() {
     const failed = previewSource
@@ -185,37 +229,16 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
               'The gateway returned this typed asset response without a public description field.'}
           </p>
 
-          <div className="asset-status-row">
-            <Badge tone="success">resolved</Badge>
-            <Badge tone="neutral">source · {result?.source || 'gateway'}</Badge>
-            <Badge tone="neutral">HTTP · {summary.status || 'n/a'}</Badge>
-            <Badge tone={summary.receiptCount > 0 ? 'success' : 'neutral'}>
-              receipts · {summary.receiptCount}
-            </Badge>
-            {summary.kindWasRouteCorrected && (
-              <Badge tone="warning">route kind · {summary.routeKind}</Badge>
-            )}
-          </div>
-
           <div className="asset-fact-grid">
-            <Fact label="Kind" value={summary.kind} />
-            <Fact label="Route kind" value={summary.routeKind || 'n/a'} />
-            <Fact label="CID" value={summary.cid} monospace />
+            <Fact label="Canonical crab URL" value={summary.crabUrl || 'Not returned'} monospace />
+            <Fact label="Content ID" value={summary.cid || 'Not returned'} monospace />
+            <Fact label="Hash" value={summary.hash || 'Not returned'} monospace />
+            <Fact label="Asset kind" value={summary.kind || 'Not returned'} />
+            <Fact label="Manifest CID" value={summary.manifestCid || 'Not returned'} monospace />
             <Fact label="Owner" value={summary.owner || 'Not returned'} />
             <Fact label="Payout" value={summary.payout || 'Not returned'} />
-            <Fact label="Manifest" value={summary.manifestCid || 'Not returned'} monospace />
-            <Fact label="Correlation" value={summary.correlationId || 'n/a'} monospace />
+            <Fact label="Correlation" value={summary.correlationId || 'Not returned'} monospace />
           </div>
-
-          {summary.kindWasRouteCorrected && (
-            <div className="asset-preview-note">
-              <strong>Preview kind corrected from route suffix.</strong>
-              <span>
-                The gateway DTO reported a generic kind, but the canonical URL suffix is .image.
-                CrabLink is using the route suffix for preview selection while keeping the DTO fields visible.
-              </span>
-            </div>
-          )}
 
           {summary.tags.length > 0 && (
             <div className="asset-tags" aria-label="Asset tags">
@@ -243,7 +266,7 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
       {summary.isTextRoute && (
         <Card
           eyebrow={`${summary.kindLabel} content`}
-          title={textContent.summary?.title || 'Text asset content'}
+          title={textContent.summary?.title || copy.titleFallback}
           className="asset-text-content-card"
           actions={
             <div className="asset-copy-actions">
@@ -254,17 +277,17 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
         >
           {textContent.status === 'loading' && (
             <div className="asset-preview-empty">
-              <strong>Loading post content…</strong>
+              <strong>{copy.loadingTitle}</strong>
               <span>CrabLink is reading the b3-backed content object through the configured gateway.</span>
             </div>
           )}
 
           {textContent.status === 'error' && (
             <div className="asset-preview-empty">
-              <strong>Post content object was not readable from the gateway.</strong>
+              <strong>{copy.errorTitle}</strong>
               <span>
-                The asset page resolved, but `/o/{summary.cid}` did not return readable text content.
-                The manifest/index pointer exists, but the local dev storage may not have the raw content bytes.
+                The asset page resolved, but <code>/o/{summary.cid}</code> did not return readable text content.
+                The manifest/index pointer may exist while the local dev storage no longer has the raw content bytes.
               </span>
               <code>{String(textContent.error?.message || textContent.error || 'unknown error')}</code>
             </div>
@@ -278,18 +301,33 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
                 <Fact label="Language" value={textContent.summary?.language || 'Not returned'} />
                 <Fact label="Site" value={textContent.summary?.site || 'Not returned'} monospace />
                 <Fact label="Parent" value={textContent.summary?.parent || 'Not returned'} monospace />
+                <Fact label="Thread" value={textContent.summary?.thread || 'Not returned'} monospace />
                 <Fact label="HTTP" value={textContent.response?.status || 'n/a'} />
               </div>
 
+              {textContent.summary?.summary && (
+                <div className="asset-text-body">
+                  <span>Summary</span>
+                  <p>{textContent.summary.summary}</p>
+                </div>
+              )}
+
               <div className="asset-text-body">
                 <span>Title</span>
-                <strong>{textContent.summary?.title || 'Untitled'}</strong>
+                <strong>{textContent.summary?.title || copy.titleFallback}</strong>
                 <span>Body</span>
                 <p>{textContent.summary?.body || 'No body returned in the content object.'}</p>
               </div>
 
+              {textContent.summary?.heroImage && (
+                <div className="asset-text-body">
+                  <span>Hero image</span>
+                  <p>{textContent.summary.heroImage}</p>
+                </div>
+              )}
+
               {textContent.summary?.tags?.length > 0 && (
-                <div className="asset-tags" aria-label="Post content tags">
+                <div className="asset-tags" aria-label={copy.tagLabel}>
                   {textContent.summary.tags.map((tag) => (
                     <Badge key={tag} tone="neutral" uppercase={false}>
                       {tag}
@@ -298,11 +336,7 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
                 </div>
               )}
 
-              <TruthBoundary
-                tone="success"
-                title="Post content truth"
-                copy="The title and body above came from the b3-backed raw content object fetched through svc-gateway. CrabLink is not fabricating the post body from local draft state."
-              />
+              <TruthBoundary tone="success" title={copy.truthTitle} copy={copy.truthCopy} />
             </>
           )}
         </Card>
@@ -337,7 +371,7 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
               <strong>Image bytes were not previewable from the gateway.</strong>
               <span>
                 The asset hydrated successfully, but the image byte route did not load inside the preview.
-                Try Open source, check gateway /o support, or confirm the local dev storage still contains this object.
+                Try Open source, check gateway <code>/o</code> support, or confirm the local dev storage still contains this object.
               </span>
             </div>
           )}
@@ -358,301 +392,198 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
           </div>
 
           {failedPreviewSources.length > 0 && (
-            <div className="asset-preview-fallbacks">
-              <strong>Fallbacks attempted</strong>
-              {failedPreviewSources.map((source) => (
-                <div key={`${source.key}-${source.failedAt}`}>
+            <details className="asset-preview-fallbacks">
+              <summary>Failed preview attempts</summary>
+              {failedPreviewSources.map((source, index) => (
+                <div key={`${source.key}:${index}`}>
                   <span>{source.label}</span>
-                  <code>{source.url}</code>
+                  <strong>{source.url}</strong>
                 </div>
               ))}
-            </div>
+            </details>
           )}
         </Card>
       )}
 
       <section className="asset-detail-grid" aria-label="Asset details">
-        <Card eyebrow="Manifest" title="Manifest / DTO summary">
-          <div className="asset-policy-list">
-            <div>
-              <dt>Access policy</dt>
-              <dd>{summary.accessPolicy || 'Not returned'}</dd>
-            </div>
-            <div>
-              <dt>Rights policy</dt>
-              <dd>{summary.rightsPolicy || 'Not returned'}</dd>
-            </div>
-            <div>
-              <dt>Storage provider</dt>
-              <dd>{summary.provider || 'Not returned'}</dd>
-            </div>
-            <div>
-              <dt>Version</dt>
-              <dd>{summary.version || 'Not returned'}</dd>
-            </div>
+        <Card eyebrow="Storage" title="Storage availability">
+          <div className="asset-fact-grid">
+            <Fact label="Available" value={summary.storageAvailable || 'Not returned'} />
+            <Fact label="Size" value={summary.sizeBytes || 'Not returned'} />
+            <Fact label="Content type" value={summary.contentType || 'Not returned'} />
+            <Fact label="Provider" value={summary.providerRef || 'Not returned'} />
+            <Fact label="Raw URL" value={summary.rawUrl || 'Not returned'} monospace />
           </div>
-
-          <TruthBoundary
-            tone="info"
-            title="Hydration truth"
-            copy="Every field in this panel is derived from the gateway response, the parsed route, or a gateway-read b3 object. Missing fields stay missing instead of being fabricated by CrabLink."
-          />
         </Card>
 
-        <Card
-          eyebrow="Diagnostics"
-          title="Gateway attempts"
-          actions={
-            <Button variant="ghost" onClick={() => setDeveloperOpen((value) => !value)}>
-              {developerOpen ? 'Hide JSON' : 'Show JSON'}
-            </Button>
-          }
-        >
-          <div className="asset-attempt-list">
-            {summary.attempts.length > 0 ? (
-              summary.attempts.map((attempt, index) => (
-                <div key={`${attempt.route || 'attempt'}-${index}`} className={attempt.ok ? 'is-ok' : 'is-error'}>
-                  <span>{attempt.ok ? 'ok' : 'fail'}</span>
-                  <strong>{attempt.route || 'unknown route'}</strong>
-                  <small>
-                    {attempt.status ? `HTTP ${attempt.status}` : attempt.reason || 'no status'}
-                    {attempt.correlationId ? ` · ${attempt.correlationId}` : ''}
-                  </small>
+        <Card eyebrow="Receipts" title="Receipt references">
+          {summary.receipts.length > 0 ? (
+            <div className="asset-attempt-list">
+              {summary.receipts.map((receipt, index) => (
+                <div key={`${receipt.kind || 'receipt'}:${receipt.txid || receipt.receipt_hash || index}`}>
+                  <span>{labelFromKind(receipt.kind || receipt.receipt_kind || 'receipt')}</span>
+                  <strong>{receipt.receipt_hash || receipt.receiptHash || receipt.txid || 'receipt returned'}</strong>
                 </div>
-              ))
-            ) : (
-              <p className="asset-muted">No attempt list was returned by the asset client.</p>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="asset-description">No receipt references were returned for this asset page.</p>
+          )}
+        </Card>
 
-          <div className="asset-resolved-timing">
-            <Fact label="Started" value={resolverState?.startedAt || 'n/a'} />
-            <Fact label="Finished" value={resolverState?.finishedAt || result?.resolvedAt || 'n/a'} />
-          </div>
-
-          {developerOpen && (
-            <JsonPreview
-              label="Gateway asset response"
-              data={{
-                route,
-                summary,
-                text_content: textContent,
-                preview_sources: previewSources,
-                failed_preview_sources: failedPreviewSources,
-                result,
-              }}
-              initiallyOpen
-            />
+        <Card eyebrow="Resolve diagnostics" title="Gateway attempts">
+          {summary.attempts.length > 0 ? (
+            <div className="asset-attempt-list">
+              {summary.attempts.map((attempt, index) => (
+                <div key={`${attempt.route || attempt.path || 'attempt'}:${index}`}>
+                  <span>{attempt.ok ? 'ok' : 'failed'}</span>
+                  <strong>{attempt.route || attempt.path || attempt.url || 'unknown route'}</strong>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="asset-description">No attempt diagnostics were returned.</p>
           )}
         </Card>
       </section>
+
+      <details className="asset-dev-json" open={developerOpen} onToggle={(event) => setDeveloperOpen(event.currentTarget.open)}>
+        <summary>Developer asset JSON</summary>
+        <JsonPreview
+          label="Asset hydration result"
+          data={{
+            route,
+            resolver_state: resolverState || null,
+            summary,
+            result,
+            text_content: {
+              status: textContent.status,
+              response_status: textContent.response?.status || null,
+              parsed: textContent.parsed,
+              summary: textContent.summary,
+              error: serializeError(textContent.error),
+            },
+            preview: {
+              preview_sources: previewSources,
+              current_preview_source: previewSource,
+              failed_preview_sources: failedPreviewSources,
+            },
+            truth_boundary:
+              'This page is read-only. Gateway, storage, index, wallet, and ledger remain backend-owned truth.',
+          }}
+          initiallyOpen
+        />
+      </details>
     </section>
   );
 }
 
 function Fact({ label, value, monospace = false }) {
+  const clean = value === null || value === undefined || value === '' ? 'n/a' : String(value);
+
   return (
-    <div className={monospace ? 'is-mono' : ''}>
+    <div className="asset-fact">
       <span>{label}</span>
-      <strong>{value}</strong>
+      <strong className={monospace ? 'is-monospace' : ''} title={clean}>
+        {clean}
+      </strong>
     </div>
   );
 }
 
 function summarizeAsset(result, route) {
-  const data = firstObject(result?.data);
-  const page = firstObject(data.page, data.asset_page, data.assetPage);
-  const object = firstObject(data.object, data.asset, data.content, page.object, page.asset);
-  const asset = firstObject(data.asset, page.asset, object.asset);
-  const manifest = firstObject(data.manifest, page.manifest, object.manifest, asset.manifest);
-  const metadata = firstObject(data.metadata, page.metadata, asset.metadata, manifest.metadata);
-  const ownership = firstObject(
-    data.ownership,
-    page.ownership,
-    asset.ownership,
-    manifest.ownership,
-    object.ownership,
-  );
-  const payout = firstObject(
-    data.payout,
-    data.payouts,
-    page.payout,
-    asset.payout,
-    manifest.payout,
-    ownership.payout,
-  );
-  const storage = firstObject(data.storage, page.storage, asset.storage, manifest.storage, object.storage);
-  const policy = firstObject(data.policy, page.policy, asset.policy, manifest.policy);
-  const receipts = firstArray(data.receipts, page.receipts, asset.receipts, manifest.receipts, object.receipts);
+  const data = result?.data || result?.body || result?.response?.data || result || {};
+  const target = result?.target || route?.params || {};
+  const manifest = data.manifest || data.asset_manifest || data.assetManifest || {};
+  const storage = data.storage || data.storage_availability || data.storageAvailability || {};
+  const owner = data.owner || data.asset_owner || manifest.owner || {};
+  const payout = data.payout || data.payout_target || manifest.payout || {};
+  const receipts = safeArray(data.receipts || data.receipt_refs || data.receiptRefs || data.wallet_receipts);
+  const attempts = safeArray(result?.attempts || data.attempts || result?.resolveAttempts);
 
-  const resultTarget = firstObject(result?.target);
-  const routeTarget = firstObject(route?.params);
-
-  const routeKind = cleanKind(
-    stringValue(
-      routeTarget.assetKind,
-      routeTarget.kind,
-      kindFromCrabUrl(route?.normalizedInput),
-      kindFromCrabUrl(resultTarget.assetUrl),
-    ),
+  const kind = cleanKind(
+    data.asset_kind ||
+      data.assetKind ||
+      data.kind ||
+      manifest.asset_kind ||
+      manifest.assetKind ||
+      target.assetKind ||
+      target.kind,
   );
-
-  const dtoKind = cleanKind(
-    stringValue(
-      resultTarget.assetKind,
-      resultTarget.kind,
-      object.kind,
-      asset.kind,
-      page.kind,
-      data.kind,
-      'asset',
-    ),
-  );
-
-  const kind = chooseDisplayKind({ routeKind, dtoKind });
-  const kindWasRouteCorrected = routeKind === 'image' && dtoKind !== 'image';
 
   const hash = normalizeHash(
-    routeTarget.hash ||
-      resultTarget.hash ||
-      object.hash ||
-      asset.hash ||
+    data.raw_hash_hex ||
       data.hash ||
-      manifest.hash ||
-      routeTarget.cid ||
-      resultTarget.cid,
+      data.asset_hash ||
+      data.assetHash ||
+      data.asset_cid ||
+      data.assetCid ||
+      data.cid ||
+      data.content_id ||
+      target.hash ||
+      target.cid,
   );
 
-  const cid = stringValue(
-    routeTarget.cid,
-    resultTarget.cid,
-    object.cid,
-    object.content_id,
-    object.contentId,
-    object.b3,
-    asset.cid,
-    asset.content_id,
-    asset.contentId,
-    data.cid,
-    data.content_id,
-    manifest.content_id,
-    manifest.cid,
-    hash ? `b3:${hash}` : '',
+  const cid = cleanCid(
+    data.asset_cid ||
+      data.assetCid ||
+      data.cid ||
+      data.content_id ||
+      data.contentId ||
+      target.cid ||
+      (hash ? `b3:${hash}` : ''),
   );
 
-  const resolvedHash = hash || normalizeHash(cid);
+  const crabUrl = stringValue(
+    data.canonical_crab,
+    data.canonicalCrab,
+    data.crab_url,
+    data.crabUrl,
+    data.asset_url,
+    data.assetUrl,
+    target.assetUrl,
+    route?.normalizedInput,
+    hash && kind ? `crab://${hash}.${kind}` : '',
+  );
+
+  const manifestCid = cleanCid(
+    data.manifest_cid ||
+      data.manifestCid ||
+      manifest.cid ||
+      manifest.content_id ||
+      manifest.contentId ||
+      data.asset_manifest_cid ||
+      data.assetManifestCid,
+  );
+
+  const title = stringValue(data.title, manifest.title, data.name, manifest.name);
+  const description = stringValue(data.description, manifest.description, data.summary, manifest.summary);
 
   return {
     kind,
-    dtoKind,
-    routeKind,
-    kindWasRouteCorrected,
-    isImageRoute: kind === 'image' || routeKind === 'image',
-    isTextRoute: TEXT_ASSET_KINDS.has(kind) || TEXT_ASSET_KINDS.has(routeKind),
-    kindLabel: labelFromKind(kind),
-    hash: resolvedHash,
+    kindLabel: labelFromKind(kind || 'asset'),
+    isImageRoute: kind === 'image',
+    isTextRoute: TEXT_ASSET_KINDS.has(kind),
+    hash,
     cid,
-    crabUrl: stringValue(
-      resultTarget.assetUrl,
-      routeTarget.assetUrl,
-      route?.normalizedInput,
-      data.crab_url,
-      data.crabUrl,
-      page.crab_url,
-      page.crabUrl,
-      asset.crab_url,
-      asset.crabUrl,
-      resolvedHash ? `crab://${resolvedHash}.${kind}` : '',
-    ),
-    title: stringValue(
-      metadata.title,
-      manifest.title,
-      asset.title,
-      page.title,
-      data.title,
-      object.title,
-    ),
-    description: stringValue(
-      metadata.description,
-      manifest.description,
-      asset.description,
-      page.description,
-      data.description,
-      object.description,
-    ),
-    owner: stringValue(
-      ownership.owner_username,
-      ownership.ownerUsername,
-      ownership.owner_passport_subject,
-      ownership.ownerPassportSubject,
-      ownership.owner,
-      data.owner,
-      asset.owner,
-    ),
-    payout: stringValue(
-      payout.account,
-      payout.payout_account,
-      payout.payoutAccount,
-      ownership.payout_account,
-      ownership.payoutAccount,
-    ),
-    manifestCid: stringValue(
-      manifest.cid,
-      manifest.manifest_cid,
-      manifest.manifestCid,
-      data.manifest_cid,
-      data.manifestCid,
-      page.manifest_cid,
-      page.manifestCid,
-    ),
-    provider: stringValue(
-      storage.provider,
-      storage.provider_id,
-      storage.providerId,
-      storage.node,
-      storage.storage_provider,
-      object.provider,
-    ),
-    version: stringValue(
-      manifest.version,
-      manifest.manifest_version,
-      manifest.manifestVersion,
-      data.version,
-      page.version,
-    ),
-    accessPolicy: summarizePolicy(policy.access || policy.access_policy || object.access_policy),
-    rightsPolicy: summarizePolicy(policy.rights || policy.rights_policy || object.rights_policy),
-    tags: normalizeTags(object.tags || page.tags || asset.tags || metadata.tags || manifest.tags),
-    status: Number(result?.response?.status || result?.status || 0),
-    correlationId: stringValue(result?.response?.correlationId, result?.correlationId, ''),
-    attempts: Array.isArray(result?.attempts) ? result.attempts : [],
-    receiptCount: receipts.length,
-  };
-}
-
-function summarizeTextAssetContent(parsed, raw, summary) {
-  const content = firstObject(parsed);
-  const metadata = firstObject(content.metadata);
-  const siteConnection = firstObject(content.site_connection, content.siteConnection);
-  const parentReference = firstObject(content.parent_reference, content.parentReference);
-
-  const body = stringValue(content.body, content.text, content.content, raw);
-  const title = stringValue(content.title, metadata.title, summary.title, 'Untitled post');
-  const tags = normalizeTags(metadata.tags || content.tags);
-  const site = stringValue(siteConnection.crab_url, siteConnection.crabUrl, content.site_context_crab_url);
-  const parent = stringValue(parentReference.crab_url, parentReference.crabUrl, content.parent_crab_url);
-
-  return {
-    schema: stringValue(content.schema),
-    kind: stringValue(content.asset_kind, content.kind, summary.kind),
+    crabUrl,
+    manifestCid,
     title,
-    body,
-    bodyPreview: body.length > 220 ? `${body.slice(0, 220)}…` : body,
-    language: stringValue(metadata.language, content.language),
-    postKind: stringValue(metadata.post_kind, metadata.postKind, content.post_kind),
-    site,
-    parent,
-    tags,
+    description,
+    status: stringValue(data.status, result?.status, result?.response?.status, 'OK'),
+    correlationId: stringValue(data.correlation_id, data.correlationId, result?.correlationId, result?.response?.correlationId),
+    owner: summarizeParty(owner),
+    payout: summarizeParty(payout),
+    tags: normalizeTags(data.tags || manifest.tags || data.metadata?.tags),
+    receipts,
+    receiptCount: Number(receipts.length || data.receipt_count || data.receiptCount || 0),
+    attempts,
+    storageAvailable: boolOrText(storage.available ?? data.storage_available ?? data.storageAvailable),
+    sizeBytes: stringValue(storage.size_bytes, storage.sizeBytes, data.size_bytes, data.sizeBytes),
+    contentType: stringValue(storage.content_type, storage.contentType, data.content_type, data.contentType),
+    providerRef: stringValue(storage.provider_ref, storage.providerRef, data.provider_ref, data.providerRef),
+    rawUrl: stringValue(storage.raw_url, storage.rawUrl, data.raw_url, data.rawUrl),
+    raw: data,
   };
 }
 
@@ -664,94 +595,162 @@ function parseTextAssetEnvelope(raw) {
   }
 
   try {
-    const parsed = JSON.parse(text);
-    return parsed && typeof parsed === 'object' ? parsed : null;
+    return JSON.parse(text);
   } catch (_error) {
     return {
       schema: 'text/plain',
-      kind: 'text',
-      title: 'Text asset',
       body: text,
     };
   }
 }
 
-function chooseDisplayKind({ routeKind, dtoKind }) {
-  if (routeKind && routeKind !== 'asset') {
-    return routeKind;
-  }
+function summarizeTextAssetContent(parsed, raw, routeSummary) {
+  const data = parsed && typeof parsed === 'object' ? parsed : {};
+  const kind = cleanKind(data.kind || data.asset_kind || data.assetKind || routeSummary.kind || 'asset');
+  const copy = copyForKind(kind);
 
-  if (dtoKind && dtoKind !== 'asset') {
-    return dtoKind;
-  }
+  const title = stringValue(
+    data.title,
+    data.metadata?.title,
+    data.content?.title,
+    kind === 'comment' ? copy.titleFallback : '',
+  );
 
-  return dtoKind || routeKind || 'asset';
+  const body = stringValue(
+    data.body,
+    data.markdown,
+    data.text,
+    data.content?.body,
+    data.content?.markdown,
+    data.content?.text,
+    typeof parsed === 'string' ? parsed : '',
+  );
+
+  const summary = stringValue(data.summary, data.excerpt, data.content?.summary, data.content?.excerpt);
+  const language = stringValue(data.language, data.lang, data.metadata?.language);
+  const site = stringValue(
+    data.site_context_crab_url,
+    data.siteContextCrabUrl,
+    data.site,
+    data.relations?.site,
+    data.site_connection?.crab_url,
+    data.siteConnection?.crabUrl,
+  );
+  const parent = stringValue(
+    data.parent_crab_url,
+    data.parentCrabUrl,
+    data.thread_context_crab_url,
+    data.threadContextCrabUrl,
+    data.parent,
+    data.relations?.parent,
+    data.parent_reference?.crab_url,
+    data.parentReference?.crabUrl,
+  );
+  const thread = stringValue(
+    data.thread_context_crab_url,
+    data.threadContextCrabUrl,
+    data.thread,
+    data.relations?.thread,
+  );
+  const heroImage = stringValue(
+    data.hero_image_crab_url,
+    data.heroImageCrabUrl,
+    data.linked_assets?.hero_image,
+    data.linkedAssets?.heroImage,
+    data.cover_image,
+    data.coverImage,
+  );
+
+  return {
+    schema: stringValue(data.schema, data.type, 'Not returned'),
+    kind,
+    title: title || copy.titleFallback,
+    body,
+    bodyPreview: body ? truncate(body, 180) : truncate(String(raw || ''), 180),
+    summary,
+    language,
+    site,
+    parent,
+    thread,
+    heroImage,
+    tags: normalizeTags(data.tags || data.metadata?.tags),
+  };
 }
 
 function normalizePreviewSources(sources) {
-  if (!Array.isArray(sources)) {
-    return [];
-  }
+  return safeArray(sources)
+    .map((item, index) => {
+      const url = typeof item === 'string' ? item : item?.url;
 
-  return sources
-    .map((source, index) => {
-      if (typeof source === 'string') {
-        return {
-          key: index === 0 ? 'raw-object' : `source-${index + 1}`,
-          label: index === 0 ? 'Raw object bytes' : `Gateway preview source ${index + 1}`,
-          description: '',
-          url: source,
-        };
+      if (!url) {
+        return null;
       }
 
-      if (source && typeof source === 'object') {
-        return {
-          key: stringValue(source.key, `source-${index + 1}`),
-          label: stringValue(source.label, `Gateway preview source ${index + 1}`),
-          description: stringValue(source.description),
-          url: stringValue(source.url, source.href),
-        };
-      }
-
-      return null;
+      return {
+        key: `${index}:${url}`,
+        label: index === 0 ? 'Gateway raw object' : index === 1 ? 'Typed b3 route' : `Preview source ${index + 1}`,
+        url,
+      };
     })
-    .filter((source) => source?.url);
-}
-
-function kindFromCrabUrl(value) {
-  const match = String(value || '').trim().match(/^crab:\/\/[0-9a-f]{64}\.([a-z][a-z0-9_-]{0,31})$/i);
-  return match ? match[1].toLowerCase() : '';
+    .filter(Boolean);
 }
 
 function withCacheBuster(url, revision) {
-  const safeUrl = String(url || '').trim();
-
-  if (!safeUrl) {
+  if (!url) {
     return '';
   }
 
-  const separator = safeUrl.includes('?') ? '&' : '?';
-  return `${safeUrl}${separator}crablink_preview=${encodeURIComponent(String(revision || Date.now()))}`;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}crablink_preview_rev=${encodeURIComponent(String(revision || 0))}`;
 }
 
-function firstObject(...values) {
-  for (const value of values) {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      return value;
-    }
+function serializeError(error) {
+  if (!error) {
+    return null;
   }
 
-  return {};
+  return {
+    name: error.name || 'Error',
+    message: error.message || String(error),
+    status: Number(error.status || error.response?.status || 0),
+    reason: error.reason || error.code || '',
+    correlationId: error.correlationId || error.response?.correlationId || '',
+    route: error.route || error.response?.route || '',
+    data: error.data || null,
+  };
 }
 
-function firstArray(...values) {
-  for (const value of values) {
-    if (Array.isArray(value)) {
-      return value;
-    }
+function summarizeParty(value) {
+  if (!value) {
+    return '';
   }
 
-  return [];
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'object') {
+    return stringValue(
+      value.display,
+      value.display_name,
+      value.displayName,
+      value.username,
+      value.passport_subject,
+      value.passportSubject,
+      value.wallet_account,
+      value.walletAccount,
+      value.account,
+      value.address,
+      value.target,
+      value.kind,
+    );
+  }
+
+  return String(value);
+}
+
+function copyForKind(kind) {
+  return KIND_COPY[cleanKind(kind)] || KIND_COPY.asset;
 }
 
 function stringValue(...values) {
@@ -769,6 +768,20 @@ function stringValue(...values) {
 function cleanKind(value) {
   const clean = String(value || '').trim().toLowerCase();
   return /^[a-z][a-z0-9_-]{0,31}$/.test(clean) ? clean : '';
+}
+
+function cleanCid(value) {
+  const clean = String(value || '').trim().toLowerCase();
+
+  if (/^b3:[0-9a-f]{64}$/.test(clean)) {
+    return clean;
+  }
+
+  if (/^[0-9a-f]{64}$/.test(clean)) {
+    return `b3:${clean}`;
+  }
+
+  return '';
 }
 
 function normalizeHash(value) {
@@ -791,20 +804,30 @@ function normalizeTags(value) {
     .slice(0, 16);
 }
 
-function summarizePolicy(value) {
-  if (!value) {
-    return '';
+function boolOrText(value) {
+  if (value === true) {
+    return 'yes';
   }
 
-  if (typeof value === 'string') {
-    return value;
+  if (value === false) {
+    return 'no';
   }
 
-  if (typeof value === 'object') {
-    return stringValue(value.mode, value.type, value.name, value.policy_id, JSON.stringify(value));
+  return stringValue(value);
+}
+
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function truncate(value, maxLength) {
+  const clean = String(value || '').trim();
+
+  if (clean.length <= maxLength) {
+    return clean;
   }
 
-  return String(value);
+  return `${clean.slice(0, maxLength - 1)}…`;
 }
 
 function labelFromKind(kind) {
