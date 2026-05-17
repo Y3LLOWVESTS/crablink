@@ -319,7 +319,7 @@ export default function AdCampaignDraft({ app, draftState }) {
             </select>
           </Field>
 
-          <Field label="Budget minor units" help="Integer planning field only; no wallet hold or spend occurs.">
+          <Field label="Budget (ROC)" help="Integer planning field only; no wallet hold or spend occurs.">
             <TextInput
               inputMode="numeric"
               value={draft.budgetMinor}
@@ -329,7 +329,7 @@ export default function AdCampaignDraft({ app, draftState }) {
             />
           </Field>
 
-          <Field label="Budget asset" help="Future economics should use integer minor units.">
+          <Field label="Budget asset" help="Future economics should use integer ROC values.">
             <select
               className="cl-select"
               value={draft.budgetAsset}

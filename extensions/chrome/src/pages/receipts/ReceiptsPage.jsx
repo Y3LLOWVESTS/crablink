@@ -380,7 +380,7 @@ function formatAmount(amountMinor, asset = 'roc') {
   const suffix = String(asset || 'roc').toUpperCase();
 
   if (/^[0-9]+$/.test(clean)) {
-    return `${clean} ${suffix} minor`;
+    return `${clean} ${suffix}`;
   }
 
   return `${clean} ${suffix}`;

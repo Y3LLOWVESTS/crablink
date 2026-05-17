@@ -758,7 +758,7 @@ function normalizeReceipts(receipts = []) {
         txid,
         action,
         status: item.status || 'backend receipt display cache',
-        detail: [amount ? `${amount} ROC minor` : '', payer && recipient ? `${payer} → ${recipient}` : '']
+        detail: [amount ? `${amount} ROC` : '', payer && recipient ? `${payer} → ${recipient}` : '']
           .filter(Boolean)
           .join(' · '),
         source: item.source || 'recent_receipts',

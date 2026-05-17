@@ -270,7 +270,7 @@ export default function ArticlePublishFlow({ app, draftState }) {
       [
         'Confirm ROC hold for article publish?',
         '',
-        `Amount: ${formatMinorUnits(holdApiRequest.amount_minor)} ROC minor units`,
+        `Amount: ${formatRocUnits(holdApiRequest.amount_minor)} ROC`,
         `From: ${holdApiRequest.from}`,
         `Escrow: ${holdApiRequest.to}`,
         `Nonce: ${holdApiRequest.nonce}`,
@@ -1042,7 +1042,7 @@ function formatBytes(value) {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-function formatMinorUnits(value) {
+function formatRocUnits(value) {
   const raw = String(value ?? '').trim();
 
   if (!/^[0-9]+$/.test(raw)) {

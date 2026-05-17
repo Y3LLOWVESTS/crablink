@@ -358,6 +358,8 @@ for (const [file, source] of reactSources) {
   for (const forbidden of [
     'page-local-route-mode',
     'crab://b3/',
+    'ROC minor',
+    'minor units',
     '<all_urls>',
     'chrome.history',
     'chrome.cookies',

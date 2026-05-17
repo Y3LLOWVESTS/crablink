@@ -580,7 +580,7 @@ function starterGrantMessage(data, account) {
     return `${account} already had starter ROC or backend declined a duplicate grant.`;
   }
 
-  return [`${account} bootstrap complete`, amount ? `${amount} ROC minor` : '', receipt ? `receipt ${receipt}` : '']
+  return [`${account} bootstrap complete`, amount ? `${amount} ROC` : '', receipt ? `receipt ${receipt}` : '']
     .filter(Boolean)
     .join(' · ');
 }
