@@ -333,7 +333,7 @@ function compactIdempotencyKey(value) {
   const normalized = String(value || '')
     .trim()
     .replace(/\s+/g, '-')
-    .replace(/[^a-zA-Z0-9:_./-]+/g, '-');
+    .replace(/[^a-zA-Z0-9:_.-]+/g, '-');
 
   if (normalized.length > 0 && normalized.length <= MAX_IDEMPOTENCY_KEY_BYTES) {
     return normalized;
