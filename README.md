@@ -7,40 +7,178 @@ It resolves `crab://` links, opens typed b3 asset pages, opens named RON sites, 
 
 CrabLink is a thin browser client. RustyOnions remains the source of truth for identity, wallet balance, ROC receipts, site manifests, storage, index state, raw b3 bytes, creator ownership, profile truth, reputation/moderator scores, and backend publication status.
 
-CrabLink must stay:
+
+# How to run the CrabLink browser extension locally
+
+This local setup runs the RustyOnions WEB3/CrabLink backend stack and then builds the CrabLink Chrome extension.
+
+## Prerequisites
+
+You need two repos locally:
 
 ```text
-thin
-honest
-safe
-explicit
-local-first
-gateway-only
-receipt-driven
-permission-minimal
-future-browser-ready
+/RustyOnions
+/crablink
+````
+
+Open four terminals.
+
+---
+
+## Terminal 1 — start `svc-wallet`
+
+```bash
+cd PATH_TO_FILE/RustyOnions
+
+RUST_LOG=info SVC_WALLET_ADDR=127.0.0.1:8088 cargo run -p svc-wallet
+```
+
+Leave this terminal running.
+
+Expected:
+
+```text
+svc-wallet listening local_addr=127.0.0.1:8088
 ```
 
 ---
 
-## Load unpacked
+## Terminal 2 — start `svc-passport`
 
-1. Open Chrome.
-2. Go to:
+```bash
+cd PATH_TO_FILE/RustyOnions
+
+PASSPORT_CONFIG_FILE=crates/svc-passport/config/default.toml \
+RUST_LOG=info \
+cargo run -p svc-passport
+```
+
+Leave this terminal running.
+
+Expected:
+
+```text
+svc-passport listening on 127.0.0.1:5307
+```
+
+If this says the address is already in use, check whether `svc-passport` is already running:
+
+```bash
+lsof -nP -iTCP:5307 -sTCP:LISTEN
+```
+
+---
+
+## Terminal 3 — start the RustyOnions CrabLink dev stack
+
+```bash
+cd PATH_TO_FILE/RustyOnions
+
+ECON_PATH="$(pwd)/configs/roc-economics.dev.toml"
+
+OMNIGATE_PASSPORT_BASE_URL=http://127.0.0.1:5307 \
+OMNIGATE_WALLET_BASE_URL=http://127.0.0.1:8088 \
+OMNIGATE_WALLET_BEARER=dev \
+RON_STORAGE_ROC_ECONOMICS_PATH="$ECON_PATH" \
+RON_STORAGE_ROC_ECONOMICS_ACTION=paid_storage_put \
+SVC_GATEWAY_STORAGE_BASE_URL=http://127.0.0.1:5303 \
+scripts/web3_crablink_dev_stack.sh
+```
+
+Leave this terminal running.
+
+Expected local services:
+
+```text
+svc-wallet   http://127.0.0.1:8088
+svc-passport http://127.0.0.1:5307
+svc-storage  http://127.0.0.1:5303
+svc-index    http://127.0.0.1:5304
+omnigate     http://127.0.0.1:9090
+svc-gateway  http://127.0.0.1:8090
+```
+
+---
+
+## Terminal 4 — build and package CrabLink
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Expected outputs:
+
+```text
+dist/chrome-src/react.html
+dist/chrome-src/page.html
+dist/chrome-extension-staging/
+dist/crablink-extension-chrome.zip
+CODEBUNDLE_CHROME_EXTENSION.md
+```
+
+---
+
+## Load the extension in Chrome
+
+Open Chrome and go to:
 
 ```text
 chrome://extensions
 ```
 
-3. Enable **Developer Mode**.
-4. Click **Load unpacked**.
-5. Select:
+Then:
 
 ```text
-extensions/chrome
+Developer Mode ON
+Load unpacked
 ```
 
-6. Click the CrabLink extension icon to open the full-tab CrabLink browser.
+Select:
+
+```text
+PATH_TO_FILE/crablink/dist/chrome-extension-staging
+```
+
+---
+
+## Open CrabLink
+
+Click the puzzle-piece icon in Chrome’s toolbar, then click CrabLink.
+
+The extension should open a full-tab CrabLink browser. The expected URL should look like:
+
+```text
+chrome-extension://<extension-id>/react.html?url=crab%3A%2F%2Fsite
+```
+
+It should not look like:
+
+```text
+chrome-extension://<extension-id>/src/react.html?url=crab%3A%2F%2Fsite
+```
+
+---
+
+## Quick smoke routes
+
+Inside CrabLink, test:
+
+```text
+crab://home
+crab://library
+crab://site
+crab://image
+crab://profile
+crab://article
+crab://post
+crab://comment
+```
 
 ---
 
