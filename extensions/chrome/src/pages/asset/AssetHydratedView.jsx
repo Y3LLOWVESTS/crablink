@@ -1,8 +1,8 @@
 /**
  * RO:WHAT — Read-only hydrated view for gateway-returned typed asset DTOs.
  * RO:WHY — Gives b3/crab asset pages a useful React UI while preserving backend-truth boundaries.
- * RO:INTERACTS — AssetResolver, gateway asset DTOs, JsonPreview, CopyButton, StatChip.
- * RO:INVARIANTS — display backend-returned fields only; image/text previews are gateway reads; no unsafe HTML; no wallet mutation.
+ * RO:INTERACTS — AssetResolver, gateway asset DTOs, ContentViewAccess, JsonPreview, CopyButton, StatChip.
+ * RO:INVARIANTS — display backend-returned fields only; article raw content is gated by paid content_view proof; no unsafe HTML; no direct wallet mutation.
  * RO:METRICS — displays gateway correlation/status fields returned by GatewayClient.
  * RO:CONFIG — gateway base URL through assetClient.
  * RO:SECURITY — no script execution; JSON preview is redacted by shared component.
@@ -17,6 +17,7 @@ import CopyButton from '../../shared/components/CopyButton.jsx';
 import JsonPreview from '../../shared/components/JsonPreview.jsx';
 import StatChip from '../../shared/components/StatChip.jsx';
 import TruthBoundary from '../../shared/components/TruthBoundary.jsx';
+import AssetContentViewAccess from './AssetContentViewAccess.jsx';
 
 const TEXT_ASSET_KINDS = new Set(['post', 'comment', 'article']);
 
@@ -57,7 +58,7 @@ const KIND_COPY = Object.freeze({
     errorTitle: 'Article content object was not readable from the gateway.',
     truthTitle: 'Article content truth',
     truthCopy:
-      'The title and body above came from the b3-backed raw article content object fetched through svc-gateway. CrabLink is not fabricating the article body from local draft state.',
+      'The title and body above came from the b3-backed raw article content object fetched through svc-gateway after the paid content_view proof unlocked it. CrabLink is not fabricating the article body from local draft state.',
     tagLabel: 'Article content tags',
   },
   asset: {
@@ -72,16 +73,27 @@ const KIND_COPY = Object.freeze({
   },
 });
 
-export default function AssetHydratedView({ route, result, assetClient, resolverState }) {
+export default function AssetHydratedView({ route, app, result, assetClient, resolverState }) {
   const [imagePreviewOk, setImagePreviewOk] = useState(true);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewRevision, setPreviewRevision] = useState(0);
   const [failedPreviewSources, setFailedPreviewSources] = useState([]);
   const [developerOpen, setDeveloperOpen] = useState(false);
   const [textContent, setTextContent] = useState(TEXT_CONTENT_IDLE);
+  const [contentViewAccess, setContentViewAccess] = useState({
+    requiresPayment: false,
+    canView: true,
+    status: 'free',
+    quote: null,
+    payment: null,
+    receipt: null,
+    error: null,
+  });
 
   const summary = useMemo(() => summarizeAsset(result, route), [result, route]);
   const copy = copyForKind(summary.kind);
+  const requiresPaidContentView = summary.kind === 'article';
+  const canReadTextContent = summary.isTextRoute && (!requiresPaidContentView || contentViewAccess.canView);
 
   const previewSources = useMemo(() => {
     if (!summary.isImageRoute || !summary.hash || !assetClient?.previewSources) {
@@ -106,10 +118,22 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
   }, [summary.hash, summary.kind, summary.crabUrl]);
 
   useEffect(() => {
+    setContentViewAccess({
+      requiresPayment: requiresPaidContentView,
+      canView: !requiresPaidContentView,
+      status: requiresPaidContentView ? 'idle' : 'free',
+      quote: null,
+      payment: null,
+      receipt: null,
+      error: null,
+    });
+  }, [requiresPaidContentView, summary.crabUrl, summary.hash, summary.kind]);
+
+  useEffect(() => {
     let alive = true;
 
     async function run() {
-      if (!summary.isTextRoute || !summary.cid || !assetClient?.gateway?.request) {
+      if (!canReadTextContent || !summary.cid || !assetClient?.gateway?.request) {
         setTextContent(TEXT_CONTENT_IDLE);
         return;
       }
@@ -169,7 +193,7 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
     return () => {
       alive = false;
     };
-  }, [assetClient, copy.singular, summary.cid, summary.isTextRoute, summary.kind]);
+  }, [assetClient, canReadTextContent, copy.singular, summary.cid, summary.kind]);
 
   function handlePreviewError() {
     const failed = previewSource
@@ -263,7 +287,15 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
         </aside>
       </section>
 
-      {summary.isTextRoute && (
+      {requiresPaidContentView && (
+        <AssetContentViewAccess
+          app={app}
+          summary={summary}
+          onAccessChange={setContentViewAccess}
+        />
+      )}
+
+      {summary.isTextRoute && (!requiresPaidContentView || contentViewAccess.canView) && (
         <Card
           eyebrow={`${summary.kindLabel} content`}
           title={textContent.summary?.title || copy.titleFallback}
@@ -456,6 +488,7 @@ export default function AssetHydratedView({ route, result, assetClient, resolver
             resolver_state: resolverState || null,
             summary,
             result,
+            content_view_access: contentViewAccess,
             text_content: {
               status: textContent.status,
               response_status: textContent.response?.status || null,
