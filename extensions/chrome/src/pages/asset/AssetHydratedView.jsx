@@ -2,11 +2,11 @@
  * RO:WHAT — Read-only hydrated view for gateway-returned typed asset DTOs.
  * RO:WHY — Gives b3/crab asset pages a useful React UI while preserving backend-truth boundaries.
  * RO:INTERACTS — AssetResolver, gateway asset DTOs, ContentViewAccess, JsonPreview, CopyButton, StatChip.
- * RO:INVARIANTS — display backend-returned fields only; article raw content is gated by paid content_view proof; no unsafe HTML; no direct wallet mutation.
+ * RO:INVARIANTS — display backend-returned fields only; article/post/comment raw content and image preview bytes are gated by paid content_view proof; no unsafe HTML; no direct wallet mutation.
  * RO:METRICS — displays gateway correlation/status fields returned by GatewayClient.
  * RO:CONFIG — gateway base URL through assetClient.
  * RO:SECURITY — no script execution; JSON preview is redacted by shared component.
- * RO:TEST — known-good image asset smoke, .post/.comment/.article raw content smoke, malformed/offline gateway smoke.
+ * RO:TEST — known-good paid image view smoke, .post/.comment/.article raw content smoke, malformed/offline gateway smoke.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -20,6 +20,7 @@ import TruthBoundary from '../../shared/components/TruthBoundary.jsx';
 import AssetContentViewAccess from './AssetContentViewAccess.jsx';
 
 const TEXT_ASSET_KINDS = new Set(['post', 'comment', 'article']);
+const PAID_CONTENT_VIEW_KINDS = new Set(['article', 'post', 'comment', 'image']);
 
 const TEXT_CONTENT_IDLE = Object.freeze({
   status: 'idle',
@@ -38,7 +39,7 @@ const KIND_COPY = Object.freeze({
     errorTitle: 'Post content object was not readable from the gateway.',
     truthTitle: 'Post content truth',
     truthCopy:
-      'The title and body above came from the b3-backed raw post content object fetched through svc-gateway. CrabLink is not fabricating the post body from local draft state.',
+      'The title and body above came from the b3-backed raw post content object fetched through svc-gateway after the paid content_view proof unlocked it. CrabLink is not fabricating the post body from local draft state.',
     tagLabel: 'Post content tags',
   },
   comment: {
@@ -48,7 +49,7 @@ const KIND_COPY = Object.freeze({
     errorTitle: 'Comment content object was not readable from the gateway.',
     truthTitle: 'Comment content truth',
     truthCopy:
-      'The title and body above came from the b3-backed raw comment content object fetched through svc-gateway. CrabLink is not fabricating the comment body from local draft state.',
+      'The title and body above came from the b3-backed raw comment content object fetched through svc-gateway after the paid content_view proof unlocked it. CrabLink is not fabricating the comment body from local draft state.',
     tagLabel: 'Comment content tags',
   },
   article: {
@@ -92,8 +93,9 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
 
   const summary = useMemo(() => summarizeAsset(result, route), [result, route]);
   const copy = copyForKind(summary.kind);
-  const requiresPaidContentView = summary.kind === 'article';
+  const requiresPaidContentView = PAID_CONTENT_VIEW_KINDS.has(summary.kind);
   const canReadTextContent = summary.isTextRoute && (!requiresPaidContentView || contentViewAccess.canView);
+  const canPreviewImage = summary.isImageRoute && (!requiresPaidContentView || contentViewAccess.canView);
 
   const previewSources = useMemo(() => {
     if (!summary.isImageRoute || !summary.hash || !assetClient?.previewSources) {
@@ -226,7 +228,7 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
   }
 
   function openPreviewSource() {
-    if (!previewSource?.url) {
+    if (!canPreviewImage || !previewSource?.url) {
       return;
     }
 
@@ -295,7 +297,7 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
         />
       )}
 
-      {summary.isTextRoute && (!requiresPaidContentView || contentViewAccess.canView) && (
+      {canReadTextContent && (
         <Card
           eyebrow={`${summary.kindLabel} content`}
           title={textContent.summary?.title || copy.titleFallback}
@@ -381,16 +383,16 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
           className="asset-preview-card"
           actions={
             <div className="asset-copy-actions">
-              <Button variant="secondary" onClick={reloadPreview} disabled={previewSources.length === 0}>
+              <Button variant="secondary" onClick={reloadPreview} disabled={!canPreviewImage || previewSources.length === 0}>
                 Reload preview
               </Button>
-              <Button variant="secondary" onClick={openPreviewSource} disabled={!previewSource?.url}>
+              <Button variant="secondary" onClick={openPreviewSource} disabled={!canPreviewImage || !previewSource?.url}>
                 Open source
               </Button>
             </div>
           }
         >
-          {previewSource && imagePreviewOk ? (
+          {canPreviewImage && previewSource && imagePreviewOk ? (
             <div className="asset-image-preview-shell">
               <img
                 src={previewUrl}
@@ -400,10 +402,11 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
             </div>
           ) : (
             <div className="asset-preview-empty">
-              <strong>Image bytes were not previewable from the gateway.</strong>
+              <strong>{canPreviewImage ? 'Image bytes were not previewable from the gateway.' : 'Image preview is locked until paid.'}</strong>
               <span>
-                The asset hydrated successfully, but the image byte route did not load inside the preview.
-                Try Open source, check gateway <code>/o</code> support, or confirm the local dev storage still contains this object.
+                {canPreviewImage
+                  ? 'The asset hydrated successfully, but the image byte route did not load inside the preview. Try Open source, check gateway /o support, or confirm the local dev storage still contains this object.'
+                  : 'The image asset metadata is visible, but CrabLink will not fetch or render image bytes until the backend returns a paid content_view receipt.'}
               </span>
             </div>
           )}
@@ -411,19 +414,19 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
           <div className="asset-preview-source-strip" aria-label="Image preview source">
             <div>
               <span>Current source</span>
-              <strong>{previewSource?.label || 'No source'}</strong>
+              <strong>{canPreviewImage ? previewSource?.label || 'No source' : 'Locked'}</strong>
             </div>
             <div>
               <span>Source URL</span>
-              <strong>{previewSource?.url || 'n/a'}</strong>
+              <strong>{canPreviewImage ? previewSource?.url || 'n/a' : 'Hidden until paid'}</strong>
             </div>
             <div>
               <span>Preview mode</span>
-              <strong>gateway raw bytes first</strong>
+              <strong>{canPreviewImage ? 'gateway raw bytes first' : 'paid view gate'}</strong>
             </div>
           </div>
 
-          {failedPreviewSources.length > 0 && (
+          {canPreviewImage && failedPreviewSources.length > 0 && (
             <details className="asset-preview-fallbacks">
               <summary>Failed preview attempts</summary>
               {failedPreviewSources.map((source, index) => (
@@ -444,7 +447,7 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
             <Fact label="Size" value={summary.sizeBytes || 'Not returned'} />
             <Fact label="Content type" value={summary.contentType || 'Not returned'} />
             <Fact label="Provider" value={summary.providerRef || 'Not returned'} />
-            <Fact label="Raw URL" value={summary.rawUrl || 'Not returned'} monospace />
+            <Fact label="Raw URL" value={summary.isImageRoute && !canPreviewImage ? 'Hidden until paid image_view receipt' : summary.rawUrl || 'Not returned'} monospace />
           </div>
         </Card>
 
@@ -497,9 +500,10 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
               error: serializeError(textContent.error),
             },
             preview: {
-              preview_sources: previewSources,
-              current_preview_source: previewSource,
-              failed_preview_sources: failedPreviewSources,
+              preview_sources: canPreviewImage ? previewSources : [],
+              current_preview_source: canPreviewImage ? previewSource : null,
+              failed_preview_sources: canPreviewImage ? failedPreviewSources : [],
+              image_preview_locked: summary.isImageRoute && !canPreviewImage,
             },
             truth_boundary:
               'This page is read-only. Gateway, storage, index, wallet, and ledger remain backend-owned truth.',

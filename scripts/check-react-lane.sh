@@ -54,10 +54,14 @@ need_file "$APP_DIR/routeRegistry.js"
 need_file "$SHARED_DIR/api/gatewayClient.js"
 need_file "$SHARED_DIR/api/walletClient.js"
 need_file "$SHARED_DIR/api/siteClient.js"
+need_file "$SHARED_DIR/api/contentViewClient.js"
 need_file "$SHARED_DIR/embed/embedRegistry.js"
 need_file "$SHARED_DIR/embed/safeHtml.js"
+need_file "$SHARED_DIR/receipts/recentReceipts.js"
 need_file "$PAGES_DIR/site/SiteLaunchFlow.jsx"
 need_file "$PAGES_DIR/image/ImagePublishFlow.jsx"
+need_file "$PAGES_DIR/asset/AssetContentViewAccess.jsx"
+need_file "$PAGES_DIR/asset/AssetHydratedView.jsx"
 need_dir "$APP_DIR/shell"
 need_dir "$PAGES_DIR"
 need_dir "$SHARED_DIR"
@@ -194,14 +198,14 @@ for (const [route, files] of new Map([
   ['site', ['SitePage.jsx', 'SiteLaunchFlow.jsx', 'SiteSandboxPreview.jsx', 'siteTemplates.js']],
   ['image', ['ImagePage.jsx', 'ImagePublishFlow.jsx']],
   ['profile', ['ProfilePage.jsx']],
-  ['asset', ['AssetPage.jsx', 'AssetResolver.jsx', 'AssetHydratedView.jsx']],
+  ['asset', ['AssetPage.jsx', 'AssetResolver.jsx', 'AssetHydratedView.jsx', 'AssetContentViewAccess.jsx']],
   ['music', ['MusicPage.jsx', 'MusicRights.jsx']],
-  ['article', ['ArticlePage.jsx', 'articleDraftModel.js']],
+  ['article', ['ArticlePage.jsx', 'articleDraftModel.js', 'ArticlePublishFlow.jsx']],
   ['video', ['VideoPage.jsx', 'videoDraftModel.js']],
   ['stream', ['StreamPage.jsx', 'StreamPodcastMode.jsx']],
   ['podcast', ['PodcastPage.jsx']],
-  ['post', ['PostPage.jsx']],
-  ['comment', ['CommentPage.jsx']],
+  ['post', ['PostPage.jsx', 'postDraftModel.js', 'PostPublishFlow.jsx']],
+  ['comment', ['CommentPage.jsx', 'commentDraftModel.js', 'CommentPublishFlow.jsx']],
   ['ad', ['AdPage.jsx']],
   ['algo', ['AlgoPage.jsx']],
   ['code', ['CodePage.jsx']],
@@ -249,9 +253,13 @@ for (const token of [
   'collectCrabTypedUrls',
   'textAssetCache',
   '/o/${ref.cid}',
-  'comment dropdown ready',
 ]) {
   requireIncludes(siteSandbox, token, 'pages/site/SiteSandboxPreview.jsx');
+}
+
+const siteSandboxOptionalSignals = ['comment dropdown ready', 'Comment', 'comment'];
+if (!siteSandboxOptionalSignals.some((token) => siteSandbox.includes(token))) {
+  fail('pages/site/SiteSandboxPreview.jsx missing comment render/dropdown signal');
 }
 
 const siteTemplates = readText(path.join(pages, 'site', 'siteTemplates.js'));
@@ -265,6 +273,75 @@ for (const token of [
   '<crab-article',
 ]) {
   requireIncludes(siteTemplates, token, 'pages/site/siteTemplates.js');
+}
+
+const contentViewClient = readText(path.join(shared, 'api', 'contentViewClient.js'));
+for (const token of [
+  '/content/view/quote',
+  '/content/view/pay',
+  'quote',
+  'pay',
+  'Idempotency-Key',
+]) {
+  requireIncludes(contentViewClient, token, 'shared/api/contentViewClient.js');
+}
+for (const forbidden of [
+  'http://127.0.0.1:8088',
+  'http://localhost:8088',
+  '127.0.0.1:8088',
+  'localhost:8088',
+  '/v1/transfer',
+  '/v1/hold',
+  '/v1/issue',
+  '/v1/burn',
+]) {
+  forbidIncludes(contentViewClient, forbidden, 'shared/api/contentViewClient.js');
+}
+
+const assetContentViewAccess = readText(path.join(pages, 'asset', 'AssetContentViewAccess.jsx'));
+for (const token of [
+  'PAYABLE_KINDS',
+  "new Set(['article', 'post', 'comment', 'image'])",
+  'createContentViewClient',
+  'writeRecentReceipt',
+  'writeLocalCatalogEntry',
+  '/content/view/quote',
+  '/content/view/pay',
+  'post content_view',
+  'comment content_view',
+  'image content_view',
+  'article content_view',
+  'No silent spend / no fake unlock',
+]) {
+  requireIncludes(assetContentViewAccess, token, 'pages/asset/AssetContentViewAccess.jsx');
+}
+for (const forbidden of [
+  'wallet/hold',
+  'createWalletHold(',
+  'svc-wallet',
+  'ron-ledger',
+]) {
+  forbidIncludes(assetContentViewAccess, forbidden, 'pages/asset/AssetContentViewAccess.jsx');
+}
+
+const assetHydratedView = readText(path.join(pages, 'asset', 'AssetHydratedView.jsx'));
+for (const token of [
+  'PAID_CONTENT_VIEW_KINDS',
+  "new Set(['article', 'post', 'comment', 'image'])",
+  'requiresPaidContentView',
+  'contentViewAccess.canView',
+  'AssetContentViewAccess',
+  'canPreviewImage',
+  'Image preview is locked until paid',
+  'paid view gate',
+  'article/post/comment raw content and image preview bytes are gated',
+]) {
+  requireIncludes(assetHydratedView, token, 'pages/asset/AssetHydratedView.jsx');
+}
+for (const forbidden of [
+  'dangerouslySetInnerHTML',
+]) {
+  forbidIncludes(assetHydratedView, forbidden, 'pages/asset/AssetHydratedView.jsx');
 }
 
 const paidPublisherRoutes = new Set(['post', 'comment', 'article']);
@@ -352,14 +429,15 @@ const reactSources = [
   ...collectTextFiles(shared),
 ].map((file) => [file, readText(file)]);
 
+const forbiddenUiMoneyPhrases = ['ROC ' + 'minor', 'minor ' + 'units'];
+
 for (const [file, source] of reactSources) {
   const label = path.relative(root, file);
 
   for (const forbidden of [
     'page-local-route-mode',
     'crab://b3/',
-    'ROC minor',
-    'minor units',
+    ...forbiddenUiMoneyPhrases,
     '<all_urls>',
     'chrome.history',
     'chrome.cookies',

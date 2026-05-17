@@ -1,12 +1,12 @@
 /**
- * RO:WHAT — Explicit paid content_view gate for b3-backed asset pages.
- * RO:WHY — NEXT_LEVEL creator economy proof: article readers pay through gateway-backed wallet truth before content is displayed.
+ * RO:WHAT — Explicit paid content_view gate for b3-backed text asset pages.
+ * RO:WHY — NEXT_LEVEL creator economy proof: readers pay through gateway-backed wallet truth before protected content is displayed.
  * RO:INTERACTS — contentViewClient, AssetHydratedView, recentReceipts, localCatalog, GatewayClient.
  * RO:INVARIANTS — no silent spend; no fake unlock; no direct wallet/ledger calls; receipt cache is display-only.
  * RO:METRICS — displays returned gateway correlation IDs, txid, receipt_hash, and ledger_root.
  * RO:CONFIG — uses current CrabLink wallet/passport settings and configured gateway URL.
  * RO:SECURITY — pay button requires explicit click; local cache never grants authorization.
- * RO:TEST — open crab://<hash>.article, quote, click Pay, confirm article body unlocks and receipt appears.
+ * RO:TEST — open crab://<hash>.article, crab://<hash>.post, crab://<hash>.comment, and crab://<hash>.image, quote, click Pay, confirm protected content unlocks only after receipt.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -21,7 +21,85 @@ import { createContentViewClient } from '../../shared/api/contentViewClient.js';
 import { writeLocalCatalogEntry } from '../../shared/catalog/localCatalog.js';
 import { writeRecentReceipt } from '../../shared/receipts/recentReceipts.js';
 
-const PAYABLE_KINDS = new Set(['article']);
+const PAYABLE_KINDS = new Set(['article', 'post', 'comment', 'image']);
+
+const KIND_COPY = Object.freeze({
+  article: {
+    noun: 'article',
+    bodyName: 'article body',
+    payTitle: 'Pay to view this article',
+    paidTitle: 'Article view paid and unlocked',
+    badge: 'article content_view',
+    unavailableTitle: 'Paid article view is not available yet',
+    unavailableCopy:
+      'The asset resolved, but the backend quote/pay route did not return a usable content_view proof. CrabLink will not unlock the article body from local state.',
+    unlockedTitle: 'Backend receipt unlocked this article view',
+    unlockedCopy:
+      'The article body below is unlocked only after svc-gateway returned wallet receipt metadata for content_view. Local receipt memory is display-only.',
+    lockedCopy:
+      'CrabLink does not direct-call wallet or ledger, does not adjust local balances, and does not show article content until a backend content_view receipt is returned.',
+  },
+  post: {
+    noun: 'post',
+    bodyName: 'post body',
+    payTitle: 'Pay to view this post',
+    paidTitle: 'Post view paid and unlocked',
+    badge: 'post content_view',
+    unavailableTitle: 'Paid post view is not available yet',
+    unavailableCopy:
+      'The asset resolved, but the backend quote/pay route did not return a usable content_view proof. CrabLink will not unlock the post body from local state.',
+    unlockedTitle: 'Backend receipt unlocked this post view',
+    unlockedCopy:
+      'The post body below is unlocked only after svc-gateway returned wallet receipt metadata for content_view. Local receipt memory is display-only.',
+    lockedCopy:
+      'CrabLink does not direct-call wallet or ledger, does not adjust local balances, and does not show post content until a backend content_view receipt is returned.',
+  },
+  comment: {
+    noun: 'comment',
+    bodyName: 'comment body',
+    payTitle: 'Pay to view this comment',
+    paidTitle: 'Comment view paid and unlocked',
+    badge: 'comment content_view',
+    unavailableTitle: 'Paid comment view is not available yet',
+    unavailableCopy:
+      'The asset resolved, but the backend quote/pay route did not return a usable content_view proof. CrabLink will not unlock the comment body from local state.',
+    unlockedTitle: 'Backend receipt unlocked this comment view',
+    unlockedCopy:
+      'The comment body below is unlocked only after svc-gateway returned wallet receipt metadata for content_view. Local receipt memory is display-only.',
+    lockedCopy:
+      'CrabLink does not direct-call wallet or ledger, does not adjust local balances, and does not show comment content until a backend content_view receipt is returned.',
+  },
+  image: {
+    noun: 'image',
+    bodyName: 'image preview',
+    payTitle: 'Pay to view this image',
+    paidTitle: 'Image view paid and unlocked',
+    badge: 'image content_view',
+    unavailableTitle: 'Paid image view is not available yet',
+    unavailableCopy:
+      'The asset resolved, but the backend quote/pay route did not return a usable content_view proof. CrabLink will not unlock the image preview from local state.',
+    unlockedTitle: 'Backend receipt unlocked this image view',
+    unlockedCopy:
+      'The image preview below is unlocked only after svc-gateway returned wallet receipt metadata for content_view. Local receipt memory is display-only.',
+    lockedCopy:
+      'CrabLink does not direct-call wallet or ledger, does not adjust local balances, and does not show image bytes until a backend content_view receipt is returned.',
+  },
+  asset: {
+    noun: 'asset',
+    bodyName: 'asset body',
+    payTitle: 'Pay to view this asset',
+    paidTitle: 'Asset view paid and unlocked',
+    badge: 'asset content_view',
+    unavailableTitle: 'Paid asset view is not available yet',
+    unavailableCopy:
+      'The asset resolved, but the backend quote/pay route did not return a usable content_view proof. CrabLink will not unlock protected content from local state.',
+    unlockedTitle: 'Backend receipt unlocked this asset view',
+    unlockedCopy:
+      'The protected content below is unlocked only after svc-gateway returned wallet receipt metadata for content_view. Local receipt memory is display-only.',
+    lockedCopy:
+      'CrabLink does not direct-call wallet or ledger, does not adjust local balances, and does not show protected content until a backend content_view receipt is returned.',
+  },
+});
 
 export default function AssetContentViewAccess({ app, summary, onAccessChange }) {
   const gateway = app?.clients?.gateway || app?.gateway || null;
@@ -35,6 +113,7 @@ export default function AssetContentViewAccess({ app, summary, onAccessChange })
   });
 
   const target = useMemo(() => normalizeTarget(summary), [summary]);
+  const copy = useMemo(() => copyForKind(target.kind), [target.kind]);
   const payerAccount = cleanString(app?.settings?.walletAccount || gateway?.walletAccount || '');
   const passportSubject = cleanString(app?.settings?.passportSubject || gateway?.passportSubject || '');
   const shouldQuote = PAYABLE_KINDS.has(target.kind);
@@ -278,7 +357,7 @@ export default function AssetContentViewAccess({ app, summary, onAccessChange })
   return (
     <Card
       eyebrow="Paid content view"
-      title={hasPayment ? 'Article view paid and unlocked' : 'Pay to view this article'}
+      title={hasPayment ? copy.paidTitle : copy.payTitle}
       className={`asset-content-view-card is-${state.status}`}
       actions={
         <div className="asset-copy-actions">
@@ -305,7 +384,7 @@ export default function AssetContentViewAccess({ app, summary, onAccessChange })
           {statusLabel(state.status)}
         </Badge>
         <Badge tone="neutral" uppercase={false}>
-          article content_view
+          {copy.badge}
         </Badge>
         <Badge tone="neutral" uppercase={false}>
           gateway-only
@@ -314,7 +393,7 @@ export default function AssetContentViewAccess({ app, summary, onAccessChange })
 
       <p className="asset-description">
         CrabLink is using the backend <code>/content/view/quote</code> and <code>/content/view/pay</code> routes.
-        The article body stays hidden until a backend payment receipt is returned.
+        The {copy.bodyName} stays hidden until a backend payment receipt is returned.
       </p>
 
       <div className="asset-fact-grid asset-content-view-facts">
@@ -336,20 +415,16 @@ export default function AssetContentViewAccess({ app, summary, onAccessChange })
 
       {state.error && (
         <ErrorPanel
-          title="Paid content_view is not available yet"
+          title={copy.unavailableTitle}
           error={state.error}
-          copy="The asset resolved, but the backend quote/pay route did not return a usable content_view proof. CrabLink will not unlock the article body from local state."
+          copy={copy.unavailableCopy}
         />
       )}
 
       <TruthBoundary
         tone={hasPayment ? 'success' : 'warning'}
-        title={hasPayment ? 'Backend receipt unlocked this article view' : 'No silent spend / no fake unlock'}
-        copy={
-          hasPayment
-            ? 'The article body below is unlocked only after svc-gateway returned wallet receipt metadata for content_view. Local receipt memory is display-only.'
-            : 'CrabLink does not direct-call wallet or ledger, does not adjust local balances, and does not show article content until a backend content_view receipt is returned.'
-        }
+        title={hasPayment ? copy.unlockedTitle : 'No silent spend / no fake unlock'}
+        copy={hasPayment ? copy.unlockedCopy : copy.lockedCopy}
       />
 
       <details className="asset-content-view-json">
@@ -384,7 +459,7 @@ function persistContentViewProof({ target, summary, quote, payment }) {
       schema: 'crablink.recent-receipt.content-view.v1',
       kind: 'content_view',
       action: 'content_view',
-      title: `Paid content view: ${target.assetCrabUrl}`,
+      title: `Paid ${target.kind || 'asset'} content view: ${target.assetCrabUrl}`,
       crabUrl: target.assetCrabUrl,
       amountMinor: paymentSummary.amountMinor || quoteSummary.amountMinor,
       asset: paymentSummary.asset || quoteSummary.asset || 'roc',
@@ -415,7 +490,7 @@ function persistContentViewProof({ target, summary, quote, payment }) {
   try {
     writeLocalCatalogEntry({
       schema: 'crablink.local-catalog-entry.v1',
-      kind: target.kind || 'article',
+      kind: target.kind || 'asset',
       crabUrl: target.assetCrabUrl,
       title: cleanString(summary?.title) || `${labelFromKind(target.kind)} asset`,
       status: 'paid content_view receipt cached',
@@ -442,9 +517,10 @@ function persistContentViewProof({ target, summary, quote, payment }) {
 
 function normalizeTarget(summary = {}) {
   const hash = cleanHash(summary.hash || summary.raw_hash_hex);
-  const kind = cleanKind(summary.kind || summary.assetKind || 'article');
+  const rawKind = summary.kind || summary.assetKind;
+  const kind = cleanKind(rawKind);
   const cid = cleanCid(summary.cid || summary.assetCid || (hash ? `b3:${hash}` : ''));
-  const assetCrabUrl = cleanString(summary.crabUrl || summary.assetCrabUrl || (hash ? `crab://${hash}.${kind}` : ''));
+  const assetCrabUrl = cleanString(summary.crabUrl || summary.assetCrabUrl || (hash && kind ? `crab://${hash}.${kind}` : ''));
 
   return {
     hash,
@@ -534,12 +610,16 @@ function cleanCid(value) {
 }
 
 function cleanKind(value) {
-  const clean = String(value || 'article').trim().toLowerCase();
-  return /^[a-z][a-z0-9_-]{0,31}$/.test(clean) ? clean : 'article';
+  const clean = String(value || '').trim().toLowerCase();
+  return /^[a-z][a-z0-9_-]{0,31}$/.test(clean) ? clean : '';
 }
 
 function cleanString(value) {
   return String(value || '').trim();
+}
+
+function copyForKind(kind) {
+  return KIND_COPY[cleanKind(kind)] || KIND_COPY.asset;
 }
 
 function labelFromKind(kind) {

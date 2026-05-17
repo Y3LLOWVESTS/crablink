@@ -56648,3 +56648,1074 @@ We finished a major CrabLink frontend proof session: text publish smoke with aut
 
 
 ### END NOTE - MAY 16 2026 - 12:05 CST
+
+
+
+### BEGIN NOTE - MAY 17 2026 - 09:40 CST
+
+# RustyOnions / CrabLink Carryover Notes — Paid Article Proven, Next: Post Then Comment
+
+## 0. Current checkpoint
+
+We are continuing the RustyOnions + CrabLink NEXT_LEVEL / WEB3_2 product-layer work.
+
+The current major live proof is:
+
+```text
+Creator A creates article
+Visitor B pays to view article
+svc-gateway /content/view/quote works
+svc-gateway /content/view/pay works
+omnigate routes payment to wallet
+svc-wallet commits transfer
+ron-ledger returns receipt/root
+CrabLink receives backend receipt
+CrabLink unlocks article body
+Article body becomes visible
+```
+
+This is a major milestone. The article content view loop is no longer theoretical or UI-only. It is a real paid unlock path:
+
+```text
+crab://<hash>.article
+→ typed asset page
+→ quote content_view
+→ explicit Pay button
+→ wallet transfer
+→ receipt returned
+→ frontend unlock
+→ raw b3 article body fetched through gateway
+→ body rendered
+```
+
+This session also proved the right failure behavior before success:
+
+```text
+bad payment request / invalid idempotency key
+→ backend rejected payment
+→ CrabLink did not unlock article body
+```
+
+That is exactly the correct trust boundary.
+
+---
+
+## 1. Critical project rules still active
+
+Do not drift from these.
+
+```text
+ROC remains internal.
+No ROX.
+No Solana.
+No external settlement.
+No bridge.
+No staking.
+No liquidity.
+No exchange-facing logic.
+No QuickChain implementation yet.
+```
+
+QuickChain is still a future blueprint. Current work remains the internal ROC creator economy and product loop. Recent notes explicitly identify the active mission as proving the internal economy first and state that QuickChain remains locked, even after preflight-style work. 
+
+Frontend invariants:
+
+```text
+CrabLink is a thin browser client.
+CrabLink calls svc-gateway public routes only.
+CrabLink must not call svc-wallet directly.
+CrabLink must not call ron-ledger directly.
+CrabLink must not call svc-storage directly.
+CrabLink must not call svc-index directly.
+CrabLink must not call omnigate directly.
+CrabLink must not fake balances.
+CrabLink must not fake receipts.
+CrabLink must not silently spend ROC.
+CrabLink local receipt/cache/catalog state is display-only.
+```
+
+The CrabLink extension docs and carryover notes repeatedly lock this gateway-only boundary and forbid direct internal-service calls. 
+
+---
+
+## 2. What was accomplished in this session
+
+### 2.1 Paid article view is live-proven
+
+We successfully paid to view an article as Visitor B.
+
+Confirmed live behavior:
+
+```text
+payer: acct_visitor_b
+recipient: acct_dev
+amount: 5 ROC
+payment succeeded
+receipt returned
+article body visible
+```
+
+The successful UI proof showed the paid content view card, backend receipt metadata, and then the article body rendered below it.
+
+This is one of the most important product proofs so far because it proves the system can do paid access to typed b3 content, not just paid storage/upload.
+
+### 2.2 Visitor B funding flow works
+
+After stack restart, `acct_visitor_b` had 0 ROC. We funded it through the wallet issue route in dev mode, then the article paid view worked with Visitor B as payer.
+
+Important dev workflow retained:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+curl -fsS -X POST http://127.0.0.1:8088/v1/issue \
+  -H 'Authorization: Bearer dev' \
+  -H "Idempotency-Key: dev-fund-visitor-b-$(date +%s)" \
+  -H 'Content-Type: application/json' \
+  -d '{"to":"acct_visitor_b","asset":"roc","amount_minor":"1776","memo":"dev fund visitor B"}' \
+  | jq .
+```
+
+Note for future docs/UI: the backend wire field may still be named `amount_minor` for compatibility, but user-facing docs and UI should say **ROC**, **ROC units**, or just the amount as `1776 ROC`.
+
+### 2.3 Payment bug found and fixed: idempotency key sanitization
+
+The first Visitor B article payment failed even though the quote worked.
+
+Observed:
+
+```text
+quote route worked
+payer was acct_visitor_b
+recipient was acct_dev
+amount was 5 ROC
+payment reached backend
+wallet rejected the transfer with HTTP 400
+```
+
+Root cause:
+
+```text
+CrabLink generated a content_view idempotency key using the crab:// URL.
+That produced slashes inside the idempotency key.
+svc-wallet rejects invalid idempotency key characters.
+```
+
+Fix applied:
+
+```text
+contentViewClient idempotency key sanitizer now removes / characters.
+```
+
+After that fix, payment succeeded and article body unlocked.
+
+Carryover warning:
+
+```text
+Do not reintroduce / into wallet-facing idempotency keys.
+Use only wallet-accepted safe characters.
+```
+
+### 2.4 ROC wording cleanup direction established
+
+The user explicitly rejected “ROC minor” as a phrase.
+
+Going forward:
+
+```text
+Use: ROC
+Use: ROC units
+Use: amount_roc / price_roc in UI-facing or docs-facing names when possible
+Do not use: ROC minor
+Do not use: minor units
+```
+
+Exception:
+
+```text
+Existing backend DTO/wire fields such as amount_minor may remain when required for compatibility.
+Do not do a blind API migration unless intentionally planned.
+Hide the naming at adapter boundaries wherever possible.
+```
+
+### 2.5 Current broad post/comment patch was intentionally skipped
+
+The last suggested frontend patch generalized article paid view to post/comment with a regex script. The user chose not to apply it.
+
+That was the correct call.
+
+Reason:
+
+```text
+The patch was too broad.
+It did not first prove post paid-view live behavior.
+It risked changing article-proven behavior while trying to cover multiple kinds at once.
+It could have hidden kind-specific bugs.
+It could have made post/comment appear pay-gated before backend/live proof was verified.
+```
+
+New rule for next session:
+
+```text
+Do not apply broad regex patches for paid post/comment.
+Use full paste-ready files with exact paths.
+Move one kind at a time:
+1. post
+2. comment
+```
+
+---
+
+## 3. Current CrabLink code state
+
+### 3.1 React-primary extension is current path
+
+CrabLink is currently React-primary with the staged extension output as the correct Chrome load target.
+
+Current load path:
+
+```text
+/Users/mymac/Desktop/crablink/dist/chrome-extension-staging
+```
+
+Do not use raw source as the main Chrome extension test target:
+
+```text
+/Users/mymac/Desktop/crablink/extensions/chrome
+```
+
+Current expected entry shape:
+
+```text
+chrome-extension://<extension-id>/react.html?url=crab%3A%2F%2Fsite
+```
+
+The current codebundle includes React app shell, route registry, typed pages, asset pages, post/comment/article pages, shared API clients, receipt panels, local catalog, and build scripts. 
+
+### 3.2 Build/check/package command
+
+Run from CrabLink repo:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Expected outputs:
+
+```text
+dist/chrome-src/react.html
+dist/chrome-src/page.html
+dist/chrome-extension-staging/
+dist/crablink-extension-chrome.zip
+CODEBUNDLE_CHROME_EXTENSION.md
+```
+
+The manual checklist also records the expected build gate and staged extension workflow. 
+
+### 3.3 AssetContentViewAccess is article-only right now
+
+Current file:
+
+```text
+extensions/chrome/src/pages/asset/AssetContentViewAccess.jsx
+```
+
+Current important state:
+
+```javascript
+const PAYABLE_KINDS = new Set(['article']);
+```
+
+Implication:
+
+```text
+Only .article typed asset pages are currently protected by the paid content_view gate.
+```
+
+Do not assume post/comment are paid-gated yet. They are not.
+
+### 3.4 AssetHydratedView recognizes post/comment/article text kinds
+
+Current file:
+
+```text
+extensions/chrome/src/pages/asset/AssetHydratedView.jsx
+```
+
+Current important state:
+
+```javascript
+const TEXT_ASSET_KINDS = new Set(['post', 'comment', 'article']);
+```
+
+The current code has post/comment/article rendering support as text assets, but only article has the paid-view language and gate path wired. Post/comment text copy currently says body was fetched through gateway and not fabricated from local draft state, while article copy says the body was fetched after paid proof. 
+
+### 3.5 Known issue in current paid view files
+
+Current `AssetContentViewAccess.jsx` has article-specific default/fallback wording in several places. It was acceptable for the article proof, but it must be generalized carefully during post/comment work.
+
+Known spots to fix when doing the post batch:
+
+```text
+RO header says article readers
+RO test says .article
+PAYABLE_KINDS only includes article
+card title says article
+description says article body
+error says article body
+truth boundary says article view/article body
+cleanKind default falls back to article
+```
+
+Important:
+
+```text
+Do not generalize all of that in a single blind patch.
+Create a kind-aware helper and test it first for post only.
+Then repeat for comment.
+```
+
+---
+
+## 4. Backend state relevant to next work
+
+### 4.1 Generic content_view backend exists
+
+Backend support for generic paid asset views exists:
+
+```text
+POST /content/view/quote
+POST /content/view/pay
+```
+
+Expected chain:
+
+```text
+CrabLink / client
+→ svc-gateway /content/view/quote or /content/view/pay
+→ omnigate /v1/content/view/quote or /v1/content/view/pay
+→ svc-index asset manifest pointer
+→ svc-storage manifest object
+→ manifest-derived payout recipient
+→ svc-wallet /v1/transfer
+→ ron-ledger receipt/root
+```
+
+Prior carryover notes describe this route as backend green with Clippy-enabled gate:
+
+```bash
+RON_RUN_CLIPPY=1 bash scripts/web3_nextlevel_content_view_green_gate.sh
+```
+
+
+
+### 4.2 Post/comment publish likely exist, but must be verified fresh
+
+Recent project notes mention `post_asset_publish.rs`, `comment_asset_publish.rs`, post/comment clients, and post/comment pages. The current CrabLink tree includes:
+
+```text
+extensions/chrome/src/pages/post/PostPublishFlow.jsx
+extensions/chrome/src/pages/comment/CommentPublishFlow.jsx
+extensions/chrome/src/shared/api/postAssetClient.js
+extensions/chrome/src/shared/api/commentAssetClient.js
+```
+
+The backend codebundle tree previously showed omnigate tests for post/comment text assets, but the next instance must verify current repo status before editing.
+
+First backend verification commands:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+cargo test -p omnigate --test content_view
+cargo test -p omnigate --test text_asset_publish
+cargo test -p omnigate --test comment_asset_publish
+cargo test -p svc-gateway --test product_routes_proxy
+```
+
+Also check whether there is a dedicated gateway content view proxy test:
+
+```bash
+cargo test -p svc-gateway --all-targets content_view
+```
+
+Do not assume test names without inspecting the codebundle or `ls crates/*/tests`.
+
+---
+
+## 5. Why post should be next, then comment
+
+The correct order is:
+
+```text
+1. Paid post view loop
+2. Paid comment view loop
+3. Then broaden shared UI helpers if both are green
+```
+
+Reason:
+
+```text
+Post is the simpler social/text primitive.
+Comment has parent/target/thread/site relations and should follow post.
+Article is already proven.
+```
+
+This lines up with the NEXT_LEVEL text primitive sequencing: post first, comment second, article after that in the original backend route order, while the paid content_view path now has article proven first by live UX. The next work should close the gap by proving paid post, then paid comment.
+
+---
+
+## 6. Next-session plan — Phase A: prepare environment
+
+Start backend in four terminals.
+
+### Terminal 1 — wallet
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+RUST_LOG=info SVC_WALLET_ADDR=127.0.0.1:8088 cargo run -p svc-wallet
+```
+
+### Terminal 2 — passport
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+PASSPORT_CONFIG_FILE=crates/svc-passport/config/default.toml \
+RUST_LOG=info \
+cargo run -p svc-passport
+```
+
+### Terminal 3 — CrabLink dev stack
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+ECON_PATH="$(pwd)/configs/roc-economics.dev.toml"
+
+OMNIGATE_PASSPORT_BASE_URL=http://127.0.0.1:5307 \
+OMNIGATE_WALLET_BASE_URL=http://127.0.0.1:8088 \
+OMNIGATE_WALLET_BEARER=dev \
+RON_STORAGE_ROC_ECONOMICS_PATH="$ECON_PATH" \
+RON_STORAGE_ROC_ECONOMICS_ACTION=paid_storage_put \
+SVC_GATEWAY_STORAGE_BASE_URL=http://127.0.0.1:5303 \
+scripts/web3_crablink_dev_stack.sh
+```
+
+### Terminal 4 — CrabLink build
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+Load unpacked:
+
+```text
+chrome://extensions
+→ Developer Mode ON
+→ Load unpacked
+→ /Users/mymac/Desktop/crablink/dist/chrome-extension-staging
+```
+
+---
+
+## 7. Next-session plan — Phase B: verify balances
+
+Check direct wallet balance:
+
+```bash
+curl -fsS \
+  'http://127.0.0.1:8088/v1/balance?account=acct_dev&asset=roc' \
+  -H 'Authorization: Bearer dev' \
+  | jq .
+
+curl -fsS \
+  'http://127.0.0.1:8088/v1/balance?account=acct_visitor_b&asset=roc' \
+  -H 'Authorization: Bearer dev' \
+  | jq .
+```
+
+Check through gateway:
+
+```bash
+curl -fsS 'http://127.0.0.1:8090/wallet/acct_visitor_b/balance' \
+  -H 'Authorization: Bearer dev' \
+  -H 'x-ron-passport: passport:main:visitor-b' \
+  -H 'x-ron-wallet-account: acct_visitor_b' \
+  | jq .
+```
+
+Fund Visitor B again after stack reset if needed:
+
+```bash
+curl -fsS -X POST http://127.0.0.1:8088/v1/issue \
+  -H 'Authorization: Bearer dev' \
+  -H "Idempotency-Key: dev-fund-visitor-b-$(date +%s)" \
+  -H 'Content-Type: application/json' \
+  -d '{"to":"acct_visitor_b","asset":"roc","amount_minor":"1776","memo":"dev fund visitor B"}' \
+  | jq .
+```
+
+Again: user-facing docs should say `1776 ROC`; the `amount_minor` field is a backend wire compatibility detail.
+
+---
+
+## 8. Next-session plan — Phase C: paid post loop
+
+### Goal
+
+Prove:
+
+```text
+Creator A post
+→ Visitor B pays to view post
+→ acct_visitor_b decreases
+→ acct_dev receives
+→ wallet receipt returned
+→ CrabLink unlocks post body
+```
+
+### Step C1 — Create or find a fresh post asset
+
+Use the existing `crab://post` built-in page if it is still working.
+
+Expected creator settings:
+
+```text
+creator/main:
+passport: passport:main:dev
+wallet: acct_dev
+```
+
+Create a fresh post so local storage/index definitely has it after stack restart.
+
+Expected returned URL shape:
+
+```text
+crab://<64hex>.post
+```
+
+Record the fresh post URL in the carryover notes.
+
+### Step C2 — Test post typed asset page before paid gate
+
+Open:
+
+```text
+crab://<fresh-post-hash>.post
+```
+
+Current likely behavior before patch:
+
+```text
+post body may load without paid gate
+or post body loads as regular text asset
+```
+
+That is the behavior we need to change, but only after backend proof.
+
+### Step C3 — Verify backend quote/pay manually or through Dev UI
+
+Use CrabLink Developer content_view JSON if available, or terminal quote/pay once payload shape is confirmed from existing article client.
+
+Expected backend behavior:
+
+```text
+quote accepts asset_crab_url for .post
+quote derives recipient from manifest
+quote returns amount, payer, recipient, quote id/hash
+pay transfers from acct_visitor_b to acct_dev
+pay returns txid, receipt_hash, ledger_root
+```
+
+### Step C4 — Patch UI for post only
+
+Do not jump directly to comment.
+
+Frontend files likely touched:
+
+```text
+extensions/chrome/src/pages/asset/AssetContentViewAccess.jsx
+extensions/chrome/src/pages/asset/AssetHydratedView.jsx
+scripts/check-react-lane.sh
+possibly extensions/chrome/test/manual-checklist.md
+```
+
+Required behavior:
+
+```text
+PAYABLE_KINDS includes article and post.
+Post raw body is hidden until post payment receipt returns.
+Article behavior remains unchanged.
+Comment remains unchanged until its own batch.
+```
+
+Do not use broad regex. Provide full paste-ready files.
+
+### Step C5 — Build/check/package
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+### Step C6 — Live proof
+
+Set active CrabLink identity to Visitor B:
+
+```text
+passport: passport:main:visitor-b
+wallet: acct_visitor_b
+```
+
+Open:
+
+```text
+crab://<fresh-post-hash>.post
+```
+
+Expected UI:
+
+```text
+PAYER acct_visitor_b
+RECIPIENT acct_dev
+Pay 5 ROC or configured post view price
+No silent spend / no fake unlock before payment
+```
+
+Click Pay once.
+
+Expected after payment:
+
+```text
+paid receipt returned
+post body visible
+receipt in recent receipts
+acct_visitor_b balance decreased
+acct_dev balance increased
+```
+
+Take screenshots of:
+
+```text
+paid post receipt
+post body visible
+Developer content_view JSON
+Developer asset JSON
+```
+
+---
+
+## 9. Next-session plan — Phase D: paid comment loop
+
+Only start after post is green.
+
+### Goal
+
+Prove:
+
+```text
+Creator A comment
+→ Visitor B pays to view comment
+→ acct_visitor_b decreases
+→ acct_dev receives
+→ wallet receipt returned
+→ CrabLink unlocks comment body
+```
+
+### Step D1 — Create or find fresh comment asset
+
+Use existing `crab://comment` flow.
+
+A comment should ideally reference:
+
+```text
+target post
+or site/thread context
+or article/post parent
+```
+
+Expected returned URL:
+
+```text
+crab://<64hex>.comment
+```
+
+Record it.
+
+### Step D2 — Verify backend quote/pay for comment
+
+Expected:
+
+```text
+quote accepts .comment asset URL
+quote derives recipient from comment manifest
+pay transfers from visitor account to creator/payout account
+receipt returned
+```
+
+### Step D3 — Patch UI for comment only
+
+Frontend behavior after comment patch:
+
+```text
+PAYABLE_KINDS includes article, post, comment.
+Text body fetch is gated for all three.
+Kind-specific copy says post/comment/article correctly.
+No article-only fallback copy remains.
+```
+
+### Step D4 — Build/check/package
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+npm run build
+scripts/check-react-lane.sh
+scripts/check-chrome.sh
+scripts/package-chrome.sh
+scripts/make_codebundle.sh
+```
+
+### Step D5 — Live proof
+
+Open:
+
+```text
+crab://<fresh-comment-hash>.comment
+```
+
+Expected before payment:
+
+```text
+payer acct_visitor_b
+recipient acct_dev
+Pay configured ROC amount
+comment body hidden
+```
+
+Expected after payment:
+
+```text
+receipt returned
+comment body visible
+recent receipt cached
+balances changed correctly
+```
+
+---
+
+## 10. Design for the actual frontend patch
+
+The final version should avoid article-hardcoding.
+
+Recommended helper shape in `AssetContentViewAccess.jsx`:
+
+```text
+copyForKind(kind):
+  post:
+    noun: post
+    bodyName: post body
+    payTitle: Pay to view this post
+    paidTitle: Post view paid and unlocked
+    unlockedTitle: Backend receipt unlocked this post view
+
+  comment:
+    noun: comment
+    bodyName: comment body
+    payTitle: Pay to view this comment
+    paidTitle: Comment view paid and unlocked
+    unlockedTitle: Backend receipt unlocked this comment view
+
+  article:
+    noun: article
+    bodyName: article body
+    payTitle: Pay to view this article
+    paidTitle: Article view paid and unlocked
+    unlockedTitle: Backend receipt unlocked this article view
+```
+
+Important code hygiene:
+
+```text
+cleanKind default should not silently become article for post/comment pages.
+Use asset as generic fallback.
+```
+
+Important UI copy:
+
+```text
+post content_view
+comment content_view
+article content_view
+```
+
+Avoid:
+
+```text
+article content_view on post/comment
+Backend receipt unlocked this article view on post/comment
+The article body stays hidden on post/comment
+```
+
+---
+
+## 11. Tests and check-script additions for next session
+
+After post batch, `scripts/check-react-lane.sh` should lock:
+
+```text
+PAYABLE_KINDS contains article and post
+post uses paid content_view gate
+article still works
+comment is not accidentally half-gated unless intentionally included
+no ROC wording regression
+```
+
+After comment batch, it should lock:
+
+```text
+PAYABLE_KINDS contains article, post, comment
+kind-aware paid copy exists
+article-only text does not appear in generic paid gate
+post/comment/article body fetch gating is explicit
+no ROC wording regression
+```
+
+Forbidden tokens in active UI/docs:
+
+```text
+ROC minor
+minor units
+```
+
+Allowed backend compatibility strings only where unavoidable:
+
+```text
+amount_minor
+x-ron-paid-estimate-minor
+```
+
+Those are wire/API compatibility fields, not user-facing language.
+
+---
+
+## 12. What not to do next session
+
+Do not:
+
+```text
+Do not apply the skipped broad patch.
+Do not edit post/comment/article all at once.
+Do not start video/music/podcast/stream backend.
+Do not touch QuickChain implementation.
+Do not add ROX/Solana/bridge code.
+Do not direct-call wallet from CrabLink.
+Do not direct-call storage/index/omnigate from CrabLink.
+Do not fake post/comment unlock from local receipt cache.
+Do not show local catalog receipt as authorization.
+Do not make storage semantic.
+Do not make index economic.
+Do not move ledger mutation outside svc-wallet.
+Do not use old “ROC minor” wording in UI/docs/comments.
+```
+
+Also avoid:
+
+```text
+Do not rely on old assets after stack restart.
+Create fresh post/comment assets when proving paid views.
+```
+
+Reason:
+
+```text
+Local dev stack resets can lose raw content bytes or local index DB state.
+Fresh assets reduce confusion.
+```
+
+---
+
+## 13. Acceptance gate for paid post
+
+Paid post is done only when all of this is true:
+
+```text
+Fresh crab://<hash>.post exists.
+Post typed asset resolves.
+Post quote returns payer acct_visitor_b and recipient acct_dev.
+Post pay returns txid, receipt_hash, ledger_root.
+Post body is hidden before payment.
+Post body is visible after payment.
+CrabLink does not unlock from local cache alone.
+Recent receipt appears.
+Library/receipt display uses ROC wording.
+acct_visitor_b balance decreases.
+acct_dev balance increases.
+npm run build passes.
+check-react-lane passes.
+check-chrome passes.
+package-chrome passes.
+make_codebundle passes.
+```
+
+---
+
+## 14. Acceptance gate for paid comment
+
+Paid comment is done only when all of this is true:
+
+```text
+Fresh crab://<hash>.comment exists.
+Comment typed asset resolves.
+Comment quote returns payer acct_visitor_b and recipient acct_dev.
+Comment pay returns txid, receipt_hash, ledger_root.
+Comment body is hidden before payment.
+Comment body is visible after payment.
+CrabLink does not unlock from local cache alone.
+Recent receipt appears.
+Library/receipt display uses ROC wording.
+acct_visitor_b balance decreases.
+acct_dev balance increases.
+npm run build passes.
+check-react-lane passes.
+check-chrome passes.
+package-chrome passes.
+make_codebundle passes.
+```
+
+---
+
+## 15. Suggested opening prompt for next instance
+
+Use this:
+
+```text
+We are continuing RustyOnions/CrabLink NEXT_LEVEL. The latest live proof is paid article content_view: acct_visitor_b paid acct_dev 5 ROC, backend returned receipt, and the article body unlocked. The previous broad patch to generalize paid content_view to post/comment was intentionally skipped. Do not assume it was applied.
+
+Next task: implement paid post view first, then paid comment view, one batch at a time. Review CODEBUNDLE_CHROME_EXTENSION.md, CODEBUNDLE_RS.md, ALLNOTES.MD, NOTES.MD, NEXT_LEVEL.MD, CODECHECK.md, and CODECOMMENTS.MD. Confirm backend content_view supports .post before editing CrabLink. Provide full paste-ready files with exact paths, not regex patches. Preserve gateway-only CrabLink, no silent spend, no fake unlock, no QuickChain implementation, and no “ROC minor” wording in user-facing code/comments.
+```
+
+---
+
+## 16. Current mental model of project progress
+
+### CrabLink React/browser client
+
+```text
+Status: strong internal beta
+Estimated: 94–96% for current React route layer
+```
+
+Strong:
+
+```text
+React-primary shell
+staged extension workflow
+home/library/profile/site/image/text pages
+paid image flow
+site flow
+article paid view proof
+receipt display
+local catalog
+QuickChain readiness dashboard
+build/package/codebundle scripts
+```
+
+Still remaining:
+
+```text
+paid post view
+paid comment view
+kind-aware paid text asset gate
+first-run passport polish
+profile backend maturity
+more smoke automation
+less dev clutter in some drawers/panels
+```
+
+### RustyOnions internal ROC / NEXT_LEVEL
+
+```text
+Status: very strong, still needs repeatable product gates
+Estimated: 90–93%
+```
+
+Strong:
+
+```text
+wallet/ledger receipts
+paid storage
+paid image
+site creation
+site visit
+article content_view
+accounting/rewarder preflight
+gateway/omnigate product routes
+```
+
+Still remaining:
+
+```text
+post paid view
+comment paid view
+ledger replay proof tied to all content_view actions
+accounting snapshots for content_view
+rewarder payout planning for content_view
+policy/economics polish
+reference graph MVP
+site refs to post/comment/article
+```
+
+### QuickChain
+
+```text
+Readiness/preflight: improving
+Implementation: locked / future
+```
+
+Do not implement QuickChain until the internal economy and all immediate NEXT_LEVEL paid loops are proven and repeatable.
+
+---
+
+## 17. Final handoff summary
+
+The project is at an exciting point:
+
+```text
+Image publish proved paid storage.
+Site visit proved paid browsing.
+Article content_view proved paid content access.
+Post and comment are the next two paid content loops.
+```
+
+The next session should be disciplined:
+
+```text
+1. Prove paid post view.
+2. Then prove paid comment view.
+3. Only then generalize the shared text paid-view UI.
+4. Then add smoke gates so this never regresses.
+```
+
+Do not skip ahead. This is the moment to turn a breakthrough into a repeatable product contract.
+
+### END NOTE - MAY 17 2026 - 09:40 CST
