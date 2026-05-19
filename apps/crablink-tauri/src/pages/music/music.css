@@ -1,0 +1,490 @@
+/*
+ * RO:WHAT — Page-owned styles for the React crab://music workspace.
+ * RO:WHY — Keeps music route UX modular, premium, and separate from legacy page-* patch styles.
+ * RO:INTERACTS — MusicPage.jsx, MusicDraft.jsx, MusicLinkedAssets.jsx, MusicRights.jsx, shared theme tokens.
+ * RO:INVARIANTS — use CSS variables; no hardcoded theme drift; local draft labels must not look backend-confirmed.
+ * RO:TEST — visual/manual checks in React HTTP lane and Chrome extension lane when bridged.
+ */
+
+.cl-music-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.cl-music-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+  gap: 1rem;
+  align-items: stretch;
+  border: 1px solid var(--cl-border);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--cl-accent) 10%, transparent), transparent 38%),
+    var(--cl-card);
+  padding: 1.25rem;
+  box-shadow: 0 20px 50px color-mix(in srgb, var(--cl-text) 8%, transparent);
+}
+
+.cl-music-hero h1 {
+  margin: 0;
+  font-size: clamp(2.35rem, 5vw, 4.8rem);
+  line-height: 0.92;
+  letter-spacing: -0.075em;
+}
+
+.cl-music-hero p:not(.cl-eyebrow) {
+  max-width: 920px;
+  margin: 0.75rem 0 0;
+  color: var(--cl-muted);
+  font-size: 1.02rem;
+  line-height: 1.55;
+}
+
+.cl-music-route-card {
+  display: grid;
+  align-content: center;
+  gap: 0.25rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--cl-surface) 72%, var(--cl-card));
+  padding: 1rem;
+}
+
+.cl-music-route-card span,
+.cl-music-route-card small {
+  color: var(--cl-muted);
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-music-route-card strong {
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.cl-music-principles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.cl-music-principles article,
+.cl-music-panel,
+.cl-music-subpanel {
+  border: 1px solid var(--cl-border);
+  border-radius: 22px;
+  background: var(--cl-card);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--cl-text) 5%, transparent);
+}
+
+.cl-music-principles article {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.9rem;
+}
+
+.cl-music-principles strong {
+  font-size: 0.95rem;
+}
+
+.cl-music-principles span {
+  color: var(--cl-muted);
+  line-height: 1.45;
+}
+
+.cl-music-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 430px);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.cl-music-main,
+.cl-music-side {
+  min-width: 0;
+}
+
+.cl-music-side,
+.cl-music-builder-stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.cl-music-panel,
+.cl-music-subpanel {
+  padding: 1rem;
+}
+
+.cl-music-panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 1rem;
+}
+
+.cl-music-panel-head h2,
+.cl-music-subhead h3,
+.cl-music-preview h2 {
+  margin: 0;
+  line-height: 1.1;
+}
+
+.cl-music-subhead {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.cl-music-subhead p:not(.cl-eyebrow) {
+  margin: 0;
+  color: var(--cl-muted);
+  line-height: 1.48;
+}
+
+.cl-music-panel-head p:not(.cl-eyebrow) {
+  max-width: 780px;
+  margin: 0.45rem 0 0;
+  color: var(--cl-muted);
+  line-height: 1.5;
+}
+
+.cl-music-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 0.25rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cl-surface) 70%, transparent);
+  padding: 0.25rem;
+}
+
+.cl-music-toggle button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--cl-muted);
+  padding: 0 0.75rem;
+  font: inherit;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.cl-music-toggle button.is-active {
+  background: var(--cl-text);
+  color: var(--cl-bg);
+}
+
+.cl-music-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.cl-music-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.cl-music-four {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.cl-music-field {
+  display: grid;
+  gap: 0.38rem;
+  min-width: 0;
+}
+
+.cl-music-field > span {
+  color: var(--cl-muted);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.cl-music-field input,
+.cl-music-field select,
+.cl-music-field textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--cl-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--cl-surface) 82%, var(--cl-card));
+  color: var(--cl-text);
+  font: inherit;
+  font-weight: 650;
+  outline: none;
+}
+
+.cl-music-field input,
+.cl-music-field select {
+  min-height: 42px;
+  padding: 0 0.75rem;
+}
+
+.cl-music-field textarea {
+  resize: vertical;
+  padding: 0.75rem;
+  line-height: 1.55;
+}
+
+.cl-music-field input:focus,
+.cl-music-field select:focus,
+.cl-music-field textarea:focus {
+  border-color: color-mix(in srgb, var(--cl-accent) 55%, var(--cl-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cl-accent) 12%, transparent);
+}
+
+.cl-music-builder-note,
+.cl-music-linked-note,
+.cl-music-rights-note,
+.cl-music-truth-box {
+  display: grid;
+  gap: 0.28rem;
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 34%, var(--cl-border));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--cl-warning) 10%, var(--cl-card));
+  padding: 0.8rem;
+}
+
+.cl-music-builder-note span,
+.cl-music-linked-note span,
+.cl-music-rights-note span,
+.cl-music-truth-box p {
+  color: var(--cl-muted);
+  line-height: 1.45;
+}
+
+.cl-music-builder-note span,
+.cl-music-linked-note span,
+.cl-music-rights-note span,
+.cl-music-truth-box p,
+.cl-music-preview-meta {
+  margin: 0;
+}
+
+.cl-music-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.cl-music-actions button {
+  min-height: 40px;
+  border: 1px solid var(--cl-border);
+  border-radius: 999px;
+  background: var(--cl-card);
+  color: var(--cl-text);
+  padding: 0 0.85rem;
+  font: inherit;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.cl-music-actions button:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--cl-text) 30%, var(--cl-border));
+}
+
+.cl-music-actions .cl-music-primary {
+  border-color: var(--cl-text);
+  background: var(--cl-text);
+  color: var(--cl-bg);
+}
+
+.cl-music-actions span {
+  color: var(--cl-muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.cl-music-stats {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.cl-music-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.cl-music-stat {
+  display: grid;
+  gap: 0.16rem;
+  min-width: 0;
+  border: 1px solid var(--cl-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--cl-surface) 72%, var(--cl-card));
+  padding: 0.72rem;
+}
+
+.cl-music-stat span {
+  color: var(--cl-muted);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-music-stat strong {
+  min-width: 0;
+  font-size: 0.92rem;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.cl-music-preview {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.cl-music-preview h2 {
+  font-size: 1.55rem;
+}
+
+.cl-music-preview-meta {
+  color: var(--cl-muted);
+  font-weight: 750;
+}
+
+.cl-music-preview article {
+  min-height: 120px;
+  border: 1px solid var(--cl-border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--cl-surface) 76%, var(--cl-card));
+  padding: 0.95rem;
+  line-height: 1.55;
+}
+
+.cl-music-preview article p {
+  margin: 0 0 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.cl-music-preview article p:last-child {
+  margin-bottom: 0;
+}
+
+.cl-music-cover,
+.cl-music-link-list {
+  display: grid;
+  gap: 0.3rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--cl-surface) 76%, var(--cl-card));
+  padding: 0.85rem;
+}
+
+.cl-music-cover {
+  min-height: 118px;
+  align-content: center;
+  border-style: dashed;
+}
+
+.cl-music-cover span,
+.cl-music-link-list span {
+  color: var(--cl-muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.cl-music-cover span {
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-music-cover strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.cl-music-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+}
+
+.cl-music-tags span {
+  border: 1px solid var(--cl-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cl-surface) 76%, var(--cl-card));
+  color: var(--cl-muted);
+  padding: 0.26rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.cl-music-route-debug dl {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.cl-music-route-debug dl > div {
+  display: grid;
+  grid-template-columns: 105px minmax(0, 1fr);
+  gap: 0.55rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 14px;
+  padding: 0.6rem;
+}
+
+.cl-music-route-debug dt {
+  color: var(--cl-muted);
+  font-weight: 900;
+}
+
+.cl-music-route-debug dd {
+  min-width: 0;
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1120px) {
+  .cl-music-layout,
+  .cl-music-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-music-side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cl-music-route-debug {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 820px) {
+  .cl-music-principles,
+  .cl-music-side,
+  .cl-music-two,
+  .cl-music-four,
+  .cl-music-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-music-panel-head {
+    display: grid;
+  }
+
+  .cl-music-toggle {
+    justify-self: start;
+  }
+
+  .cl-music-hero h1 {
+    font-size: clamp(2.2rem, 16vw, 4rem);
+  }
+}

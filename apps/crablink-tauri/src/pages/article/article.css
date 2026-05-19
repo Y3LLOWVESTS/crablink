@@ -1,0 +1,254 @@
+/*
+ * RO:WHAT — Styles for the React-owned crab://article workspace and publish flow.
+ * RO:WHY — NEXT_LEVEL text primitive work needs article drafting plus explicit gateway prepare/hold/publish stages.
+ * RO:INTERACTS — ArticlePage.jsx, ArticleDraft.jsx, ArticlePublishFlow.jsx, shared theme/form/card/layout styles, shell layout.
+ * RO:INVARIANTS — use CSS variables; never style local drafts as backend-confirmed truth.
+ * RO:TEST — visual/manual checks in CrabLink full-tab browser in light and dark mode.
+ */
+
+.article-page {
+  display: grid;
+  gap: 1rem;
+
+  --article-panel-bg: var(--cl-card, #ffffff);
+  --article-soft-bg: color-mix(in srgb, var(--cl-card, #ffffff) 74%, var(--cl-bg, #f5f4f1) 26%);
+  --article-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
+}
+
+[data-theme='dark'] .article-page {
+  --article-panel-bg: #0b0b0b;
+  --article-soft-bg: #050505;
+  --article-border-soft: #242424;
+}
+
+.article-draft-card,
+.article-publish-card {
+  min-width: 0;
+}
+
+.article-draft-intro,
+.article-publish-badges,
+.article-publish-actions,
+.article-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.article-draft-intro {
+  margin-bottom: 1rem;
+}
+
+.article-form-grid,
+.article-publish-grid,
+.article-publish-controls,
+.article-publish-success {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 0.9rem;
+}
+
+.article-publish-controls {
+  grid-template-columns: minmax(0, 1fr) 160px;
+}
+
+.article-inline-dev {
+  margin-top: 1rem;
+}
+
+.article-actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cl-border);
+}
+
+.article-action-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+  color: var(--cl-muted);
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.article-action-buttons {
+  justify-content: flex-end;
+}
+
+.article-preview {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.article-preview-subtitle,
+.article-preview-summary,
+.article-preview-meta {
+  margin: 0;
+}
+
+.article-preview-subtitle {
+  color: var(--cl-text);
+  font-size: 1rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.article-preview-summary {
+  color: var(--cl-muted);
+  line-height: 1.55;
+}
+
+.article-preview-meta {
+  color: var(--cl-muted);
+  font-weight: 700;
+}
+
+.article-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.article-preview-body {
+  min-height: 300px;
+  max-height: 560px;
+  overflow: auto;
+  white-space: pre-wrap;
+  border: 1px solid var(--cl-border);
+  border-radius: 18px;
+  background: var(--cl-surface);
+  color: var(--cl-text);
+  padding: 0.9rem;
+  font: inherit;
+  line-height: 1.65;
+}
+
+[data-theme='dark'] .article-preview-body {
+  background: #050505;
+}
+
+.article-section-copy,
+.article-publish-step p {
+  color: var(--cl-muted, #626262);
+  line-height: 1.55;
+}
+
+.article-publish-card .article-section-copy {
+  margin-bottom: 1rem;
+}
+
+.article-publish-warning {
+  display: grid;
+  gap: 0.25rem;
+  margin: 1rem 0;
+  padding: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--cl-warning, #d97706) 50%, var(--article-border-soft));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--cl-warning, #d97706) 11%, var(--article-soft-bg));
+}
+
+.article-publish-warning strong {
+  color: var(--cl-text, #111111);
+}
+
+.article-publish-warning span {
+  color: var(--cl-muted, #626262);
+  line-height: 1.45;
+}
+
+.article-publish-step {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--article-border-soft);
+  border-radius: 22px;
+  background: var(--article-soft-bg);
+}
+
+.article-publish-step header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.article-publish-step h3 {
+  margin: 0.1rem 0 0;
+  color: var(--cl-text, #111111);
+  font-size: 1.1rem;
+}
+
+.article-publish-actions {
+  align-items: center;
+}
+
+.article-publish-actions .cl-button {
+  min-width: max-content;
+}
+
+.article-publish-success {
+  margin-top: 0.25rem;
+}
+
+.article-publish-fact {
+  min-width: 0;
+  padding: 0.82rem;
+  border: 1px solid var(--article-border-soft);
+  border-radius: 16px;
+  background: var(--article-soft-bg);
+}
+
+.article-publish-fact span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.article-publish-fact strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--cl-text, #111111);
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.article-publish-fact .is-monospace {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 760px) {
+  .article-form-grid,
+  .article-publish-grid,
+  .article-publish-controls,
+  .article-publish-success {
+    grid-template-columns: 1fr;
+  }
+
+  .article-actions {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .article-action-buttons,
+  .article-publish-actions {
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .article-action-buttons .cl-button,
+  .article-publish-actions .cl-button {
+    width: 100%;
+  }
+
+  .article-publish-step header {
+    display: grid;
+  }
+}

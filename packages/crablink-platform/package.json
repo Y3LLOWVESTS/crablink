@@ -1,0 +1,8 @@
+{
+  "name": "@crablink/platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CrabLink platform adapter contracts for Chrome, Tauri, and tests.",
+  "type": "module",
+  "main": "src/index.js"
+}

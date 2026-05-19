@@ -1,6 +1,6 @@
 # =============================================================================
 # CrabLink .gitignore
-# Browser-client repo for RustyOnions / CrabLink Extension / future CrabLink browser
+# Browser-client repo for RustyOnions / CrabLink Extension / CrabLink Tauri
 # =============================================================================
 
 
@@ -18,7 +18,8 @@ Icon?
 ehthumbs.db
 Thumbs.db
 Desktop.ini
-
+CODEBUNDLE_TAURI_APP.md
+CODEBUNDLE_CHROME_EXTENSION.md
 
 # =============================================================================
 # Editor / IDE files
@@ -105,7 +106,7 @@ bower_components/
 # =============================================================================
 # Package manager lock notes
 # =============================================================================
-# Keep lockfiles when the repo starts using package managers.
+# Keep lockfiles tracked.
 # Do NOT ignore:
 # package-lock.json
 # pnpm-lock.yaml
@@ -130,7 +131,7 @@ bower_components/
 /tmp/
 /temp/
 /.cache/
-/.parcel-cache/
+/parcel-cache/
 /.turbo/
 /.rollup.cache/
 
@@ -143,6 +144,12 @@ bower_components/
 vite.config.*.timestamp-*
 vite.config.*.mjs.timestamp-*
 *.tsbuildinfo
+
+apps/**/dist/
+apps/**/build/
+apps/**/.vite/
+apps/**/.turbo/
+apps/**/coverage/
 
 
 # =============================================================================
@@ -221,13 +228,26 @@ DerivedData/
 
 
 # =============================================================================
-# Tauri / Rust future browser shell artifacts
+# Tauri / Rust browser shell artifacts
+# =============================================================================
+# Keep source under apps/crablink-tauri/src-tauri tracked.
+# Ignore generated Rust/Tauri build output only.
+# Keep Cargo.lock tracked for app crates unless we intentionally decide otherwise.
 # =============================================================================
 
 /target/
 Cargo.lock.bak
 
+apps/**/src-tauri/target/
+apps/**/src-tauri/gen/
+apps/**/src-tauri/.tauri/
+apps/**/src-tauri/target-debug/
+apps/**/src-tauri/target-release/
+
 src-tauri/target/
+src-tauri/gen/
+src-tauri/.tauri/
+
 browser/**/target/
 crates/**/target/
 
@@ -255,8 +275,10 @@ env/
 # =============================================================================
 # Generated local packages / generated code snapshots
 # =============================================================================
+# IMPORTANT:
+# Do not ignore /packages/ because packages/crablink-core and
+# packages/crablink-platform are real source packages.
 
-/packages/
 /packed/
 *.tar.gz
 

@@ -1,0 +1,27 @@
+/*
+ * RO:WHAT — Light theme token overrides for CrabLink.
+ * RO:WHY — Light mode is the default user-facing mode with a neutral black/white paper feel.
+ * RO:INTERACTS — themeTokens.css and ThemeProvider.
+ * RO:INVARIANTS — readable contrast; no blue default theme; no page-specific global hacks.
+ * RO:TEST — visual/manual theme smoke.
+ */
+
+[data-theme='light'] {
+  color-scheme: light;
+
+  --cl-bg: #f5f4f1;
+  --cl-surface: #fbfaf7;
+  --cl-card: #ffffff;
+  --cl-text: #111111;
+  --cl-muted: #626262;
+  --cl-border: #d9d6cf;
+
+  --cl-accent: #111111;
+  --cl-accent-contrast: #ffffff;
+
+  --cl-danger: #b42318;
+  --cl-warning: #8a4b00;
+  --cl-success: #166534;
+
+  --cl-ad-bg: #efede7;
+}

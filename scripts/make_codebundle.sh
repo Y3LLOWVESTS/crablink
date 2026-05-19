@@ -1,28 +1,24 @@
 #!/usr/bin/env bash
-# RO:WHAT — Builds a clean text-only CrabLink Chrome extension/refactor codebundle for review.
-# RO:WHY — NEXT_LEVEL DX/GOV; future AI/code review needs deterministic, readable source bundles.
-# RO:INTERACTS — root refactor docs/configs, extensions/chrome, shared, selected scripts, CODEBUNDLE_CHROME_EXTENSION.md.
-# RO:INVARIANTS — text source only; no binary dumps; include current green-gate/smoke/scaffold scripts; source of truth remains repo files.
+# RO:WHAT — Builds a clean text-only CrabLink Tauri app codebundle for review.
+# RO:WHY — Tauri-first DX/GOV; AI/code review needs deterministic native-app bundles separate from Chrome.
+# RO:INTERACTS — apps/crablink-tauri, packages/crablink-core, packages/crablink-platform, docs/tauri, selected scripts, CODEBUNDLE_TAURI_APP.md.
+# RO:INVARIANTS — text source only; no target/dist/node_modules dumps; Chrome proof bundle remains separate in make_codebundle_chrome.sh.
 # RO:METRICS — reports text and binary counts in the generated bundle.
 # RO:CONFIG — optional first arg sets output path.
-# RO:SECURITY — excludes transient artifacts and avoids dumping binary/local junk into review bundles.
+# RO:SECURITY — excludes transient artifacts, secrets, local state, generated package-lock noise, and build output.
 # RO:TEST — bash -n scripts/make_codebundle.sh && scripts/make_codebundle.sh.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT="${1:-$ROOT/CODEBUNDLE_CHROME_EXTENSION.md}"
-CHROME_DIR="$ROOT/extensions/chrome"
-SHARED_DIR="$ROOT/shared"
-DOCS_DIR="$ROOT/docs"
+OUT="${1:-$ROOT/CODEBUNDLE_TAURI_APP.md}"
 
-if [[ ! -d "$CHROME_DIR" ]]; then
-  echo "error: expected Chrome extension folder at: $CHROME_DIR"
-  exit 1
-fi
+TAURI_APP_DIR="$ROOT/apps/crablink-tauri"
+TAURI_DOCS_DIR="$ROOT/docs/tauri"
+PACKAGES_DIR="$ROOT/packages"
 
-if [[ ! -d "$SHARED_DIR" ]]; then
-  echo "error: expected shared folder at: $SHARED_DIR"
+if [[ ! -d "$TAURI_APP_DIR" ]]; then
+  echo "error: expected Tauri app folder at: $TAURI_APP_DIR"
   exit 1
 fi
 
@@ -47,9 +43,24 @@ lower_path() {
 
 lang_for_file() {
   local file
+  local base
+
   file="$(lower_path "$1")"
+  base="$(basename "$file")"
+
+  case "$base" in
+    .gitignore)
+      echo "text"
+      return 0
+      ;;
+    cargo.lock)
+      echo "toml"
+      return 0
+      ;;
+  esac
 
   case "$file" in
+    *.rs) echo "rust" ;;
     *.js|*.mjs|*.cjs|*.jsx) echo "javascript" ;;
     *.ts|*.mts|*.cts|*.tsx) echo "typescript" ;;
     *.json|*.jsonc) echo "json" ;;
@@ -62,22 +73,32 @@ lang_for_file() {
     *.txt|*.text) echo "text" ;;
     *.xml) echo "xml" ;;
     *.svg) echo "xml" ;;
+    *.plist) echo "xml" ;;
     *) echo "text" ;;
   esac
 }
 
 is_text_file() {
   local file
+  local base
+
   file="$(lower_path "$1")"
+  base="$(basename "$file")"
+
+  case "$base" in
+    .gitignore|cargo.lock|cargo.toml|build.rs|package.json|vite.config.js|vite.config.mjs|vite.config.cjs|eslint.config.js|prettier.config.js)
+      return 0
+      ;;
+  esac
 
   case "$file" in
+    *.rs)
+      return 0
+      ;;
     *.js|*.mjs|*.cjs|*.jsx|*.ts|*.mts|*.cts|*.tsx)
       return 0
       ;;
-    *.json|*.jsonc|*.html|*.htm|*.css|*.md|*.markdown|*.sh|*.bash|*.zsh|*.txt|*.text|*.yml|*.yaml|*.toml|*.xml|*.svg)
-      return 0
-      ;;
-    package.json|vite.config.js|vite.config.mjs|vite.config.cjs|eslint.config.js|prettier.config.js)
+    *.json|*.jsonc|*.html|*.htm|*.css|*.md|*.markdown|*.sh|*.bash|*.zsh|*.txt|*.text|*.yml|*.yaml|*.toml|*.xml|*.svg|*.plist)
       return 0
       ;;
     *)
@@ -105,27 +126,51 @@ is_excluded_path() {
   local rel="$1"
 
   case "$rel" in
-    CODEBUNDLE_CHROME_EXTENSION.md)
+    CODEBUNDLE_TAURI_APP.md|CODEBUNDLE_CHROME_EXTENSION.md)
       return 0
       ;;
-    dist/*|node_modules/*|coverage/*|.git/*|.vite/*)
+
+    # npm lockfiles are tracked in Git but too noisy for AI review bundles.
+    package-lock.json|apps/*/package-lock.json|packages/*/package-lock.json)
       return 0
       ;;
-    extensions/chrome/.DS_Store|extensions/chrome/assets/.DS_Store|extensions/chrome/assets/icons/.DS_Store)
+
+    .git/*|node_modules/*|dist/*|build/*|coverage/*|target/*|.vite/*|.turbo/*)
       return 0
       ;;
-    extensions/chrome/node_modules/*|extensions/chrome/dist/*|extensions/chrome/coverage/*|extensions/chrome/.vite/*)
+
+    apps/*/node_modules/*|apps/*/dist/*|apps/*/build/*|apps/*/coverage/*|apps/*/.vite/*|apps/*/.turbo/*)
       return 0
       ;;
-    shared/node_modules/*|shared/dist/*|shared/coverage/*|shared/.vite/*)
+
+    apps/*/src-tauri/target/*|apps/*/src-tauri/gen/*|apps/*/src-tauri/.tauri/*)
       return 0
       ;;
-    scripts/.DS_Store|shared/.DS_Store|docs/.DS_Store)
+
+    packages/*/node_modules/*|packages/*/dist/*|packages/*/build/*|packages/*/coverage/*|packages/*/.vite/*|packages/*/.turbo/*)
       return 0
       ;;
+
+    docs/tauri/dump/*)
+      return 0
+      ;;
+
+    scripts/.DS_Store|docs/.DS_Store|docs/tauri/.DS_Store|packages/.DS_Store)
+      return 0
+      ;;
+
     *.zip|*.tar|*.tar.gz|*.tgz|*.map)
       return 0
       ;;
+
+    *.sqlite|*.sqlite3|*.db|*.db-shm|*.db-wal|*.sled|*.redb|*.rocksdb)
+      return 0
+      ;;
+
+    *.pem|*.key|*.p12|*.pfx|*.crt|*.csr|*.token|*.secret)
+      return 0
+      ;;
+
     *)
       return 1
       ;;
@@ -162,7 +207,8 @@ selected_root_files() {
     "$ROOT/SECURITY.md" \
     "$ROOT/CONTRIBUTING.md" \
     "$ROOT/package.json" \
-    "$ROOT/vite.config.js"
+    "$ROOT/vite.config.js" \
+    "$ROOT/.gitignore"
   do
     if [[ -f "$file" ]]; then
       echo "$file"
@@ -172,15 +218,10 @@ selected_root_files() {
 
 selected_scripts() {
   for script in \
-    "$ROOT/scripts/check-chrome.sh" \
-    "$ROOT/scripts/check-react-lane.sh" \
-    "$ROOT/scripts/package-chrome.sh" \
-    "$ROOT/scripts/smoke-local-gateway.sh" \
-    "$ROOT/scripts/smoke-profile-gateway.sh" \
-    "$ROOT/scripts/smoke-first-run-profile.sh" \
-    "$ROOT/scripts/smoke-site-create-local.sh" \
-    "$ROOT/scripts/green-gate-local.sh" \
-    "$ROOT/scripts/scaffold_crablink_refactor.sh" \
+    "$ROOT/scripts/check-tauri.sh" \
+    "$ROOT/scripts/smoke-tauri-local-gateway.sh" \
+    "$ROOT/scripts/migrate_chrome_react_to_tauri.sh" \
+    "$ROOT/scripts/scaffold_crablink_tauri.sh" \
     "$ROOT/scripts/make_codebundle.sh"
   do
     if [[ -f "$script" ]]; then
@@ -192,23 +233,42 @@ selected_scripts() {
 candidate_files() {
   selected_root_files
 
-  if [[ -d "$DOCS_DIR" ]]; then
-    find "$DOCS_DIR" \
+  if [[ -d "$TAURI_DOCS_DIR" ]]; then
+    find "$TAURI_DOCS_DIR" \
       \( -name .git \
          -o -name node_modules \
          -o -name dist \
+         -o -name build \
          -o -name coverage \
          -o -name .vite \
+         -o -name dump \
       \) -prune -o -type f -print 2>/dev/null
   fi
 
-  find "$CHROME_DIR" "$SHARED_DIR" \
+  find "$TAURI_APP_DIR" \
     \( -name .git \
        -o -name node_modules \
        -o -name dist \
+       -o -name build \
        -o -name coverage \
        -o -name .vite \
+       -o -name .turbo \
+       -o -name target \
+       -o -name gen \
+       -o -name .tauri \
     \) -prune -o -type f -print 2>/dev/null
+
+  if [[ -d "$PACKAGES_DIR" ]]; then
+    find "$PACKAGES_DIR" \
+      \( -name .git \
+         -o -name node_modules \
+         -o -name dist \
+         -o -name build \
+         -o -name coverage \
+         -o -name .vite \
+         -o -name .turbo \
+      \) -prune -o -type f -print 2>/dev/null
+  fi
 
   selected_scripts
 }
@@ -319,11 +379,11 @@ binary_count="$(binary_files | count_stream)"
 
 {
   echo "<!-- Generated by scripts/make_codebundle.sh on $timestamp -->"
-  echo "# Code Bundle — CrabLink Chrome Extension"
+  echo "# Code Bundle — CrabLink Tauri App"
   echo
   echo "> Generated for review/sharing. Source of truth remains the repo."
-  echo "> Includes root refactor docs/configs, Chrome extension source, shared browser-client helpers, schemas, fixtures, and relevant scripts."
-  echo "> Binary assets and OS/editor metadata are intentionally omitted from file-body dumps."
+  echo "> Includes Tauri app source, Tauri Rust command bridge, Tauri IDBs, platform/core migration packages, and selected Tauri scripts."
+  echo "> Excludes Chrome extension source, node_modules, dist, target, transient state, secrets, generated npm lockfile bodies, and binary file bodies."
   echo
   echo "- Root: $ROOT"
   echo "- Generated: $timestamp"
@@ -340,18 +400,15 @@ binary_count="$(binary_files | count_stream)"
   echo "CONTRIBUTING.md"
   echo "package.json"
   echo "vite.config.js"
-  echo "docs/"
-  echo "extensions/chrome/"
-  echo "shared/"
-  echo "scripts/check-chrome.sh"
-  echo "scripts/check-react-lane.sh"
-  echo "scripts/package-chrome.sh"
-  echo "scripts/smoke-local-gateway.sh"
-  echo "scripts/smoke-profile-gateway.sh"
-  echo "scripts/smoke-first-run-profile.sh"
-  echo "scripts/smoke-site-create-local.sh"
-  echo "scripts/green-gate-local.sh"
-  echo "scripts/scaffold_crablink_refactor.sh"
+  echo ".gitignore"
+  echo "docs/tauri/"
+  echo "apps/crablink-tauri/"
+  echo "packages/crablink-core/"
+  echo "packages/crablink-platform/"
+  echo "scripts/check-tauri.sh"
+  echo "scripts/smoke-tauri-local-gateway.sh"
+  echo "scripts/scaffold_crablink_tauri.sh"
+  echo "scripts/migrate_chrome_react_to_tauri.sh"
   echo "scripts/make_codebundle.sh"
   echo '```'
   echo

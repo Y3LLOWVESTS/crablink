@@ -1,0 +1,596 @@
+/*
+ * RO:WHAT — Styles for the React-owned typed asset page.
+ * RO:WHY — Gives crab://<hash>.<kind> gateway hydration a professional protected-route layout.
+ * RO:INTERACTS — AssetPage.jsx, AssetResolver.jsx, AssetHydratedView.jsx, shared theme/card/layout styles.
+ * RO:INVARIANTS — CSS only; use shared theme tokens; no hard-coded backend truth.
+ * RO:TEST — visual/manual checks in light/dark mode with gateway online/offline.
+ */
+
+.asset-page {
+  display: grid;
+  gap: 1rem;
+  width: min(1500px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+
+  --asset-panel-bg: var(--cl-card, #ffffff);
+  --asset-soft-bg: color-mix(in srgb, var(--cl-card, #ffffff) 74%, var(--cl-bg, #f5f4f1) 26%);
+  --asset-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
+  --asset-ok-border: color-mix(in srgb, var(--cl-success, #12805c) 42%, var(--asset-border-soft));
+  --asset-warn-border: color-mix(in srgb, var(--cl-warning, #a15c00) 42%, var(--asset-border-soft));
+  --asset-danger-border: color-mix(in srgb, var(--cl-danger, #b42318) 44%, var(--asset-border-soft));
+}
+
+[data-theme='dark'] .asset-page {
+  --asset-panel-bg: #0b0b0b;
+  --asset-soft-bg: #050505;
+  --asset-border-soft: #242424;
+}
+
+.asset-page *,
+.asset-page *::before,
+.asset-page *::after {
+  box-sizing: border-box;
+}
+
+.asset-page .cl-card,
+.asset-page .cl-card-head,
+.asset-page .cl-card-body,
+.asset-page .cl-card-actions,
+.asset-page .cl-json-preview,
+.asset-page .cl-json,
+.asset-page code {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.asset-page-actions,
+.asset-copy-actions,
+.asset-error-actions,
+.asset-status-row,
+.asset-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.asset-route-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: stretch;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 24px;
+  background: var(--asset-panel-bg);
+  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.05));
+}
+
+.asset-route-main,
+.asset-route-mini-grid div,
+.asset-fact-grid div,
+.asset-policy-list div,
+.asset-problem-facts div,
+.asset-resolved-timing div {
+  min-width: 0;
+  padding: 0.72rem;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 16px;
+  background: var(--asset-soft-bg);
+}
+
+.asset-route-main span,
+.asset-route-mini-grid span,
+.asset-fact-grid span,
+.asset-problem-facts span,
+.asset-resolved-timing span,
+.asset-policy-list dt,
+.asset-preview-source-strip span,
+.asset-preview-fallbacks strong,
+.asset-attempt-list span {
+  display: block;
+  margin-bottom: 0.28rem;
+  color: var(--cl-muted, #626262);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.asset-route-main strong,
+.asset-route-mini-grid strong,
+.asset-fact-grid strong,
+.asset-problem-facts strong,
+.asset-resolved-timing strong,
+.asset-policy-list dd,
+.asset-preview-source-strip strong {
+  display: block;
+  margin: 0;
+  color: var(--cl-text, #111111);
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.asset-route-mini-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.asset-route-actions {
+  display: grid;
+  gap: 0.5rem;
+  align-content: center;
+  min-width: 165px;
+}
+
+.is-mono strong,
+.asset-preview-fallbacks code,
+.asset-route-main strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.82rem;
+}
+
+.asset-resolver-loading {
+  min-width: 0;
+}
+
+.asset-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 330px);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.asset-summary-card {
+  min-width: 0;
+}
+
+.asset-description,
+.asset-muted,
+.asset-problem-copy,
+.asset-problem-message,
+.asset-problem-help span,
+.asset-preview-empty span {
+  margin: 0;
+  color: var(--cl-muted, #626262);
+  line-height: 1.5;
+}
+
+.asset-status-row {
+  margin: 1rem 0;
+}
+
+.asset-fact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.asset-tags {
+  margin-top: 0.9rem;
+}
+
+.asset-side-panel {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+  align-content: start;
+  min-width: 0;
+}
+
+.asset-preview-card,
+.asset-detail-grid > .cl-card {
+  min-width: 0;
+}
+
+.asset-image-preview-shell {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  min-height: 360px;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 24px;
+  background:
+    linear-gradient(45deg, color-mix(in srgb, var(--cl-text, #111111) 4%, transparent) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in srgb, var(--cl-text, #111111) 4%, transparent) 25%, transparent 25%),
+    var(--asset-soft-bg);
+  background-size: 18px 18px;
+}
+
+.asset-image-preview-shell img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+.asset-preview-empty {
+  display: grid;
+  gap: 0.35rem;
+  min-height: 180px;
+  place-items: center;
+  text-align: center;
+  border: 1px dashed var(--asset-warn-border);
+  border-radius: 22px;
+  background: var(--asset-soft-bg);
+  padding: 1.2rem;
+}
+
+.asset-preview-empty strong {
+  color: var(--cl-text, #111111);
+}
+
+.asset-preview-source-strip {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.35fr) minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.asset-preview-source-strip div {
+  min-width: 0;
+  padding: 0.7rem;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 16px;
+  background: var(--asset-soft-bg);
+}
+
+.asset-preview-fallbacks {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+  padding: 0.8rem;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 16px;
+  background: var(--asset-soft-bg);
+}
+
+.asset-preview-fallbacks div {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.3fr) minmax(0, 1fr);
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.asset-preview-fallbacks code {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--cl-text, #111111);
+}
+
+.asset-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.asset-policy-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.asset-attempt-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.asset-attempt-list div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: center;
+  min-width: 0;
+  padding: 0.72rem;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 16px;
+  background: var(--asset-soft-bg);
+}
+
+.asset-attempt-list div.is-ok {
+  border-color: var(--asset-ok-border);
+}
+
+.asset-attempt-list div.is-error {
+  border-color: var(--asset-danger-border);
+}
+
+.asset-attempt-list strong,
+.asset-attempt-list small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.asset-attempt-list strong {
+  color: var(--cl-text, #111111);
+}
+
+.asset-attempt-list small {
+  color: var(--cl-muted, #626262);
+}
+
+.asset-resolved-timing {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0.85rem 0;
+}
+
+.asset-problem-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.asset-problem-card {
+  border-color: var(--asset-danger-border);
+}
+
+.asset-problem-warning {
+  border-color: var(--asset-warn-border);
+}
+
+.asset-problem-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.asset-problem-message {
+  margin-top: 0.75rem;
+  padding: 0.8rem;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 16px;
+  background: var(--asset-soft-bg);
+}
+
+.asset-problem-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.9rem;
+}
+
+.asset-problem-help {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.9rem;
+  padding: 0.85rem;
+  border: 1px solid var(--asset-warn-border);
+  border-radius: 16px;
+  background: var(--asset-soft-bg);
+}
+
+.asset-problem-help strong {
+  color: var(--cl-text, #111111);
+}
+
+@media (max-width: 1100px) {
+  .asset-route-hero,
+  .asset-overview-grid,
+  .asset-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-route-actions {
+    display: flex;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .asset-side-panel {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .asset-problem-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 780px) {
+  .asset-fact-grid,
+  .asset-side-panel,
+  .asset-problem-facts,
+  .asset-preview-source-strip,
+  .asset-preview-fallbacks div,
+  .asset-attempt-list div,
+  .asset-resolved-timing {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-route-actions,
+  .asset-route-actions .cl-button,
+  .asset-error-actions,
+  .asset-error-actions .cl-button,
+  .asset-copy-actions,
+  .asset-copy-actions .cl-button {
+    width: 100%;
+  }
+}
+
+.asset-text-content-card {
+  border-color: rgba(18, 128, 92, 0.28);
+}
+
+.asset-text-body {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.95rem;
+  padding: 1rem;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 18px;
+  background: var(--asset-soft-bg);
+}
+
+.asset-text-body span {
+  color: var(--cl-muted, #626262);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.asset-text-body strong {
+  color: var(--cl-text, #111111);
+  font-size: 1.2rem;
+  letter-spacing: -0.03em;
+}
+
+.asset-text-body p {
+  margin: 0;
+  color: var(--cl-text, #111111);
+  font-size: 1rem;
+  line-height: 1.62;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.asset-preview-empty code {
+  display: block;
+  margin-top: 0.7rem;
+  color: var(--cl-muted, #626262);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.asset-content-view-card {
+  border-color: color-mix(in srgb, var(--cl-warning, #a15c00) 32%, var(--asset-border-soft));
+}
+
+.asset-content-view-card.is-paid {
+  border-color: var(--asset-ok-border);
+}
+
+.asset-content-view-status,
+.asset-content-view-json {
+  margin-top: 0.85rem;
+}
+
+.asset-content-view-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.asset-content-view-facts {
+  margin-top: 0.9rem;
+}
+
+.asset-content-view-receipt {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.9rem;
+}
+
+.asset-content-view-receipt .asset-fact {
+  border-color: var(--asset-ok-border);
+}
+
+.asset-content-view-json {
+  padding: 0.85rem;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 16px;
+  background: var(--asset-soft-bg);
+}
+
+.asset-content-view-json summary {
+  cursor: pointer;
+  color: var(--cl-text, #111111);
+  font-weight: 900;
+}
+
+@media (max-width: 780px) {
+  .asset-content-view-receipt {
+    grid-template-columns: 1fr;
+  }
+}
+/* RO:WHAT — Paid text asset render and receipt wrapping fixes.
+ * RO:WHY — Long txid/receipt/ledger strings must not overflow, and fact labels/values need block layout.
+ * RO:INVARIANTS — CSS only; no payment, receipt, wallet, or asset truth is created here.
+ */
+
+.asset-fact {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.asset-fact span {
+  display: block;
+  margin-bottom: 0.28rem;
+  color: var(--cl-muted, #626262);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.asset-fact strong {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--cl-text, #111111);
+  font-weight: 850;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.asset-fact strong.is-monospace,
+.asset-fact .is-monospace {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.78rem;
+}
+
+.asset-content-view-receipt {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.asset-content-view-receipt .asset-fact {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.asset-content-view-receipt .asset-fact strong {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.asset-attempt-list strong,
+.asset-preview-source-strip strong,
+.asset-preview-fallbacks strong {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.asset-video-preview-shell {
+  overflow: hidden;
+  border: 1px solid var(--cl-border);
+  border-radius: 22px;
+  background: #050505;
+}
+
+.asset-video-preview-shell video {
+  display: block;
+  width: 100%;
+  max-height: 68vh;
+  background: #050505;
+}

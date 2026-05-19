@@ -1,0 +1,176 @@
+/*
+ * RO:WHAT — Styles for the React-owned structured problem page.
+ * RO:WHY — Makes gateway/router/policy failures clear without looking like a broken app.
+ * RO:INTERACTS — ProblemPage.jsx and shared theme/card/button/json components.
+ * RO:INVARIANTS — CSS only; no fake success; no route/backend behavior.
+ * RO:TEST — visual/manual problem route smoke in light and dark mode.
+ */
+
+.problem-page {
+  display: grid;
+  gap: 1rem;
+  width: min(1500px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+
+  --problem-panel-bg: var(--cl-card, #ffffff);
+  --problem-soft-bg: color-mix(in srgb, var(--cl-card, #ffffff) 76%, var(--cl-bg, #f5f4f1) 24%);
+  --problem-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
+  --problem-info-border: color-mix(in srgb, var(--cl-info, #2a6fbb) 38%, var(--problem-border-soft));
+  --problem-warning-border: color-mix(in srgb, var(--cl-warning, #a15c00) 44%, var(--problem-border-soft));
+  --problem-danger-border: color-mix(in srgb, var(--cl-danger, #b42318) 46%, var(--problem-border-soft));
+}
+
+[data-theme='dark'] .problem-page {
+  --problem-panel-bg: #0b0b0b;
+  --problem-soft-bg: #050505;
+  --problem-border-soft: #242424;
+}
+
+.problem-page *,
+.problem-page *::before,
+.problem-page *::after {
+  box-sizing: border-box;
+}
+
+.problem-page .cl-card,
+.problem-page .cl-card-head,
+.problem-page .cl-card-body,
+.problem-page .cl-card-actions,
+.problem-page .cl-json-preview,
+.problem-page .cl-json {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.problem-actions,
+.problem-badge-row,
+.problem-remediation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.problem-overview-grid,
+.problem-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.62fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.problem-summary-card {
+  border-color: var(--problem-info-border);
+}
+
+.problem-summary-card.is-warning {
+  border-color: var(--problem-warning-border);
+}
+
+.problem-summary-card.is-danger {
+  border-color: var(--problem-danger-border);
+}
+
+.problem-copy {
+  margin: 0;
+  color: var(--cl-muted, #626262);
+  line-height: 1.55;
+}
+
+.problem-badge-row {
+  margin: 1rem 0;
+}
+
+.problem-fact-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.problem-fact-grid div,
+.problem-remediation,
+.problem-dl div {
+  min-width: 0;
+  padding: 0.78rem;
+  border: 1px solid var(--problem-border-soft);
+  border-radius: 16px;
+  background: var(--problem-soft-bg);
+}
+
+.problem-fact-grid span,
+.problem-dl dt {
+  display: block;
+  margin: 0 0 0.25rem;
+  color: var(--cl-muted, #626262);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.problem-fact-grid strong,
+.problem-dl dd,
+.problem-remediation strong {
+  display: block;
+  margin: 0;
+  color: var(--cl-text, #111111);
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.problem-fact-grid .is-mono strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.82rem;
+}
+
+.problem-remediation {
+  display: grid;
+  gap: 0.35rem;
+  border-color: var(--problem-warning-border);
+}
+
+.problem-remediation span {
+  color: var(--cl-muted, #626262);
+  line-height: 1.5;
+}
+
+.problem-remediation-actions {
+  margin-top: 0.8rem;
+}
+
+.problem-dl {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+}
+
+.problem-safety-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--cl-muted, #626262);
+  line-height: 1.5;
+}
+
+.problem-safety-list li {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1100px) {
+  .problem-overview-grid,
+  .problem-detail-grid,
+  .problem-fact-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .problem-actions,
+  .problem-actions .cl-button,
+  .problem-remediation-actions,
+  .problem-remediation-actions .cl-button {
+    width: 100%;
+  }
+}

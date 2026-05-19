@@ -1,0 +1,473 @@
+/**
+ * RO:WHAT — Styles for the CrabLink local library route.
+ * RO:WHY — Gives profiles/sites/assets/receipts a polished user-facing page without changing backend truth.
+ * RO:INTERACTS — LibraryPage.jsx and shared theme tokens.
+ * RO:INVARIANTS — readable in light/dark; long hashes wrap; no hidden proof text.
+ * RO:TEST — crab://library in light and dark themes with profile/site/image/post/comment/article/receipt entries.
+ */
+
+.library-page {
+  display: grid;
+  gap: 18px;
+}
+
+.cl-library-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.cl-library-copy-state {
+  margin: -4px 0 0;
+  color: var(--cl-muted, #626262);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.cl-library-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cl-library-stat {
+  min-width: 0;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 22px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--cl-accent, #111) 9%, transparent), transparent 44%),
+    var(--cl-card, #ffffff);
+  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.06));
+}
+
+.cl-library-stat span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-library-stat strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--cl-text, #111111);
+  font-size: clamp(34px, 6vw, 58px);
+  font-weight: 950;
+  line-height: 0.92;
+  letter-spacing: -0.08em;
+}
+
+.cl-library-stat p {
+  margin: 8px 0 0;
+  color: var(--cl-muted, #626262);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.cl-library-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cl-library-proof-group {
+  min-width: 0;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 20px;
+  padding: 14px;
+  background: var(--cl-card, #ffffff);
+  box-shadow: var(--cl-shadow-soft, 0 12px 26px rgba(0, 0, 0, 0.045));
+}
+
+.cl-library-proof-group.is-active {
+  border-color: color-mix(in srgb, var(--cl-accent, #111) 52%, var(--cl-border, #dddddd));
+}
+
+.cl-library-proof-group header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cl-library-proof-group header span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-library-proof-group header strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--cl-text, #111111);
+  font-size: 30px;
+  font-weight: 950;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+}
+
+.cl-library-proof-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cl-library-toolbar {
+  display: grid;
+  gap: 12px;
+}
+
+.cl-library-toolbar-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.cl-library-search {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cl-library-search span {
+  color: var(--cl-muted, #626262);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-library-search input {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.28));
+  border-radius: 16px;
+  padding: 0 14px;
+  background: var(--cl-input-bg, var(--cl-surface, #ffffff));
+  color: var(--cl-text, #111111);
+  font: inherit;
+  font-weight: 750;
+  outline: none;
+}
+
+.cl-library-search input:focus {
+  border-color: color-mix(in srgb, var(--cl-accent, #111) 48%, var(--cl-border, #dddddd));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cl-accent, #111) 12%, transparent);
+}
+
+.cl-library-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.cl-library-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cl-library-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.28));
+  border-radius: 999px;
+  padding: 0 11px;
+  background: var(--cl-card, #ffffff);
+  color: var(--cl-text, #111111);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+}
+
+.cl-library-tabs button strong {
+  display: inline-grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cl-text, #111111) 8%, transparent);
+  font-size: 11px;
+}
+
+.cl-library-tabs button.is-active {
+  background: var(--cl-text, #111111);
+  color: var(--cl-bg, #ffffff);
+  border-color: var(--cl-text, #111111);
+}
+
+.cl-library-tabs button.is-active strong {
+  background: color-mix(in srgb, var(--cl-bg, #ffffff) 18%, transparent);
+}
+
+.cl-library-section-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.cl-library-section {
+  display: grid;
+  gap: 12px;
+}
+
+.cl-library-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cl-library-section-head h2 {
+  margin: 2px 0 0;
+  color: var(--cl-text, #111111);
+  font-size: clamp(22px, 4vw, 40px);
+  font-weight: 950;
+  line-height: 0.94;
+  letter-spacing: -0.07em;
+}
+
+.cl-library-section-head p:not(.cl-eyebrow),
+.cl-library-section-copy {
+  margin: 7px 0 0;
+  color: var(--cl-muted, #626262);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.42;
+}
+
+.cl-library-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cl-library-card {
+  min-width: 0;
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border-radius: 22px;
+  padding: 16px;
+  background: var(--cl-card, #ffffff);
+  box-shadow: var(--cl-shadow-soft, 0 12px 28px rgba(0, 0, 0, 0.05));
+}
+
+.cl-library-card.is-post,
+.cl-library-card.is-comment,
+.cl-library-card.is-article,
+.cl-library-card.is-image {
+  border-color: color-mix(in srgb, var(--cl-success, #16703d) 45%, var(--cl-border, #dddddd));
+}
+
+.cl-library-card header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.cl-library-card header span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-library-card header strong {
+  display: block;
+  min-width: 0;
+  margin-top: 3px;
+  color: var(--cl-text, #111111);
+  font-size: 18px;
+  font-weight: 950;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+
+.cl-library-card-main {
+  display: grid;
+  gap: 8px;
+}
+
+.cl-library-fact {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--cl-border, #dddddd) 75%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--cl-surface, #f7f5ef) 78%, transparent);
+}
+
+.cl-library-fact span {
+  color: var(--cl-muted, #626262);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-library-fact strong {
+  min-width: 0;
+  color: var(--cl-text, #111111);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.cl-library-fact strong.is-monospace {
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    monospace;
+  font-size: 11px;
+}
+
+.cl-library-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.cl-library-text-readiness {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.cl-library-readiness-pill {
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.24));
+  border-radius: 18px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--cl-surface, #f7f5ef) 82%, transparent);
+}
+
+.cl-library-readiness-pill.is-ready {
+  border-color: color-mix(in srgb, var(--cl-success, #16703d) 45%, var(--cl-border, #dddddd));
+}
+
+.cl-library-readiness-pill span {
+  display: block;
+  color: var(--cl-muted, #626262);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-library-readiness-pill strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--cl-text, #111111);
+  font-size: 32px;
+  font-weight: 950;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+}
+
+.cl-library-readiness-pill em {
+  display: block;
+  margin-top: 4px;
+  color: var(--cl-muted, #626262);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.cl-library-empty {
+  grid-column: 1 / -1;
+}
+
+.cl-library-dev-json {
+  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.24));
+  border-radius: 20px;
+  padding: 14px;
+  background: var(--cl-card, #ffffff);
+}
+
+.cl-library-dev-json summary {
+  cursor: pointer;
+  color: var(--cl-text, #111111);
+  font-weight: 950;
+}
+
+@media (max-width: 1320px) {
+  .cl-library-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .cl-library-proof-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1120px) {
+  .cl-library-list {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-library-toolbar-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-library-toolbar-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .cl-library-stat-grid,
+  .cl-library-proof-grid,
+  .cl-library-text-readiness {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-library-header-actions,
+  .cl-library-card-actions,
+  .cl-library-toolbar-actions {
+    justify-content: stretch;
+  }
+
+  .cl-library-header-actions .cl-button,
+  .cl-library-card-actions .cl-button,
+  .cl-library-toolbar-actions .cl-button,
+  .cl-library-proof-actions .cl-button {
+    width: 100%;
+  }
+
+  .cl-library-card header,
+  .cl-library-fact {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-library-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

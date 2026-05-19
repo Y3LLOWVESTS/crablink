@@ -1,0 +1,27 @@
+/*
+ * RO:WHAT — Dark theme token overrides for CrabLink.
+ * RO:WHY — Provides a true black neutral dark mode instead of a dark-blue mode.
+ * RO:INTERACTS — themeTokens.css and ThemeProvider.
+ * RO:INVARIANTS — readable contrast; black/gray dark mode; no blue default theme.
+ * RO:TEST — visual/manual theme smoke.
+ */
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --cl-bg: #000000;
+  --cl-surface: #050505;
+  --cl-card: #0b0b0b;
+  --cl-text: #f4f4f4;
+  --cl-muted: #a3a3a3;
+  --cl-border: #2a2a2a;
+
+  --cl-accent: #f4f4f4;
+  --cl-accent-contrast: #000000;
+
+  --cl-danger: #ff6b6b;
+  --cl-warning: #f59e0b;
+  --cl-success: #4ade80;
+
+  --cl-ad-bg: #050505;
+}

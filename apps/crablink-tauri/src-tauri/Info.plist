@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  RO:WHAT — macOS privacy usage strings for CrabLink local stream preview.
+  RO:WHY — macOS requires purpose strings before camera/microphone prompts can be shown.
+  RO:INTERACTS — WebView getUserMedia, future native media module, stream control room.
+  RO:INVARIANTS — permission prompt only; no capture starts without explicit user click; no backend stream truth.
+  RO:SECURITY — do not add broad local-file, contacts, location, shell, automation, or unrelated permissions here.
+-->
+<plist version="1.0">
+<dict>
+  <key>NSCameraUsageDescription</key>
+  <string>CrabLink uses the camera only when you explicitly start a local stream preview or future creator stream.</string>
+
+  <key>NSMicrophoneUsageDescription</key>
+  <string>CrabLink uses the microphone only when you explicitly enable audio for a local stream preview or future creator stream.</string>
+</dict>
+</plist>

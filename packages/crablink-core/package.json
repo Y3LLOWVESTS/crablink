@@ -1,0 +1,8 @@
+{
+  "name": "@crablink/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Platform-neutral CrabLink React core migration target.",
+  "type": "module",
+  "main": "src/index.js"
+}
