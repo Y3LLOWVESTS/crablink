@@ -594,3 +594,177 @@
   max-height: 68vh;
   background: #050505;
 }
+/* RO:WHAT — Stream-lite paid viewer styles for .stream asset pages.
+ * RO:WHY — Render backend-returned latest stream segment after receipt without fake local playback.
+ * RO:INVARIANTS — CSS only; no stream/session/payment truth is created here.
+ */
+
+.asset-stream-viewer-card {
+  border-color: color-mix(in srgb, var(--cl-success, #15b86a) 35%, var(--asset-border-soft));
+}
+
+.asset-stream-lite-status {
+  min-height: 9rem;
+}
+
+.asset-stream-lite-warning {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.95rem;
+  padding: 0.95rem;
+  border: 1px dashed color-mix(in srgb, var(--cl-warning, #a15c00) 55%, var(--asset-border-soft));
+  border-radius: 18px;
+  background: var(--asset-soft-bg);
+}
+
+.asset-stream-lite-warning strong {
+  color: var(--cl-text, #111111);
+  font-weight: 950;
+}
+
+.asset-stream-lite-warning span {
+  color: var(--cl-muted, #626262);
+  line-height: 1.5;
+}
+
+.asset-stream-lite-warning code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.asset-stream-lite-player {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--asset-ok-border);
+  border-radius: 22px;
+  background: #050505;
+  color: #ffffff;
+  overflow: hidden;
+}
+
+.asset-stream-lite-player-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.asset-stream-lite-player-head div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.asset-stream-lite-player-head span,
+.asset-stream-lite-player-head small {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.asset-stream-lite-player-head strong {
+  color: #ffffff;
+  font-weight: 950;
+}
+
+.asset-stream-lite-player img {
+  display: block;
+  width: 100%;
+  max-height: 68vh;
+  object-fit: contain;
+  border-radius: 16px;
+  background: #000000;
+}
+
+.asset-stream-lite-text {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* RO:WHAT — Paid stream latest-segment polling controls.
+ * RO:WHY — Makes stream-lite viewer refresh explicit after backend receipt proof.
+ * RO:INVARIANTS — CSS only; no receipt, payment, stream, or cache truth is created here.
+ */
+
+.asset-stream-poll-card {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--cl-success, #15b86a) 30%, var(--asset-border-soft));
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--cl-success, #15b86a) 10%, transparent), transparent 40%),
+    var(--asset-soft-bg);
+}
+
+.asset-stream-poll-card > div:first-child {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.asset-stream-poll-card > div:first-child > span,
+.asset-stream-poll-select span {
+  color: var(--cl-muted, #626262);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.asset-stream-poll-card > div:first-child > strong {
+  color: var(--cl-text, #111111);
+  font-size: 1rem;
+  font-weight: 980;
+}
+
+.asset-stream-poll-card > div:first-child > small {
+  color: var(--cl-muted, #626262);
+  line-height: 1.5;
+}
+
+.asset-stream-poll-select {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.asset-stream-poll-select select {
+  width: 100%;
+  border: 1px solid var(--asset-border-soft);
+  border-radius: 14px;
+  background: var(--asset-card-bg);
+  color: var(--cl-text, #111111);
+  font: inherit;
+  font-weight: 850;
+  padding: 0.62rem 0.75rem;
+}
+
+.asset-stream-poll-select select:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.asset-stream-poll-stats {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  .asset-stream-poll-stats {
+    grid-template-columns: 1fr;
+  }
+}

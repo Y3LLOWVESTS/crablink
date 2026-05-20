@@ -183,7 +183,18 @@ export async function openDevPassportSessionWindow({
   }
 
   if (isTauriRuntime()) {
-    return switchCurrentWindowToSessionUrl(url, sessionId, 'tauri_current_window');
+    /*
+     * Tauri stream safety:
+     * never rewrite the WebView URL/history from a dev passport action.
+     * PassportDrawer applies the local labels through settings instead.
+     */
+    return Object.freeze({
+      switchedCurrentWindow: false,
+      tauriSettingsOnly: true,
+      sessionId: normalizeSessionId(sessionId),
+      url,
+      reason: 'tauri_settings_only_no_window_navigation',
+    });
   }
 
   let opened = null;
@@ -247,25 +258,51 @@ function switchCurrentWindowToSessionUrl(url, sessionId, reason) {
     throw new Error('Cannot switch dev session without a target URL.');
   }
 
-  const current = new URL(globalThis.location?.href || 'http://127.0.0.1:1420/');
-  const next = new URL(target);
+  const safeSessionId = normalizeSessionId(sessionId);
+  const next = new URL(target, globalThis.location?.href || 'http://127.0.0.1:1420/');
 
-  globalThis.location?.assign?.(target);
+  /*
+   * Critical Tauri rule:
+   * Do not call location.assign() or location.reload() here.
+   *
+   * The Tauri WebView is the native client window. Reloading it destroys
+   * route-owned React state and stops local MediaStreams. A dev passport
+   * switch is only a display/session label change for testing creator/visitor
+   * flows; it must not remount the stream tab.
+   */
+  try {
+    globalThis.history?.replaceState?.(
+      {
+        ...(globalThis.history?.state || {}),
+        crablinkDevPassportSession: safeSessionId,
+        crablinkDevPassportSwitchReason: reason,
+      },
+      '',
+      next,
+    );
+  } catch (_error) {
+    // History can be restricted in some preview contexts. The setting patch
+    // in PassportDrawer remains the source for this React session.
+  }
 
-  if (current.origin === next.origin && current.pathname === next.pathname && current.search === next.search) {
-    globalThis.setTimeout?.(() => {
-      try {
-        globalThis.location?.reload?.();
-      } catch (_error) {
-        // If reload is blocked, the hash route still changed and the route hook can react to it.
-      }
-    }, 20);
+  try {
+    globalThis.dispatchEvent?.(
+      new CustomEvent('crablink:dev-passport-session-changed', {
+        detail: {
+          sessionId: safeSessionId,
+          url: next.toString(),
+          reason,
+        },
+      }),
+    );
+  } catch (_error) {
+    // Optional same-window UI notification only.
   }
 
   return Object.freeze({
     switchedCurrentWindow: true,
-    sessionId: normalizeSessionId(sessionId),
-    url: target,
+    sessionId: safeSessionId,
+    url: next.toString(),
     reason,
   });
 }

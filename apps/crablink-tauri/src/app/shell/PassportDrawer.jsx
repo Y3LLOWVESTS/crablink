@@ -4,9 +4,9 @@
  * RO:INTERACTS — appContext, identityClient, walletClient, PassportSummary, PassportActions, devPassportSessions, publicProfileCache, recentReceipts, localCatalog.
  * RO:INVARIANTS — no fake identity, balance, receipt, CID, catalogue, or permission truth; gateway-only reads; no direct wallet/ledger calls.
  * RO:METRICS — identity/wallet/bootstrap/profile calls inherit gateway x-correlation-id behavior.
- * RO:CONFIG — gatewayUrl, passportSubject, walletAccount, local storage backend, optional dev session URL params.
+ * RO:CONFIG — gatewayUrl, passportSubject, walletAccount, local storage backend, optional dev session URL/hash params.
  * RO:SECURITY — no private keys, seed phrases, private alt mappings, or spend authority are requested/rendered.
- * RO:TEST — manual drawer open/close, bootstrap starter ROC, refresh identity, refresh balance, profile/library/receipts navigation.
+ * RO:TEST — manual drawer open/close, bootstrap starter ROC, refresh identity, refresh balance, profile/library/receipts navigation, stream-safe dev session switch.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -15,10 +15,9 @@ import PassportActions from './PassportActions.jsx';
 import PassportSummary, { buildPassportView } from './PassportSummary.jsx';
 import {
   DEFAULT_DEV_STARTER_GRANT_MINOR,
+  getDevPassportSession,
   listDevPassportSessions,
-  openDevPassportSessionWindow,
   sessionLabel,
-  sessionTargetFromNavigation,
 } from '../../shared/utils/devPassportSessions.js';
 import {
   readPublicProfileCache,
@@ -305,6 +304,7 @@ export default function PassportDrawer({ id, navigation, onClose }) {
     }
 
     const result = await context.updateSettings({
+      devMode: true,
       passportSubject: DEV_PASSPORT_SUBJECT,
       walletAccount: DEV_WALLET_ACCOUNT,
     });
@@ -319,25 +319,51 @@ export default function PassportDrawer({ id, navigation, onClose }) {
   }
 
   async function openSession(sessionId) {
-    const target = sessionTargetFromNavigation(navigation);
+    const session = getDevPassportSession(sessionId);
 
-    setOpeningSessionId(sessionId);
+    if (!session) {
+      context.notify?.({
+        title: 'Unknown dev session',
+        message: `${sessionId || 'session'} is not an allowlisted CrabLink dev passport label.`,
+        tone: 'warning',
+      });
+      return;
+    }
+
+    setOpeningSessionId(session.id);
 
     try {
-      await openDevPassportSessionWindow({
-        sessionId,
-        target,
-        lane: 'react',
+      if (typeof context.updateSettings !== 'function') {
+        throw new Error('Dev session switch requires settings access.');
+      }
+
+      /*
+       * Stream-safe Tauri rule:
+       * a dev passport switch is a local label/settings switch only.
+       * Do not open a new window, mutate location/hash, call history.replaceState,
+       * reload the WebView, or refresh identity/wallet inside this click handler.
+       * The creator stream tab must stay mounted and its MediaStream must survive.
+       */
+      await context.updateSettings({
+        devMode: true,
+        passportSubject: session.passportSubject,
+        walletAccount: session.walletAccount,
+        handle: session.handle,
+        username: session.handle ? session.handle.replace(/^@/, '') : '',
+        usernameStatus: session.usernameStatus || 'local_dev',
+        profileCrabUrl: session.handle ? `crab://${session.handle}` : '',
       });
 
       context.notify?.({
-        title: 'Dev session window opened',
-        message: `${sessionId} opened at ${target}. Labels are URL-scoped and do not fake backend truth.`,
+        title: `${session.label} active`,
+        message: `${session.passportSubject} / ${session.walletAccount}. Local labels switched only; no URL rewrite, reload, wallet mutation, or fake balance.`,
         tone: 'success',
       });
+
+      onClose?.();
     } catch (error) {
       context.notify?.({
-        title: 'Could not open dev session',
+        title: 'Could not switch dev session',
         message: error?.message || String(error),
         tone: 'warning',
       });
@@ -390,8 +416,8 @@ export default function PassportDrawer({ id, navigation, onClose }) {
         <section className="cl-passport-truth" aria-label="Active dev passport window session">
           <strong>Active dev window session</strong>
           <p>
-            {sessionLabel(activeDevSession)}. These are per-window URL labels for testing
-            creator/visitor flows. They do not create a passport, mint ROC, or grant spend authority.
+            {sessionLabel(activeDevSession)}. These are local labels for testing creator/visitor flows.
+            They do not create a passport, mint ROC, or grant spend authority.
           </p>
         </section>
       )}
@@ -449,7 +475,7 @@ export default function PassportDrawer({ id, navigation, onClose }) {
           <div>
             <strong>Starter ROC bootstrap</strong>
             <p>
-              Explicit dev-only backend-routed starter balance action for the active passport/window.
+              Explicit dev-only backend-routed starter balance action for the active passport/session.
             </p>
           </div>
         </header>
@@ -462,7 +488,7 @@ export default function PassportDrawer({ id, navigation, onClose }) {
             title={
               canBootstrapStarter
                 ? `${activePassportSubject} / ${activeWalletAccount}`
-                : 'Open Creator A or Visitor B first'
+                : 'Use Creator A or Visitor B first'
             }
           >
             {bootstrapState.status === 'checking'
@@ -488,10 +514,11 @@ export default function PassportDrawer({ id, navigation, onClose }) {
 
       {devSessions.length > 0 && (
         <details className="cl-passport-truth" aria-label="Multi-passport dev testing">
-          <summary>Dev windows</summary>
+          <summary>Creator / visitor dev sessions</summary>
           <p>
-            Open separate CrabLink windows with different local labels so Passport A can create content
-            while Passport B visits it. URL-scoped labels do not fake backend truth.
+            In Tauri this switches the current React session without reloading the WebView, so mounted
+            tabs and local stream preview stay alive. In Chrome proof mode it may open a separate window.
+            These labels do not fake backend truth.
           </p>
 
           <div className="cl-passport-actions">
@@ -503,7 +530,7 @@ export default function PassportDrawer({ id, navigation, onClose }) {
                 disabled={openingSessionId === session.id}
                 title={`${session.passportSubject} / ${session.walletAccount}`}
               >
-                {openingSessionId === session.id ? `Opening ${session.label}…` : `Open ${session.label}`}
+                {openingSessionId === session.id ? `Switching ${session.label}…` : `Use ${session.label}`}
               </button>
             ))}
           </div>
@@ -541,6 +568,16 @@ export default function PassportDrawer({ id, navigation, onClose }) {
         </p>
       </section>
     </section>
+  );
+}
+
+
+function isTauriRuntime() {
+  return Boolean(
+    globalThis.__TAURI__ ||
+      globalThis.__TAURI_INTERNALS__ ||
+      globalThis.window?.__TAURI__ ||
+      globalThis.window?.__TAURI_INTERNALS__,
   );
 }
 

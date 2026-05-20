@@ -26,27 +26,29 @@ export { DEFAULT_SETTINGS };
 
 export async function loadAppSettings() {
   const loaded = await getSettings();
-  const sessionResult = applyDevPassportSessionToSettings(loaded);
-
-  return {
-    settings: sessionResult.settings,
-    storage: storageStatus(sessionResult.session),
-  };
+  return applySettingsSessionBoundary(loaded);
 }
 
 export async function saveAppSettings(next) {
   const saved = await saveSettings(next);
-  const sessionResult = applyDevPassportSessionToSettings(saved);
-
-  return {
-    settings: sessionResult.settings,
-    storage: storageStatus(sessionResult.session),
-  };
+  return applySettingsSessionBoundary(saved);
 }
 
 export async function resetAppSettings() {
   const reset = await resetSettings();
-  const sessionResult = applyDevPassportSessionToSettings(reset);
+  return applySettingsSessionBoundary(reset);
+}
+
+function applySettingsSessionBoundary(settings) {
+  /*
+   * In Tauri, dev passport switching must be settings-only.
+   * Applying crablinkSession from the URL/hash can rewrite active route state and
+   * destabilize mounted stream tabs. Chrome/extension proof lanes can still use
+   * URL-scoped sessions when not running inside Tauri.
+   */
+  const sessionResult = isTauriRuntime()
+    ? { settings: { ...(settings || {}) }, session: null }
+    : applyDevPassportSessionToSettings(settings);
 
   return {
     settings: sessionResult.settings,
@@ -54,15 +56,26 @@ export async function resetAppSettings() {
   };
 }
 
-export function storageStatus(activeSession = getDevPassportSessionFromLocation()) {
+export function storageStatus(activeSession = null) {
+  const session = activeSession || (isTauriRuntime() ? null : getDevPassportSessionFromLocation());
+
   return {
     backend: storageBackendName(),
     chromeLocal: hasChromeLocalStorage(),
     isExtensionContext: Boolean(globalThis.chrome?.runtime?.id),
     isDevFallback: !hasChromeLocalStorage(),
-    devPassportSession: activeSession,
-    hasDevPassportSession: Boolean(activeSession),
+    devPassportSession: session,
+    hasDevPassportSession: Boolean(session),
   };
+}
+
+function isTauriRuntime() {
+  return Boolean(
+    globalThis.__TAURI__ ||
+      globalThis.__TAURI_INTERNALS__ ||
+      globalThis.window?.__TAURI__ ||
+      globalThis.window?.__TAURI_INTERNALS__,
+  );
 }
 
 export function watchAppSettings(callback) {

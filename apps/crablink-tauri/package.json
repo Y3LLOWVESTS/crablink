@@ -11,10 +11,12 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "check": "npm run build && cargo check --manifest-path src-tauri/Cargo.toml",
-    "tauri:dev:mac-media": "tauri dev --config src-tauri/tauri.macos.dev-media.conf.json"
+    "check": "npm run build && npm run check:rust:mac-media",
+    "tauri:dev:mac-media": "tauri dev --config src-tauri/tauri.macos.dev-media.conf.json",
+    "check:rust:mac-media": "TAURI_CONFIG=\"$(cat src-tauri/tauri.macos.dev-media.conf.json)\" cargo check --manifest-path src-tauri/Cargo.toml"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.34",
     "@tauri-apps/api": "^2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

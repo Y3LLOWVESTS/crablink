@@ -1,6 +1,6 @@
 /**
  * RO:WHAT — UI-only zoom helpers for the CrabLink Tauri React shell.
- * RO:WHY — Tauri WebView does not reliably honor browser Command +/- zoom shortcuts, so CrabLink owns a bounded display zoom.
+ * RO:WHY — Tauri WebView does not reliably honor browser Command +/- zoom shortcuts, so CrabLink owns bounded display zoom.
  * RO:INTERACTS — TopBar.jsx, Shell.css, window.localStorage, document.documentElement CSS variables.
  * RO:INVARIANTS — zoom is display-only; it does not change route, wallet, receipt, asset, passport, or backend truth.
  * RO:SECURITY — stores only a numeric UI preference; no secrets, tokens, capabilities, or spend authority.
@@ -9,8 +9,8 @@
 
 export const ZOOM_STORAGE_KEY = 'crablink.ui.zoomScale.v1';
 export const DEFAULT_ZOOM_SCALE = 1;
-export const MIN_ZOOM_SCALE = 0.7;
-export const MAX_ZOOM_SCALE = 1.6;
+export const MIN_ZOOM_SCALE = 0.75;
+export const MAX_ZOOM_SCALE = 1.5;
 export const ZOOM_STEP = 0.1;
 
 export function readStoredZoomScale() {
@@ -53,6 +53,7 @@ export function applyZoomScale(value, documentLike = globalThis.document) {
 
     if (root?.style?.setProperty) {
       root.style.setProperty('--cl-app-zoom-scale', String(scale));
+      root.style.setProperty('font-size', `${Math.round(scale * 100)}%`);
       root.dataset.crablinkZoom = formatZoomPercent(scale);
     }
   } catch (_error) {

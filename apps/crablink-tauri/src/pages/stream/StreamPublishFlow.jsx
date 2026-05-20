@@ -9,7 +9,7 @@
  * RO:TEST — manual crab://stream prepare/hold/publish smoke after backend stream routes exist.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import JsonPreview from '../../shared/components/JsonPreview.jsx';
 import { writeLocalCatalogEntry } from '../../shared/catalog/localCatalog.js';
 import {
@@ -41,7 +41,7 @@ const IDLE_RESULT = Object.freeze({
   nonceRecovery: null,
 });
 
-export default function StreamPublishFlow({ app, draft, previewState, pricing, manifest }) {
+export default function StreamPublishFlow({ app, draft, previewState, pricing, manifest, onPublishedStream }) {
   const settings = app?.settings || {};
   const gateway = app?.clients?.gateway || null;
   const streamClient = useMemo(() => createStreamAssetClient(gateway), [gateway]);
@@ -57,7 +57,6 @@ export default function StreamPublishFlow({ app, draft, previewState, pricing, m
   const [holdNonce, setHoldNonce] = useState(() => loadNextNonceHint(settings.walletAccount));
   const [holdReviewOpen, setHoldReviewOpen] = useState(false);
   const [publishReviewOpen, setPublishReviewOpen] = useState(false);
-  const autoOpenTimer = useRef(0);
 
   const publishRequest = useMemo(
     () =>
@@ -90,20 +89,15 @@ export default function StreamPublishFlow({ app, draft, previewState, pricing, m
     setPublishState(IDLE_RESULT);
     setHoldReviewOpen(false);
     setPublishReviewOpen(false);
-  }, [workflowKey]);
+
+    if (typeof onPublishedStream === 'function') {
+      onPublishedStream(null);
+    }
+  }, [workflowKey, onPublishedStream]);
 
   useEffect(() => {
     setHoldNonce(loadNextNonceHint(settings.walletAccount));
   }, [settings.walletAccount]);
-
-  useEffect(
-    () => () => {
-      if (autoOpenTimer.current) {
-        window.clearTimeout(autoOpenTimer.current);
-      }
-    },
-    [],
-  );
 
   const preparedData = prepareState.data || prepareState.response || null;
   const holdData = holdState.data || holdState.response || null;
@@ -324,6 +318,19 @@ export default function StreamPublishFlow({ app, draft, previewState, pricing, m
       });
       setPublishReviewOpen(false);
 
+      if (typeof onPublishedStream === 'function') {
+        onPublishedStream(
+          summarizePublishedStream({
+            data,
+            streamUrl: nextStreamUrl,
+            streamCid: nextStreamCid,
+            streamId: nextStreamId,
+            publishRequest,
+            settings,
+          }),
+        );
+      }
+
       if (nextStreamUrl || nextStreamCid) {
         writeCatalogEntrySafe({
           crabUrl: nextStreamUrl,
@@ -334,12 +341,6 @@ export default function StreamPublishFlow({ app, draft, previewState, pricing, m
           tags: publishRequest.tags,
           raw: data,
         });
-      }
-
-      if (nextStreamUrl) {
-        autoOpenTimer.current = window.setTimeout(() => {
-          app?.navigate?.(nextStreamUrl);
-        }, 700);
       }
 
       app?.refreshWallet?.();
@@ -515,6 +516,11 @@ export default function StreamPublishFlow({ app, draft, previewState, pricing, m
         <div className="cl-stream-publish-success">
           <p className="cl-eyebrow">Backend confirmed</p>
           <h3>Stream descriptor minted</h3>
+          <p>
+            Stay on this control room to keep local camera preview alive. Opening the viewer
+            route in this same window will unmount the creator preview and stop local tracks
+            until backend live ingest is added.
+          </p>
 
           <div className="cl-stream-result-grid">
             <Fact label="Stream URL" value={streamUrl || 'Not returned'} />
@@ -529,7 +535,7 @@ export default function StreamPublishFlow({ app, draft, previewState, pricing, m
                   Copy stream URL
                 </button>
                 <button type="button" onClick={() => app?.navigate?.(streamUrl)}>
-                  Open stream page
+                  Open viewer page in this window
                 </button>
               </>
             ) : null}
@@ -651,6 +657,67 @@ function writeCatalogEntrySafe({ crabUrl, cid, streamId, title, description, tag
   } catch (_error) {
     // Catalog is display-only convenience. Never block a backend-confirmed publish on it.
   }
+}
+
+function summarizePublishedStream({ data, streamUrl, streamCid, streamId, publishRequest, settings }) {
+  const root = objectValue(data);
+  const manifest = objectValue(root.manifest);
+  const descriptor = objectValue(root.descriptor);
+  const creator = objectValue(publishRequest?.creator);
+  const owner = objectValue(root.owner);
+  const payout = objectValue(root.payout);
+
+  return {
+    schema: 'crablink.stream-published-control-room.v1',
+    streamUrl: streamUrl || extractStreamAssetUrl(root),
+    streamCid: streamCid || extractStreamAssetCid(root),
+    streamId:
+      streamId ||
+      extractStreamId(root) ||
+      cleanString(descriptor.stream_id || descriptor.streamId || manifest.stream_id || manifest.streamId),
+    manifestCid: cleanCid(
+      manifest.manifest_cid ||
+        manifest.manifestCid ||
+        root.manifest_cid ||
+        root.manifestCid ||
+        root.asset_manifest_cid ||
+        root.assetManifestCid,
+    ),
+    title: cleanString(root.title || descriptor.metadata?.title || publishRequest?.title),
+    creatorAccount: cleanString(
+      creator.wallet_account ||
+        owner.wallet_account ||
+        owner.walletAccount ||
+        payout.recipient_account ||
+        payout.recipientAccount ||
+        settings?.walletAccount,
+    ),
+    creatorPassport: cleanString(
+      creator.passport_subject ||
+        owner.passport_subject ||
+        owner.passportSubject ||
+        settings?.passportSubject,
+    ),
+    status: cleanString(root.status || descriptor.status || 'descriptor_published'),
+    raw: root,
+    publishedAt: new Date().toISOString(),
+    truth_boundary:
+      'This is a React display copy of a backend-confirmed stream descriptor publish response. Backend stream session state still must be started through /streams/{stream_id}/start.',
+  };
+}
+
+function cleanCid(value) {
+  const clean = cleanString(value).toLowerCase();
+
+  if (/^b3:[0-9a-f]{64}$/.test(clean)) {
+    return clean;
+  }
+
+  if (/^[0-9a-f]{64}$/.test(clean)) {
+    return `b3:${clean}`;
+  }
+
+  return '';
 }
 
 function normalizeError(error, fallback) {

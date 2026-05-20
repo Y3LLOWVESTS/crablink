@@ -2,11 +2,11 @@
  * RO:WHAT — Read-only hydrated view for gateway-returned typed asset DTOs.
  * RO:WHY — Gives b3/crab asset pages a useful React UI while preserving backend-truth boundaries.
  * RO:INTERACTS — AssetResolver, gateway asset DTOs, ContentViewAccess, JsonPreview, CopyButton, StatChip.
- * RO:INVARIANTS — display backend-returned fields only; article/post/comment raw content and image preview bytes are gated by paid content_view proof; no unsafe HTML; no direct wallet mutation.
+ * RO:INVARIANTS — display backend-returned fields only; article/post/comment raw content and image/video/stream preview bytes are gated by paid content_view proof; no unsafe HTML; no direct wallet mutation.
  * RO:METRICS — displays gateway correlation/status fields returned by GatewayClient.
  * RO:CONFIG — gateway base URL through assetClient.
  * RO:SECURITY — no script execution; JSON preview is redacted by shared component.
- * RO:TEST — known-good paid image view smoke, .post/.comment/.article raw content smoke, malformed/offline gateway smoke.
+ * RO:TEST — known-good paid image/video/stream view smoke, .post/.comment/.article raw content smoke, malformed/offline gateway smoke.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -18,10 +18,11 @@ import JsonPreview from '../../shared/components/JsonPreview.jsx';
 import StatChip from '../../shared/components/StatChip.jsx';
 import TruthBoundary from '../../shared/components/TruthBoundary.jsx';
 import AssetContentViewAccess from './AssetContentViewAccess.jsx';
+import StreamPaidSegmentViewer from './StreamPaidSegmentViewer.jsx';
 
 const TEXT_ASSET_KINDS = new Set(['post', 'comment', 'article']);
 const MEDIA_PREVIEW_KINDS = new Set(['image', 'video']);
-const PAID_CONTENT_VIEW_KINDS = new Set(['article', 'post', 'comment', 'image', 'video']);
+const PAID_CONTENT_VIEW_KINDS = new Set(['article', 'post', 'comment', 'image', 'video', 'stream']);
 const MAX_VIDEO_BLOB_PREVIEW_BYTES = 12 * 1024 * 1024;
 
 const TEXT_CONTENT_IDLE = Object.freeze({
@@ -465,6 +466,15 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
           app={app}
           summary={summary}
           onAccessChange={setContentViewAccess}
+        />
+      )}
+
+      {summary.kind === 'stream' && (
+        <StreamPaidSegmentViewer
+          app={app}
+          assetClient={assetClient}
+          summary={summary}
+          contentViewAccess={contentViewAccess}
         />
       )}
 

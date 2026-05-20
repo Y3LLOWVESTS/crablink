@@ -21,7 +21,7 @@ import { createContentViewClient } from '../../shared/api/contentViewClient.js';
 import { writeLocalCatalogEntry } from '../../shared/catalog/localCatalog.js';
 import { writeRecentReceipt } from '../../shared/receipts/recentReceipts.js';
 
-const PAYABLE_KINDS = new Set(['article', 'post', 'comment', 'image', 'video']);
+const PAYABLE_KINDS = new Set(['article', 'post', 'comment', 'image', 'video', 'stream']);
 
 const KIND_COPY = Object.freeze({
   article: {
@@ -98,6 +98,21 @@ const KIND_COPY = Object.freeze({
       'Video playback below is unlocked only after svc-gateway returned wallet receipt metadata for content_view. Local receipt memory is display-only.',
     lockedCopy:
       'CrabLink does not direct-call wallet or ledger, does not adjust local balances, and does not show video bytes until a backend content_view receipt is returned.',
+  },
+  stream: {
+    noun: 'stream',
+    bodyName: 'stream descriptor / watch access',
+    payTitle: 'Pay to watch this stream',
+    paidTitle: 'Stream access paid and unlocked',
+    badge: 'stream content_view',
+    unavailableTitle: 'Paid stream access is not available yet',
+    unavailableCopy:
+      'The stream descriptor resolved, but the backend quote/pay route did not return a usable content_view proof. CrabLink will not unlock stream playback from local state.',
+    unlockedTitle: 'Backend receipt unlocked this stream view',
+    unlockedCopy:
+      'Stream access below is unlocked only after svc-gateway returned wallet receipt metadata. Live playback still requires backend stream segment routes.',
+    lockedCopy:
+      'CrabLink does not direct-call wallet or ledger, does not adjust local balances, and does not show stream playback until a backend receipt is returned.',
   },
   asset: {
     noun: 'asset',

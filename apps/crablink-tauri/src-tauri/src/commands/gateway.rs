@@ -97,6 +97,7 @@ fn is_allowed_gateway_route(method: &str, route: &str) -> bool {
                 || path.starts_with("/sites/")
                 || path.starts_with("/assets/")
                 || path.starts_with("/content/")
+                || path.starts_with("/streams/")
                 || is_wallet_balance_path(path)
         }
         "POST" => {
@@ -107,6 +108,7 @@ fn is_allowed_gateway_route(method: &str, route: &str) -> bool {
                 || path == "/o"
                 || path.starts_with("/assets/")
                 || path.starts_with("/content/")
+                || path.starts_with("/streams/")
                 || path.starts_with("/identity/passport/")
                 || path.starts_with("/sites/")
         }

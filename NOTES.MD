@@ -5173,3 +5173,3601 @@ That is the correct next battle.
 
 
 ### END NOTE - MAY 18 2026 - 20:55 CST
+
+
+
+### BEGIN NOTES - MAY 19 2026 - 09:15 CST
+
+
+
+## What is going wrong
+
+The stream **did mint successfully** as a canonical typed asset:
+
+```text
+crab://e0e82ffd0ed95534d50d7e6c172fe02dd2bf30db7933101d54c5d2e58ba2e993.stream
+```
+
+The asset page resolves with HTTP `200`, storage availability says `yes`, and size is returned. That means the `.stream` descriptor bytes are in storage and the public `crab://<hash>.stream` resolver path is working.
+
+The failure is later, inside the paid viewer gate:
+
+```text
+asset manifest pointer was not found
+reason: asset_pointer_not_found
+http: 404
+```
+
+So the current state is:
+
+```text
+✅ Stream descriptor object exists in storage
+✅ crab://<hash>.stream resolves as a typed asset
+✅ CrabLink shows a stream viewer paid gate
+✅ Wallet B has ROC
+❌ content_view quote/pay cannot find the asset manifest pointer in svc-index
+❌ no backend stream session exists
+❌ no live media route exists
+❌ no paid_until interval route exists
+```
+
+This is not a Tauri display bug. It is a backend/index contract gap.
+
+The Tauri side is behaving honestly. `AssetContentViewAccess.jsx` now treats `stream` as payable through the existing content view gate, and the copy says it will not unlock stream playback unless a backend payment receipt is returned.  The stream viewer card also correctly says there is no fake stream playback and that live playback still requires backend stream status, `paid_until`, and bounded segment routes. That matches our no-fake-unlock invariant.
+
+The backend issue is that content_view does not use “storage object exists” as enough proof. It expects an indexed asset manifest pointer. The stream descriptor publish path likely stored the descriptor bytes, but either did not write the index pointer correctly, wrote it to the wrong route/shape, or svc-index rejected/ignored `.stream` as a manifest-pointer kind. That is why the resolver can show the asset but content_view quote cannot price/pay it.
+
+## Why the stream is not viewable yet
+
+There are two separate meanings of “view” right now:
+
+```text
+1. View the descriptor page:
+   This should be payable through content_view once svc-index has a stream manifest pointer.
+
+2. View the live stream:
+   This does not exist yet. We still need backend stream session/access/segment routes.
+```
+
+The current `StreamSessionPanel` is still local-only by design. It says the local room does not create backend stream truth, b3 address, viewer entitlement, receipt, or ROC transfer.  The `streamSessionClient.js` is also explicit that local session state is display-only, creates no fake b3, no backend live claim, no receipt, and no ROC mutation. 
+
+So this is the exact line we have reached:
+
+```text
+We can mint a stream descriptor.
+We cannot yet start a backend stream.
+We cannot yet let Wallet B watch live media.
+The content_view descriptor payment is blocked by missing svc-index manifest pointer.
+```
+
+## Best next backend fix
+
+The next RustyOnions patch should compare stream publish against the working video publish path and make stream publish store the same kind of index pointer that content_view expects.
+
+The goal is:
+
+```text
+POST /assets/stream
+  stores descriptor JSON in svc-storage
+  returns b3 CID
+  writes svc-index asset manifest pointer for kind=stream
+  returns manifest_cid / owner / payout / access policy fields
+  makes /content/view/quote able to find the pointer
+```
+
+For the fastest honest proof, the next backend test should be:
+
+```text
+mint stream descriptor
+curl /crab/resolve?url=crab://<hash>.stream
+curl /content/view/quote for .stream as acct_visitor_b
+expect quote amount/recipient/quote_id
+pay quote
+expect wallet receipt
+CrabLink displays backend receipt accepted
+```
+
+Then after that, the real stream route family should be added:
+
+```text
+POST /streams/{stream_id}/start
+POST /streams/{stream_id}/stop
+GET  /streams/{stream_id}/status
+POST /streams/{stream_id}/access/quote
+POST /streams/{stream_id}/access/pay
+GET  /streams/{stream_id}/access/status
+POST /streams/{stream_id}/segments
+GET  /streams/{stream_id}/segments/latest
+```
+
+That route family is where `stream_watch_interval`, `paid_until`, renewals, and real live media access belong.
+
+---
+
+# Carryover Notes — CrabLink Tauri Stream Session, Descriptor Mint, Viewer Gate, and Browser Tabs
+
+## 0. Current checkpoint
+
+This session moved `crab://stream` from a local-only concept into the first real backend-backed product slice.
+
+We now have:
+
+```text
+CrabLink Tauri stream control room
+local camera preview working on macOS media config
+stream pricing / interval policy UI
+stream descriptor prepare path
+explicit ROC hold path
+stream descriptor publish path
+canonical crab://<hash>.stream mint
+asset page resolution for .stream
+Wallet B funded and able to attempt paid view
+stream paid gate visible on .stream asset page
+```
+
+The latest uploaded Tauri codebundle shows the app now includes stream-specific files:
+
+```text
+StreamPage.jsx
+StreamLocalPreview.jsx
+StreamMediaReadiness.jsx
+StreamPricingPanel.jsx
+StreamPublishFlow.jsx
+StreamSessionPanel.jsx
+streamDraftModel.js
+streamAssetClient.js
+streamSessionClient.js
+```
+
+and the Tauri Rust side has stream/media command modules present:
+
+```text
+src-tauri/src/commands/media.rs
+src-tauri/src/commands/stream.rs
+```
+
+The codebundle confirms those files are now part of the current Tauri app tree. 
+
+## 1. What was accomplished in CrabLink Tauri
+
+### 1.1 macOS camera/media path
+
+We got live camera preview working in the Tauri WebView using the macOS media dev config.
+
+Important commands:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run tauri:dev:mac-media
+```
+
+The normal `npm run check` was also fixed so it uses the mac media config for Cargo check:
+
+```json
+"check": "npm run build && npm run check:rust:mac-media",
+"check:rust:mac-media": "TAURI_CONFIG=\"$(cat src-tauri/tauri.macos.dev-media.conf.json)\" cargo check --manifest-path src-tauri/Cargo.toml"
+```
+
+This matters because `macos-private-api` in `Cargo.toml` requires the matching Tauri config allowlist.
+
+### 1.2 Stream page stabilized
+
+`crab://stream` now loads a route-owned stream control room. It imports and renders:
+
+```text
+StreamLocalPreview
+StreamPublishFlow
+StreamDraft
+StreamPodcastMode
+StreamPricingPanel
+StreamSessionPanel
+StreamMediaReadiness
+StreamChatPlaceholder
+```
+
+The route’s own invariant says local preview is not backend live, and only the backend may return b3 CID, stream URL, receipt, stream ID, live status, or viewer entitlement. 
+
+### 1.3 Stream descriptor mint flow added
+
+We added a stream descriptor mint lane patterned after video:
+
+```text
+Prepare stream
+→ Review ROC hold
+→ Send ROC hold
+→ Review publish
+→ Publish stream descriptor
+→ backend returns crab://<hash>.stream
+```
+
+The local UI does not invent a stream CID or URL. The descriptor mint is backend-confirmed only.
+
+### 1.4 Auto-navigation after mint was removed
+
+Earlier, after minting the stream descriptor, CrabLink auto-navigated to the minted `.stream` asset page. That caused the camera preview to stop because `StreamLocalPreview` unmounted and correctly stopped its camera tracks.
+
+We patched the flow so the creator remains on `crab://stream` after mint. This is important until tabs or a backend-supervised stream session exists.
+
+### 1.5 Explicit wallet hold confirmation repaired
+
+The first stream hold failed with:
+
+```text
+Wallet hold requires explicit caller confirmation.
+```
+
+That came from the client-side no-silent-spend guard. We patched `StreamPublishFlow.jsx` so the wallet hold helper passes:
+
+```js
+confirmed: true
+```
+
+only after the user clicks the explicit **Send ROC hold** button.
+
+This preserved the no-silent-spend rule.
+
+## 2. What was accomplished in RustyOnions backend
+
+### 2.1 Added stream descriptor routes
+
+We added or patched the backend route surface:
+
+```text
+svc-gateway:
+  POST /assets/stream/prepare
+  POST /assets/stream
+
+omnigate:
+  POST /v1/assets/stream/prepare
+  POST /v1/assets/stream
+```
+
+These routes allowed stream descriptor prepare and publish to work.
+
+### 2.2 Fixed Rust ownership compile issue
+
+The stream publish response originally had:
+
+```rust
+request.stream_kind.unwrap_or_else(...)
+```
+
+which partially moved `request.stream_kind`, then later tried to borrow `request`.
+
+We fixed it by replacing remaining consuming unwraps with:
+
+```rust
+request.stream_kind.clone().unwrap_or_else(...)
+```
+
+After that, `omnigate` compiled.
+
+### 2.3 Added `.stream` to content_view kind acceptance
+
+Before the patch, Wallet B’s paid view attempt failed with:
+
+```text
+unsupported_asset_kind
+content view requires a canonical b3-backed asset target
+```
+
+We patched `omnigate/src/routes/v1/content_view.rs` so `stream` is accepted as a content_view target kind. That got us past `unsupported_asset_kind`.
+
+### 2.4 Current backend failure
+
+After accepting `.stream`, the backend now fails later with:
+
+```text
+asset manifest pointer was not found
+reason: asset_pointer_not_found
+status: 404
+```
+
+This is progress. It means the backend now recognizes `.stream` as a payable kind, but content_view cannot locate the stream’s asset manifest pointer in svc-index.
+
+## 3. Current proof state
+
+### Working
+
+```text
+Tauri app launches with media config.
+npm run check passes after package script fix.
+crab://stream opens.
+Camera preview works.
+Prepare stream no longer 404.
+Wallet hold works after explicit confirmation fix.
+Stream descriptor publishes.
+A canonical crab://<hash>.stream is minted.
+crab://<hash>.stream resolves with status 200.
+Storage says available: yes.
+Wallet B can be funded.
+Wallet B can attempt paid view.
+Stream viewer card appears.
+CrabLink refuses fake playback.
+```
+
+### Not working yet
+
+```text
+Wallet B cannot pay to view stream descriptor yet.
+content_view quote/pay returns asset_pointer_not_found.
+No stream backend session exists.
+No backend live status exists.
+No viewer paid_until exists.
+No backend segment route exists.
+No actual live media is delivered to Wallet B.
+No tabs exist yet.
+Creator and viewer still share one current route in one WebView.
+Switching route can unmount creator preview and stop camera.
+```
+
+## 4. Why the screenshots look the way they do
+
+The screenshots show three layers:
+
+### 4.1 Typed asset resolver layer
+
+This works.
+
+The top of the page shows:
+
+```text
+Stream Asset
+Gateway read
+Kind: stream
+Status: 200
+Storage available: yes
+Size: 1248
+```
+
+That means the descriptor exists and can be resolved.
+
+### 4.2 Paid content view layer
+
+This fails.
+
+The paid content view card shows:
+
+```text
+Amount: Not quoted
+Recipient: Manifest recipient not quoted
+Quote ID: Not quoted
+Problem: asset manifest pointer was not found
+```
+
+That means content_view tried to derive a quote from index/manifest truth but could not find the stream asset pointer.
+
+### 4.3 Stream viewer layer
+
+This is honest placeholder behavior.
+
+It says:
+
+```text
+Pay to view this stream through the backend wallet path.
+No fake stream playback.
+The descriptor is real, but live playback requires stream status, paid_until, and bounded segment routes from the backend.
+```
+
+That is exactly what it should say at this stage. It avoids cheating by not using local camera preview as viewer playback.
+
+## 5. Root cause hypothesis for `asset_pointer_not_found`
+
+Most likely cause:
+
+```text
+POST /assets/stream stores descriptor bytes but does not successfully write the asset manifest pointer in svc-index in the shape content_view expects.
+```
+
+Possible sub-causes:
+
+```text
+1. The stream pointer write route is wrong.
+2. svc-index rejects or ignores asset_kind=stream.
+3. The stream pointer body differs from image/video/article pointer body.
+4. The pointer is written under raw CID but content_view looks under manifest CID.
+5. The pointer write failed but the publish route only returned a warning.
+6. The stack was restarted after mint and local index DB was lost while storage still had the descriptor.
+7. content_view expects a uniform manifest but stream publish stores descriptor JSON only.
+```
+
+The next session should inspect the working video publish route and copy its index pointer contract exactly for stream.
+
+## 6. Backend next steps
+
+### 6.1 Fix stream manifest pointer write
+
+Files likely involved in RustyOnions:
+
+```text
+crates/omnigate/src/routes/v1/assets.rs
+crates/omnigate/src/routes/v1/content_view.rs
+crates/omnigate/tests/content_view.rs
+crates/omnigate/tests/asset_page_resolver.rs
+crates/svc-gateway/src/routes/product.rs
+crates/svc-gateway/tests/product_routes_proxy.rs
+```
+
+Goal:
+
+```text
+After POST /assets/stream, svc-index must contain a manifest pointer for the stream hash.
+```
+
+Test target:
+
+```text
+mint stream descriptor
+quote content_view on crab://<hash>.stream
+expect quote success
+pay content_view
+expect receipt
+```
+
+### 6.2 Make content_view quote useful for stream descriptor
+
+The existing content_view route can be used for a short proof, but it should be labeled carefully:
+
+```text
+content_view on .stream = paid stream descriptor/view page access
+not live stream segment access
+```
+
+Do not pretend this is the final stream interval model.
+
+### 6.3 Add proper stream access routes
+
+After descriptor-level paid view is green, build the real stream access route family:
+
+```text
+POST /streams/{stream_id}/start
+POST /streams/{stream_id}/stop
+GET  /streams/{stream_id}/status
+POST /streams/{stream_id}/access/quote
+POST /streams/{stream_id}/access/pay
+GET  /streams/{stream_id}/access/status
+POST /streams/{stream_id}/segments
+GET  /streams/{stream_id}/segments/latest
+```
+
+The carryover notes already framed this correctly: stream truth should live in backend services, wallet handles payments, ledger is durable economic truth, omnigate coordinates session/access hydration, gateway is the public boundary, index handles stream pointer lookup, and storage handles manifests and later recorded segments. 
+
+## 7. Tauri tabs are now the right next frontend step
+
+Tabs make sense now because the current problem is not just UX polish. It affects the stream proof.
+
+Right now, one WebView has one active route. If Creator A is on `crab://stream` with camera preview running, then navigating to the minted `.stream` page or switching to Wallet B can unmount the stream page and stop local capture.
+
+Tabs can give us this dev/product workflow:
+
+```text
+Tab 1:
+  Creator A
+  crab://stream
+  camera preview/live control room stays mounted
+
+Tab 2:
+  Visitor B
+  crab://<hash>.stream
+  pay/view attempt happens separately
+
+Tab 3:
+  Receipts or wallet page
+
+Tab 4:
+  Home/library/debug page
+```
+
+The older stream notes already identified this exact design fork: easiest proof is two windows; better product is persistent Tauri Rust stream state; backend-supervised is the final target.  Tabs are the cleanest Tauri app step between those options.
+
+## 8. Tab design requirements
+
+### 8.1 Placement
+
+Tabs should sit exactly here:
+
+```text
+TopBar
+Tabs row
+HeaderAdSlot
+Page content
+```
+
+The current shell renders:
+
+```jsx
+<TopBar route={route} navigation={navigation} />
+<HeaderAdSlot route={route} />
+<main className="cl-shell-main">
+  {children}
+</main>
+```
+
+So the next implementation should insert a new `TabStrip` between `TopBar` and `HeaderAdSlot`. 
+
+Target layout:
+
+```jsx
+<div className="cl-shell">
+  <TopBar ... />
+  <TabStrip ... />
+  <HeaderAdSlot ... />
+  <main ...>
+    {children}
+  </main>
+</div>
+```
+
+### 8.2 Maximum tab count
+
+Hard cap:
+
+```text
+max open tabs = 10
+```
+
+Behavior when user tries to open tab 11:
+
+```text
+Show toast:
+  “Maximum 10 tabs open”
+  “Close a tab before opening another.”
+```
+
+Do not silently drop tabs.
+
+### 8.3 Theme integration
+
+Tabs must use existing theme tokens only:
+
+```css
+var(--cl-bg)
+var(--cl-surface)
+var(--cl-card)
+var(--cl-border)
+var(--cl-text)
+var(--cl-muted)
+var(--cl-accent)
+```
+
+They must look correct in both light and dark themes. No hardcoded blue-heavy design. No separate tab theme.
+
+### 8.4 Visual direction
+
+Tabs should look modern and distinctive, not like old browser tabs.
+
+Suggested look:
+
+```text
+rounded floating capsule strip
+glass/card surface
+active tab has soft glow/accent underline
+inactive tabs are pill cards
+favicon/icon slot based on route kind
+close button appears on hover/focus
+new tab button as circular plus
+subtle “live” pulse indicator for stream tab
+overflow handled by horizontal scroll, not wrapping
+```
+
+For stream specifically:
+
+```text
+If a tab is crab://stream and preview/session is active:
+  show small LIVE / PREVIEW pill
+  show animated dot
+  warn before closing tab if capture/session active
+```
+
+### 8.5 State model
+
+Add a tab state layer, likely under:
+
+```text
+apps/crablink-tauri/src/app/tabs/
+  tabModel.js
+  tabStore.js
+```
+
+or directly:
+
+```text
+apps/crablink-tauri/src/app/appTabs.js
+```
+
+Recommended state shape:
+
+```js
+{
+  tabs: [
+    {
+      id,
+      url,
+      title,
+      routeKind,
+      history,
+      historyIndex,
+      pinned: false,
+      dirty: false,
+      createdAt,
+      lastActiveAt,
+      sessionFlags: {
+        streamPreviewActive: false,
+        localStreamRoomActive: false
+      }
+    }
+  ],
+  activeTabId
+}
+```
+
+Cap tabs to 10.
+
+### 8.6 Important implementation warning
+
+A simple tab strip that only remembers URLs will not keep the stream page mounted. If switching tabs uses the same single route outlet, React will still unmount the stream route.
+
+There are two possible phases:
+
+#### Phase T1 — Lightweight browser tabs
+
+```text
+Tabs store URLs/history.
+Only active tab is mounted.
+Switching tabs navigates to that tab URL.
+This gives browser UX but does NOT preserve camera preview across tab switches.
+```
+
+This is easier and good for general browsing.
+
+#### Phase T2 — Keep-alive route tabs
+
+```text
+Each tab keeps its route subtree mounted.
+Inactive tabs are hidden with CSS.
+Stream tab stays alive while Visitor B tab is active.
+```
+
+This is what we need for the stream proof.
+
+For the next stream-centered session, implement **T2 or a hybrid** if practical. At minimum, do not claim tabs solve stream persistence unless the inactive stream tab remains mounted.
+
+### 8.7 Security and authority rules for tabs
+
+Tabs are UI/navigation state only.
+
+Tabs must not:
+
+```text
+hold wallet spend authority
+hold private keys
+hold raw capabilities
+auto-pay in background
+continue paid actions without foreground confirmation
+unlock paid content from cache
+run arbitrary executable crab facets
+```
+
+Tabs may:
+
+```text
+store per-tab URL/history/title
+display per-tab route kind
+display per-tab local preview/session indicator
+ask before closing active capture/session tab
+```
+
+## 9. Recommended frontend files for tabs
+
+Likely new files:
+
+```text
+apps/crablink-tauri/src/app/shell/TabStrip.jsx
+apps/crablink-tauri/src/app/tabs/tabModel.js
+apps/crablink-tauri/src/app/tabs/tabStore.js
+```
+
+Likely modified files:
+
+```text
+apps/crablink-tauri/src/app/shell/Shell.jsx
+apps/crablink-tauri/src/app/shell/Shell.css
+apps/crablink-tauri/src/app/App.jsx
+apps/crablink-tauri/src/app/appContext.js
+apps/crablink-tauri/src/app/appState.js
+apps/crablink-tauri/src/app/router.js
+apps/crablink-tauri/src/app/shell/TopBar.jsx
+apps/crablink-tauri/src/app/shell/AddressBar.jsx
+```
+
+Potentially modified for stream close warning:
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamLocalPreview.jsx
+apps/crablink-tauri/src/pages/stream/StreamSessionPanel.jsx
+apps/crablink-tauri/src/shared/api/streamSessionClient.js
+```
+
+## 10. Testing plan for tabs
+
+### 10.1 Build checks
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run check
+```
+
+### 10.2 Visual route checks
+
+```text
+crab://home
+crab://stream
+crab://image
+crab://site
+crab://<hash>.stream
+```
+
+Verify:
+
+```text
+tab row appears under topbar
+ad slot stays under tabs
+tab row uses dark theme correctly
+tab row uses light theme correctly
+address bar reflects active tab URL
+active tab changes route
+close tab works
+new tab opens home
+cannot exceed 10 tabs
+```
+
+### 10.3 Stream-specific checks
+
+```text
+Open tab 1: crab://stream
+Start camera preview
+Mint stream descriptor
+Open tab 2: minted crab://<hash>.stream
+Switch back to tab 1
+Camera preview should still be alive if T2 keep-alive tabs are implemented
+```
+
+If camera preview dies, tabs are only T1 lightweight navigation tabs and do not solve the stream persistence problem yet.
+
+### 10.4 Wallet B test
+
+```text
+Tab 1: Creator A / acct_dev / crab://stream
+Tab 2: Visitor B / acct_visitor_b / crab://<hash>.stream
+Fund wallet B if needed:
+  POST /v1/issue to acct_visitor_b
+Attempt pay view
+Expect current known backend failure until stream manifest pointer is fixed:
+  asset_pointer_not_found
+```
+
+## 11. Critical invariants to carry forward
+
+```text
+No fake stream playback.
+No fake live status.
+No fake viewer count.
+No cache-only paid unlock.
+No hidden recurring spend.
+No auto-renew until explicitly designed.
+No direct wallet or ledger calls from React.
+No stream unlock without backend receipt.
+No stream segment playback without backend stream/session route.
+No pretending descriptor mint equals live stream start.
+No local camera preview reused as Wallet B playback.
+No stream keys or ingest secrets in React state/localStorage/URL/logs.
+```
+
+## 12. Recommended next session order
+
+### Step 1 — Backend diagnosis/fix for `asset_pointer_not_found`
+
+Before more stream viewer UI work, fix RustyOnions so `.stream` descriptor content_view quote can find its manifest pointer.
+
+Do this by comparing working video asset publish/index pointer logic to stream publish/index pointer logic.
+
+### Step 2 — Add browser tabs in Tauri
+
+Build tabs under the topbar and above the ad slot.
+
+Decide upfront whether to implement:
+
+```text
+T1 lightweight URL tabs
+or
+T2 keep-alive tabs
+```
+
+For stream proof, T2 is preferred.
+
+### Step 3 — Retest stream descriptor paid view
+
+Once backend pointer lookup is fixed:
+
+```text
+Creator A mints stream descriptor.
+Wallet B opens .stream tab.
+Wallet B pays content_view.
+Receipt returns.
+Viewer card changes to backend receipt accepted.
+Still no live video until stream session routes exist.
+```
+
+### Step 4 — Real stream session backend
+
+Implement the stream access/session route family.
+
+### Step 5 — Real live media proof
+
+Only after session/access/pay is green should we attempt bounded media segment delivery.
+
+## 13. Current best estimate
+
+For the stream slice:
+
+```text
+Local preview/control room:       70–75%
+Descriptor mint:                  80–85%
+Descriptor paid view:             45–55% because index pointer is failing
+Live backend session truth:        10–15%
+Wallet B real live viewing:         5–10%
+Tabs needed for stream workflow:    0% implemented, high priority next
+```
+
+For the broader Tauri migration:
+
+```text
+Tauri shell and route migration:   strong progress
+Paid asset flows:                  mostly proven for existing asset classes
+Stream:                            descriptor proof achieved, live proof pending
+Browser-quality UX:                tabs are now the next major missing piece
+```
+
+The big win from this session is that we crossed from “stream is just a UI page” into “stream descriptor is a real minted crab asset.” The next blockers are precise and solvable: fix the backend stream manifest pointer for content_view, then add a tab system that can keep the creator stream control room alive while Wallet B tests the viewer path.
+
+
+### END NOTE - MAY 19 2026 - 09:15 CST
+
+
+### BEGIN NOTE - MAY 19 2026 - 12:55 CST
+
+# Carryover Notes — CrabLink Tauri Stream-Lite Paid View Checkpoint
+
+We ended this session at a very important milestone: **Visitor B successfully paid ROC to unlock a `.stream` descriptor through backend `content_view`, but the actual live preview did not render yet.** That is expected from where the code now stands. The backend paid receipt path is proven; the remaining work is wiring the new stream-lite session/segment routes into the creator and viewer UI.
+
+The current CrabLink Tauri bundle includes the stream page files, stream asset client, stream session client, Tauri command bridge, shell tabs, receipts page, and media/stream command modules.  The RustyOnions bundle now includes `crates/omnigate/src/routes/v1/streams.rs` and `crates/omnigate/tests/streams.rs`, which define the stream-lite route family and its receipt-gated latest-segment test.  
+
+---
+
+## 1. Current final checkpoint
+
+### What is now proven
+
+```text
+✅ CrabLink Tauri launches with macOS media permissions.
+✅ crab://stream local camera preview works.
+✅ Browser tabs work well enough to keep the creator stream preview alive.
+✅ Switching to Visitor B no longer reloads the Tauri WebView.
+✅ Stream descriptor minting works.
+✅ New crab://<hash>.stream URLs resolve as typed stream assets.
+✅ Stream manifest pointer issue was fixed enough for content_view quote/pay.
+✅ Visitor B can pay 5 ROC to Creator A / acct_dev for stream descriptor access.
+✅ Backend wallet receipt returns txid, receipt hash, ledger root, payer, recipient, quote id, amount.
+✅ Receipt is displayed on the stream asset page.
+✅ Receipt is persisted and visible in crab://receipts.
+```
+
+The screenshots confirm the paid stream descriptor path is now working: the stream access panel shows “Stream access paid and unlocked,” amount `5 ROC`, payer `acct_visitor_b`, recipient `acct_dev`, txid, receipt hash, manifest CID, and ledger root.
+
+### What is not yet proven
+
+```text
+❌ Visitor B still cannot see live video after payment.
+❌ Creator tab is not yet publishing backend stream-lite snapshot segments.
+❌ Viewer tab is not yet calling /streams/{stream_id}/segments/latest after receipt.
+❌ The asset viewer currently shows Stream ID: Not returned.
+❌ Stream-lite backend routes exist, but the React UI has not fully wired them.
+```
+
+So the current state is **paid descriptor unlock works**, but **paid live playback is not wired yet**.
+
+---
+
+## 2. Why the preview did not appear after payment
+
+The payment succeeded, but the viewer panel still says:
+
+```text
+Backend payment receipt accepted for this stream descriptor.
+Live segment playback still needs the next backend stream-session routes before video can appear here.
+Stream ID: Not returned
+```
+
+That points to two remaining gaps.
+
+First, the creator side must start a backend stream session and push at least one bounded preview frame or text segment to Omnigate. The new Tauri `streamSessionClient.js` already has client methods for `startBackendStreamSession`, `publishStreamSnapshotSegment`, `loadLatestPaidStreamSegment`, and `captureCurrentStreamPreviewFrame`, but the stream page UI has not fully wired those into the creator/viewer flow yet.  
+
+Second, the viewer side needs a reliable `stream_id`. The screenshot says `Stream ID Not returned`, so even after payment the asset page does not know which backend route to call:
+
+```text
+POST /streams/{stream_id}/segments/latest
+```
+
+The backend stream-lite route exists and is intentionally receipt-gated. It stores only an in-memory latest segment, bounds payload size, and requires wallet receipt lookup before returning viewer media.  The test also proves the intended contract: missing receipt is rejected, matching receipt returns the latest segment and `receipt_verified`. 
+
+---
+
+## 3. Major accomplishments from this session
+
+### 3.1 Tabs are now practical for stream testing
+
+We added a modern Tauri browser tab strip under the topbar and above the ad slot.
+
+Important outcomes:
+
+```text
+10-tab maximum enforced.
+Horizontal scrollbar removed.
+Tabs visually fit across the screen.
+Selected-tab shading softened.
+Light/dark theme preserved.
+Tabs keep mounted pages alive.
+Creator stream preview survives switching tabs.
+```
+
+This is a major CrabLink browser milestone. Before tabs, creator/visitor stream testing required navigation in the same route, which killed the stream preview. Now the creator page can remain mounted while Visitor B opens the stream asset in another tab.
+
+Remaining tab polish:
+
+```text
+Possibly add per-tab identity/session later.
+Keep global session switch for now because it avoids reload.
+Verify 75%, 100%, 115%, 130% zoom after each shell patch.
+```
+
+### 3.2 Passport session switch is now stream-safe
+
+Earlier, clicking Visitor B in the passport drawer caused the Tauri WebView to close/reload, which killed the local stream. We changed the dev passport session helper so Tauri same-window switching uses history/settings/event updates instead of `location.assign()` or full reload.
+
+Current behavior:
+
+```text
+Use Creator A / Visitor B changes active local dev labels.
+The app does not reload.
+Mounted tabs stay alive.
+Local camera preview remains active.
+```
+
+Important limitation:
+
+```text
+The passport/session is still global to the Tauri window.
+Tab 1 does not truly remain Creator A while Tab 2 is Visitor B.
+For dev testing, the stream preview survives, but future per-tab sessions would be cleaner.
+```
+
+### 3.3 Passport drawer styling was repaired
+
+The passport drawer had fallen back into plain-text looking layout because new React class names were not styled. We added styling for the newer passport summary/hero/stat/row classes.
+
+Current state:
+
+```text
+Drawer is readable again.
+Truth boundary copy remains visible.
+Creator/visitor dev session controls are clearer.
+Receipts/library/profile quick links remain separated from the main dropdown clutter.
+```
+
+### 3.4 Stream descriptor mint path works
+
+The stream page now supports the same general shape we used for video/image:
+
+```text
+Prepare stream
+Review/hold ROC
+Publish stream descriptor
+Backend returns canonical crab://<hash>.stream
+Asset resolves through gateway
+```
+
+The stream publish path is honest: it mints a descriptor, not a fake live stream. The stream publish flow file explicitly treats it as prepare → wallet hold → stream descriptor publish and does not claim live ingest or viewer playback exists yet. 
+
+### 3.5 Backend manifest pointer problem was fixed
+
+Earlier failure:
+
+```json
+{
+  "reason": "asset_pointer_not_found",
+  "status": 404
+}
+```
+
+Root cause:
+
+```text
+The .stream descriptor object existed in storage and resolved as an asset,
+but content_view could not find an indexed asset manifest pointer.
+```
+
+Fix direction completed:
+
+```text
+svc-index accepts stream as an asset kind.
+omnigate stream publish now follows video-like two-object logic:
+  descriptor object CID
+  manifest object CID
+  asset → manifest pointer
+content_view can now quote/pay .stream descriptors.
+```
+
+The successful payment proves this blocker is past.
+
+### 3.6 Paid descriptor unlock works end-to-end
+
+Final successful path:
+
+```text
+Creator A starts local camera preview.
+Creator A mints a new .stream descriptor.
+Visitor B opens crab://<hash>.stream.
+Visitor B pays 5 ROC through content_view.
+Backend wallet returns receipt.
+Ledger root and receipt hash display.
+CrabLink records receipt in crab://receipts.
+```
+
+This is a real internal ROC value-plane proof. No fake balance, no fake receipt, no silent spend, no local unlock.
+
+---
+
+## 4. RustyOnions backend state
+
+### 4.1 New stream-lite route family exists
+
+Current backend route family added under Omnigate:
+
+```text
+POST /v1/streams/{stream_id}/start
+POST /v1/streams/{stream_id}/stop
+GET  /v1/streams/{stream_id}/status
+POST /v1/streams/{stream_id}/segments
+POST /v1/streams/{stream_id}/segments/latest
+```
+
+Gateway proxy routes were added at public paths:
+
+```text
+POST /streams/{stream_id}/start
+POST /streams/{stream_id}/stop
+GET  /streams/{stream_id}/status
+POST /streams/{stream_id}/segments
+POST /streams/{stream_id}/segments/latest
+```
+
+The current backend model is intentionally **stream-lite V1**, not full WebRTC/HLS:
+
+```text
+in-memory stream session
+bounded latest segment only
+creator can publish a bounded data URL or text segment
+viewer can fetch latest segment only after wallet receipt lookup
+no durable segment storage yet
+no ingest keys
+no stream secrets
+no DRM claims
+no auto-renew
+```
+
+### 4.2 Omnigate stream route invariants
+
+The new `streams.rs` route states the exact intended security boundary:
+
+```text
+in-memory stream session only
+latest bounded segment only
+viewer media requires wallet receipt lookup
+no wallet mutation in stream route
+fail-closed receipt validation
+no stream keys
+no ingest secrets
+bounded body
+no arbitrary execution
+```
+
+That is the correct shape for a first live proof. 
+
+### 4.3 Stream test exists
+
+The new Omnigate test proves this sequence:
+
+```text
+start stream session
+put latest segment
+request latest without receipt → PAYMENT_REQUIRED
+request latest with matching wallet receipt → OK
+segment returned
+access.status = receipt_verified
+```
+
+The codebundle’s test snippet shows this exact expected behavior. 
+
+### 4.4 Remaining backend concerns
+
+The backend stream-lite route is currently in-memory. That is fine for proof, but it means:
+
+```text
+Restarting Omnigate loses live stream sessions.
+Only the latest segment is retained.
+No historical segments.
+No durable replay.
+No multi-viewer fanout model yet.
+No paid_until interval model yet.
+```
+
+Future backend hardening should eventually move from in-memory latest frame to a bounded stream session service or storage-backed segment/rendition model.
+
+---
+
+## 5. CrabLink Tauri frontend state
+
+### 5.1 Current stream files
+
+The current Tauri app bundle includes:
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamPage.jsx
+apps/crablink-tauri/src/pages/stream/StreamLocalPreview.jsx
+apps/crablink-tauri/src/pages/stream/StreamMediaReadiness.jsx
+apps/crablink-tauri/src/pages/stream/StreamPricingPanel.jsx
+apps/crablink-tauri/src/pages/stream/StreamPublishFlow.jsx
+apps/crablink-tauri/src/pages/stream/StreamSessionPanel.jsx
+apps/crablink-tauri/src/pages/stream/StreamDraft.jsx
+apps/crablink-tauri/src/pages/stream/StreamPodcastMode.jsx
+apps/crablink-tauri/src/pages/stream/StreamChatPlaceholder.jsx
+apps/crablink-tauri/src/shared/api/streamAssetClient.js
+apps/crablink-tauri/src/shared/api/streamSessionClient.js
+apps/crablink-tauri/src/pages/asset/AssetContentViewAccess.jsx
+```
+
+The codebundle confirms the stream page/component/client set is now part of the current Tauri app. 
+
+### 5.2 streamSessionClient exists but needs UI wiring
+
+`streamSessionClient.js` already has the right client methods:
+
+```text
+startBackendStreamSession()
+stopBackendStreamSession()
+getBackendStreamStatus()
+publishStreamSnapshotSegment()
+loadLatestPaidStreamSegment()
+captureCurrentStreamPreviewFrame()
+```
+
+It also bounds snapshot size and refuses invalid data URLs.  
+
+The missing piece is calling those functions from the right UI moments.
+
+---
+
+## 6. Most important next-session diagnosis
+
+The next session should start with this conclusion:
+
+```text
+Paid stream descriptor access works.
+Actual preview does not appear because the UI has not yet connected:
+  creator preview → backend latest segment
+  backend receipt → viewer latest segment request
+```
+
+The screenshot’s `Stream ID: Not returned` is the most important clue.
+
+Before adding fancy playback, solve these two questions:
+
+```text
+1. Where should the viewer get stream_id from?
+2. When should the creator publish the first backend segment?
+```
+
+Recommended answer:
+
+```text
+stream_id should come from backend stream descriptor/manifest metadata, not local display cache.
+creator should publish a manual "current preview snapshot" first before any loop/timer.
+```
+
+---
+
+## 7. Next session implementation plan
+
+### Batch A — Wire creator backend stream controls
+
+Files likely involved:
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamPublishFlow.jsx
+apps/crablink-tauri/src/pages/stream/StreamSessionPanel.jsx
+apps/crablink-tauri/src/pages/stream/StreamLocalPreview.jsx
+apps/crablink-tauri/src/pages/stream/StreamPage.jsx
+apps/crablink-tauri/src/shared/api/streamSessionClient.js
+apps/crablink-tauri/src/pages/stream/stream.css
+```
+
+Add creator-side controls after descriptor mint:
+
+```text
+Start backend stream session
+Check backend stream status
+Publish current preview snapshot
+Stop backend stream session
+```
+
+Expected creator sequence:
+
+```text
+1. Start camera preview.
+2. Prepare stream.
+3. Hold ROC.
+4. Publish stream descriptor.
+5. Click Start backend session.
+6. Click Publish current preview snapshot.
+7. Keep tab open.
+```
+
+Use `captureCurrentStreamPreviewFrame()` to capture the current video element frame. Then call `publishStreamSnapshotSegment()` with:
+
+```text
+streamId
+assetCrabUrl
+mediaType: image/jpeg
+dataUrl
+source: crablink_tauri_creator_snapshot
+```
+
+Manual snapshot first. Do not start an automatic frame loop yet. Once manual proof works, add a controlled interval later.
+
+### Batch B — Ensure stream_id is available to viewer
+
+Current issue:
+
+```text
+Stream ID: Not returned
+```
+
+Possible fix paths:
+
+```text
+Preferred backend fix:
+content_view pay response for .stream includes stream_id from manifest metadata.
+
+Acceptable frontend fix:
+Asset page extracts stream_id from the resolved descriptor JSON if descriptor body is available.
+
+Fallback for local testing only:
+Use publish response/local catalog, but do not rely on that for Visitor B truth.
+```
+
+Best next backend/frontend contract:
+
+```json
+{
+  "asset_kind": "stream",
+  "stream_id": "stream_...",
+  "manifest_cid": "b3:...",
+  "asset_crab_url": "crab://<hash>.stream"
+}
+```
+
+The viewer panel should refuse to call latest segment if `stream_id` is missing and should display a clear diagnostic:
+
+```text
+Paid receipt returned, but backend did not return stream_id. Cannot request stream segment.
+```
+
+### Batch C — Wire viewer paid latest segment fetch
+
+Files likely involved:
+
+```text
+apps/crablink-tauri/src/pages/asset/AssetContentViewAccess.jsx
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/pages/asset/asset.css
+apps/crablink-tauri/src/shared/api/streamSessionClient.js
+```
+
+After `content_view` payment succeeds for `.stream`, collect:
+
+```text
+streamId
+assetCrabUrl
+payerAccount
+recipientAccount
+txid
+receiptHash
+amountMinor / amount ROC adapter value
+```
+
+Then call:
+
+```text
+loadLatestPaidStreamSegment(gateway, {
+  streamId,
+  assetCrabUrl,
+  payerAccount,
+  recipientAccount,
+  txid,
+  receiptHash,
+  amountMinor
+})
+```
+
+Render result:
+
+```text
+if segment.data_url starts with image/:
+  render <img>
+if segment.text:
+  render text proof
+if no segment:
+  show backend returned no segment yet
+if receipt rejected:
+  lock viewer and show reason
+```
+
+The first proof can be a still frame. Do not try live video playback yet.
+
+### Batch D — Add one green smoke path
+
+Create or update a smoke script later:
+
+```text
+scripts/web3_stream_lite_live_smoke.sh
+```
+
+Target flow:
+
+```text
+start stack
+mint stream descriptor
+start backend stream session
+put text segment or image data-url segment
+pay content_view
+fetch latest segment with receipt
+expect ok=true and receipt_verified
+```
+
+This should become the backend proof before adding auto-refresh UI.
+
+---
+
+## 8. Testing commands for next session
+
+RustyOnions:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+cargo fmt -p omnigate -p svc-gateway -p svc-index
+cargo check -p omnigate -p svc-gateway -p svc-index
+cargo test -p omnigate --test streams
+cargo test -p omnigate --test content_view
+cargo test -p svc-gateway --test content_view_routes_proxy
+cargo test -p svc-index --test http_contract
+```
+
+CrabLink Tauri:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+
+npm run build
+npm run check:rust:mac-media
+npm run tauri:dev:mac-media
+```
+
+Runtime stack:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+bash scripts/web3_crablink_dev_stack.sh
+```
+
+---
+
+## 9. Manual proof checklist for next session
+
+Use this exact sequence after the next UI wiring patch:
+
+```text
+1. Start RustyOnions stack.
+2. Launch CrabLink Tauri with npm run tauri:dev:mac-media.
+3. Tab 1: Use Creator A / acct_dev.
+4. Open crab://stream.
+5. Start camera preview.
+6. Prepare stream.
+7. Hold ROC.
+8. Publish stream descriptor.
+9. Confirm new crab://<hash>.stream URL.
+10. Click Start backend session.
+11. Click Publish current preview snapshot.
+12. Tab 2: Use Visitor B / acct_visitor_b.
+13. Open the new crab://<hash>.stream URL.
+14. Pay quoted 5 ROC.
+15. Confirm receipt returned.
+16. Click or auto-run Load latest paid segment.
+17. Expect still preview frame or text segment to render.
+18. Confirm no playback appears before receipt.
+19. Confirm no playback appears if txid/receiptHash is removed or wrong.
+20. Confirm creator preview remains alive in Tab 1.
+```
+
+---
+
+## 10. Critical invariants to carry forward
+
+```text
+No fake stream playback.
+No fake live status.
+No fake viewer count.
+No cache-only paid unlock.
+No hidden recurring spend.
+No auto-renew until explicitly designed.
+No direct wallet or ledger calls from React.
+No stream unlock without backend receipt.
+No stream segment return without backend stream route.
+No pretending descriptor mint equals live stream start.
+No local camera preview reused as Visitor B playback.
+No stream keys or ingest secrets in React state/localStorage/URL/logs.
+No full-file media through command results.
+No creator-supplied executable player.
+No DRM/anti-rip promises.
+```
+
+For the stream-lite proof, a still image frame is acceptable. It is not full streaming yet, but it proves:
+
+```text
+creator preview → backend segment route
+viewer payment → wallet receipt
+receipt → backend segment access
+backend segment → viewer render
+```
+
+That is the next honest checkpoint.
+
+---
+
+## 11. Current project completion estimate
+
+For the specific stream feature:
+
+```text
+Local camera preview:              90%
+Stream control room UI:            75%
+Descriptor mint/publish:           85%
+Stream manifest pointer/indexing:  80–85%
+Paid descriptor unlock:            90%
+Backend stream-lite route skeleton:70%
+Creator segment publishing UI:     10–20%
+Viewer paid segment rendering UI:  10–20%
+Interval renewal / paid_until:     0–10%
+Durable stream sessions:           0–10%
+Real continuous live playback:     5–10%
+```
+
+For the broader CrabLink Tauri migration:
+
+```text
+Tauri shell:                       strong progress
+Browser tabs:                      usable, needs polish/per-tab identity later
+Theme/zoom/topbar:                 mostly stable
+Paid content_view loop:            proven for several asset classes
+Video paid playback:               proven
+Stream paid descriptor:            proven
+Stream live preview after payment: next target
+Chrome proof:                      still useful but no longer primary
+```
+
+---
+
+## 12. Best opening prompt for the next session
+
+```text
+We successfully proved paid stream descriptor access in CrabLink Tauri: Creator A minted a crab://<hash>.stream descriptor, Visitor B paid 5 ROC through backend content_view, and the receipt appeared in the stream page and receipts page. The preview still did not appear because the creator UI is not yet starting a backend stream-lite session/publishing a snapshot segment, and the viewer UI is not yet loading /streams/{stream_id}/segments/latest after receipt. The stream asset page also showed Stream ID: Not returned. Please review the latest CODEBUNDLE_RS.md and CODEBUNDLE_TAURI_APP.md, then wire the next batch: creator Start backend session + Publish current preview snapshot, viewer Load latest paid segment after receipt, and ensure stream_id is extracted from backend stream descriptor/manifest truth. Keep all invariants: no fake playback, no cache-only unlock, no silent spend, no direct wallet calls from React.
+```
+
+That is the cleanest next step.
+
+
+### END NOTE - MAY 19 2026 - 12:55 CST
+
+
+### BEGIN NOTE - MAY 19 2026 - 16:05 CST
+
+## CrabLink Tauri Live Stream Carryover Notes — 2026-05-19
+
+### Current high-level status
+
+We made a major breakthrough this session. The `.stream` flow is no longer blocked at payment, receipt verification, descriptor parsing, or viewer routing. The current proof shows that a paid viewer can receive backend-returned stream media after the backend session exists and a segment has been published.
+
+The stream is currently **stream-lite**, meaning it returns the latest bounded backend segment, usually one JPEG frame or a text heartbeat. It is not yet smooth continuous video. The next work is to turn this into a live-feeling paid stream by adding a bounded creator publish loop and a bounded viewer polling loop.
+
+The terminal proof confirmed the backend sequence works: manually starting the backend session succeeded, publishing a text heartbeat segment succeeded, and loading the latest segment with Visitor B’s paid receipt returned `ok: true` with `access.status: receipt_verified`. 
+
+---
+
+# 1. What we accomplished this session
+
+## 1.1 Confirmed the Tauri build/tooling issue was separate from stream logic
+
+Early in the session, `npm run build` succeeded but Rust/Tauri checking failed because plain Cargo check was not receiving the macOS media config needed for the `macos-private-api` Tauri feature. We confirmed the correct app-level package script is:
+
+```json
+"check:rust:mac-media": "TAURI_CONFIG=\"$(cat src-tauri/tauri.macos.dev-media.conf.json)\" cargo check --manifest-path src-tauri/Cargo.toml"
+```
+
+We also confirmed `tauri: command not found` was a local Tauri CLI install issue, not a code issue. The fix was to run `npm install` inside:
+
+```bash
+/Users/mymac/Desktop/crablink/apps/crablink-tauri
+```
+
+The current package.json is correct and does not need further changes for this issue.
+
+---
+
+## 1.2 Replaced the old placeholder stream viewer
+
+The asset page previously showed a paid stream placeholder even after ROC payment. It said the receipt was accepted but did not fetch any backend stream segment.
+
+We added and wired:
+
+```text
+apps/crablink-tauri/src/pages/asset/StreamPaidSegmentViewer.jsx
+```
+
+Then updated:
+
+```text
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+```
+
+so `.stream` assets render `StreamPaidSegmentViewer` instead of the old placeholder `<Card>` block.
+
+Result: after paying for a `.stream` asset, the viewer now:
+
+1. Fetches/parses the descriptor object.
+2. Extracts `stream_id`.
+3. Uses the backend wallet receipt metadata.
+4. Calls the latest-segment route.
+5. Renders the returned segment if the backend stream session exists.
+
+This fixed the “paid but no visible stream component behavior” problem.
+
+---
+
+## 1.3 Confirmed descriptor parsing and `stream_id` extraction works
+
+Before the viewer patch, the UI showed:
+
+```text
+Stream ID: Not returned
+```
+
+After the patch, the UI correctly extracted:
+
+```text
+stream_8ccae1a2
+```
+
+from the descriptor and attempted to load:
+
+```text
+/streams/stream_8ccae1a2/segments/latest
+```
+
+This was a major diagnostic milestone because it proved the viewer had enough data to reach the correct backend stream route.
+
+---
+
+## 1.4 Diagnosed the real blocker: backend session was not started
+
+The viewer then returned:
+
+```text
+Latest segment was not returned
+stream session was not found
+```
+
+We ran a direct backend check:
+
+```bash
+curl -i http://127.0.0.1:8090/streams/stream_8ccae1a2/status
+```
+
+and the backend returned:
+
+```json
+{
+  "code": "stream_session_not_found",
+  "message": "stream session was not found",
+  "reason": "stream_not_found"
+}
+```
+
+This proved the viewer route was working, but the creator-side backend session had not been started or had been lost from Omnigate’s in-memory stream map.
+
+Important conclusion: this was not a payment problem, not a receipt problem, not a content view problem, and not a route proxy problem. It was a creator-side session-start/publish problem.
+
+---
+
+## 1.5 Confirmed the backend stream-lite route contract works
+
+We ran the force-proof terminal sequence:
+
+```text
+POST /streams/{stream_id}/start
+POST /streams/{stream_id}/segments
+POST /streams/{stream_id}/segments/latest
+```
+
+The results were successful.
+
+The backend returned:
+
+```json
+"ok": true,
+"schema": "omnigate.stream-start.v1",
+"status": "live"
+```
+
+Then the text heartbeat publish returned:
+
+```json
+"ok": true,
+"schema": "omnigate.stream-segment-put.v1",
+"seq": 1
+```
+
+Then the paid latest segment request returned:
+
+```json
+"ok": true,
+"schema": "omnigate.stream-latest-segment.v1",
+"access": {
+  "status": "receipt_verified"
+}
+```
+
+This proved the RustyOnions backend path is good for the current stream-lite model. 
+
+---
+
+## 1.6 Patched the creator-side stream session panel
+
+We updated:
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamSessionPanel.jsx
+```
+
+The previous version already had manual buttons and methods for:
+
+```text
+Start backend stream session
+Check backend status
+Publish current preview snapshot
+Publish text heartbeat
+Stop backend stream
+```
+
+but the user could still mint a stream descriptor and miss the backend start/segment publish sequence. The new version makes the missing sequence automatic.
+
+After a stream descriptor is minted, `StreamSessionPanel` now attempts to:
+
+```text
+1. Auto-start backend stream session.
+2. Auto-publish the first bounded segment.
+3. Prefer a camera snapshot if preview capture is available.
+4. Fall back to a text heartbeat if snapshot capture fails.
+5. Keep manual buttons for retry/debug.
+```
+
+The current uploaded StreamSessionPanel before the patch had the manual methods and buttons, but did not reliably force the initial backend proof sequence after descriptor publish. 
+
+---
+
+## 1.7 Confirmed paid stream image frame render works
+
+After the latest patch, the screenshots showed:
+
+Creator side:
+
+```text
+Stream descriptor minted
+Stream ID returned
+Latest backend segment displayed in side panel
+image/jpeg segment published
+```
+
+Viewer side:
+
+```text
+Backend latest segment
+segment #1 · receipt_verified
+image/jpeg rendered after ROC payment
+```
+
+This means the full paid stream-lite path now works:
+
+```text
+Creator camera preview
+→ capture frame
+→ backend stream-lite segment
+→ Visitor B pays ROC
+→ backend verifies receipt
+→ viewer receives latest image segment
+→ viewer renders frame
+```
+
+This is the most important proof from the session.
+
+---
+
+# 2. Current exact state of live streaming
+
+## What works now
+
+The following path works:
+
+```text
+Creator A:
+open crab://stream
+start camera preview
+prepare stream descriptor
+send ROC hold
+publish stream descriptor
+backend session auto-starts
+first segment auto-publishes
+
+Visitor B:
+open crab://<hash>.stream
+pay ROC content_view
+receipt returns
+load latest paid segment
+viewer renders backend segment
+```
+
+The viewer is no longer just showing a placeholder. It now displays backend-returned media after paid receipt verification.
+
+## What does not work yet
+
+The viewer receives only **one frame** unless the creator publishes another segment.
+
+This is expected because the current backend route is:
+
+```text
+stream-lite latest segment
+```
+
+not full live video transport.
+
+Current stream-lite model:
+
+```text
+Backend stores one latest segment in memory.
+Creator publishes a frame or text heartbeat.
+Viewer fetches latest segment after payment.
+```
+
+There is not yet:
+
+```text
+continuous creator frame loop
+continuous viewer refresh loop
+paid_until interval tracking
+automatic renewal prompt
+smooth video transport
+audio
+WebRTC/HLS/OAP streaming
+durable live segment history
+```
+
+---
+
+# 3. Important architecture distinction: video vs stream
+
+The user asked whether we can look at how video worked and make stream work the same way.
+
+The answer is: partly, but not completely.
+
+## Video asset behavior
+
+Video worked because video is an immutable b3 asset. After payment, the viewer fetches a stable video object or blob from storage/gateway. The video is already stored as bytes and can be replayed.
+
+Path:
+
+```text
+mint video asset
+store video bytes by b3
+viewer pays
+gateway returns/fetches video bytes
+video element plays immutable media
+```
+
+## Stream asset behavior
+
+Stream is mutable live state. The `.stream` descriptor is b3-backed, but the actual “what is live right now” content is not the descriptor. It is current session state.
+
+Current stream-lite path:
+
+```text
+mint stream descriptor
+start backend session in Omnigate memory
+creator publishes latest segment
+viewer pays
+viewer fetches latest segment
+```
+
+That is why stream needs extra session work that video did not need.
+
+---
+
+# 4. Critical known landmine: creator/visitor wallet role confusion
+
+In the latest screenshot, the creator-side segment metadata appeared to show:
+
+```text
+producer acct_visitor_b
+```
+
+while the stream was being tested across creator and visitor identities.
+
+This must be checked carefully next session.
+
+Possible causes:
+
+1. The stream was minted while the app was still on `passport:main:visitor-b`.
+2. The creator session panel fell back to the currently selected wallet instead of the descriptor owner/creator account.
+3. The descriptor publish response did not expose enough creator account metadata, so the UI used `app.settings.walletAccount`.
+4. The user changed identity after minting but before starting/publishing stream segment.
+
+This matters because paid streams must not blur creator and viewer roles.
+
+Next session should verify:
+
+```text
+Creator account for stream session = descriptor creator/payout account
+Segment producer account = creator account
+Viewer payer account = acct_visitor_b
+Receipt recipient = creator account
+```
+
+If the app uses the currently selected wallet after descriptor publish, we should lock the stream control room to the descriptor creator account and warn if the active wallet changes.
+
+---
+
+# 5. What remains for live stream MVP
+
+There are two definitions of “live stream” now:
+
+## 5.1 Near-term MVP: paid live snapshot stream
+
+This is what we should build next.
+
+It will behave like a low-frame-rate live stream:
+
+```text
+Creator tab:
+capture current camera frame every 1–2 seconds
+POST it to /streams/{stream_id}/segments
+
+Viewer tab:
+after payment, poll /streams/{stream_id}/segments/latest every 1–2 seconds
+render the newest seq
+```
+
+This is safe and consistent with current backend design.
+
+It keeps all invariants:
+
+```text
+no fake receipts
+no silent ROC spend
+no local camera leaking directly to viewer
+no direct wallet mutation from UI
+no full-file buffering through commands
+no arbitrary execution
+no external settlement
+no cache-based unlock
+```
+
+## 5.2 Full real live video
+
+This is future work after MVP.
+
+True smooth video would require a real streaming transport:
+
+```text
+WebRTC
+HLS / LL-HLS
+OAP-backed stream transport
+gateway-mediated media sessions
+segment/range service
+possibly media worker/service route
+```
+
+That will need a separate backend blueprint and more serious media/session policy design.
+
+We should not jump straight to smooth video until the snapshot stream MVP is stable, because the current proof gives us a controlled stepping stone.
+
+---
+
+# 6. Next session: exact recommended plan
+
+## Batch 1 — Creator live frame publish loop
+
+Patch:
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamSessionPanel.jsx
+apps/crablink-tauri/src/shared/api/streamSessionClient.js
+apps/crablink-tauri/src/pages/stream/stream.css
+```
+
+Add explicit controls:
+
+```text
+Start live frame loop
+Stop live frame loop
+Frame interval selector: 1s / 2s / 5s
+Latest publish status
+Dropped frame count
+Last publish latency
+Last backend seq
+```
+
+Rules:
+
+```text
+Default loop off.
+User must explicitly start it.
+Never publish if no backend session.
+Never run more than one publish at a time.
+Drop frame if previous publish is still in flight.
+Bound JPEG size and dimensions.
+Stop on unmount unless we intentionally support preserved background tab streaming.
+No wallet mutation.
+No receipt creation.
+No stream key.
+No hidden spend.
+```
+
+Suggested initial settings:
+
+```text
+maxWidth: 640
+quality: 0.65–0.72
+interval: 1500ms or 2000ms
+max data URL length guard
+```
+
+The creator loop should repeatedly call the same existing backend route:
+
+```text
+POST /streams/{stream_id}/segments
+```
+
+with:
+
+```json
+{
+  "asset_crab_url": "crab://<hash>.stream",
+  "media_type": "image/jpeg",
+  "data_url": "<captured data url>",
+  "source": "crablink_tauri_creator_frame_loop"
+}
+```
+
+Header:
+
+```text
+x-ron-wallet-account: <creator account>
+```
+
+Potential helper to add in `streamSessionClient.js`:
+
+```text
+createStreamFramePublisher()
+startStreamFrameLoop()
+stopStreamFrameLoop()
+```
+
+But keep authority in backend. This is just a UI-controlled publisher loop.
+
+---
+
+## Batch 2 — Viewer latest-segment auto-refresh loop
+
+Patch:
+
+```text
+apps/crablink-tauri/src/pages/asset/StreamPaidSegmentViewer.jsx
+apps/crablink-tauri/src/pages/asset/asset.css
+```
+
+Add controls:
+
+```text
+Auto-refresh latest segment
+Pause refresh
+Refresh interval: 1s / 2s / 5s
+Last seq
+Last checked
+Receipt status
+Stream status
+```
+
+Rules:
+
+```text
+Only start after content_view payment receipt exists.
+Never re-pay automatically.
+Never create receipt from cache.
+Only call latest segment route with backend receipt metadata.
+Only update render when seq changes.
+Back off on errors.
+Stop polling when page unmounts.
+Show clear message if session is lost.
+```
+
+Viewer route remains:
+
+```text
+POST /streams/{stream_id}/segments/latest
+```
+
+with:
+
+```json
+{
+  "asset_crab_url": "crab://<hash>.stream",
+  "payer_account": "acct_visitor_b",
+  "recipient_account": "acct_dev",
+  "txid": "<wallet txid>",
+  "receipt_hash": "<receipt hash>",
+  "amount_minor": "5"
+}
+```
+
+Note: the UI should display “ROC” to the user, but backend wire fields may still use existing compatible field names.
+
+---
+
+## Batch 3 — Paid interval / renewal model
+
+The user wants streams where the creator can set:
+
+```text
+X ROC every Y minutes
+```
+
+This needs product behavior beyond the current one-time content view.
+
+Recommended model:
+
+```text
+Creator sets:
+price_roc
+interval_seconds
+grace_seconds
+renewal_policy: manual
+
+Viewer flow:
+quote current interval
+pay explicitly
+backend returns paid_until
+viewer can watch until paid_until
+near expiry, show renewal prompt
+viewer confirms next payment manually
+no hidden recurring payments
+```
+
+Do not implement silent recurring spend.
+
+The UI should show:
+
+```text
+Paid until
+Time remaining
+Renew stream access
+Last receipt
+Current interval price
+Recipient
+```
+
+Backend needs to expose enough in the quote/pay response or stream latest response:
+
+```text
+paid_until_ms
+interval_seconds
+amount_roc
+recipient_account
+payer_account
+txid
+receipt_hash
+```
+
+If backend does not yet have `paid_until`, next session should decide whether to add a temporary gateway/omnigate display field or defer until the interval route is real.
+
+---
+
+## Batch 4 — Session resilience and restart handling
+
+Current stream sessions are in Omnigate memory. That means if Omnigate restarts, all live sessions disappear.
+
+Next session should add clearer UI behavior:
+
+```text
+If latest route returns stream_session_not_found:
+  show "backend session lost"
+  tell creator to restart stream session
+  if on creator page, offer "restart backend session + publish first segment"
+  if on viewer page, show "stream offline or backend restarted"
+```
+
+Future backend design options:
+
+```text
+Keep stream descriptor durable by b3.
+Keep live session state in memory for MVP.
+Later add session registry / durable heartbeat / stream status record.
+Do not store every frame as durable b3 unless intentionally publishing clips/VOD.
+```
+
+---
+
+## Batch 5 — Identity locking and creator/viewer separation
+
+This is important based on the screenshots.
+
+Next session should patch the creator session logic so that after descriptor publish:
+
+```text
+creatorAccount = descriptor creator account or payout recipient
+creatorPassport = descriptor creator passport
+```
+
+and it should not silently switch to the currently active app wallet if the user changes sessions.
+
+UI warning:
+
+```text
+"Active wallet differs from stream creator wallet. Segment publishing must use the creator account that minted this stream."
+```
+
+Possible behavior:
+
+```text
+Creator control room stores publishedStream.creatorAccount.
+Segment publishing requires that account.
+If active account differs, disable publish and show switch-account warning.
+```
+
+For local dev convenience, we may still allow an override button, but it should be explicit.
+
+---
+
+# 7. Exact files touched or relevant
+
+## Tauri frontend
+
+Main files involved:
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamPage.jsx
+apps/crablink-tauri/src/pages/stream/StreamPublishFlow.jsx
+apps/crablink-tauri/src/pages/stream/StreamSessionPanel.jsx
+apps/crablink-tauri/src/pages/stream/StreamLocalPreview.jsx
+apps/crablink-tauri/src/pages/stream/stream.css
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/pages/asset/StreamPaidSegmentViewer.jsx
+apps/crablink-tauri/src/pages/asset/AssetContentViewAccess.jsx
+apps/crablink-tauri/src/pages/asset/asset.css
+apps/crablink-tauri/src/shared/api/streamAssetClient.js
+apps/crablink-tauri/src/shared/api/streamSessionClient.js
+apps/crablink-tauri/src/shared/api/contentViewClient.js
+```
+
+## RustyOnions backend
+
+Relevant backend areas:
+
+```text
+crates/omnigate/src/routes/v1/streams.rs
+crates/omnigate/tests/streams.rs
+crates/svc-gateway/src/routes/product.rs
+crates/svc-gateway/tests/product_routes_proxy.rs
+crates/svc-gateway/tests/content_view_routes_proxy.rs
+```
+
+The backend route behavior was proven by curl in this session.
+
+---
+
+# 8. Commands to run next session
+
+## Start backend stack
+
+Use the normal RustyOnions dev stack. If the stack is restarted, remember:
+
+```text
+local assets disappear
+stream sessions disappear
+wallet B may need to be re-funded
+```
+
+## Tauri app
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+npm run check:rust:mac-media
+npm run tauri:dev:mac-media
+```
+
+## If Tauri CLI is missing
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm install
+npm run tauri:dev:mac-media
+```
+
+---
+
+# 9. Manual test plan for next session
+
+## Test A — Current proven stream-lite flow
+
+```text
+1. Creator A opens crab://stream.
+2. Creator A starts camera preview.
+3. Creator A prepares stream.
+4. Creator A sends ROC hold.
+5. Creator A publishes stream descriptor.
+6. Confirm StreamSessionPanel auto-starts backend session.
+7. Confirm first latest segment appears in creator side panel.
+8. Copy stream URL.
+9. Visitor B opens stream URL.
+10. Visitor B pays ROC.
+11. Click Load latest paid segment.
+12. Confirm image frame renders.
+```
+
+Expected:
+
+```text
+Viewer shows segment #1 or newer
+access.status = receipt_verified
+media_type = image/jpeg
+```
+
+## Test B — Creator manual snapshot refresh
+
+```text
+1. Creator clicks Publish current preview snapshot.
+2. Confirm creator side panel seq increments.
+3. Visitor clicks Load latest paid segment again.
+4. Confirm viewer image updates.
+```
+
+Expected:
+
+```text
+seq increases
+viewer frame changes
+no second payment required during current proof
+```
+
+## Test C — Backend restart/session lost
+
+```text
+1. Restart Omnigate or stack.
+2. Visitor clicks Load latest paid segment.
+3. Confirm viewer shows stream session missing/offline message.
+4. Creator clicks Auto start + first segment.
+5. Visitor retries.
+```
+
+Expected:
+
+```text
+clear offline/session-lost UI
+no fake stream
+no fake receipt
+```
+
+## Test D — Role separation
+
+```text
+1. Mint as acct_dev.
+2. Switch to acct_visitor_b.
+3. Try creator segment publishing.
+```
+
+Expected desired behavior after future patch:
+
+```text
+UI warns active wallet is not stream creator wallet
+does not silently publish as visitor
+```
+
+---
+
+# 10. Suggested first patch for next session
+
+The next patch should be:
+
+```text
+Creator live frame loop + viewer poll loop
+```
+
+Recommended order:
+
+## File 1
+
+```text
+apps/crablink-tauri/src/shared/api/streamSessionClient.js
+```
+
+Add or confirm helpers for:
+
+```text
+captureCurrentStreamPreviewFrame
+publishStreamSnapshotSegment
+loadLatestPaidStreamSegment
+```
+
+Then add bounded loop helpers only if it keeps components cleaner. Otherwise keep loops in components.
+
+## File 2
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamSessionPanel.jsx
+```
+
+Add:
+
+```text
+Start live frame loop
+Stop live frame loop
+interval selector
+publish in-flight guard
+dropped frame count
+last seq
+last latency
+```
+
+## File 3
+
+```text
+apps/crablink-tauri/src/pages/asset/StreamPaidSegmentViewer.jsx
+```
+
+Add:
+
+```text
+Auto-refresh toggle
+pause/resume
+poll interval
+seq-change detection
+session-lost UI
+receipt expiry placeholder
+```
+
+## File 4
+
+```text
+apps/crablink-tauri/src/pages/stream/stream.css
+apps/crablink-tauri/src/pages/asset/asset.css
+```
+
+Add modern controls/status styling for loop state.
+
+---
+
+# 11. Invariants to preserve next session
+
+These are non-negotiable:
+
+```text
+CrabLink Tauri is the client, not backend truth.
+Gateway/Omnigate/backend own stream session truth.
+svc-wallet owns wallet mutation.
+ron-ledger owns durable economic truth.
+No fake balance.
+No fake receipt.
+No silent spend.
+No automatic ROC renewal without explicit confirmation.
+No local cache unlock for paid stream.
+No local camera preview reused directly as viewer truth.
+No large video buffers through Tauri command result.
+No arbitrary execution.
+No creator-supplied player code.
+No external settlement or QuickChain work yet.
+```
+
+For the stream loop specifically:
+
+```text
+Frame loop must be explicit and stoppable.
+Only one publish in flight.
+Dropped frames are okay.
+Backpressure is okay.
+Huge frames are rejected.
+Errors are visible.
+Viewer polling is receipt-gated.
+Viewer polling must not create new payments.
+```
+
+---
+
+# 12. Estimated completion state
+
+For the stream feature:
+
+```text
+Descriptor minting: 90% proven
+Paid content_view for stream: 90% proven
+Viewer latest segment rendering: 80% proven
+Creator backend session start: 75% proven after auto patch
+Single-frame paid stream proof: 85% proven
+Live-feeling snapshot loop: 25% remaining / next target
+Paid interval renewal: 10–15% designed, not implemented
+True smooth live video transport: not implemented; future architecture work
+```
+
+For the immediate “paid live stream MVP,” we are now around:
+
+```text
+60–65% complete
+```
+
+The remaining work is mostly loop behavior, role safety, paid interval UX, and resilience.
+
+For true production-grade live video, we are much earlier, probably:
+
+```text
+20–25% complete
+```
+
+because that requires real transport design and backend media architecture beyond latest JPEG segments.
+
+---
+
+# 13. Bottom line for next session
+
+The next session should start from this exact conclusion:
+
+```text
+Paid stream-lite works.
+The viewer can render backend-returned image segments after ROC payment.
+The remaining blocker is not payment or descriptor parsing.
+The remaining blocker is turning one latest segment into a controlled live loop.
+```
+
+The first paste-ready batch should implement:
+
+```text
+Creator: Start/Stop live frame loop
+Viewer: Auto-refresh latest paid segment
+```
+
+Then test:
+
+```text
+Creator publishes frames every 1–2 seconds.
+Visitor B pays once.
+Visitor B sees frames update without re-paying.
+No silent renewal.
+No fake receipt.
+No local-only unlock.
+```
+
+That is the cleanest next milestone toward real live streaming.
+
+
+### END NOTE - MAY 19 2026 - 16:05 CST
+
+
+
+### BEGIN NOTE - MAY 19 2026 - 17:50 CST
+
+Below are the carryover notes for the next instance.
+
+# CrabLink Tauri Streaming / Creator Studio Carryover Notes
+
+## 0. Current checkpoint
+
+We successfully proved the **paid live stream-lite end-to-end loop** in CrabLink Tauri.
+
+The most important breakthrough was that the stream worked when we launched **two separate app instances**:
+
+```text
+Instance A: Creator A / acct_dev
+Instance B: Visitor B / acct_visitor_b
+```
+
+Creator A started the stream and published frames. Visitor B paid ROC, unlocked the stream, started auto-refresh, and saw frames coming through after payment. This proves the hardest value-loop path for live streaming:
+
+```text
+Creator camera / preview
+→ stream descriptor
+→ backend stream session
+→ creator publishes bounded live segments
+→ Visitor B pays ROC
+→ backend verifies wallet receipt
+→ Visitor B polls latest segment
+→ frames render after payment
+→ no fake receipt
+→ no silent spend
+→ no cache-only unlock
+```
+
+This is **not full production video streaming yet**. It is the intentionally bounded **stream-lite proof**. It uses latest bounded frame/segment delivery, not WebRTC/HLS/audio. The new `STREAM_BLUEPRINT.MD` now defines the next product direction: stop backend work for a while and build an excellent Creator Studio UX around the proven stream-lite path. 
+
+---
+
+## 1. Strategic decision for next session
+
+We are pausing deeper backend streaming work for now.
+
+The next session should focus on **CrabLink Tauri streaming studio UX**, not more Rust backend routes.
+
+The goal is to make the stream page feel like a beautiful, modern creator tool:
+
+```text
+Pick source.
+Pick look.
+Set ROC access.
+Go live.
+```
+
+The new blueprint says the Creator Studio should support the 90% streaming use cases without becoming an OBS clone:
+
+```text
+Camera only
+Screen only
+Screen with webcam thumbnail
+Camera with green screen
+Camera with custom background
+Quick background switching mid-stream
+Saved scene settings
+Simple paid access setup
+Clear live/publish status
+```
+
+The blueprint also says the implementation must be additive: do not replace working stream-lite proof code, do not delete existing panels, and do not rewrite paid/wallet logic. 
+
+---
+
+## 2. What we accomplished in this session
+
+### 2.1 Live camera preview was already proven
+
+Earlier work got the local camera preview working in Tauri on macOS using the dev media path.
+
+Relevant pieces already exist in the Tauri app:
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamLocalPreview.jsx
+apps/crablink-tauri/src/pages/stream/StreamMediaReadiness.jsx
+apps/crablink-tauri/src-tauri/Info.plist
+apps/crablink-tauri/src-tauri/tauri.macos.dev-media.conf.json
+```
+
+The current `StreamLocalPreview` already supports local camera/screen/file preview style behavior and clearly labels that preview as local capture, not backend truth. The codebundle shows the preview UI has local capture controls, preview status badges, and a warning that persistent capture should eventually move behind stronger native media state so identity switching does not kill the creator stream. 
+
+### 2.2 Stream asset minting and stream descriptor flow worked
+
+The stream page could mint/publish a `.stream` asset descriptor.
+
+The backend session could be started using the stream descriptor. The session had fields like:
+
+```text
+stream_id
+asset_crab_url
+asset_cid
+manifest_cid
+creator_account
+creator_passport
+status: live
+latest_seq
+latest_segment
+delivery.mode: stream_lite_latest_segment
+```
+
+The important architectural truth: the stream descriptor is b3/crab-addressed content, while the live stream session is backend session state. The live latest segment is not durable b3 media truth.
+
+### 2.3 Manual segment publishing proved backend stream route worked
+
+We manually posted a text heartbeat segment through gateway:
+
+```bash
+STREAM_ID="stream_3a4aebe9"
+ASSET_URL="crab://e7dd246e59e80b05f435f7a8cf6176a945699e4e4c20f3fe73b9a98d3041b1f8.stream"
+
+curl -sS -X POST "http://127.0.0.1:8090/streams/${STREAM_ID}/segments" \
+  -H 'Authorization: Bearer dev' \
+  -H 'Content-Type: application/json' \
+  -H 'x-ron-wallet-account: acct_dev' \
+  -d "{
+    \"asset_crab_url\":\"${ASSET_URL}\",
+    \"media_type\":\"text/plain\",
+    \"text\":\"debug heartbeat $(date -u +%FT%TZ)\",
+    \"source\":\"manual_debug_heartbeat\"
+  }" | jq .
+```
+
+That advanced the backend stream from `seq: 1` to `seq: 2`.
+
+This proved:
+
+```text
+gateway /streams/{stream_id}/segments route works
+Omnigate stream session accepts segments
+asset_crab_url must match the session asset URL
+producer_account was correctly acct_dev
+latest segment updates in backend status
+```
+
+### 2.4 Viewer polling path was proven separately
+
+Visitor B’s paid stream viewer was polling successfully.
+
+At one point, the viewer UI showed values like:
+
+```text
+Checked: 20
+Errors: 0
+Last seq: 1
+Unchanged: 20
+```
+
+That meant the viewer refresh loop itself was not failing. It was polling the backend correctly, but the backend latest segment was not advancing because the creator loop had stopped or never started.
+
+The key diagnostic rule we established:
+
+```text
+If latest_seq is not advancing in /streams/{stream_id}/status:
+  creator publishing is stuck.
+
+If latest_seq advances but Visitor B does not update:
+  viewer polling/rendering is stuck.
+```
+
+### 2.5 We diagnosed the one-window identity-switch problem
+
+When we tried to use one Tauri app window and switch from Creator A to Visitor B, the creator stream would stop, crash, blank, or freeze.
+
+We found several reasons:
+
+```text
+Tauri/dev identity switch is global to the app window.
+React route state and MediaStream state are fragile during identity switching.
+The creator tab can be unmounted, hidden, or lose capture state.
+The active wallet label becomes acct_visitor_b, confusing creator publishing.
+The media stream can stop when the route/app refreshes.
+```
+
+We patched parts of this:
+
+```text
+Passport drawer switch became more settings-only.
+React error boundary surfaced crashes instead of silent blank screen.
+Duplicate lockedCreatorAccount compile error was found and cleaned up.
+Creator publish logic was pushed toward descriptor creator account instead of active wallet.
+Inactive tab preservation was attempted.
+```
+
+But the main conclusion was: **do not rely on one WebView/session for Creator A and Visitor B stream proof yet.**
+
+### 2.6 Two separate app instances solved the proof problem
+
+The successful method was:
+
+```text
+Terminal/dev app:
+  Creator A starts preview and live frame loop.
+
+Packaged/built app:
+  Visitor B opens stream URL, pays, starts refresh.
+```
+
+This separated creator capture/control from viewer payment/playback at the process level. That is now the official smoke model until we build real per-tab/per-session identity isolation.
+
+The Stream Blueprint formalizes this as the canonical stream-lite smoke:
+
+```text
+Instance 1: Creator A
+Instance 2: Visitor B
+
+Creator starts preview.
+Creator goes live.
+Creator frame loop advances latest_seq.
+Visitor pays once.
+Visitor auto-refreshes.
+Creator changes background.
+Visitor sees changed background.
+Creator toggles webcam overlay.
+Visitor sees overlay.
+No second payment occurs during refresh.
+```
+
+
+
+### 2.7 We clarified why stream-lite is low frame rate
+
+The current system is intentionally conservative.
+
+Current stream-lite works roughly like this:
+
+```text
+local preview frame
+→ canvas/JPEG snapshot
+→ base64 data URL
+→ JSON POST through gateway
+→ Omnigate latest segment memory
+→ paid viewer polls latest segment
+```
+
+That is not suitable for smooth 30fps streaming or audio. It is perfect for proving the payment/session/access boundary.
+
+The MEDIA_TAURI_IDB reinforces this direction: large media should not cross the Tauri command boundary as one full in-memory blob, playback should use bounded range/segment paths, cached media must be verified, paid media cannot unlock from cache alone, and CrabLink must not make fake DRM/anti-rip claims. 
+
+---
+
+## 3. Current architecture status
+
+### 3.1 Tauri app remains primary
+
+The project pivot is still Tauri-first. Chrome is proof/companion only.
+
+The COMBINED_IDB says Tauri is now the primary client, gateway compatibility comes first, OAP is Rust-side only, b3 hashes are canonical, wallet/ledger truth remains backend-owned, and the app must not create fake balances, fake receipts, silent spend, or arbitrary code execution. 
+
+### 3.2 React is display and creator UX, not authority
+
+React may:
+
+```text
+show camera preview
+show stream studio controls
+collect title/access/source/look settings
+call typed adapters
+show backend-derived status
+show backend-derived receipts
+request explicit paid actions
+```
+
+React must not:
+
+```text
+own wallet truth
+own ledger truth
+invent balances
+invent receipts
+unlock paid content from cache
+store secrets
+store spend authority
+manually build OAP frames
+run arbitrary creator code
+```
+
+### 3.3 Stream-lite truth boundary
+
+Current stream-lite truth model:
+
+```text
+Stream descriptor:
+  b3/crab asset truth
+
+Backend stream session:
+  Omnigate/session truth, not durable media truth
+
+Latest segment:
+  bounded in-memory latest segment, not permanent VOD truth
+
+Paid unlock:
+  backend receipt truth through wallet/ledger path
+
+Viewer refresh:
+  reuses existing backend receipt proof and does not spend again
+```
+
+### 3.4 Paid access invariants remain strict
+
+The paid-action IDB states the central rules:
+
+```text
+No fake ROC.
+No fake receipts.
+No silent spend.
+Paid actions require explicit confirmation.
+Wallet mutation goes through svc-wallet.
+ron-ledger remains durable economic truth.
+Local receipt cache is display-only.
+CrabLink never directly mutates ledger, storage, index, accounting, rewarder, or QuickChain.
+```
+
+
+
+---
+
+## 4. Important files for next session
+
+### 4.1 Stream UX / frontend files
+
+Primary files:
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamPage.jsx
+apps/crablink-tauri/src/pages/stream/stream.css
+apps/crablink-tauri/src/pages/stream/StreamLocalPreview.jsx
+apps/crablink-tauri/src/pages/stream/StreamSessionPanel.jsx
+apps/crablink-tauri/src/pages/stream/StreamPublishFlow.jsx
+apps/crablink-tauri/src/pages/stream/StreamPricingPanel.jsx
+apps/crablink-tauri/src/pages/stream/StreamDraft.jsx
+apps/crablink-tauri/src/pages/stream/streamDraftModel.js
+apps/crablink-tauri/src/pages/stream/StreamMediaReadiness.jsx
+```
+
+Viewer side:
+
+```text
+apps/crablink-tauri/src/pages/asset/StreamPaidSegmentViewer.jsx
+apps/crablink-tauri/src/pages/asset/AssetContentViewAccess.jsx
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+```
+
+API/client:
+
+```text
+apps/crablink-tauri/src/shared/api/streamAssetClient.js
+apps/crablink-tauri/src/shared/api/streamSessionClient.js
+apps/crablink-tauri/src/shared/api/contentViewClient.js
+apps/crablink-tauri/src/shared/api/walletClient.js
+```
+
+Shell/session risk zone:
+
+```text
+apps/crablink-tauri/src/app/shell/PassportDrawer.jsx
+apps/crablink-tauri/src/app/shell/BrowserTabs.jsx
+apps/crablink-tauri/src/app/shell/Shell.css
+apps/crablink-tauri/src/app/App.jsx
+apps/crablink-tauri/src/app/settings.js
+apps/crablink-tauri/src/shared/utils/devPassportSessions.js
+```
+
+### 4.2 Tauri Rust media/command files
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src-tauri/src/commands/stream.rs
+apps/crablink-tauri/src-tauri/src/commands/gateway.rs
+apps/crablink-tauri/src-tauri/Info.plist
+apps/crablink-tauri/src-tauri/tauri.macos.dev-media.conf.json
+apps/crablink-tauri/src-tauri/tauri.conf.json
+```
+
+### 4.3 Blueprint file to use next
+
+```text
+STREAM_BLUEPRINT.MD
+```
+
+The current blueprint title is:
+
+```text
+CRABLINK_STREAMING_CREATOR_STUDIO_BLUEPRINT.MD
+```
+
+It defines the Creator Studio UX, implementation order, component responsibilities, stream-lite integration, compositor contract, green screen plan, background switching, webcam overlay, two-instance smoke, and non-goals. 
+
+---
+
+## 5. What remains for video streaming to work completely
+
+### 5.1 What already works
+
+```text
+Camera preview in Tauri dev media mode
+.stream descriptor publish/mint path
+Backend stream session creation
+Manual segment publishing
+Creator frame loop in two-app mode
+Visitor B paid unlock
+Visitor B latest-segment polling
+Frames visible after payment
+Two-app Creator A / Visitor B smoke proof
+```
+
+### 5.2 What is still not done
+
+```text
+Beautiful Creator Studio UX
+Green screen effect
+Background image switching mid-stream
+Screen + webcam thumbnail compositor
+Saved stream studio presets
+Smooth source switching mid-stream
+Fallback slate when switching scenes
+Frame publishing from composited canvas instead of raw camera only
+Polished Go Live flow that hides backend debug clutter
+Developer drawer for raw stream status
+Production-quality audio/video transport
+Audio capture/mic mixing
+MediaRecorder chunk path
+WebRTC/HLS/OAP media transport
+Paid interval renewals
+Stream archive/VOD
+Chat/moderation/tips/subscriptions
+True per-tab/per-session identity isolation
+```
+
+### 5.3 Full smooth video is intentionally deferred
+
+Do not try to turn stream-lite JSON/JPEG latest segments into production streaming.
+
+Current stream-lite should be used to prove:
+
+```text
+paid access
+creator publishing
+viewer receipt verification
+gateway route behavior
+bounded media movement
+creator UX
+```
+
+Full streaming later needs one of:
+
+```text
+MediaRecorder chunks
+WebRTC session service
+HLS / LL-HLS segment service
+OAP media transport
+gateway-mediated paid stream sessions
+```
+
+---
+
+## 6. Next session mission
+
+The next session should begin **Phase 1 of STREAM_BLUEPRINT.MD**.
+
+### Mission
+
+Build the first version of the **CrabLink Streaming Creator Studio UX**.
+
+Do this as an additive refactor around the working stream page.
+
+Do not rip out working stream-lite proof.
+
+Do not start backend work.
+
+Do not introduce missing placeholder components.
+
+Do not change paid wallet logic.
+
+### Phase 1 goal
+
+Make the stream page look and feel like a real creator studio:
+
+```text
+large polished preview area
+right-side simple controls
+source/look/access grouping
+Go Live status/action area
+developer drawer collapsed by default
+clean stream status bar
+modern dark studio aesthetic
+green live accents
+minimal debug clutter on main screen
+```
+
+The blueprint explicitly says Phase 1 should preserve existing camera preview, stream mint/publish path, `StreamSessionPanel` backend controls, and the two-app paid stream proof. 
+
+---
+
+## 7. Recommended next implementation plan
+
+### Step 1 — Create an additive Studio Shell
+
+Add:
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamStudioShell.jsx
+```
+
+But only if the patch includes the full working component.
+
+The shell should wrap existing components:
+
+```text
+StreamStudioShell
+  uses existing StreamLocalPreview
+  uses existing StreamDraft / draft fields
+  uses existing StreamPricingPanel
+  uses existing StreamPublishFlow
+  uses existing StreamSessionPanel
+  hides advanced JSON/debug details behind a drawer
+```
+
+Do not create imports for components that do not exist.
+
+### Step 2 — Update StreamPage minimally
+
+`StreamPage.jsx` should mount the new shell but keep the existing data flow.
+
+Do not rewrite the stream publish model.
+
+Do not move wallet/receipt logic.
+
+Do not introduce global state changes.
+
+### Step 3 — Add modern studio CSS
+
+Update:
+
+```text
+apps/crablink-tauri/src/pages/stream/stream.css
+```
+
+Design direction:
+
+```text
+dark studio background
+large preview card
+right control rail
+source/look/access cards
+green live accent
+rounded panels
+clean typography
+same light/dark theme compatibility
+developer drawer collapsed by default
+```
+
+### Step 4 — Preserve stream-lite controls
+
+The first UX pass may reorganize these, but must preserve:
+
+```text
+Start preview
+Publish stream descriptor
+Start backend session / frame loop
+Stop backend stream
+Copy stream URL
+Show latest seq/status somewhere
+Show errors clearly
+```
+
+### Step 5 — Keep developer diagnostics
+
+Debug details should exist, but not dominate.
+
+Move or keep behind:
+
+```text
+Developer details
+Stream proof
+Backend payload
+Latest segment
+Receipt proof
+Raw JSON
+```
+
+### Step 6 — Test with two app instances
+
+Every patch should end with the canonical smoke:
+
+```text
+Instance 1: Creator A
+Instance 2: Visitor B
+Creator starts stream
+Visitor pays
+Visitor sees frames
+No second payment during refresh
+```
+
+---
+
+## 8. Phase 2 direction after the studio shell
+
+After Phase 1 is visually strong and still green, Phase 2 should add the compositor model.
+
+New files likely:
+
+```text
+apps/crablink-tauri/src/pages/stream/streamStudioModel.js
+apps/crablink-tauri/src/pages/stream/streamCompositor.js
+apps/crablink-tauri/src/pages/stream/StreamStudioPreview.jsx
+```
+
+The compositor contract from the blueprint should expose:
+
+```js
+{
+  getCanvas(): HTMLCanvasElement | null,
+
+  captureFrameDataUrl(options): Promise<{
+    schema: 'crablink.stream-studio-frame.v1',
+    mediaType: 'image/jpeg',
+    dataUrl: string,
+    width: number,
+    height: number,
+    sourceMode: string,
+    effects: {
+      greenScreenEnabled: boolean,
+      backgroundMode: string,
+      webcamOverlayEnabled: boolean
+    },
+    createdAt: string
+  }>,
+
+  captureStream(fps): MediaStream | null
+}
+```
+
+For current stream-lite:
+
+```text
+StreamSessionPanel publishes from captureFrameDataUrl().
+```
+
+For future real streaming:
+
+```text
+MediaRecorder/WebRTC/OAP can use captureStream().
+```
+
+This is the key design bridge: good UX now, no transport dead end later.
+
+---
+
+## 9. Phase 3 direction: green screen and backgrounds
+
+Green screen should be local UX/compositor only.
+
+It should not touch:
+
+```text
+wallet
+ledger
+receipt
+paid access
+stream ownership
+backend entitlement
+```
+
+Implementation direction:
+
+```text
+hidden source video
+work canvas
+output canvas
+draw background first
+draw processed foreground second
+apply chroma key alpha
+publish composited canvas frame
+```
+
+Correct draw order from blueprint:
+
+```text
+1. Draw selected background onto output canvas.
+2. Draw camera frame into work canvas.
+3. Apply chroma key alpha to work canvas pixels.
+4. Draw processed foreground over background.
+5. Draw overlays/status if needed.
+```
+
+Allowed background sources for v1:
+
+```text
+none
+solid color
+bundled image
+user-selected local image
+later b3-verified image
+```
+
+Avoid arbitrary remote URL background galleries for production.
+
+---
+
+## 10. Phase 4 direction: saved presets
+
+Presets are local convenience only.
+
+Allowed to save:
+
+```text
+source mode
+camera preference hint
+green screen settings
+background choice metadata
+webcam overlay position
+stream-lite quality preset
+preferred frame interval
+draft title/description/tags
+```
+
+Forbidden to save:
+
+```text
+wallet secrets
+raw capabilities
+stream keys
+paid receipt truth
+viewer entitlement truth
+private keys
+backend ownership truth
+ledger state
+live backend session
+```
+
+Settings must go through existing Tauri settings adapters and remain typed, bounded, non-secret, and safe to reset.
+
+---
+
+## 11. Key test commands for next session
+
+### 11.1 Tauri app checks
+
+From:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+```
+
+Run:
+
+```bash
+npm run build
+npm run check:rust:mac-media
+npm run tauri:dev:mac-media
+```
+
+The codebundle confirms these scripts exist, including `tauri:dev:mac-media` and `check:rust:mac-media`. 
+
+### 11.2 Build packaged app for second instance
+
+From:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+```
+
+Run:
+
+```bash
+npm run build
+npm run tauri -- build --config src-tauri/tauri.macos.dev-media.conf.json
+```
+
+Find output:
+
+```bash
+find src-tauri/target/release/bundle -maxdepth 4 \
+  \( -name "*.app" -o -name "*.dmg" \) -print
+```
+
+Open likely app:
+
+```bash
+open "src-tauri/target/release/bundle/macos/CrabLink.app"
+```
+
+### 11.3 Watch stream status
+
+From:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+```
+
+Run:
+
+```bash
+STREAM_ID="stream_3a4aebe9"
+
+while true; do
+  printf "\n--- %s ---\n" "$(date -u +%FT%TZ)"
+  curl -fsS "http://127.0.0.1:8090/streams/${STREAM_ID}/status" \
+    | jq '.session.status, .session.latest_seq, .session.latest_segment.media_type, .session.latest_segment.source, .session.latest_segment.producer_account, .session.latest_segment.created_at_ms'
+  sleep 2
+done
+```
+
+Expected when creator loop works:
+
+```text
+"live"
+3, 4, 5...
+"image/jpeg"
+"crablink_tauri_creator_frame_loop" or compositor equivalent
+"acct_dev"
+created_at_ms changing
+```
+
+### 11.4 Fund Visitor B after stack restart
+
+If wallet B has no ROC after restarting backend stack:
+
+```bash
+curl -fsS -X POST http://127.0.0.1:8088/v1/issue \
+  -H 'Authorization: Bearer dev' \
+  -H "Idempotency-Key: dev-fund-visitor-b-$(date +%s)" \
+  -H 'Content-Type: application/json' \
+  -d '{"to":"acct_visitor_b","asset":"roc","amount_minor":"1776","memo":"dev fund visitor B"}' \
+  | jq .
+```
+
+Verify:
+
+```bash
+curl -fsS 'http://127.0.0.1:8090/wallet/acct_visitor_b/balance' \
+  -H 'Authorization: Bearer dev' \
+  -H 'x-ron-passport: passport:main:visitor-b' \
+  -H 'x-ron-wallet-account: acct_visitor_b' \
+  | jq .
+```
+
+---
+
+## 12. Canonical two-app stream smoke for next session
+
+Use this exact order after each major UX patch:
+
+```text
+1. Start RustyOnions backend stack.
+2. Start Creator A Tauri dev app:
+   npm run tauri:dev:mac-media
+
+3. In Creator A:
+   - use acct_dev
+   - open stream page
+   - start camera preview
+   - mint/publish stream descriptor
+   - start backend session/frame loop
+   - copy stream URL
+   - do not switch to Visitor B in this instance
+
+4. Build/open packaged app as Visitor B:
+   - open .app or .dmg build
+   - switch to acct_visitor_b
+   - paste/load creator stream URL
+   - pay once
+   - start auto-refresh
+
+5. Watch terminal:
+   - latest_seq must advance
+   - producer_account must remain acct_dev
+   - viewer must update without second payment
+```
+
+This two-instance method is currently the truth-preserving stream proof.
+
+---
+
+## 13. Important warnings for next instance
+
+### 13.1 Do not restart backend unnecessarily
+
+Restarting the stack may clear local assets/sessions and wallet balances.
+
+If the stream URL stops resolving after restart, recreate the stream.
+
+If Visitor B cannot pay, fund `acct_visitor_b` again.
+
+### 13.2 Do not switch passports in the creator instance during stream proof
+
+The one-window identity switch remains risky.
+
+Avoid:
+
+```text
+Creator starts stream
+same app switches to Visitor B
+```
+
+Preferred:
+
+```text
+Creator stays Creator A in one app
+Visitor B runs in second app
+```
+
+### 13.3 Do not make localhost mandatory for normal users
+
+Localhost is dev-only.
+
+Product/default runtime remains gateway-first:
+
+```text
+Tauri → configured svc-gateway → omnigate → RustyOnions services
+```
+
+### 13.4 Do not push QuickChain/external settlement
+
+Streaming studio UX must not introduce:
+
+```text
+ROX
+Solana
+external settlement
+public bridge
+staking
+liquidity
+exchange logic
+QuickChain implementation
+```
+
+### 13.5 Do not fake smoother streaming
+
+Do not claim stream-lite is production video.
+
+Correct language:
+
+```text
+stream-lite proof
+bounded latest segment
+low-frame preview
+paid live proof
+```
+
+Avoid:
+
+```text
+full WebRTC
+DRM
+anti-rip
+production livestreaming
+broadcast-grade video
+```
+
+---
+
+## 14. Current definition of done for the next UX phase
+
+The next UX phase is done when:
+
+```text
+1. Stream page opens as a polished Creator Studio.
+2. Existing camera preview still works.
+3. Existing stream mint/publish path still works.
+4. Creator can start live frame loop.
+5. Visitor B can pay in second app.
+6. Visitor B sees frames update.
+7. No second payment occurs during refresh.
+8. Developer details are available but not cluttering main UI.
+9. npm run build passes.
+10. npm run check:rust:mac-media passes.
+```
+
+Stretch goal for the next session:
+
+```text
+The page visually supports the future source/look/access model,
+even if green screen and compositor are not wired yet.
+```
+
+---
+
+## 15. Recommended first patch for next session
+
+The first patch should be **UX-only/additive**.
+
+Likely files:
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamPage.jsx
+apps/crablink-tauri/src/pages/stream/stream.css
+```
+
+Potential new file:
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamStudioShell.jsx
+```
+
+Do not add:
+
+```text
+StreamSourcePicker.jsx
+StreamSceneControls.jsx
+StreamGoLivePanel.jsx
+StreamStudioStatusBar.jsx
+```
+
+unless those files are fully implemented in the same patch.
+
+First patch should probably:
+
+```text
+wrap existing stream panels in a studio layout
+make preview the visual center
+move draft/pricing/session controls into right-side cards
+add source/look/access visual grouping
+add collapsed developer drawer
+preserve existing props/state paths
+preserve existing live frame loop
+preserve existing publish flow
+```
+
+---
+
+## 16. Product direction after Phase 1
+
+Once the studio shell is good, proceed:
+
+```text
+Phase 2:
+  compositor model
+  camera/screen source model
+  webcam overlay primitive
+  captureFrameDataUrl contract
+
+Phase 3:
+  green screen MVP
+  tolerance slider
+  key color picker
+  bundled/local background switching
+
+Phase 4:
+  saved presets
+  reset default
+  local-only settings
+
+Phase 5:
+  better stream-lite publishing
+  fallback switching slate
+  1s proof mode
+  segment size display
+  dropped frame counter
+
+Phase 6:
+  write real media transport blueprint
+  MediaRecorder chunks
+  audio track
+  paid_until intervals
+  range/segment playback
+```
+
+---
+
+## 17. Final handoff summary
+
+We ended this session at a strong checkpoint.
+
+The backend stream-lite proof works. The viewer paid unlock works. The two-app method works. The current limitation is not the paid business loop; it is the creator product experience and the lack of a polished compositor/studio UI.
+
+Next session should start with `STREAM_BLUEPRINT.MD`, keep backend work frozen unless a regression appears, and build the Creator Studio UX around the current proven stream-lite path.
+
+The guiding rule:
+
+```text
+Make streaming feel amazing without weakening RustyOnions truth boundaries.
+```
+
+
+### END NOTE - MAY 19 2026 - 17:50 CST

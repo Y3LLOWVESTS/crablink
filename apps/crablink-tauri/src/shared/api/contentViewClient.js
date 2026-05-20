@@ -343,8 +343,16 @@ function normalizeContentViewError(error, target, request, fallbackReason) {
 }
 
 function stableContentViewIdempotencyKey(action, assetCrabUrl, payerAccount) {
-  const seed = [action, assetCrabUrl, payerAccount, Date.now()].filter(Boolean).join(':');
-  return compactIdempotencyKey(`crablink-content-view:${action}:${fnv1aHex(seed)}:${assetCrabUrl}`);
+  const typed = parseTypedAssetBody(assetCrabUrl);
+  const safeAction = String(action || 'pay').trim().toLowerCase() === 'quote' ? 'quote' : 'pay';
+  const payerHash = fnv1aHex(String(payerAccount || '').trim() || 'anonymous');
+
+  if (typed?.hash) {
+    return compactIdempotencyKey(`cl-view-${safeAction}:${typed.hash.slice(0, 16)}:${payerHash}`);
+  }
+
+  const seed = [safeAction, assetCrabUrl, payerAccount].filter(Boolean).join(':');
+  return compactIdempotencyKey(`cl-view-${safeAction}:${fnv1aHex(seed)}:${payerHash}`);
 }
 
 function compactIdempotencyKey(value) {
