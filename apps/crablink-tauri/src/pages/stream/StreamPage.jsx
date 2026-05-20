@@ -1,7 +1,7 @@
 /**
  * RO:WHAT — Route owner for the React crab://stream Creator Studio.
  * RO:WHY — Keeps the stream page focused on actual studio work: preview, saved scenes, local look controls, access, publish, and session controls.
- * RO:INTERACTS — StreamLocalPreview, StreamLookPanel, StreamMediaReadiness, StreamChatPlaceholder, StreamDraft, StreamPricingPanel, StreamSessionPanel, StreamPublishFlow, JsonPreview, streamStudioModel.
+ * RO:INTERACTS — StreamLocalPreview, StreamLookPanel, StreamGoLivePanel, StreamMediaReadiness, StreamChatPlaceholder, StreamDraft, StreamPricingPanel, StreamSessionPanel, StreamPublishFlow, JsonPreview, streamStudioModel.
  * RO:INVARIANTS — local studio/look state is display/capture UX only; backend owns b3 CID, stream URL, receipt, stream_id, live status, and viewer entitlement.
  * RO:METRICS — gateway route calls inside StreamPublishFlow/StreamSessionPanel preserve correlation diagnostics.
  * RO:CONFIG — app settings may prefill creator/passport/wallet labels; saved scenes/look settings are local preferences only.
@@ -13,6 +13,7 @@ import { useMemo, useState } from 'react';
 import JsonPreview from '../../shared/components/JsonPreview.jsx';
 import StreamChatPlaceholder from './StreamChatPlaceholder.jsx';
 import StreamDraft from './StreamDraft.jsx';
+import StreamGoLivePanel from './StreamGoLivePanel.jsx';
 import StreamLocalPreview from './StreamLocalPreview.jsx';
 import StreamLookPanel from './StreamLookPanel.jsx';
 import StreamMediaReadiness from './StreamMediaReadiness.jsx';
@@ -48,6 +49,7 @@ export default function StreamPage({ app, route }) {
   const [presetName, setPresetName] = useState('');
   const [copyState, setCopyState] = useState('');
   const [presetState, setPresetState] = useState('');
+  const [advancedControlsOpen, setAdvancedControlsOpen] = useState(false);
 
   const allStudioScenes = useMemo(
     () => [...BUILTIN_STUDIO_SCENES, ...savedScenes],
@@ -69,12 +71,39 @@ export default function StreamPage({ app, route }) {
   const pricing = stats.pricing || {};
   const previewActive = previewState.status === 'previewing';
 
-  const hasPublishedDescriptor = Boolean(
-    publishedStream?.streamId ||
-      publishedStream?.stream_id ||
-      publishedStream?.raw?.stream_id ||
-      publishedStream?.raw?.streamId,
-  );
+  function scrollToSelector(selector) {
+    window.requestAnimationFrame(() => {
+      const node = document.querySelector(selector);
+      node?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    });
+  }
+
+  function showPreview() {
+    setViewMode('studio');
+    scrollToSelector('.cl-stream-local-preview, .cl-stream-preview-card, .cl-stream-stage');
+  }
+
+  function openPublishControls() {
+    setViewMode('studio');
+    setAdvancedControlsOpen(true);
+    scrollToSelector('[data-stream-publish-controls="true"]');
+  }
+
+  function openSessionControls() {
+    setViewMode('studio');
+    setAdvancedControlsOpen(true);
+    scrollToSelector('[data-stream-session-controls="true"]');
+  }
+
+  function openSetup() {
+    setViewMode('setup');
+    scrollToSelector('.cl-stream-setup-stack');
+  }
+
+  function openDeveloper() {
+    setViewMode('developer');
+    scrollToSelector('.cl-stream-developer-grid');
+  }
 
   async function copyManifest() {
     const json = JSON.stringify(manifest, null, 2);
@@ -95,6 +124,7 @@ export default function StreamPage({ app, route }) {
     setPublishedStream(null);
     setStudioSceneId('camera');
     setPresetName('');
+    setAdvancedControlsOpen(false);
     setCopyState('Local stream draft cleared');
     window.setTimeout(() => setCopyState(''), 1800);
   }
@@ -115,8 +145,10 @@ export default function StreamPage({ app, route }) {
     setSavedScenes(next);
     setStudioSceneId(preset.id);
     setPresetName('');
-    setPresetState(`Saved scene preset: ${preset.name}`);
-    window.setTimeout(() => setPresetState(''), 2400);
+
+    const warning = preset.storageWarning ? ` ${preset.storageWarning}` : '';
+    setPresetState(`Saved scene preset: ${preset.name}.${warning}`);
+    window.setTimeout(() => setPresetState(''), warning ? 5200 : 2400);
   }
 
   function deleteSelectedScene() {
@@ -289,37 +321,72 @@ export default function StreamPage({ app, route }) {
         </main>
 
         <aside className="cl-stream-studio-side" aria-label="Creator controls">
-          <section className="cl-stream-panel cl-stream-command-box">
-            <p className="cl-eyebrow">Go live</p>
-            <h2>Preview. Publish. Start loop.</h2>
-            <ol className="cl-stream-steps">
-              <li className={previewActive ? 'is-done' : ''}>Preview active</li>
-              <li className={draft.title.trim() ? 'is-done' : ''}>Stream named</li>
-              <li className={pricing.summary ? 'is-done' : ''}>ROC access set</li>
-              <li className={hasPublishedDescriptor ? 'is-done' : ''}>Descriptor published</li>
-            </ol>
-          </section>
+          <StreamGoLivePanel
+            draft={draft}
+            pricing={pricing}
+            previewState={previewState}
+            publishedStream={publishedStream}
+            onShowPreview={showPreview}
+            onOpenPublishControls={openPublishControls}
+            onOpenSessionControls={openSessionControls}
+            onOpenSetup={openSetup}
+            onOpenDeveloper={openDeveloper}
+          />
 
           <StreamLookPanel draft={draft} onChange={setDraft} />
 
           <StreamPricingPanel draft={draft} onChange={setDraft} pricing={pricing} />
 
-          <StreamPublishFlow
-            app={app}
-            draft={draft}
-            previewState={previewState}
-            pricing={pricing}
-            manifest={manifest}
-            onPublishedStream={setPublishedStream}
-          />
+          <details
+            className="cl-stream-advanced-live-controls"
+            open={advancedControlsOpen}
+            onToggle={(event) => setAdvancedControlsOpen(event.currentTarget.open)}
+          >
+            <summary>
+              <span>Explicit publish and backend controls</span>
+              <small>
+                Prepare, ROC hold, descriptor publish, backend session, and frame loop remain visible
+                here for auditability.
+              </small>
+            </summary>
 
-          <StreamSessionPanel
-            app={app}
-            draft={draft}
-            previewState={previewState}
-            pricing={pricing}
-            publishedStream={publishedStream}
-          />
+            <div className="cl-stream-advanced-live-stack">
+              <div data-stream-publish-controls="true">
+                <StreamPublishFlow
+                  app={app}
+                  draft={draft}
+                  previewState={previewState}
+                  pricing={pricing}
+                  manifest={manifest}
+                  onPublishedStream={setPublishedStream}
+                />
+              </div>
+
+              <div data-stream-session-controls="true">
+                <StreamSessionPanel
+                  app={app}
+                  draft={draft}
+                  previewState={previewState}
+                  pricing={pricing}
+                  publishedStream={publishedStream}
+                />
+              </div>
+            </div>
+          </details>
+
+          {!advancedControlsOpen && publishedStream ? (
+            <p className="cl-stream-info">
+              Descriptor published. Open Go Live controls to start the backend stream-lite session
+              and frame loop.
+            </p>
+          ) : null}
+
+          {!advancedControlsOpen && !publishedStream ? (
+            <p className="cl-stream-info">
+              Publish controls are collapsed to keep the Studio clean. Open them when you are ready
+              for explicit ROC hold and descriptor publishing.
+            </p>
+          ) : null}
         </aside>
       </div>
 

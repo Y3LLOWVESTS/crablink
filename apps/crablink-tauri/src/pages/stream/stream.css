@@ -1883,3 +1883,307 @@
     white-space: normal;
   }
 }
+/* --------------------------------------------------------------------------
+ * Batch 6: Human-first Go Live guide
+ * -------------------------------------------------------------------------- */
+
+.cl-stream-go-live-panel {
+  position: relative;
+  overflow: hidden;
+  border-color: color-mix(in srgb, #22c55e 32%, var(--cl-border));
+  background:
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, #22c55e 18%, transparent), transparent 34%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--cl-card) 94%, transparent),
+      color-mix(in srgb, var(--cl-surface) 88%, transparent)
+    );
+}
+
+.cl-stream-go-live-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.cl-stream-go-live-hero h2 {
+  margin: 0.1rem 0 0.35rem;
+  font-size: 1.25rem;
+  letter-spacing: -0.025em;
+}
+
+.cl-stream-go-live-hero p {
+  margin: 0;
+  color: var(--cl-muted);
+  line-height: 1.45;
+}
+
+.cl-stream-live-orb {
+  display: grid;
+  place-items: center;
+  width: 4.2rem;
+  min-width: 4.2rem;
+  height: 4.2rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--cl-border) 80%, transparent);
+  background:
+    radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--cl-card) 92%, white), transparent 26%),
+    color-mix(in srgb, var(--cl-muted) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, white 8%, transparent);
+}
+
+.cl-stream-live-orb span {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: var(--cl-muted);
+}
+
+.cl-stream-live-orb.is-preview {
+  border-color: color-mix(in srgb, #f59e0b 58%, var(--cl-border));
+  background:
+    radial-gradient(circle at 38% 32%, color-mix(in srgb, #fde68a 62%, white), transparent 26%),
+    color-mix(in srgb, #f59e0b 28%, transparent);
+}
+
+.cl-stream-live-orb.is-ready {
+  border-color: color-mix(in srgb, #22c55e 70%, var(--cl-border));
+  background:
+    radial-gradient(circle at 38% 32%, color-mix(in srgb, #bbf7d0 70%, white), transparent 26%),
+    color-mix(in srgb, #22c55e 30%, transparent);
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, #22c55e 10%, transparent),
+    0 18px 34px color-mix(in srgb, #22c55e 16%, transparent);
+}
+
+.cl-stream-live-orb.is-ready span,
+.cl-stream-live-orb.is-preview span {
+  color: color-mix(in srgb, var(--cl-text) 86%, black);
+}
+
+.cl-stream-go-live-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.cl-stream-go-live-fact {
+  min-width: 0;
+  padding: 0.62rem;
+  border: 1px solid color-mix(in srgb, var(--cl-border) 78%, transparent);
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--cl-surface) 72%, transparent);
+}
+
+.cl-stream-go-live-fact span {
+  display: block;
+  margin-bottom: 0.22rem;
+  color: var(--cl-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cl-stream-go-live-fact strong {
+  display: block;
+  overflow: hidden;
+  color: var(--cl-text);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cl-stream-go-live-fact.is-good {
+  border-color: color-mix(in srgb, #22c55e 40%, var(--cl-border));
+}
+
+.cl-stream-go-live-fact.is-warn {
+  border-color: color-mix(in srgb, #f59e0b 48%, var(--cl-border));
+}
+
+.cl-stream-go-live-steps {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.85rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-stream-go-live-steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.58rem;
+  border: 1px solid color-mix(in srgb, var(--cl-border) 76%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--cl-card) 72%, transparent);
+}
+
+.cl-stream-go-live-steps li.is-done {
+  border-color: color-mix(in srgb, #22c55e 38%, var(--cl-border));
+  background: color-mix(in srgb, #22c55e 9%, var(--cl-card));
+}
+
+.cl-stream-go-live-step-index {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cl-text) 9%, transparent);
+  color: var(--cl-text);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.cl-stream-go-live-steps li.is-done .cl-stream-go-live-step-index {
+  background: color-mix(in srgb, #22c55e 28%, transparent);
+  color: color-mix(in srgb, #22c55e 72%, var(--cl-text));
+}
+
+.cl-stream-go-live-steps strong,
+.cl-stream-go-live-steps small {
+  display: block;
+  min-width: 0;
+}
+
+.cl-stream-go-live-steps strong {
+  color: var(--cl-text);
+  font-size: 0.9rem;
+}
+
+.cl-stream-go-live-steps small {
+  margin-top: 0.12rem;
+  color: var(--cl-muted);
+  line-height: 1.35;
+}
+
+.cl-stream-go-live-steps button,
+.cl-stream-go-live-actions button {
+  white-space: nowrap;
+}
+
+.cl-stream-go-live-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.cl-stream-go-live-boundary {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid color-mix(in srgb, #22c55e 24%, var(--cl-border));
+  border-radius: 14px;
+  background: color-mix(in srgb, #22c55e 7%, transparent);
+  color: var(--cl-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.cl-stream-advanced-live-controls {
+  border: 1px solid color-mix(in srgb, var(--cl-border) 84%, transparent);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--cl-card) 80%, transparent);
+  overflow: hidden;
+}
+
+.cl-stream-advanced-live-controls > summary {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.82rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.cl-stream-advanced-live-controls > summary::marker {
+  color: color-mix(in srgb, #22c55e 70%, var(--cl-text));
+}
+
+.cl-stream-advanced-live-controls > summary span {
+  color: var(--cl-text);
+  font-weight: 850;
+}
+
+.cl-stream-advanced-live-controls > summary small {
+  color: var(--cl-muted);
+  line-height: 1.35;
+}
+
+.cl-stream-advanced-live-stack {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0 0.72rem 0.72rem;
+}
+
+@media (max-width: 900px) {
+  .cl-stream-go-live-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-stream-go-live-steps li {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .cl-stream-go-live-steps li button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .cl-stream-go-live-actions button {
+    flex: 1 1 100%;
+  }
+}
+/* --------------------------------------------------------------------------
+ * Batch 7: Creator camera framing controls
+ * -------------------------------------------------------------------------- */
+
+.cl-stream-camera-frame-card {
+  display: grid;
+  gap: 0.72rem;
+  margin: 0.85rem 0;
+  padding: 0.78rem;
+  border: 1px solid color-mix(in srgb, #22c55e 22%, var(--cl-border));
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 92% 6%, color-mix(in srgb, #22c55e 12%, transparent), transparent 30%),
+    color-mix(in srgb, var(--cl-surface) 82%, transparent);
+}
+
+.cl-stream-camera-frame-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cl-stream-camera-frame-head h4 {
+  margin: 0.12rem 0 0;
+  color: var(--cl-text);
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+}
+
+.cl-stream-camera-frame-head button {
+  border: 1px solid color-mix(in srgb, var(--cl-border) 80%, transparent);
+  border-radius: 999px;
+  padding: 0.42rem 0.7rem;
+  background: color-mix(in srgb, var(--cl-card) 82%, transparent);
+  color: var(--cl-text);
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cl-stream-camera-frame-head button:hover {
+  border-color: color-mix(in srgb, #22c55e 42%, var(--cl-border));
+  background: color-mix(in srgb, #22c55e 9%, var(--cl-card));
+}
+
+.cl-stream-camera-frame-card .cl-stream-look-toggle {
+  margin: 0;
+}

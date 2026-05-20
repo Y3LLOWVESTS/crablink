@@ -1,10 +1,10 @@
 /**
  * RO:WHAT — Local look/effects controls for CrabLink stream compositor.
- * RO:WHY — Adds background replacement, uploaded local backgrounds, chroma key, and person cutout without touching backend, wallet, receipt, or stream truth.
+ * RO:WHY — Adds background replacement, uploaded local backgrounds, chroma key, person cutout, and creator framing without touching backend, wallet, receipt, or stream truth.
  * RO:INTERACTS — StreamPage, streamCompositor, streamPersonSegmentation, streamStudioModel, stream.css.
  * RO:INVARIANTS — local compositor preferences only; no wallet state, receipt state, entitlement, backend session, or stream ownership truth.
  * RO:SECURITY — uploaded background images remain local draft state; no local path exposure, no arbitrary code, no secrets.
- * RO:TEST — npm run build; camera preview → Person cutout → solid background/image background smoke.
+ * RO:TEST — npm run build; camera preview → Person cutout → mirror/zoom wide/position → brightness/contrast/saturation → solid/image background smoke.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -17,6 +17,15 @@ const BACKGROUND_PRESETS = Object.freeze([
   { id: 'solid_blue', label: 'Blue', color: '#071d3a' },
   { id: 'solid_purple', label: 'Purple', color: '#2e1065' },
 ]);
+
+const ZOOM_MIN = 33;
+const ZOOM_MAX = 220;
+const BRIGHTNESS_MIN = 40;
+const BRIGHTNESS_MAX = 180;
+const CONTRAST_MIN = 40;
+const CONTRAST_MAX = 200;
+const SATURATION_MIN = 0;
+const SATURATION_MAX = 220;
 
 export default function StreamLookPanel({ draft, onChange }) {
   const fileInputRef = useRef(null);
@@ -32,9 +41,13 @@ export default function StreamLookPanel({ draft, onChange }) {
   const feather = clampNumber(draft.greenScreenFeather, 8, 0, 100);
   const spill = clampNumber(draft.greenScreenSpillReduction, 10, 0, 100);
   const personMaskFeather = clampNumber(draft.personMaskFeather, 2, 0, 12);
-  const cameraBrightness = clampNumber(draft.cameraBrightness, 100, 70, 140);
-  const cameraContrast = clampNumber(draft.cameraContrast, 100, 70, 150);
-  const cameraSaturation = clampNumber(draft.cameraSaturation, 100, 50, 160);
+  const cameraMirror = draft.cameraMirror !== false;
+  const cameraZoom = clampNumber(draft.cameraZoom, 100, ZOOM_MIN, ZOOM_MAX);
+  const cameraOffsetX = clampNumber(draft.cameraOffsetX, 0, -50, 50);
+  const cameraOffsetY = clampNumber(draft.cameraOffsetY, 0, -50, 50);
+  const cameraBrightness = clampNumber(draft.cameraBrightness, 100, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
+  const cameraContrast = clampNumber(draft.cameraContrast, 100, CONTRAST_MIN, CONTRAST_MAX);
+  const cameraSaturation = clampNumber(draft.cameraSaturation, 100, SATURATION_MIN, SATURATION_MAX);
   const personMaskFlip =
     draft.personMaskFlip === true ||
     draft.personMaskPolarity === 'flip' ||
@@ -126,6 +139,20 @@ export default function StreamLookPanel({ draft, onChange }) {
     });
   }
 
+  function resetCameraFraming() {
+    patch({
+      cameraMirror: true,
+      cameraZoom: 100,
+      cameraOffsetX: 0,
+      cameraOffsetY: 0,
+      cameraBrightness: 100,
+      cameraContrast: 100,
+      cameraSaturation: 100,
+      personMaskFeather: 2,
+      personMaskOpacity: 1,
+    });
+  }
+
   async function onBackgroundImageSelected(event) {
     const file = event.target.files?.[0] || null;
     event.target.value = '';
@@ -164,10 +191,10 @@ export default function StreamLookPanel({ draft, onChange }) {
       <div className="cl-stream-look-head">
         <div>
           <p className="cl-eyebrow">Look</p>
-          <h3>Background replacement</h3>
+          <h3>Background + framing</h3>
           <p>
-            Use Person cutout for TikTok/Zoom-style background removal. Chroma key still exists for
-            real green screens.
+            Use Person cutout for TikTok/Zoom-style background removal, then frame yourself with
+            mirror, wide shot, zoom, position, and camera color controls.
           </p>
         </div>
 
@@ -283,6 +310,127 @@ export default function StreamLookPanel({ draft, onChange }) {
         </label>
       </div>
 
+      <div className="cl-stream-camera-frame-card">
+        <div className="cl-stream-camera-frame-head">
+          <div>
+            <p className="cl-eyebrow">Camera framing</p>
+            <h4>Fit yourself in the scene</h4>
+          </div>
+          <button type="button" onClick={resetCameraFraming}>
+            Reset
+          </button>
+        </div>
+
+        <label className="cl-stream-look-toggle">
+          <input
+            type="checkbox"
+            checked={cameraMirror}
+            onChange={(event) =>
+              patch({
+                cameraMirror: event.target.checked,
+              })
+            }
+          />
+          <span>Mirror preview</span>
+        </label>
+
+        <div className="cl-stream-look-grid">
+          <label className="cl-stream-look-range">
+            <span>{cameraZoom < 100 ? `Wide shot · ${cameraZoom}%` : `Zoom / crop · ${cameraZoom}%`}</span>
+            <input
+              type="range"
+              min={ZOOM_MIN}
+              max={ZOOM_MAX}
+              value={cameraZoom}
+              onChange={(event) =>
+                patch({
+                  cameraZoom: Number(event.target.value),
+                })
+              }
+            />
+          </label>
+
+          <label className="cl-stream-look-range">
+            <span>Horizontal position · {cameraOffsetX}</span>
+            <input
+              type="range"
+              min="-50"
+              max="50"
+              value={cameraOffsetX}
+              onChange={(event) =>
+                patch({
+                  cameraOffsetX: Number(event.target.value),
+                })
+              }
+            />
+          </label>
+        </div>
+
+        <div className="cl-stream-look-grid">
+          <label className="cl-stream-look-range">
+            <span>Vertical position · {cameraOffsetY}</span>
+            <input
+              type="range"
+              min="-50"
+              max="50"
+              value={cameraOffsetY}
+              onChange={(event) =>
+                patch({
+                  cameraOffsetY: Number(event.target.value),
+                })
+              }
+            />
+          </label>
+
+          <label className="cl-stream-look-range">
+            <span>Brightness · {cameraBrightness}%</span>
+            <input
+              type="range"
+              min={BRIGHTNESS_MIN}
+              max={BRIGHTNESS_MAX}
+              value={cameraBrightness}
+              onChange={(event) =>
+                patch({
+                  cameraBrightness: Number(event.target.value),
+                })
+              }
+            />
+          </label>
+        </div>
+
+        <div className="cl-stream-look-grid">
+          <label className="cl-stream-look-range">
+            <span>Contrast · {cameraContrast}%</span>
+            <input
+              type="range"
+              min={CONTRAST_MIN}
+              max={CONTRAST_MAX}
+              value={cameraContrast}
+              onChange={(event) =>
+                patch({
+                  cameraContrast: Number(event.target.value),
+                })
+              }
+            />
+          </label>
+
+          <label className="cl-stream-look-range">
+            <span>Saturation · {cameraSaturation}%</span>
+            <input
+              type="range"
+              min={SATURATION_MIN}
+              max={SATURATION_MAX}
+              value={cameraSaturation}
+              onChange={(event) =>
+                patch({
+                  cameraSaturation: Number(event.target.value),
+                })
+              }
+            />
+          </label>
+        </div>
+      </div>
+
       {backgroundRemovalMode === 'person' ? (
         <>
           <div className="cl-stream-segmentation-status">
@@ -313,69 +461,20 @@ export default function StreamLookPanel({ draft, onChange }) {
             <span>Flip cutout polarity</span>
           </label>
 
-          <div className="cl-stream-look-grid">
-            <label className="cl-stream-look-range">
-              <span>Cutout edge softness · {personMaskFeather}</span>
-              <input
-                type="range"
-                min="0"
-                max="12"
-                value={personMaskFeather}
-                onChange={(event) =>
-                  patch({
-                    personMaskFeather: Number(event.target.value),
-                  })
-                }
-              />
-            </label>
-
-            <label className="cl-stream-look-range">
-              <span>Brightness · {cameraBrightness}%</span>
-              <input
-                type="range"
-                min="70"
-                max="140"
-                value={cameraBrightness}
-                onChange={(event) =>
-                  patch({
-                    cameraBrightness: Number(event.target.value),
-                  })
-                }
-              />
-            </label>
-          </div>
-
-          <div className="cl-stream-look-grid">
-            <label className="cl-stream-look-range">
-              <span>Contrast · {cameraContrast}%</span>
-              <input
-                type="range"
-                min="70"
-                max="150"
-                value={cameraContrast}
-                onChange={(event) =>
-                  patch({
-                    cameraContrast: Number(event.target.value),
-                  })
-                }
-              />
-            </label>
-
-            <label className="cl-stream-look-range">
-              <span>Saturation · {cameraSaturation}%</span>
-              <input
-                type="range"
-                min="50"
-                max="160"
-                value={cameraSaturation}
-                onChange={(event) =>
-                  patch({
-                    cameraSaturation: Number(event.target.value),
-                  })
-                }
-              />
-            </label>
-          </div>
+          <label className="cl-stream-look-range">
+            <span>Cutout edge softness · {personMaskFeather}</span>
+            <input
+              type="range"
+              min="0"
+              max="12"
+              value={personMaskFeather}
+              onChange={(event) =>
+                patch({
+                  personMaskFeather: Number(event.target.value),
+                })
+              }
+            />
+          </label>
         </>
       ) : null}
 
@@ -466,8 +565,8 @@ export default function StreamLookPanel({ draft, onChange }) {
       ) : null}
 
       <p className="cl-stream-look-note">
-        Person cutout, chroma key, and background images are local compositor effects. They do not
-        create b3 assets, receipts, wallet events, entitlements, or backend stream truth.
+        Framing, person cutout, chroma key, and background images are local compositor effects. They
+        do not create b3 assets, receipts, wallet events, entitlements, or backend stream truth.
       </p>
     </section>
   );

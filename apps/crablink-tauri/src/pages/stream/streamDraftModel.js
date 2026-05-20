@@ -25,6 +25,39 @@ export const DEFAULT_STREAM_DRAFT = Object.freeze({
   sourceMode: 'local_camera_or_screen_preview',
   ingestMode: 'not_wired_local_preview',
   captureAudio: 'off',
+
+  /*
+   * Local Creator Studio look/framing state.
+   * These are display/capture preferences only. They are not backend stream truth.
+   */
+  backgroundMode: 'none',
+  backgroundSolidColor: '#111111',
+  backgroundImageDataUrl: '',
+  backgroundImageName: '',
+  backgroundImageFit: 'cover',
+  backgroundRemovalMode: 'none',
+  personSegmentationEnabled: false,
+  personMaskPolarity: 'auto',
+  personMaskFlip: false,
+  personMaskInvert: false,
+  personMaskFeather: 2,
+  personMaskOpacity: 1,
+  personSegmentationIntervalMs: 105,
+  greenScreenEnabled: false,
+  greenScreenKeyColor: '#00ff00',
+  greenScreenTolerance: 34,
+  greenScreenFeather: 8,
+  greenScreenSpillReduction: 10,
+  cameraMirror: true,
+  cameraZoom: 100,
+  cameraOffsetX: 0,
+  cameraOffsetY: 0,
+  cameraBrightness: 100,
+  cameraContrast: 100,
+  cameraSaturation: 100,
+  studioOutputWidth: 1280,
+  studioOutputHeight: 720,
+
   accessMode: 'paid_interval_manual_renew',
   priceRoc: '5',
   intervalMinutes: '5',
@@ -145,6 +178,24 @@ export function buildStreamManifest(draft, stats, route, previewState = DEFAULT_
       sent_to_backend: false,
       persisted: false,
       b3_verified: false,
+      compositor: {
+        background_mode: draft.backgroundMode || 'none',
+        background_removal_mode: draft.backgroundRemovalMode || 'none',
+        person_cutout_enabled: Boolean(draft.personSegmentationEnabled),
+        chroma_key_enabled: Boolean(draft.greenScreenEnabled),
+        output_width: normalizeNumber(draft.studioOutputWidth, 1280),
+        output_height: normalizeNumber(draft.studioOutputHeight, 720),
+      },
+      camera_framing: {
+        mirror: draft.cameraMirror !== false,
+        zoom_percent: normalizeNumber(draft.cameraZoom, 100),
+        offset_x: normalizeNumber(draft.cameraOffsetX, 0),
+        offset_y: normalizeNumber(draft.cameraOffsetY, 0),
+        brightness_percent: normalizeNumber(draft.cameraBrightness, 100),
+        contrast_percent: normalizeNumber(draft.cameraContrast, 100),
+        saturation_percent: normalizeNumber(draft.cameraSaturation, 100),
+        local_preference_only: true,
+      },
     },
     stream_plan: {
       source_mode: draft.sourceMode,
@@ -219,7 +270,7 @@ export function buildStreamManifest(draft, stats, route, previewState = DEFAULT_
     provenance: {
       created_by: 'CrabLink React local stream control room',
       source: 'crab://stream workspace',
-      version: 2,
+      version: 3,
     },
     versions: [],
     receipts: [],
@@ -270,4 +321,9 @@ function normalizeIntegerString(value, fallback, { min, max }) {
   const parsed = Number.parseInt(String(value ?? '').replace(/[^0-9]/g, ''), 10);
   const safe = Number.isFinite(parsed) ? parsed : fallback;
   return String(Math.max(min, Math.min(max, safe)));
+}
+
+function normalizeNumber(value, fallback) {
+  const parsed = Number.parseInt(String(value ?? ''), 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }

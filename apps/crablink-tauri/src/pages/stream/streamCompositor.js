@@ -4,9 +4,9 @@
  * RO:INTERACTS — StreamLocalPreview, StreamLookPanel, streamPersonSegmentation, streamSessionClient capture helper, stream.css.
  * RO:INVARIANTS — local visual compositor only; creates no b3, stream truth, receipt truth, entitlement truth, wallet truth, or backend live status.
  * RO:METRICS — local segmentation status only; future native media manager should report dropped frames/latency.
- * RO:CONFIG — reads local draft source/look hints only.
+ * RO:CONFIG — reads local draft source/look/framing/color hints only.
  * RO:SECURITY — no arbitrary code, no local path exposure, no remote user backgrounds, no secrets, no backend capabilities.
- * RO:TEST — npm run build; start camera; enable Person cutout; select image/solid background; verify active preview has no decorative idle circles.
+ * RO:TEST — npm run build; start camera; enable Person cutout; select image/solid background; verify wide zoom, mirror, position, brightness, contrast, saturation.
  */
 
 import {
@@ -21,6 +21,7 @@ let chromaWorkCanvas = null;
 let personWorkCanvas = null;
 let personFilteredCanvas = null;
 let maskCanvas = null;
+let mediaWorkCanvas = null;
 const backgroundImageCache = new Map();
 
 export function drawCompositedFrame({
@@ -199,12 +200,6 @@ function ensureCanvasSize(canvas, width, height) {
 }
 
 function drawActiveBackground(context, width, height, draft, mode) {
-  /*
-   * Important:
-   * Active preview backgrounds must be clean. The large decorative studio
-   * circles belong only to the idle splash slate, otherwise uploaded
-   * backgrounds look washed/covered and person cutout scenes look fake.
-   */
   const backgroundMode = cleanString(draft.backgroundMode);
   const backgroundColor = cleanString(draft.backgroundSolidColor) || '#111111';
   const backgroundImageDataUrl = cleanString(draft.backgroundImageDataUrl);
@@ -308,16 +303,11 @@ function getCachedBackgroundImage(dataUrl) {
 }
 
 function drawSourceVideo(context, video, width, height, draft, mode) {
-  const rect =
-    mode.fit === 'contain'
-      ? fitInside(video.videoWidth, video.videoHeight, width, height)
-      : coverInside(video.videoWidth, video.videoHeight, width, height);
-
   if (mode.personSegmentationWanted) {
-    const status = drawPersonSegmentedVideo(context, video, rect, draft);
+    const status = drawPersonSegmentedVideo(context, video, width, height, draft, mode);
 
     if (status !== 'ready') {
-      drawSourceVideoRaw(context, video, rect, mode);
+      drawSourceVideoRaw(context, video, width, height, draft, mode);
       drawFutureEffectBadge(context, width, height, personStatusText(status));
     }
 
@@ -325,20 +315,20 @@ function drawSourceVideo(context, video, width, height, draft, mode) {
   }
 
   if (mode.greenScreenWanted) {
-    const keyed = drawChromaKeyVideo(context, video, rect, draft);
+    const keyed = drawChromaKeyVideo(context, video, width, height, draft, mode);
 
     if (!keyed) {
-      drawSourceVideoRaw(context, video, rect, mode);
+      drawSourceVideoRaw(context, video, width, height, draft, mode);
       drawFutureEffectBadge(context, width, height, 'Green screen unavailable in this WebView');
     }
 
     return;
   }
 
-  drawSourceVideoRaw(context, video, rect, mode);
+  drawSourceVideoRaw(context, video, width, height, draft, mode);
 }
 
-function drawPersonSegmentedVideo(context, video, rect, draft) {
+function drawPersonSegmentedVideo(context, video, width, height, draft, mode) {
   const segmentation = requestPersonSegmentationMask({
     source: video,
     enabled: true,
@@ -364,18 +354,19 @@ function drawPersonSegmentedVideo(context, video, rect, draft) {
       return 'canvas_unavailable';
     }
 
-    work.width = Math.max(1, rect.width);
-    work.height = Math.max(1, rect.height);
+    work.width = Math.max(1, width);
+    work.height = Math.max(1, height);
     filtered.width = work.width;
     filtered.height = work.height;
     maskSourceCanvas.width = mask.width;
     maskSourceCanvas.height = mask.height;
 
     filteredContext.clearRect(0, 0, filtered.width, filtered.height);
-    filteredContext.save();
-    applyCameraFilters(filteredContext, draft);
-    filteredContext.drawImage(video, 0, 0, filtered.width, filtered.height);
-    filteredContext.restore();
+    drawFramedMedia(filteredContext, video, filtered.width, filtered.height, draft, mode, {
+      fit: 'cover',
+      mirror: shouldMirrorCamera(draft, mode),
+      adjustCameraPixels: true,
+    });
 
     workContext.clearRect(0, 0, work.width, work.height);
     workContext.drawImage(filtered, 0, 0);
@@ -403,16 +394,41 @@ function drawPersonSegmentedVideo(context, video, rect, draft) {
 
     maskContext.putImageData(maskImage, 0, 0);
 
+    const transformedMask = getMediaWorkCanvas();
+    transformedMask.width = work.width;
+    transformedMask.height = work.height;
+    const transformedMaskContext = transformedMask.getContext('2d', { willReadFrequently: true });
+
+    if (!transformedMaskContext) {
+      return 'canvas_unavailable';
+    }
+
+    transformedMaskContext.clearRect(0, 0, transformedMask.width, transformedMask.height);
+    drawFramedMedia(
+      transformedMaskContext,
+      maskSourceCanvas,
+      transformedMask.width,
+      transformedMask.height,
+      draft,
+      mode,
+      {
+        fit: 'cover',
+        mirror: shouldMirrorCamera(draft, mode),
+        adjustCameraPixels: false,
+      },
+    );
+
     workContext.save();
     workContext.globalCompositeOperation = 'destination-in';
     workContext.filter = `blur(${clampInteger(draft.personMaskFeather, 2, 0, 12)}px)`;
-    workContext.drawImage(maskSourceCanvas, 0, 0, work.width, work.height);
+    workContext.drawImage(transformedMask, 0, 0);
     workContext.restore();
+    workContext.filter = 'none';
 
     context.save();
     context.shadowColor = 'rgba(0, 0, 0, 0.28)';
     context.shadowBlur = 18;
-    context.drawImage(work, rect.x, rect.y, rect.width, rect.height);
+    context.drawImage(work, 0, 0, width, height);
     context.restore();
 
     return 'ready';
@@ -421,30 +437,60 @@ function drawPersonSegmentedVideo(context, video, rect, draft) {
   }
 }
 
-function drawSourceVideoRaw(context, video, rect, mode) {
+function drawSourceVideoRaw(context, video, width, height, draft, mode) {
   context.save();
 
   if (mode.fit === 'contain') {
+    const containRect = fitInside(video.videoWidth, video.videoHeight, width, height);
     context.shadowColor = 'rgba(0, 0, 0, 0.42)';
     context.shadowBlur = 28;
-    roundRect(context, rect.x, rect.y, rect.width, rect.height, 26);
+    roundRect(context, containRect.x, containRect.y, containRect.width, containRect.height, 26);
     context.clip();
   }
 
-  context.drawImage(video, rect.x, rect.y, rect.width, rect.height);
+  if (isCameraLikeMode(mode)) {
+    const work = getMediaWorkCanvas();
+    work.width = width;
+    work.height = height;
+    const workContext = work.getContext('2d', { willReadFrequently: true });
+
+    if (workContext) {
+      workContext.clearRect(0, 0, width, height);
+      drawFramedMedia(workContext, video, width, height, draft, mode, {
+        fit: mode.fit,
+        mirror: shouldMirrorCamera(draft, mode),
+        adjustCameraPixels: true,
+      });
+      context.drawImage(work, 0, 0);
+    } else {
+      drawFramedMedia(context, video, width, height, draft, mode, {
+        fit: mode.fit,
+        mirror: shouldMirrorCamera(draft, mode),
+        adjustCameraPixels: false,
+      });
+    }
+  } else {
+    drawFramedMedia(context, video, width, height, draft, mode, {
+      fit: mode.fit,
+      mirror: false,
+      adjustCameraPixels: false,
+    });
+  }
+
   context.restore();
 
   if (mode.fit === 'contain') {
+    const containRect = fitInside(video.videoWidth, video.videoHeight, width, height);
     context.save();
     context.strokeStyle = 'rgba(255, 255, 255, 0.14)';
     context.lineWidth = 2;
-    roundRect(context, rect.x, rect.y, rect.width, rect.height, 26);
+    roundRect(context, containRect.x, containRect.y, containRect.width, containRect.height, 26);
     context.stroke();
     context.restore();
   }
 }
 
-function drawChromaKeyVideo(context, video, rect, draft) {
+function drawChromaKeyVideo(context, video, width, height, draft, mode) {
   try {
     const work = getChromaWorkCanvas();
     const workContext = work.getContext('2d', { willReadFrequently: true });
@@ -453,11 +499,15 @@ function drawChromaKeyVideo(context, video, rect, draft) {
       return false;
     }
 
-    work.width = Math.max(1, rect.width);
-    work.height = Math.max(1, rect.height);
+    work.width = Math.max(1, width);
+    work.height = Math.max(1, height);
 
     workContext.clearRect(0, 0, work.width, work.height);
-    workContext.drawImage(video, 0, 0, work.width, work.height);
+    drawFramedMedia(workContext, video, work.width, work.height, draft, mode, {
+      fit: 'cover',
+      mirror: shouldMirrorCamera(draft, mode),
+      adjustCameraPixels: true,
+    });
 
     const imageData = workContext.getImageData(0, 0, work.width, work.height);
     const data = imageData.data;
@@ -474,6 +524,10 @@ function drawChromaKeyVideo(context, video, rect, draft) {
       const red = data[index];
       const green = data[index + 1];
       const blue = data[index + 2];
+
+      if (data[index + 3] === 0) {
+        continue;
+      }
 
       const distance = colorDistance(red, green, blue, key.r, key.g, key.b);
 
@@ -497,7 +551,7 @@ function drawChromaKeyVideo(context, video, rect, draft) {
     context.save();
     context.shadowColor = 'rgba(0, 0, 0, 0.28)';
     context.shadowBlur = 18;
-    context.drawImage(work, rect.x, rect.y, rect.width, rect.height);
+    context.drawImage(work, 0, 0, width, height);
     context.restore();
 
     return true;
@@ -514,6 +568,8 @@ function drawOverlayVideo(context, video, width, height, mode) {
   context.shadowBlur = 24;
   roundRect(context, rect.x, rect.y, rect.width, rect.height, 26);
   context.clip();
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
   context.drawImage(video, rect.x, rect.y, rect.width, rect.height);
   context.restore();
 
@@ -631,7 +687,9 @@ function drawStudioBadges(context, width, height, draft, preview, mode) {
   const title = cleanString(draft.title) || 'CrabLink stream';
   const keyState = mode.greenScreenWanted ? ' · GREEN KEY' : '';
   const personState = mode.personSegmentationWanted ? ' · PERSON CUTOUT' : '';
-  const left = `LOCAL CANVAS · ${mode.label.toUpperCase()}${keyState}${personState}`;
+  const mirrorState = isCameraLikeMode(mode) && draft.cameraMirror !== false ? ' · MIRROR' : '';
+  const zoomState = isCameraLikeMode(mode) ? ` · ${clampInteger(draft.cameraZoom, 100, 33, 220)}%` : '';
+  const left = `LOCAL CANVAS · ${mode.label.toUpperCase()}${keyState}${personState}${mirrorState}${zoomState}`;
   const right = cleanString(preview.label) || 'Preview only';
 
   context.save();
@@ -642,7 +700,7 @@ function drawStudioBadges(context, width, height, draft, preview, mode) {
   context.font = `950 ${Math.max(12, Math.round(width * 0.012))}px Inter, system-ui, sans-serif`;
   context.textAlign = 'left';
   context.textBaseline = 'middle';
-  context.fillText(left, 24, height - 44);
+  context.fillText(truncateCanvasText(context, left, width * 0.58), 24, height - 44);
 
   context.fillStyle = 'rgba(255, 255, 255, 0.95)';
   context.font = `900 ${Math.max(16, Math.round(width * 0.018))}px Inter, system-ui, sans-serif`;
@@ -655,12 +713,119 @@ function drawStudioBadges(context, width, height, draft, preview, mode) {
   context.restore();
 }
 
-function applyCameraFilters(context, draft) {
-  const brightness = clampInteger(draft.cameraBrightness, 100, 70, 140);
-  const contrast = clampInteger(draft.cameraContrast, 100, 70, 150);
-  const saturate = clampInteger(draft.cameraSaturation, 100, 50, 160);
+function drawFramedMedia(context, media, targetWidth, targetHeight, draft, mode, options = {}) {
+  const mediaWidth = media.videoWidth || media.naturalWidth || media.width || targetWidth;
+  const mediaHeight = media.videoHeight || media.naturalHeight || media.height || targetHeight;
+  const fit = options.fit === 'contain' ? 'contain' : 'cover';
+  const rect = getFramedMediaRect(mediaWidth, mediaHeight, targetWidth, targetHeight, draft, mode, fit);
 
-  context.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%)`;
+  context.save();
+  context.beginPath();
+  context.rect(0, 0, targetWidth, targetHeight);
+  context.clip();
+
+  if (options.mirror) {
+    context.translate(targetWidth / 2, targetHeight / 2);
+    context.scale(-1, 1);
+    context.translate(-targetWidth / 2, -targetHeight / 2);
+  }
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(media, rect.x, rect.y, rect.width, rect.height);
+  context.restore();
+
+  if (options.adjustCameraPixels && isCameraLikeMode(mode)) {
+    applyCameraPixelAdjustments(context, targetWidth, targetHeight, draft);
+  }
+}
+
+function getFramedMediaRect(mediaWidth, mediaHeight, targetWidth, targetHeight, draft, mode, fit) {
+  const base =
+    fit === 'contain'
+      ? fitInside(mediaWidth, mediaHeight, targetWidth, targetHeight)
+      : coverInside(mediaWidth, mediaHeight, targetWidth, targetHeight);
+
+  if (!isCameraLikeMode(mode)) {
+    return base;
+  }
+
+  const zoom = clampInteger(draft.cameraZoom, 100, 33, 220) / 100;
+  const offsetX = clampInteger(draft.cameraOffsetX, 0, -50, 50);
+  const offsetY = clampInteger(draft.cameraOffsetY, 0, -50, 50);
+
+  const width = Math.round(base.width * zoom);
+  const height = Math.round(base.height * zoom);
+  const extraX = width - base.width;
+  const extraY = height - base.height;
+
+  return {
+    x: Math.round(base.x - extraX / 2 + (offsetX / 100) * targetWidth * 0.42),
+    y: Math.round(base.y - extraY / 2 + (offsetY / 100) * targetHeight * 0.42),
+    width,
+    height,
+  };
+}
+
+function applyCameraPixelAdjustments(context, width, height, draft) {
+  const brightness = clampInteger(draft.cameraBrightness, 100, 40, 180);
+  const contrast = clampInteger(draft.cameraContrast, 100, 40, 200);
+  const saturation = clampInteger(draft.cameraSaturation, 100, 0, 220);
+
+  if (brightness === 100 && contrast === 100 && saturation === 100) {
+    return;
+  }
+
+  try {
+    const imageData = context.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    const brightnessScale = brightness / 100;
+    const contrastScale = contrast / 100;
+    const saturationScale = saturation / 100;
+
+    for (let index = 0; index < data.length; index += 4) {
+      if (data[index + 3] === 0) {
+        continue;
+      }
+
+      let red = data[index] * brightnessScale;
+      let green = data[index + 1] * brightnessScale;
+      let blue = data[index + 2] * brightnessScale;
+
+      red = (red - 128) * contrastScale + 128;
+      green = (green - 128) * contrastScale + 128;
+      blue = (blue - 128) * contrastScale + 128;
+
+      const luma = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+      red = luma + (red - luma) * saturationScale;
+      green = luma + (green - luma) * saturationScale;
+      blue = luma + (blue - luma) * saturationScale;
+
+      data[index] = clampByte(red);
+      data[index + 1] = clampByte(green);
+      data[index + 2] = clampByte(blue);
+    }
+
+    context.putImageData(imageData, 0, 0);
+  } catch (_error) {
+    /*
+     * Local camera/video sources should be readable, but keep the compositor
+     * fail-open if a WebView blocks pixel access for an unusual source.
+     */
+  }
+}
+
+function shouldMirrorCamera(draft, mode) {
+  return isCameraLikeMode(mode) && draft.cameraMirror !== false;
+}
+
+function isCameraLikeMode(mode = {}) {
+  return (
+    mode.sourceLabel === 'Camera' ||
+    mode.id === 'camera' ||
+    mode.id === 'person_cutout' ||
+    mode.id === 'green_screen'
+  );
 }
 
 function overlayRect(width) {
@@ -677,9 +842,11 @@ function overlayRect(width) {
 }
 
 function fitInside(sourceWidth, sourceHeight, targetWidth, targetHeight) {
-  const scale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
-  const width = Math.round(sourceWidth * scale);
-  const height = Math.round(sourceHeight * scale);
+  const safeSourceWidth = Math.max(1, Number(sourceWidth) || targetWidth || 1);
+  const safeSourceHeight = Math.max(1, Number(sourceHeight) || targetHeight || 1);
+  const scale = Math.min(targetWidth / safeSourceWidth, targetHeight / safeSourceHeight);
+  const width = Math.round(safeSourceWidth * scale);
+  const height = Math.round(safeSourceHeight * scale);
 
   return {
     x: Math.round((targetWidth - width) / 2),
@@ -690,9 +857,11 @@ function fitInside(sourceWidth, sourceHeight, targetWidth, targetHeight) {
 }
 
 function coverInside(sourceWidth, sourceHeight, targetWidth, targetHeight) {
-  const scale = Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight);
-  const width = Math.round(sourceWidth * scale);
-  const height = Math.round(sourceHeight * scale);
+  const safeSourceWidth = Math.max(1, Number(sourceWidth) || targetWidth || 1);
+  const safeSourceHeight = Math.max(1, Number(sourceHeight) || targetHeight || 1);
+  const scale = Math.max(targetWidth / safeSourceWidth, targetHeight / safeSourceHeight);
+  const width = Math.round(safeSourceWidth * scale);
+  const height = Math.round(safeSourceHeight * scale);
 
   return {
     x: Math.round((targetWidth - width) / 2),
@@ -762,6 +931,14 @@ function getMaskCanvas() {
   return maskCanvas;
 }
 
+function getMediaWorkCanvas() {
+  if (!mediaWorkCanvas) {
+    mediaWorkCanvas = document.createElement('canvas');
+  }
+
+  return mediaWorkCanvas;
+}
+
 function colorDistance(redA, greenA, blueA, redB, greenB, blueB) {
   const red = redA - redB;
   const green = greenA - greenB;
@@ -803,6 +980,14 @@ function personStatusText(status) {
 
 function isVideoReady(video) {
   return Boolean(video?.videoWidth && video?.videoHeight && video.readyState >= 2);
+}
+
+function clampByte(value) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(255, Math.round(value)));
 }
 
 function clampInteger(value, fallback, min, max) {

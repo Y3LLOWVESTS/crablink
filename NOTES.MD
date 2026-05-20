@@ -8771,3 +8771,912 @@ Make streaming feel amazing without weakening RustyOnions truth boundaries.
 
 
 ### END NOTE - MAY 19 2026 - 17:50 CST
+
+
+### BEGIN NOTE - MAY 19 2026 - 20:35 CST
+
+# CrabLink Tauri Streaming Creator Studio — Carryover Notes
+
+## 0. Current checkpoint
+
+We reached a major Creator Studio milestone: **person cutout background replacement works**. The stream page can now use local camera input, trace the person, remove the real-world background, and place a selected background behind the creator. This moved us beyond old-school chroma key and into TikTok/Zoom-style creator background replacement.
+
+This is still correctly scoped as **local creator UX**. It does not create stream truth, receipt truth, wallet truth, entitlement truth, viewer count truth, or ledger truth. That matches the stream blueprint’s invariant that Creator Studio is presentation/capture UX only, while paid unlock and stream/session truth stay backend-derived. 
+
+The biggest thing we proved in this session:
+
+```text
+Camera frame
+→ MediaPipe person segmentation
+→ person mask
+→ local background image/color
+→ composited canvas
+→ clean Creator Studio preview
+```
+
+This is an excellent product breakthrough because the stream page now feels like it can become a real creator app, not just a backend route test panel.
+
+---
+
+## 1. What we accomplished in this session
+
+### 1.1 Cleaned up the stream page hero/header clutter
+
+At the start, the stream page had an oversized dramatic banner and then a second status strip that still felt too bulky. We removed that clutter and moved toward a compact Creator Studio page.
+
+The blueprint’s goal is a simple product path:
+
+```text
+Pick source.
+Pick look.
+Set ROC access.
+Go live.
+```
+
+The page now feels much closer to that goal. The blueprint explicitly says the Studio should feel like a sleek creator tool, not a backend test harness, and should support camera, screen, screen + camera, green screen/background, saved scenes, simple paid access, and clear live status without becoming an OBS clone. 
+
+### 1.2 Built the local compositor direction
+
+We introduced/expanded the local compositor path around:
+
+```text
+apps/crablink-tauri/src/pages/stream/streamCompositor.js
+apps/crablink-tauri/src/pages/stream/StreamLookPanel.jsx
+apps/crablink-tauri/src/pages/stream/streamPersonSegmentation.js
+apps/crablink-tauri/src/pages/stream/stream.css
+```
+
+The current Tauri codebundle shows the stream family now includes `streamCompositor.js`, `StreamLookPanel.jsx`, `streamPersonSegmentation.js`, and `streamStudioModel.js`, which are exactly the right ownership boundaries for the Creator Studio work. 
+
+The architecture is correct:
+
+```text
+React/WebView:
+  camera/screen capture
+  local compositor
+  person cutout
+  background image/color
+  visual controls
+
+Backend:
+  stream descriptor
+  live stream session
+  latest segment route
+  paid access
+  wallet/receipt/ledger truth
+```
+
+### 1.3 Added real person cutout background replacement
+
+We moved from “green screen color key” to actual person segmentation.
+
+Important distinction:
+
+```text
+Chroma key:
+  removes a selected color from the camera feed
+
+Person cutout:
+  uses a segmentation model to identify the person,
+  keeps the person,
+  removes the real background,
+  draws a chosen background behind the person
+```
+
+This is what the user wanted: no physical green screen required.
+
+We added/used MediaPipe segmentation through `@mediapipe/tasks-vision`. Current implementation notes:
+
+```text
+streamPersonSegmentation.js:
+  loads MediaPipe vision task
+  runs segmentation on video frames
+  returns a local person/background mask
+  exposes status to the UI
+  keeps this as local visual state only
+```
+
+The codebundle’s file header correctly labels this as a local mask only, not b3/wallet/receipt/entitlement/backend truth. 
+
+### 1.4 Fixed the “black silhouette” polarity bug
+
+The first segmentation pass traced the person perfectly but blacked out the subject because the mask polarity was wrong. We diagnosed this as a label/order/polarity mismatch.
+
+Fixes added during the session:
+
+```text
+- added explicit polarity handling
+- added UI switch for flipping cutout polarity
+- moved away from trusting one fixed label order
+- added/used auto-detection logic based on likely subject region
+- confirmed the subject is now kept and the background is removed
+```
+
+The key result: the person is no longer blacked out; the background is removed correctly.
+
+### 1.5 Added background image replacement
+
+We tested background image replacement using the generated beach-with-red-crabs image. The image showed behind the cutout, proving the local background image pipeline works.
+
+Important current behavior:
+
+```text
+Open background image
+→ read as local image/data URL
+→ store in local draft state
+→ compositor draws it behind the person
+→ next composited frame uses the new background
+```
+
+This is still local-only. It does not publish the background image as a b3 asset unless we explicitly build that later.
+
+### 1.6 Fixed decorative circles covering active backgrounds
+
+After background images started working, we found the large green/gray decorative circles were being drawn over the active background. That made uploaded images look tinted or partially covered.
+
+Final intended fix:
+
+```text
+Idle slate:
+  may show decorative circles/professional splash screen
+
+Active camera/compositor preview:
+  must draw clean selected background only
+  no decorative circles over uploaded images
+```
+
+This preserves the nice professional idle screen while letting active backgrounds render cleanly.
+
+### 1.7 Confirmed the product direction is right
+
+The current page now supports a meaningful “Look” panel:
+
+```text
+No cutout
+Person cutout
+Chroma key
+Background presets
+Open background image
+Image fit
+Cutout edge softness
+Brightness
+Contrast
+Saturation
+Flip cutout polarity
+```
+
+This is exactly the right direction for a modern Creator Studio.
+
+---
+
+## 2. What is working now
+
+Current working items:
+
+```text
+CrabLink Tauri app launches with stream media profile
+Camera preview works on macOS dev media config
+Stream page has polished Creator Studio layout
+Person cutout works
+Background image replacement works
+Solid background replacement works
+Chroma key controls still exist
+Idle splash screen looks professional
+Active preview shows composited person over selected background
+Local preview clearly remains local compositor state
+```
+
+Run command for stream/media Tauri app:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run tauri:dev:mac-media
+```
+
+Useful validation commands:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+npm run check:rust:mac-media
+npm run tauri:dev:mac-media
+```
+
+If dependencies changed locally because of MediaPipe:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm install
+npm run build
+```
+
+---
+
+## 3. What must remain sacred
+
+Do not let the next session accidentally weaken the working proof.
+
+The stream blueprint says the current stream page already owns important working pieces: draft state, local preview, publish flow, pricing panel, backend session panel, live frame loop proof, and paid stream-lite integration. The Creator Studio must wrap/reorganize these pieces, not discard them. 
+
+Hard rules:
+
+```text
+Do not rewrite StreamPage from scratch.
+Do not delete StreamLocalPreview.
+Do not delete StreamSessionPanel.
+Do not delete StreamPublishFlow.
+Do not replace paid/wallet logic.
+Do not invent fake balances.
+Do not invent fake receipts.
+Do not silently spend ROC.
+Do not unlock paid stream content from cache alone.
+Do not move wallet/ledger truth into React.
+Do not claim stream-lite is production WebRTC/HLS video.
+```
+
+Correct language:
+
+```text
+stream-lite proof
+bounded latest segment
+composited frame
+paid live proof
+local creator compositor
+```
+
+Avoid claiming:
+
+```text
+broadcast-grade video
+production livestreaming
+DRM
+anti-rip
+full WebRTC
+full HLS
+```
+
+---
+
+## 4. Important files for the next session
+
+Primary frontend stream files:
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamPage.jsx
+apps/crablink-tauri/src/pages/stream/stream.css
+apps/crablink-tauri/src/pages/stream/StreamLocalPreview.jsx
+apps/crablink-tauri/src/pages/stream/StreamLookPanel.jsx
+apps/crablink-tauri/src/pages/stream/streamCompositor.js
+apps/crablink-tauri/src/pages/stream/streamPersonSegmentation.js
+apps/crablink-tauri/src/pages/stream/streamStudioModel.js
+apps/crablink-tauri/src/pages/stream/StreamPricingPanel.jsx
+apps/crablink-tauri/src/pages/stream/StreamPublishFlow.jsx
+apps/crablink-tauri/src/pages/stream/StreamSessionPanel.jsx
+apps/crablink-tauri/src/pages/stream/StreamMediaReadiness.jsx
+```
+
+Viewer side:
+
+```text
+apps/crablink-tauri/src/pages/asset/StreamPaidSegmentViewer.jsx
+apps/crablink-tauri/src/pages/asset/AssetContentViewAccess.jsx
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+```
+
+Shared API/client files:
+
+```text
+apps/crablink-tauri/src/shared/api/streamAssetClient.js
+apps/crablink-tauri/src/shared/api/streamSessionClient.js
+apps/crablink-tauri/src/shared/api/contentViewClient.js
+apps/crablink-tauri/src/shared/api/walletClient.js
+```
+
+Tauri media/command files:
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src-tauri/src/commands/stream.rs
+apps/crablink-tauri/src-tauri/src/commands/gateway.rs
+apps/crablink-tauri/src-tauri/Info.plist
+apps/crablink-tauri/src-tauri/tauri.macos.dev-media.conf.json
+apps/crablink-tauri/src-tauri/tauri.conf.json
+```
+
+The current codebundle confirms those stream files are now part of the Tauri app source tree. 
+
+---
+
+## 5. Current known risks / cleanup items
+
+### 5.1 Fresh codebundle needed
+
+The codebundle currently attached may not include the very last local patch where the active background was cleaned up and idle decorative circles were isolated. Next session should start by generating a fresh codebundle after confirming the working state:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/make_codebundle.sh
+```
+
+Then attach the new `CODEBUNDLE_TAURI_APP.md`.
+
+### 5.2 MediaPipe model is dev-CDN based right now
+
+The current segmentation implementation was introduced as an MVP and uses remote MediaPipe wasm/model URLs. That is acceptable for local dev proof, but production/offline gates should eventually bundle the model/wasm locally. The file header in the codebundle already says the MVP uses dev CDN/model URL and production should bundle locally. 
+
+Future production requirement:
+
+```text
+No required CDN for core creator effects.
+Bundle model/wasm locally.
+Respect Tauri/offline packaging.
+Keep camera frames local.
+Do not upload raw camera frames to any ML service.
+```
+
+### 5.3 Draft state may contain old bad mask defaults
+
+If the person cutout ever reverts or looks inverted after future patches, check local draft/settings state first. Old values like `personMaskInvert: true` or older polarity fields may persist.
+
+Quick manual workaround:
+
+```text
+No cutout → Person cutout
+or Clear draft
+or reset stream local draft state
+```
+
+Long-term fix:
+
+```text
+Add a draft schema version / migration for stream studio local state.
+Normalize old personMaskInvert/personMaskPolarity fields.
+```
+
+### 5.4 Background image size/state needs bounding
+
+Right now background images are local draft state. That is fine for MVP, but storing large base64 image data in long-term settings could become messy.
+
+Next better design:
+
+```text
+For immediate dev:
+  allow local data URL under size cap
+
+For production:
+  use local cache/storage adapter
+  store a background image record/id
+  keep image local unless explicitly published
+  never expose local path to React/backend
+```
+
+### 5.5 Performance must be watched
+
+Person segmentation can be expensive. The current proof works, but next session should keep an eye on:
+
+```text
+CPU/GPU usage
+frame rate
+UI responsiveness
+mask update interval
+segment publish interval
+canvas size
+background image size
+```
+
+Keep graceful degradation:
+
+```text
+High quality → balanced → proof mode → no cutout/chroma fallback
+```
+
+---
+
+## 6. What remains in the stream blueprint
+
+The blueprint’s 90% target use cases are:
+
+```text
+Camera only
+Screen only
+Screen with webcam thumbnail
+Camera with green screen
+Camera with custom background
+Quick background switching mid-stream
+Saved scene settings
+Simple paid access setup
+Clear live/publish status
+```
+
+We have now made meaningful progress on:
+
+```text
+Camera only
+Camera with custom background
+Person cutout background replacement
+Chroma key controls
+Background switching at local preview level
+```
+
+Still remaining:
+
+```text
+Screen only UX polish
+Screen + webcam thumbnail compositor
+Saved local scene presets
+Smooth source switching mid-stream
+Fallback slate during source/background switching
+Go Live one-button flow
+Developer drawer cleanup
+Composited frame publishing verification
+Segment stats/dropped frame counters
+Paid interval renewal UX
+Audio/mic path later
+MediaRecorder chunk path later
+WebRTC/HLS/OAP transport later
+```
+
+The blueprint says the next transport stage after UX is stable is `canvas.captureStream(fps)` plus optional microphone track into MediaRecorder chunks, then bounded upload/relay and paid viewer segment playback. That is explicitly later, after the Creator Studio UX stabilizes. 
+
+---
+
+## 7. Recommended next-session plan
+
+### Batch 1 — Stabilize and clean current compositor
+
+Start next session by locking in the current working state.
+
+Goals:
+
+```text
+Confirm build passes.
+Confirm app launches.
+Confirm camera preview works.
+Confirm person cutout works.
+Confirm uploaded background image displays cleanly.
+Confirm idle circles are not visible during active preview.
+Generate fresh codebundle.
+```
+
+Likely files:
+
+```text
+apps/crablink-tauri/src/pages/stream/streamCompositor.js
+apps/crablink-tauri/src/pages/stream/StreamLookPanel.jsx
+apps/crablink-tauri/src/pages/stream/stream.css
+apps/crablink-tauri/src/pages/stream/streamPersonSegmentation.js
+```
+
+Potential cleanup:
+
+```text
+Remove duplicate/obsolete personMaskInvert logic.
+Normalize to personMaskFlip/personMaskPolarity only.
+Make active background and idle background code clearly separate.
+Make loaded background images redraw without the “Loading local background image” badge lingering.
+```
+
+Definition of done:
+
+```text
+npm run build passes
+npm run check:rust:mac-media passes
+camera + person cutout + uploaded background all work
+```
+
+### Batch 2 — Add saved local scene presets
+
+This is the most logical next product feature because the cutout/background effect now works and users will want to save the setup.
+
+The blueprint defines a scene preset as local creator UX only, with fields for source mode, camera hints, screen flags, overlay position, effects, background, output settings, and a truth boundary. It also explicitly allows saving source mode, camera preference, green-screen/background settings, webcam overlay position, output quality, frame interval, and draft title/description/tags; it forbids saving wallet secrets, raw capabilities, stream keys, receipt truth, entitlement truth, private keys, ownership truth, ledger state, or live backend session. 
+
+Suggested new/updated files:
+
+```text
+apps/crablink-tauri/src/pages/stream/streamStudioSettings.js
+apps/crablink-tauri/src/pages/stream/streamStudioModel.js
+apps/crablink-tauri/src/pages/stream/StreamLookPanel.jsx
+apps/crablink-tauri/src/pages/stream/StreamPage.jsx
+apps/crablink-tauri/src/pages/stream/stream.css
+```
+
+Capabilities:
+
+```text
+Save current scene
+Load saved scene
+Reset default scene
+Rename scene
+Delete scene
+Show “local preference only” label
+Do not store wallet/session/receipt/backend truth
+```
+
+MVP shape:
+
+```js
+{
+  schema: 'crablink.creator-scene-preset.v1',
+  id: 'default',
+  name: 'Default',
+  sourceMode: 'camera_only',
+  backgroundRemovalMode: 'person',
+  backgroundMode: 'image',
+  backgroundImageName: 'crabs beach',
+  backgroundImageFit: 'cover',
+  personMaskFeather: 2,
+  cameraBrightness: 100,
+  cameraContrast: 100,
+  cameraSaturation: 100,
+  output: {
+    width: 1280,
+    height: 720,
+    quality: 0.72,
+    frameIntervalMs: 2000
+  },
+  truthBoundary: 'Local creator UX preset only. Not stream, wallet, receipt, or entitlement truth.'
+}
+```
+
+### Batch 3 — Add camera framing / creator comfort controls
+
+Now that the cutout works, creators need to frame themselves better.
+
+Recommended controls:
+
+```text
+Mirror preview
+Zoom/crop
+Horizontal position
+Vertical position
+Brightness
+Contrast
+Saturation
+Edge softness
+Optional “reset camera look”
+```
+
+Why this matters: the cutout is good, but the subject framing can still feel raw. Simple framing controls make the Studio feel like a real creator app.
+
+Likely files:
+
+```text
+streamCompositor.js
+StreamLookPanel.jsx
+streamStudioModel.js
+stream.css
+```
+
+Important rule:
+
+```text
+These are local visual effects only.
+They do not change backend stream truth except through the composited frame that the creator explicitly publishes.
+```
+
+### Batch 4 — Screen + webcam thumbnail compositor
+
+This is the next major blueprint feature after camera/background.
+
+The blueprint describes source modes for Camera Only, Screen Only, Screen + Camera, and Camera + Background. Screen + Camera should keep it simple: screen fills the canvas, webcam appears as a thumbnail, with quick positions like bottom right/bottom left/top right/top left, without building a full layer editor. 
+
+Implementation target:
+
+```text
+Screen only:
+  capture screen
+  draw screen into compositor canvas
+
+Screen + camera:
+  capture screen as main source
+  capture camera as overlay source
+  draw screen first
+  draw webcam thumbnail second
+  allow position/size/shape controls
+```
+
+Likely files:
+
+```text
+StreamLocalPreview.jsx
+streamCompositor.js
+StreamLookPanel.jsx or new Source/Overlay panel
+streamStudioModel.js
+stream.css
+```
+
+MVP controls:
+
+```text
+Source: Camera / Screen / Screen + Cam
+Webcam overlay: Off/On
+Position: bottom right / bottom left / top right / top left
+Size: small / medium / large
+Shape: rounded rectangle / circle later
+```
+
+Definition of done:
+
+```text
+Screen capture preview works.
+Screen + camera thumbnail works.
+Switching to screen mode does not break current camera mode.
+No backend truth changes.
+```
+
+### Batch 5 — Smooth source/background switching mid-stream
+
+This should be done after source modes and presets exist.
+
+Goal:
+
+```text
+Creator can change background or source while live.
+Preview updates immediately.
+Next published segment uses the new compositor output.
+No wallet/receipt/session state changes.
+```
+
+Needed UX:
+
+```text
+Show a short fallback slate while switching source.
+Keep previous source alive until new source is ready when possible.
+Do not kill live frame loop accidentally.
+Show “Switching source…” state.
+Recover cleanly if permission denied.
+```
+
+Potential files:
+
+```text
+StreamLocalPreview.jsx
+streamCompositor.js
+StreamSessionPanel.jsx
+StreamPage.jsx
+stream.css
+```
+
+### Batch 6 — Polish Go Live flow
+
+Current stream page still exposes too many pieces separately. The blueprint wants simple main action language like “Start preview,” “Choose source,” “Go live,” “Copy stream link,” and “Stop stream,” while route names, latest seq, data URL, receipt hash, gateway payload, and similar details belong in a developer drawer. 
+
+Target user flow:
+
+```text
+1. Start Preview
+2. Set Look / Access
+3. Go Live
+   - publish descriptor if needed
+   - start backend stream session
+   - start live frame loop
+4. Copy stream link
+5. Stop Stream
+```
+
+Do not change backend semantics. This is orchestration UX, not a new authority path.
+
+Likely files:
+
+```text
+StreamPage.jsx
+StreamPublishFlow.jsx
+StreamSessionPanel.jsx
+StreamPricingPanel.jsx
+stream.css
+```
+
+Definition of done:
+
+```text
+Main UI has one obvious Go Live path.
+Developer details are collapsible.
+Existing manual controls remain available for debugging.
+No silent ROC action.
+```
+
+### Batch 7 — Two-app paid stream smoke with composited frame
+
+After compositor and Go Live polish, rerun the paid proof:
+
+```text
+Instance A:
+  Creator A / acct_dev
+  Person cutout on
+  Background image selected
+  Go Live
+  Frame loop publishing composited frames
+
+Instance B:
+  Visitor B / acct_visitor_b
+  Pay once
+  Unlock stream
+  Auto-refresh latest segment
+  See composited person + background
+  No second payment during refresh
+```
+
+This is the key proof that the visual compositor has entered the real stream-lite path, not just local preview.
+
+The previous carryover notes established the two-app stream-lite value loop: creator preview → descriptor/session → bounded live segments → Visitor B ROC payment → backend receipt verification → latest-segment polling → frames render after payment, with no fake receipt, no silent spend, and no cache-only unlock. 
+
+---
+
+## 8. Backend work status
+
+Backend streaming should remain mostly frozen unless a regression appears.
+
+Already proven:
+
+```text
+.stream descriptor publish/mint path
+backend stream session creation
+manual/latest segment publishing
+creator live frame loop in two-app mode
+visitor paid unlock
+visitor latest-segment polling
+frames visible after payment
+no second payment on refresh
+```
+
+Current backend is good enough for Creator Studio UX work.
+
+Do not start:
+
+```text
+WebRTC backend
+HLS backend
+OAP media transport
+paid interval ledger changes
+QuickChain
+external settlement
+ROX/Solana
+```
+
+until the Creator Studio UX and stream-lite proof are polished.
+
+---
+
+## 9. Future media transport, not next immediate patch
+
+Full smooth video remains later.
+
+Blueprint-approved future path:
+
+```text
+composited canvas.captureStream(fps)
++ optional microphone track
+→ MediaRecorder
+→ short WebM chunks
+→ bounded upload/relay route
+→ paid viewer segment playback
+```
+
+Audio should not be bolted onto JPEG stream-lite frames. It belongs with chunked/realtime media transport, where microphone/screen audio/mixing/mute state/audio meters can be handled honestly. 
+
+Future options:
+
+```text
+MediaRecorder chunks
+WebRTC session service
+HLS / LL-HLS segment service
+OAP media transport
+gateway-mediated paid stream sessions
+```
+
+But next session should stay on UX/compositor/source/preset work unless the user explicitly chooses to shift back to backend transport.
+
+---
+
+## 10. Testing checklist for next session
+
+Basic frontend gates:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+npm run check:rust:mac-media
+npm run tauri:dev:mac-media
+```
+
+Manual local Studio smoke:
+
+```text
+Open crab://stream
+Start camera preview
+Enable Person cutout
+Select background image
+Verify person stays visible
+Verify real background is gone
+Verify selected background is clean
+Verify idle circles disappear during active preview
+Stop preview
+Verify idle splash returns
+```
+
+Compositor smoke:
+
+```text
+Change background while camera is active
+Change solid background preset
+Open background image
+Switch image fit cover/contain
+Toggle flip polarity only if needed
+Adjust edge softness
+Adjust brightness/contrast/saturation
+Confirm no app crash
+```
+
+Stream-lite smoke:
+
+```text
+Start backend stack
+Ensure wallet B has ROC after stack restart
+Launch Creator A instance
+Launch Visitor B instance
+Creator goes live
+Visitor pays once
+Visitor sees updated latest frames
+Refresh/poll does not re-spend
+```
+
+Regression checks:
+
+```text
+Image/video/post/article/site paid flows should not be touched.
+Wallet labels and balance display should remain backend-derived.
+No new secrets in React state/localStorage/logs.
+No raw capabilities exposed.
+No arbitrary execution from background images or crab links.
+```
+
+---
+
+## 11. Recommended first prompt for next session
+
+Use something like:
+
+```text
+We are continuing CrabLink Tauri Streaming Creator Studio work. The person cutout and background replacement are now working. The next priority is to stabilize the compositor and add saved local scene presets / source controls according to STREAM_BLUEPRINT.MD. Do not touch backend wallet/ledger logic. Do not replace the stream page from scratch. Provide full paste-ready files only, no downloadable artifacts.
+```
+
+Then attach a fresh `CODEBUNDLE_TAURI_APP.md`.
+
+---
+
+## 12. Bottom line
+
+This session was a major product breakthrough.
+
+Before this session, streaming was mostly a backend-paid stream-lite proof with a rough creator page. After this session, CrabLink now has the start of a real Creator Studio:
+
+```text
+polished stream page
+camera compositor
+person cutout
+background replacement
+background image support
+idle/professional splash
+local-only effect boundaries
+backend truth boundaries preserved
+```
+
+Next session should not chase backend complexity. The best next move is:
+
+```text
+1. Stabilize current compositor.
+2. Save/load local scene presets.
+3. Add camera framing controls.
+4. Add screen + webcam thumbnail.
+5. Polish Go Live flow.
+6. Re-run two-app paid smoke with the composited background frame.
+```
+
+The guiding rule remains:
+
+```text
+Make streaming feel amazing without weakening RustyOnions truth boundaries.
+```
+
+
+### END NOTE - MAY 19 2026 - 20:35 CST
