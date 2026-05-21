@@ -9680,3 +9680,2476 @@ Make streaming feel amazing without weakening RustyOnions truth boundaries.
 
 
 ### END NOTE - MAY 19 2026 - 20:35 CST
+
+
+### BEGIN NOTE - MAY 20 2026 - 10:15 CST
+
+Absolutely. This is the right checkpoint to **lock the stream Creator Studio UX proof**, avoid over-polishing it right now, and move into the other creator media pages. The latest CrabLink Tauri bundle confirms the app now has the relevant page families present for this next phase: stream, music, podcast, video, shared API clients, Tauri command bridge files, shared creator components, theme files, and the Tauri IDBs all in the current app tree. 
+
+# Carryover Notes — CrabLink Tauri Media Pages Next Phase
+
+## 0. Current checkpoint
+
+We are stopping stream UX work for now because the core local Creator Studio proof is working extremely well.
+
+The stream page now proves:
+
+```text
+camera preview
+→ local canvas compositor
+→ person cutout
+→ background image replacement
+→ solid background replacement
+→ chroma key path still available
+→ mirror preview
+→ wide-shot zoom out
+→ zoom in
+→ X/Y framing
+→ brightness / contrast / saturation
+→ saved local scene presets
+→ polished Go Live guide
+```
+
+This is a major milestone. The current stream implementation should now be considered a **locked local Creator Studio proof**, not something to keep expanding in the immediate next session.
+
+The previous carryover already captured the core stream invariant: the current stream page owns local preview/presentation pieces, while stream descriptor/session/payment truth remains backend-derived. It also warned not to delete `StreamLocalPreview`, `StreamPublishFlow`, or `StreamSessionPanel`, and not to replace paid/wallet logic. 
+
+## 1. What we accomplished in the streaming UX phase
+
+### 1.1 We proved a real creator-style local compositor
+
+The stream page moved from a backend test panel into something that feels like a real creator tool.
+
+Working pieces:
+
+```text
+StreamLocalPreview.jsx
+streamCompositor.js
+StreamLookPanel.jsx
+streamPersonSegmentation.js
+streamStudioModel.js
+StreamGoLivePanel.jsx
+StreamPage.jsx
+stream.css
+```
+
+Core product result:
+
+```text
+The creator can start a camera preview,
+remove the real background,
+place themselves over a selected background,
+frame themselves,
+adjust camera look,
+save the scene,
+and use a clearer Go Live flow.
+```
+
+This is much closer to a TikTok/Zoom/OBS-lite creator studio, but it still correctly avoids becoming an unsafe full execution/media backend.
+
+### 1.2 Person cutout is working
+
+We successfully moved beyond chroma-only green screen. The app can now detect the person, keep the subject, remove the real-world background, and draw a local selected background behind the creator.
+
+Resolved issues:
+
+```text
+initial black-silhouette / inverted-mask problem
+background circles overlaying active backgrounds
+background image not coming through clearly
+subject positioning/cropping limitations
+zoom-out limitation
+brightness/contrast/saturation not visibly changing in Tauri WebView
+```
+
+The final fix switched camera color adjustment to a more reliable pixel-processing path rather than depending only on canvas filter behavior.
+
+### 1.3 Creator framing is working
+
+Confirmed working:
+
+```text
+move subject up
+move subject down
+move subject left
+move subject right
+zoom in strongly
+zoom out to a much wider shot
+mirror preview
+brightness
+contrast
+saturation
+reset framing/look
+```
+
+This is good enough to stop here for now. More polish can come later after Music, Podcast, and Video are brought up to the same product quality level.
+
+### 1.4 Saved local scenes are working
+
+The scene preset system is now the right model:
+
+```text
+local preference only
+stores look/framing/background/source hints
+does not store wallet secrets
+does not store receipts
+does not store stream keys
+does not store backend session truth
+does not create ownership or entitlement truth
+```
+
+This exact local-preset pattern may be useful for Music and Podcast later, especially for creator branding presets, but do not prematurely generalize it until the Music page UX is upgraded.
+
+### 1.5 Go Live UX is cleaner
+
+The stream page now has a human-first “Go Live” panel that guides the creator through:
+
+```text
+start preview
+set access
+publish descriptor
+open live controls
+copy stream link
+developer details
+```
+
+Important: this did **not** replace the explicit backend/wallet controls. It just organized them. The hidden/advanced controls remain visible when needed for auditability.
+
+## 2. What remains parked for streaming
+
+Do not work on these immediately unless explicitly restarting stream/backend work:
+
+```text
+production live video transport
+WebRTC/HLS-style streaming
+real multi-segment playback
+backend stream durability
+viewer live playback beyond stream-lite/latest segment proof
+screen + webcam thumbnail compositor
+full dual-mode podcast/video stream
+creator-side stream analytics
+live chat
+stream moderation
+recording/replay pipeline
+audio mixing
+camera device picker polish
+green screen polish
+background publishing as b3 assets
+stream backend hardening
+```
+
+The correct current language remains:
+
+```text
+stream-lite proof
+local Creator Studio compositor
+bounded latest segment
+paid live proof
+composited frame
+backend-derived stream/session/payment truth
+```
+
+Avoid claiming:
+
+```text
+production livestreaming
+broadcast-grade transport
+full WebRTC
+full HLS
+DRM
+anti-rip
+cache-based paid unlock
+```
+
+## 3. Current stream files to preserve
+
+Do not casually rewrite these:
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamPage.jsx
+apps/crablink-tauri/src/pages/stream/StreamLocalPreview.jsx
+apps/crablink-tauri/src/pages/stream/StreamLookPanel.jsx
+apps/crablink-tauri/src/pages/stream/streamCompositor.js
+apps/crablink-tauri/src/pages/stream/streamPersonSegmentation.js
+apps/crablink-tauri/src/pages/stream/streamStudioModel.js
+apps/crablink-tauri/src/pages/stream/StreamGoLivePanel.jsx
+apps/crablink-tauri/src/pages/stream/StreamPricingPanel.jsx
+apps/crablink-tauri/src/pages/stream/StreamPublishFlow.jsx
+apps/crablink-tauri/src/pages/stream/StreamSessionPanel.jsx
+apps/crablink-tauri/src/pages/stream/StreamMediaReadiness.jsx
+apps/crablink-tauri/src/pages/stream/streamDraftModel.js
+apps/crablink-tauri/src/pages/stream/stream.css
+```
+
+The current codebundle confirms these stream files exist in the Tauri app tree alongside the music, podcast, and video page families. 
+
+## 4. Next phase: Music page first
+
+The next session should begin with **crab://music**.
+
+The current Tauri app tree includes:
+
+```text
+apps/crablink-tauri/src/pages/music/music.css
+apps/crablink-tauri/src/pages/music/MusicDraft.jsx
+apps/crablink-tauri/src/pages/music/MusicLinkedAssets.jsx
+apps/crablink-tauri/src/pages/music/MusicPage.jsx
+apps/crablink-tauri/src/pages/music/MusicRights.jsx
+```
+
+These files are present in the latest bundle. 
+
+### 4.1 Goal for Music page
+
+Bring the Music page up to the new Creator Studio quality bar, but do **not** build backend music publishing unless we explicitly decide to.
+
+The first Music batch should likely be UI/UX and local manifest quality.
+
+Target product concept:
+
+```text
+crab://music should feel like a creator music release workspace.
+It should support drafting a song/single/album/beat/stem-pack.
+It should have clean sections for metadata, local audio preview, cover art, linked assets, rights, access, credits, and manifest preview.
+```
+
+### 4.2 Music page should probably support these creator fields
+
+Core release metadata:
+
+```text
+title
+artist display
+album / project title
+track number
+release type: single, album, beat, stem pack, loop, demo, live recording
+genre
+mood
+language
+explicit rating
+description
+tags
+content warning
+```
+
+Audio/source fields:
+
+```text
+audio source mode
+local audio file preview
+audio crab URL / future b3 asset pointer
+master audio crab URL
+preview clip crab URL
+stems crab URL
+lyrics crab URL
+cover image crab URL
+music video crab URL
+site context crab URL
+```
+
+Rights/economics:
+
+```text
+rights mode
+license mode
+payout mode
+creator wallet display label
+collaborators
+splits placeholder
+paid access mode
+public preview mode
+download permission
+stream permission
+remix permission
+commercial use permission
+```
+
+Manifest/truth boundary:
+
+```text
+local draft only
+no fake b3 CID
+no fake audio asset CID
+no fake receipt
+no fake wallet event
+no fake ownership truth
+no direct ledger mutation
+```
+
+### 4.3 Best first Music patch
+
+The best first patch should probably be one of these:
+
+```text
+Option A — Music UX shell polish:
+  Replace MusicPage/MusicDraft/MusicRights/MusicLinkedAssets/music.css
+  Keep it local-only
+  Use shared CreatorWorkspaceLayout if already suitable
+  Add a better right-side summary and truth panel
+
+Option B — Local audio preview:
+  Add MusicLocalPlaybackPreview.jsx
+  Allow local audio file selection for preview only
+  Extract duration/file facts
+  Keep file bytes local
+  Do not publish
+  Do not create b3
+  Do not create paid unlock
+
+Option C — Music manifest model cleanup:
+  Improve musicDraftModel.js or equivalent
+  Normalize manifest shape toward uniform media assets
+  Add linked asset stats
+  Add readiness/completeness scoring
+```
+
+My recommendation: **start with Option B if the current Music page already has a decent form, otherwise start with Option A.** The local audio preview will make Music feel real quickly, similar to how camera preview made Stream feel real.
+
+### 4.4 Music design principles
+
+Music should not copy Stream’s camera UI. It should feel like a release/studio page.
+
+Good UX direction:
+
+```text
+hero: release title / artist / release type
+left column: local audio preview + cover art preview
+main builder: metadata, track info, linked assets
+right rail: release readiness, rights, access, truth boundary
+developer mode: manifest JSON
+```
+
+Keep the language creator-friendly:
+
+```text
+Draft release
+Preview audio
+Add cover
+Link lyrics
+Set rights
+Set access
+Copy manifest
+```
+
+Avoid backend claims until routes exist:
+
+```text
+Do not say “published”
+Do not say “minted”
+Do not say “uploaded”
+Do not show fake crab://music URLs
+Do not show fake receipts
+```
+
+## 5. After Music: Podcast page
+
+The current Podcast page is still more of a local manifest builder. The code explicitly says it is a local creator workspace before paid audio/stream publishing flows, and its invariants say no fake b3 CID, no fake manifest CID, no ROC mutation, and no backend publication claim. 
+
+Current podcast files:
+
+```text
+apps/crablink-tauri/src/pages/podcast/podcast.css
+apps/crablink-tauri/src/pages/podcast/PodcastDraft.jsx
+apps/crablink-tauri/src/pages/podcast/PodcastPage.jsx
+```
+
+### 5.1 Podcast page goal
+
+Bring Podcast to the same standard as Music, but with show/episode structure.
+
+Target product concept:
+
+```text
+crab://podcast should support creating a podcast show or episode draft,
+previewing/attaching local audio,
+linking transcript/clips/cover art/site context,
+setting rights/access,
+and preparing a clean local manifest.
+```
+
+### 5.2 Podcast fields to support
+
+Show/episode identity:
+
+```text
+show title
+episode title
+host display
+cohosts / guests
+season
+episode number
+episode type: audio episode, video podcast, live episode, clip, trailer
+category
+language
+explicit rating
+description
+episode notes
+transcript summary
+tags
+content warning
+```
+
+Linked assets:
+
+```text
+cover image crab URL
+audio crab URL
+video crab URL
+live stream crab URL
+transcript crab URL
+clip crab URL
+site context crab URL
+sponsor/ad reference future
+chapter markers future
+```
+
+Access/rights:
+
+```text
+public preview
+paid episode
+paid archive
+subscriber-only future
+creator-owned original
+licensed/interview
+payout mode
+```
+
+### 5.3 Podcast should probably reuse Music components later
+
+Music and Podcast should converge around shared media primitives:
+
+```text
+LocalAudioPreview
+CoverArtPreview
+MediaLinkedAssets
+RightsAndSplitsPanel
+AccessPolicyPanel
+ManifestTruthPanel
+```
+
+Do not generalize too early, but keep the structure similar enough that extraction is easy after both pages work.
+
+## 6. After Music + Podcast: return to Video
+
+The Video page is already more advanced than Music/Podcast in some ways. The current bundle shows `VideoDraft.jsx`, `VideoLocalPlaybackPreview.jsx`, `VideoPublishFlow.jsx`, `VideoRenditions.jsx`, `videoDraftModel.js`, `VideoPage.jsx`, and `video.css`. 
+
+Video has already had paid publish/view work earlier, so do not break it while polishing.
+
+### 6.1 Video next goals
+
+After Music and Podcast:
+
+```text
+clean video UX to match new creator workspace standard
+review local video preview
+review paid publish flow
+review content view after payment
+clean receipt/hash overflow
+ensure b3/video manifest shape stays honest
+prepare for dual video + podcast streaming mode
+```
+
+### 6.2 Dual stream / podcast + video mode
+
+This should come later, not next session.
+
+The future goal:
+
+```text
+A creator can run a video stream and a podcast/audio stream together.
+The system can produce a video-oriented stream experience and a podcast-oriented audio/show experience from the same creator session.
+```
+
+Possible future modes:
+
+```text
+video stream only
+audio podcast live only
+video + podcast dual mode
+screen + webcam with podcast audio
+camera stream with separate podcast companion
+record video and extract audio/podcast asset later
+```
+
+Important truth boundary:
+
+```text
+The UI may coordinate two local presentation modes.
+The backend still owns stream sessions, asset CIDs, receipts, paid access, and durable truth.
+The wallet path still requires explicit prepare/quote → confirm → backend receipt.
+No silent dual publishing.
+No fake second asset.
+No fake podcast transcript/audio CID.
+```
+
+## 7. Suggested next-session order
+
+Start next session with this order:
+
+```text
+1. Review current Music files.
+2. Decide whether to first polish Music UX shell or add local audio preview.
+3. Patch Music page in one contained batch.
+4. Run npm run build.
+5. Smoke crab://music.
+6. Then move to Podcast.
+7. Only after Music and Podcast feel good, return to Video.
+```
+
+Best first concrete next task:
+
+```text
+“Please review the current Music page files and provide the first paste-ready batch to modernize crab://music, ideally adding local audio preview while preserving local-only manifest truth.”
+```
+
+## 8. Likely files for next Music patch
+
+Expect to touch some subset of:
+
+```text
+apps/crablink-tauri/src/pages/music/MusicPage.jsx
+apps/crablink-tauri/src/pages/music/MusicDraft.jsx
+apps/crablink-tauri/src/pages/music/MusicLinkedAssets.jsx
+apps/crablink-tauri/src/pages/music/MusicRights.jsx
+apps/crablink-tauri/src/pages/music/music.css
+```
+
+Possible new file:
+
+```text
+apps/crablink-tauri/src/pages/music/MusicLocalPlaybackPreview.jsx
+```
+
+Possible model file if it exists or should be added:
+
+```text
+apps/crablink-tauri/src/pages/music/musicDraftModel.js
+```
+
+Need to verify the current bundle before generating exact code, because Music may not yet have a model file like Video does.
+
+## 9. Likely files for Podcast patch after Music
+
+Expect to touch:
+
+```text
+apps/crablink-tauri/src/pages/podcast/PodcastPage.jsx
+apps/crablink-tauri/src/pages/podcast/PodcastDraft.jsx
+apps/crablink-tauri/src/pages/podcast/podcast.css
+```
+
+Possible new files:
+
+```text
+apps/crablink-tauri/src/pages/podcast/PodcastLocalAudioPreview.jsx
+apps/crablink-tauri/src/pages/podcast/podcastDraftModel.js
+```
+
+## 10. Commands for next session
+
+From the Tauri app:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+npm run check:rust:mac-media
+npm run tauri:dev:mac-media
+```
+
+For Music/Podcast-only UI work, `npm run build` is the main gate. Keep `check:rust:mac-media` green because the Tauri command bridge should remain healthy.
+
+## 11. Rules to preserve across Music, Podcast, and Video
+
+These are non-negotiable:
+
+```text
+Tauri-first.
+Gateway compatibility first.
+React owns display/user intent, not durable truth.
+No wallet truth in React.
+No fake balances.
+No fake receipts.
+No silent ROC spend.
+No direct ledger mutation.
+No backend publication claim from local draft pages.
+No private keys/secrets/capabilities in React state/localStorage/URLs/logs.
+No arbitrary code execution.
+No creator-supplied player execution.
+Cache/display state is not ownership/payment truth.
+b3 hashes are canonical truth only after backend/storage/index path confirms them.
+crab:// links are navigation/pointers, not authority.
+```
+
+For media specifically:
+
+```text
+Local preview is allowed.
+Local file metadata is allowed.
+Local playback is allowed.
+Local draft manifest is allowed.
+Backend-derived asset CIDs are required before claiming publication.
+Backend-derived receipts are required before claiming paid access.
+Large media should not be pushed through Tauri command results.
+Future media should prefer range/segment/streaming paths.
+```
+
+## 12. Important product judgment
+
+We should not keep chasing Stream polish right now. It is finally impressive and stable enough to leave alone.
+
+The best use of the next session is:
+
+```text
+Music page → Podcast page → Video polish → dual media/streaming concept
+```
+
+This gives CrabLink a broader creator economy surface instead of one excellent Stream page surrounded by older placeholder-feeling media pages. Music and Podcast are also important because they will force us to clarify shared media concepts: cover art, local playback, linked assets, rights, access, credits, manifests, and future paid publishing.
+
+## 13. Mental model for next session
+
+Use this as the next-session north star:
+
+```text
+We are no longer proving that Tauri can do impressive camera UX.
+We proved that.
+
+Now we are raising the rest of CrabLink’s creator media pages to the same standard,
+starting with Music, then Podcast, then returning to Video and future dual-mode media.
+```
+
+The next code batch should be **Music-first**, paste-ready, and conservative about backend truth.
+
+
+### END NOTE - MAY 20 2026 - 10:15 CST
+
+
+
+### BEGIN NOTE - MAY 20 2026 - 15:30 CST
+
+Below are the carry-over notes for the next session.
+
+# RustyOnions / CrabLink Tauri Carry-Over Notes
+
+## Session focus completed: `crab://music` minting + paid listening loop
+
+## Next session focus: `crab://podcasts` / podcast studio page
+
+We successfully proved the **music page end-to-end loop**:
+
+```text
+crab://music
+→ select local audio
+→ fill metadata
+→ reference optional cover art by crab:// image URL only
+→ accept creator rights disclaimer
+→ prepare music upload
+→ explicit ROC hold
+→ upload music bytes
+→ mint crab://<hash>.music
+→ open minted music asset as wallet B
+→ quote paid content_view
+→ pay ROC
+→ unlock audio player only after backend receipt
+```
+
+This is now the exact pattern we should reuse for the podcast page.
+
+---
+
+# 1. Major outcome: Music now works
+
+The important result is that music is no longer just a local draft page. It now supports the full internal ROC loop:
+
+```text
+prepare → explicit hold → upload → b3 music asset → paid content_view → player unlock
+```
+
+The successful minted test asset was:
+
+```text
+crab://b4077f988784d91f21a9b80ded4c671a6fdcd46c5f16fc81ee3bcf32390ff107.music
+```
+
+The asset page showed:
+
+```text
+Asset kind: music
+Status: 200
+Storage available: yes
+Content type: audio/x-wav
+Owner: passport:main:dev
+Size: 1048558
+Receipt references: paid storage receipt returned
+```
+
+Then visitor wallet B was able to pay for the music after wallet B was funded again.
+
+The first payment failure was correct behavior:
+
+```text
+HTTP: 409
+Reason: wallet_transfer_rejected
+Message: svc-wallet rejected content view transfer
+```
+
+Cause:
+
+```text
+acct_visitor_b had 0 ROC after stack restart.
+```
+
+Fix:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+curl -fsS -X POST http://127.0.0.1:8088/v1/issue \
+  -H 'Authorization: Bearer dev' \
+  -H "Idempotency-Key: dev-fund-visitor-b-$(date +%s)" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "to": "acct_visitor_b",
+    "asset": "roc",
+    "amount_minor": "1776",
+    "memo": "dev fund visitor B for music content_view"
+  }' \
+  | jq .
+```
+
+After funding wallet B, the payment worked.
+
+Important recurring gotcha:
+
+```text
+Whenever the dev wallet service / stack restarts, acct_visitor_b may need to be funded again.
+```
+
+---
+
+# 2. Music frontend files touched / concepts added
+
+## CrabLink Tauri music route
+
+Main files involved:
+
+```text
+apps/crablink-tauri/src/pages/music/MusicPage.jsx
+apps/crablink-tauri/src/pages/music/MusicLocalPlaybackPreview.jsx
+apps/crablink-tauri/src/pages/music/MusicOwnershipDisclaimer.jsx
+apps/crablink-tauri/src/pages/music/musicOwnershipDisclaimer.css
+apps/crablink-tauri/src/pages/music/MusicPublishFlow.jsx
+apps/crablink-tauri/src/pages/music/music.css
+apps/crablink-tauri/src/shared/api/musicAssetClient.js
+```
+
+The music page now has these important pieces:
+
+```text
+1. Local audio preview
+2. Metadata form
+3. Linked asset references
+4. Rights/access/payout draft form
+5. Required creator ownership/rights disclaimer
+6. Explicit prepare request
+7. Explicit ROC hold review/send
+8. Explicit music upload review/send
+9. Auto-open returned crab://<hash>.music
+```
+
+The local preview is not backend truth. It is only a local object URL. The backend mint step is separate and explicit.
+
+---
+
+# 3. Music ownership disclaimer
+
+We added a legal/rights gate before minting. This was important because music is high-risk for copyright infringement.
+
+The creator must confirm:
+
+```text
+- They own or control the rights to the music.
+- Samples, loops, beats, vocals, stems, and third-party material are cleared.
+- They will not upload music that belongs to someone else.
+- They understand disputed content can be reviewed, blocked, removed, or have payouts blocked.
+- Metadata and creator claims are accurate.
+- They enter a creator confirmation signature.
+```
+
+Important invariant:
+
+```text
+This is a required creator confirmation, not backend legal proof.
+```
+
+Manifest truth boundary says:
+
+```text
+local_ui_attestation_only: true
+proves_legal_ownership: false
+backend_verified: false
+creates_copyright_registration: false
+creates_wallet_authority: false
+creates_asset_publication: false
+creates_receipt: false
+```
+
+For podcasts, we should reuse this concept but adapt the wording:
+
+```text
+Podcast creator must confirm they have rights to:
+- voice recordings
+- guest permissions
+- intro/outro music
+- sound effects
+- clips
+- interview releases
+- cover art references
+- transcripts/show notes
+```
+
+---
+
+# 4. Cover art rule for music
+
+The user specifically requested:
+
+```text
+Do not upload cover art from the music page.
+```
+
+We followed that.
+
+Music page rule:
+
+```text
+Cover art is a reference only:
+crab://<64hex>.image
+```
+
+Music minting uploads only the selected audio file.
+
+No cover image bytes are sent from `crab://music`.
+
+The manifest has fields like:
+
+```text
+cover_image_crab_url
+cover_image_upload_from_music_page: false
+```
+
+Carry this forward to podcasts:
+
+```text
+Podcast cover art should also be reference-only.
+Use crab://<hash>.image.
+Do not upload cover art inside the podcast page.
+```
+
+---
+
+# 5. Music client-side paid mint flow
+
+New client:
+
+```text
+apps/crablink-tauri/src/shared/api/musicAssetClient.js
+```
+
+Important routes it calls:
+
+```text
+POST /assets/music/prepare
+POST /assets/music
+```
+
+It follows the same proven pattern as video.
+
+Important paid proof headers:
+
+```text
+x-ron-paid-op
+x-ron-paid-asset
+x-ron-paid-estimate-minor
+x-ron-wallet-txid
+x-ron-wallet-receipt-hash
+x-ron-wallet-from
+x-ron-wallet-to
+```
+
+Music-specific metadata headers:
+
+```text
+x-ron-music-artist
+x-ron-music-album
+x-ron-music-release-type
+x-ron-music-duration
+x-ron-music-genre
+x-ron-music-language
+x-ron-cover-image-crab-url
+x-ron-lyrics-crab-url
+x-ron-music-bpm
+x-ron-music-key
+x-ron-music-explicit-rating
+x-ron-music-rights-attested
+```
+
+Important detail:
+
+```text
+The frontend had to send x-ron-music-rights-attested=true during upload.
+```
+
+Backend requires that header.
+
+For podcasts, likely analogous headers:
+
+```text
+x-ron-podcast-host
+x-ron-podcast-show
+x-ron-podcast-episode
+x-ron-podcast-season
+x-ron-podcast-duration
+x-ron-podcast-language
+x-ron-podcast-category
+x-ron-podcast-explicit-rating
+x-ron-podcast-cover-image-crab-url
+x-ron-podcast-transcript-crab-url
+x-ron-podcast-rights-attested
+```
+
+---
+
+# 6. Tauri command bridge added music upload support
+
+We updated the Tauri Rust command bridge so bounded audio bytes can upload through a fixed, allowlisted route.
+
+Main file:
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+```
+
+Added command:
+
+```rust
+upload_music_asset_gateway
+```
+
+Registered in:
+
+```text
+apps/crablink-tauri/src-tauri/src/lib.rs
+```
+
+The command uses:
+
+```text
+POST /assets/music
+```
+
+Important bridge limits:
+
+```text
+MAX_IMAGE_UPLOAD_BYTES: 1 MiB
+MAX_VIDEO_UPLOAD_BYTES: 10 MiB
+MAX_MUSIC_UPLOAD_BYTES: 25 MiB
+```
+
+The music upload command requires:
+
+```text
+Content-Type must start with audio/
+Paid proof headers must exist
+Idempotency-Key must exist
+```
+
+Important invariant:
+
+```text
+No arbitrary URL upload.
+No filesystem path is exposed.
+No direct storage/index/wallet/ledger call from Tauri.
+Gateway-first only.
+```
+
+For podcasts, we can likely either:
+
+```text
+A. Add upload_podcast_asset_gateway with a podcast-specific route and audio/* MIME requirement.
+```
+
+or reuse a generic audio bridge only if it remains fixed-route and typed. Better architecture is:
+
+```text
+upload_podcast_asset_gateway → /assets/podcast
+```
+
+because podcast and music have different manifests, rights language, and product pages.
+
+---
+
+# 7. Backend RustyOnions routes added for music
+
+The original blocker was:
+
+```text
+POST /assets/music/prepare returned 404
+```
+
+Cause:
+
+```text
+svc-gateway and omnigate did not expose music routes yet.
+```
+
+We added music-lite backend routes by mirroring video-lite.
+
+## svc-gateway
+
+Main file:
+
+```text
+crates/svc-gateway/src/routes/product.rs
+```
+
+Added public routes:
+
+```text
+POST /assets/music/prepare → omnigate /v1/assets/music/prepare
+POST /assets/music         → omnigate /v1/assets/music
+```
+
+Tests updated:
+
+```text
+crates/svc-gateway/tests/product_routes_proxy.rs
+```
+
+The proxy test passed:
+
+```text
+cargo test -p svc-gateway --test product_routes_proxy
+```
+
+Result:
+
+```text
+7 passed
+```
+
+## omnigate
+
+Main file:
+
+```text
+crates/omnigate/src/routes/v1/assets.rs
+```
+
+Added internal routes:
+
+```text
+POST /v1/assets/music/prepare
+POST /v1/assets/music
+```
+
+Added schemas:
+
+```text
+omnigate.music-asset-prepare.v1
+omnigate.music-asset-upload.v1
+```
+
+Added request DTO:
+
+```rust
+MusicAssetPrepareRequest
+```
+
+Added handlers:
+
+```rust
+music_prepare
+music_upload
+```
+
+Added helpers:
+
+```rust
+is_valid_audio_content_type
+truthy_header
+build_music_manifest
+put_music_index_pointer
+```
+
+There was one compile failure:
+
+```text
+cannot find function put_music_index_pointer
+```
+
+Cause:
+
+```text
+The helper insertion was skipped because the script saw the call site token.
+```
+
+Fix:
+
+```text
+Inserted put_music_index_pointer before put_video_index_pointer.
+```
+
+After that, the music backend compiled and worked.
+
+For podcasts, expect the same Rust pattern:
+
+```text
+svc-gateway:
+  POST /assets/podcast/prepare
+  POST /assets/podcast
+
+omnigate:
+  POST /v1/assets/podcast/prepare
+  POST /v1/assets/podcast
+
+response:
+  crab://<hash>.podcast
+```
+
+---
+
+# 8. Music backend behavior
+
+## Prepare
+
+`music_prepare` validates:
+
+```text
+bytes > 0
+content_type starts with audio/
+legal_attestation_accepted == true
+```
+
+It fetches paid storage estimate and returns:
+
+```text
+schema: omnigate.music-asset-prepare.v1
+asset_kind: music
+wallet_hold required
+next.create_hold: /v1/wallet/hold
+next.submit_upload: /v1/assets/music
+```
+
+Important warnings:
+
+```text
+music_lite_only_no_transcoding_no_drm_no_cover_art_upload
+legal_attestation_is_creator_confirmation_not_backend_ownership_proof
+```
+
+## Upload
+
+`music_upload` validates:
+
+```text
+Content-Type: audio/*
+x-ron-music-rights-attested=true
+paid proof headers
+```
+
+Then:
+
+```text
+1. Sends audio bytes to paid storage.
+2. Gets asset CID.
+3. Builds music manifest.
+4. Stores manifest object.
+5. Writes index pointer.
+6. Returns crab://<hash>.music.
+```
+
+Music manifest includes:
+
+```text
+asset_kind: music
+kind: music
+metadata.title
+metadata.description
+metadata.tags
+metadata.content_type
+metadata.media_kind: music
+metadata.music.artist_display
+metadata.music.album_title
+metadata.music.release_type
+metadata.music.duration
+metadata.music.genre
+metadata.music.language
+metadata.music.bpm
+metadata.music.key_signature
+metadata.music.explicit_rating
+metadata.music.rights_attested
+linked_assets.cover_image_crab_url
+linked_assets.cover_image_upload_from_music_page: false
+linked_assets.lyrics_crab_url
+rights_policy.legal_attestation.accepted
+rights_policy.legal_attestation.backend_verified: false
+storage.raw_url
+storage.paid: true
+media.mode: music_lite
+media.range_streaming: false
+media.transcoding: false
+media.drm: false
+```
+
+For podcasts, we should create:
+
+```text
+podcast_lite
+range_streaming: false for MVP
+transcoding: false
+drm: false
+episode_audio_upload only
+cover art reference only
+transcript reference only
+```
+
+---
+
+# 9. Music paid playback frontend fix
+
+After minting worked, the `.music` asset opened but had no player/pay gate.
+
+Cause:
+
+```text
+AssetHydratedView.jsx still only treated image/video as media preview kinds and did not include music in paid content-view local route sets.
+```
+
+We patched:
+
+```text
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+```
+
+Key changes:
+
+```javascript
+const MEDIA_PREVIEW_KINDS = new Set(['image', 'video', 'music']);
+const PAID_CONTENT_VIEW_KINDS = new Set(['article', 'post', 'comment', 'image', 'video', 'music', 'stream']);
+```
+
+Added:
+
+```javascript
+isMusicRoute: kind === 'music'
+canPreviewMusic
+music_preview_locked
+```
+
+Added a music playback card with:
+
+```html
+<audio controls preload="metadata">
+```
+
+Important behavior:
+
+```text
+Before payment:
+  pay card appears
+  music playback card is locked
+  source URL hidden
+
+After payment:
+  backend receipt returned
+  player appears
+  audio bytes fetched from gateway
+```
+
+AssetContentViewAccess already had music support:
+
+```text
+Pay to listen to this music
+Music view paid and unlocked
+Music playback below is unlocked only after svc-gateway returned wallet receipt metadata
+```
+
+For podcasts, we need to add `podcast` to the same frontend sets and add a podcast playback card or share the music audio player card.
+
+Potential sets after podcast:
+
+```javascript
+const MEDIA_PREVIEW_KINDS = new Set(['image', 'video', 'music', 'podcast']);
+const PAID_CONTENT_VIEW_KINDS = new Set(['article', 'post', 'comment', 'image', 'video', 'music', 'podcast', 'stream']);
+```
+
+---
+
+# 10. Tests / commands that worked
+
+## CrabLink Tauri
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+
+npm run build
+npm run tauri:dev:mac-media
+```
+
+User runs Tauri from:
+
+```text
+/Users/mymac/Desktop/crablink/apps/crablink-tauri
+```
+
+With media profile:
+
+```bash
+npm run tauri:dev:mac-media
+```
+
+## RustyOnions
+
+After patches:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+cargo fmt -p omnigate
+cargo fmt -p svc-gateway
+
+cargo test -p svc-gateway --test product_routes_proxy
+cargo check -p omnigate --all-targets
+cargo check -p svc-gateway --all-targets
+```
+
+Gateway test passed:
+
+```text
+7 passed
+```
+
+Music prepare smoke after stack restart:
+
+```bash
+curl -i -X POST http://127.0.0.1:8090/assets/music/prepare \
+  -H 'Authorization: Bearer dev' \
+  -H 'Content-Type: application/json' \
+  -H 'x-ron-passport: passport:main:dev' \
+  -H 'x-ron-wallet-account: acct_dev' \
+  -H 'Idempotency-Key: music-prepare-smoke-1' \
+  --data '{
+    "bytes": 1024,
+    "payer_account": "acct_dev",
+    "owner_passport_subject": "passport:main:dev",
+    "content_type": "audio/mpeg",
+    "title": "Music route smoke",
+    "artist_display": "CrabLink Test",
+    "legal_attestation_accepted": true,
+    "client_idempotency_key": "music-prepare-smoke-1"
+  }'
+```
+
+Expected:
+
+```text
+200
+schema: omnigate.music-asset-prepare.v1
+```
+
+---
+
+# 11. Important architectural invariants preserved
+
+Music work stayed consistent with RustyOnions / CrabLink doctrine:
+
+```text
+Tauri is the primary client.
+Gateway-first only.
+React owns display and user intent, not backend truth.
+No silent ROC spend.
+No fake balances.
+No fake receipts.
+No fake b3 CIDs.
+No direct wallet/ledger mutation from UI.
+svc-wallet owns wallet mutation.
+ron-ledger owns economic truth.
+omnigate coordinates product route hydration and publish flows.
+svc-gateway is the public route boundary.
+Storage stores by b3/content ID.
+crab:// is navigation, not authority.
+Cache never unlocks paid content alone.
+Receipt cache is display-only.
+```
+
+Music-specific invariants:
+
+```text
+Local preview is not publication.
+Local preview does not unlock paid content.
+Audio upload is explicit.
+Music prepare does not create a CID.
+Music upload requires paid proof.
+Music upload requires rights attestation.
+Cover art is reference-only.
+No cover art upload from music page.
+No transcoding claim.
+No DRM/anti-rip claim.
+No backend legal ownership proof claim.
+```
+
+---
+
+# 12. Next session: Podcast page direction
+
+The next natural page is:
+
+```text
+crab://podcasts
+```
+
+The podcast page should not be just a duplicate of music. It should feel like a **Podcast Studio** with a small set of impressive, practical audio controls.
+
+The user specifically wants something like the streaming studio, but for podcasts / streaming audio:
+
+```text
+- microphone / local audio recording feel
+- gain knob
+- maybe noise gate
+- maybe a few other knobs
+- not too much clutter
+- modern/impressive
+```
+
+Recommended MVP direction:
+
+```text
+Podcast Studio Workspace
+```
+
+Core sections:
+
+```text
+1. Episode draft metadata
+2. Local audio preview / recording source panel
+3. Podcast Studio controls
+4. Guest / host / show metadata
+5. Rights / guest permission disclaimer
+6. Linked references
+7. Paid podcast mint flow
+8. Paid podcast playback after content_view receipt
+```
+
+---
+
+# 13. Podcast should reuse music’s proven loop
+
+Podcast page should mirror music technically:
+
+```text
+Podcast local audio file / recording
+→ metadata
+→ rights/guest attestation
+→ prepare
+→ ROC hold
+→ upload
+→ crab://<hash>.podcast
+→ visitor pays content_view
+→ audio player unlocks
+```
+
+Backend should mirror music-lite:
+
+```text
+svc-gateway:
+  POST /assets/podcast/prepare
+  POST /assets/podcast
+
+omnigate:
+  POST /v1/assets/podcast/prepare
+  POST /v1/assets/podcast
+```
+
+Tauri bridge:
+
+```text
+upload_podcast_asset_gateway
+```
+
+Client:
+
+```text
+podcastAssetClient.js
+```
+
+Page files likely:
+
+```text
+apps/crablink-tauri/src/pages/podcast/PodcastPage.jsx
+apps/crablink-tauri/src/pages/podcast/PodcastDraft.jsx
+apps/crablink-tauri/src/pages/podcast/PodcastStudio.jsx
+apps/crablink-tauri/src/pages/podcast/PodcastOwnershipDisclaimer.jsx
+apps/crablink-tauri/src/pages/podcast/PodcastPublishFlow.jsx
+apps/crablink-tauri/src/pages/podcast/podcast.css
+apps/crablink-tauri/src/shared/api/podcastAssetClient.js
+```
+
+Depending on existing route naming, it may be singular `podcast` or plural `podcasts`. The visible route should probably be:
+
+```text
+crab://podcasts
+```
+
+Minted asset URL should probably be:
+
+```text
+crab://<hash>.podcast
+```
+
+Use plural for the studio route and singular for the asset kind.
+
+---
+
+# 14. Podcast metadata fields
+
+Recommended podcast draft fields:
+
+```text
+Episode title
+Show title
+Host / creator display
+Guest names
+Season number
+Episode number
+Description
+Show notes
+Category
+Language
+Duration
+Explicit rating
+Tags
+Cover image crab URL
+Transcript crab URL
+Chapters crab URL
+Clip/source references
+Site/show page crab URL
+Access mode
+Payout mode
+Rights mode
+License mode
+```
+
+Podcast-specific linked assets:
+
+```text
+cover_image_crab_url       // reference-only
+transcript_crab_url        // future .article or .transcript asset
+chapters_crab_url          // future JSON/text asset
+show_page_crab_url         // named site or creator page
+music_intro_crab_url       // optional music reference
+music_outro_crab_url       // optional music reference
+video_episode_crab_url     // optional video companion
+```
+
+Do not upload cover art in podcast page.
+
+---
+
+# 15. Podcast rights / legal disclaimer
+
+Podcast attestation should be separate from music’s wording.
+
+Creator should confirm:
+
+```text
+I own or control the rights to this episode audio.
+I have permission from all speakers/guests whose voices appear.
+Any intro/outro music, sound effects, clips, or third-party media are cleared.
+I will not upload private conversations without consent.
+I will not impersonate someone or upload deceptive AI voice clones.
+The title, show name, guest names, collaborators, rights, and payout claims are accurate.
+I understand CrabLink may remove, block, review, or freeze payout routing for disputed content.
+```
+
+Truth boundary:
+
+```text
+Local attestation only.
+Does not prove legal ownership.
+Does not prove guest release.
+Does not create publication.
+Does not create receipt.
+Does not create payout authority.
+Backend policy may still review/reject.
+```
+
+---
+
+# 16. Podcast Studio UX idea
+
+The podcast page should impress people, but not become overcomplicated.
+
+Recommended “Podcast Studio” controls:
+
+```text
+Input gain
+Noise gate
+Compressor / voice leveler
+Monitor volume
+Playback speed for review
+```
+
+Possibly also:
+
+```text
+Mic test meter
+Silence detector
+Room tone indicator
+Clipping warning
+```
+
+Avoid too many controls. Suggested MVP knobs:
+
+```text
+Gain
+Noise gate
+Voice leveler
+Monitor
+```
+
+## How to implement safely in frontend
+
+Use Web Audio API locally:
+
+```text
+MediaStream from microphone or selected audio file
+AudioContext
+GainNode
+DynamicsCompressorNode
+AnalyserNode
+optional AudioWorklet or ScriptProcessor for gate-like behavior
+```
+
+Important limitation:
+
+```text
+Frontend audio effects are local preview/recording UX only.
+Backend truth is still the uploaded audio bytes and b3 hash.
+```
+
+If we do local recording later:
+
+```text
+Use MediaRecorder.
+Generate Blob.
+Preview locally.
+Then explicit podcast prepare/hold/upload.
+```
+
+No raw mic streams should silently upload.
+
+No background recording.
+
+No auto-mint.
+
+No hidden ROC spend.
+
+## Suggested studio controls in UI
+
+```text
+Gain
+Range: 0.5x to 2.0x
+Purpose: raise/lower mic input.
+
+Noise gate
+Range: off / low / medium / high
+Purpose: reduce background noise when not speaking.
+Implementation can be honest and simple: threshold-based gain reduction.
+
+Voice leveler
+Range: off / gentle / strong
+Purpose: make speech sound more even.
+Use DynamicsCompressorNode.
+
+Monitor
+Range: 0% to 100%
+Purpose: local preview monitor volume.
+```
+
+UI should include honest labels:
+
+```text
+Local preview processing only
+Not mastering
+Not DRM
+Not backend proof
+```
+
+---
+
+# 17. Podcast backend design
+
+Podcast should not be shoehorned into music or video.
+
+Add dedicated asset kind:
+
+```text
+podcast
+```
+
+Routes:
+
+```text
+POST /assets/podcast/prepare
+POST /assets/podcast
+GET /b3/<hash>.podcast
+GET /crab/resolve?url=crab://<hash>.podcast
+POST /content/view/quote
+POST /content/view/pay
+```
+
+Prepare request DTO:
+
+```rust
+PodcastAssetPrepareRequest {
+    bytes: u64,
+    payer_account: Option<String>,
+    owner_passport_subject: Option<String>,
+    content_type: Option<String>,
+    expected_asset_cid: Option<String>,
+    title: Option<String>,
+    description: Option<String>,
+    tags: Vec<String>,
+    show_title: Option<String>,
+    host_display: Option<String>,
+    guest_display: Option<String>,
+    season_number: Option<String>,
+    episode_number: Option<String>,
+    duration: Option<String>,
+    category: Option<String>,
+    language: Option<String>,
+    explicit_rating: Option<String>,
+    cover_image_crab_url: Option<String>,
+    transcript_crab_url: Option<String>,
+    chapters_crab_url: Option<String>,
+    show_page_crab_url: Option<String>,
+    rights_mode: Option<String>,
+    license_mode: Option<String>,
+    guest_permission_attested: bool,
+    legal_attestation_accepted: bool,
+    client_idempotency_key: Option<String>,
+}
+```
+
+Validation:
+
+```text
+bytes > 0
+content_type starts with audio/
+legal_attestation_accepted == true
+guest_permission_attested == true
+```
+
+Upload requires:
+
+```text
+x-ron-podcast-rights-attested=true
+x-ron-podcast-guest-permission-attested=true
+Content-Type: audio/*
+paid proof headers
+```
+
+Response:
+
+```text
+crab://<hash>.podcast
+```
+
+Manifest:
+
+```text
+asset_kind: podcast
+kind: podcast
+metadata.media_kind: podcast
+metadata.podcast.show_title
+metadata.podcast.host_display
+metadata.podcast.guest_display
+metadata.podcast.season_number
+metadata.podcast.episode_number
+metadata.podcast.duration
+metadata.podcast.category
+metadata.podcast.language
+metadata.podcast.explicit_rating
+linked_assets.cover_image_crab_url
+linked_assets.transcript_crab_url
+linked_assets.chapters_crab_url
+linked_assets.show_page_crab_url
+storage.paid: true
+media.mode: podcast_lite
+media.range_streaming: false
+media.transcoding: false
+media.drm: false
+```
+
+---
+
+# 18. Podcast paid playback frontend
+
+Asset page needs to include podcast after backend exists.
+
+Likely changes:
+
+```javascript
+const MEDIA_PREVIEW_KINDS = new Set(['image', 'video', 'music', 'podcast']);
+
+const PAID_CONTENT_VIEW_KINDS = new Set([
+  'article',
+  'post',
+  'comment',
+  'image',
+  'video',
+  'music',
+  'podcast',
+  'stream',
+]);
+```
+
+Add `podcast` copy to `AssetContentViewAccess.jsx`:
+
+```text
+Pay to listen to this podcast
+Podcast view paid and unlocked
+Podcast playback below is unlocked only after svc-gateway returned wallet receipt metadata for content_view.
+```
+
+Add podcast playback card to `AssetHydratedView.jsx`, likely sharing the audio player shell used for music:
+
+```html
+<audio controls preload="metadata">
+```
+
+Before payment:
+
+```text
+Podcast playback is locked until paid.
+```
+
+After payment:
+
+```text
+Backend receipt unlocked this podcast episode.
+```
+
+---
+
+# 19. Important difference between podcast and stream
+
+Do not confuse:
+
+```text
+stream = live / session / real-time-ish
+podcast = recorded episode / audio asset
+```
+
+Podcast can use uploaded audio bytes like music.
+
+Streaming uses stream descriptors and eventually segment/live routes.
+
+Podcast Studio may feel like streaming studio, but its MVP should mint a recorded/uploaded audio episode.
+
+For now:
+
+```text
+Podcast is audio asset publication.
+Not live stream.
+Not sidecar required.
+Not background service.
+```
+
+Later, podcast could support:
+
+```text
+live-to-recorded podcast
+dual stream + podcast capture
+scheduled episodes
+RSS-like feed
+creator show pages
+```
+
+But MVP should prove:
+
+```text
+podcast audio mint + paid listen
+```
+
+---
+
+# 20. Suggested next session order
+
+Best next session workflow:
+
+## Step 1: Inspect current podcast route
+
+Check whether route exists:
+
+```text
+crab://podcasts
+crab://podcast
+```
+
+Find files in Tauri bundle:
+
+```text
+apps/crablink-tauri/src/pages/podcast/*
+apps/crablink-tauri/src/pages/podcasts/*
+router route registration
+builtin route registry
+```
+
+If no page exists, create the page using music page as model.
+
+## Step 2: Build frontend local Podcast Studio page first
+
+Create:
+
+```text
+PodcastPage.jsx
+PodcastStudio.jsx
+PodcastDraft.jsx
+PodcastOwnershipDisclaimer.jsx
+PodcastPublishFlow.jsx
+podcast.css
+podcastAssetClient.js
+```
+
+Initial frontend can include:
+
+```text
+local audio file preview
+studio controls UI
+rights disclaimer
+metadata
+publish flow scaffold
+```
+
+## Step 3: Wire Tauri audio upload command
+
+Add:
+
+```rust
+upload_podcast_asset_gateway
+```
+
+in:
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+```
+
+Use fixed route:
+
+```text
+/assets/podcast
+```
+
+Limit:
+
+```text
+MAX_PODCAST_UPLOAD_BYTES could be 50 MiB for MVP
+```
+
+But be careful with command bridge memory. Since current music bridge passes bytes through command, 50 MiB may be high. Safer MVP:
+
+```text
+25 MiB or 50 MiB
+```
+
+If we choose 50 MiB, call it temporary bounded MVP, not final podcast media path.
+
+## Step 4: Add backend podcast routes
+
+RustyOnions:
+
+```text
+crates/svc-gateway/src/routes/product.rs
+crates/svc-gateway/tests/product_routes_proxy.rs
+crates/omnigate/src/routes/v1/assets.rs
+```
+
+Mirror music, not video.
+
+## Step 5: Add asset page paid podcast playback
+
+Patch:
+
+```text
+AssetContentViewAccess.jsx
+AssetHydratedView.jsx
+asset.css if needed
+```
+
+## Step 6: Test full loop
+
+```text
+Creator wallet:
+  crab://podcasts
+  select/upload audio
+  accept disclaimer
+  prepare
+  hold ROC
+  upload
+  get crab://<hash>.podcast
+
+Visitor wallet B:
+  fund acct_visitor_b if needed
+  open crab://<hash>.podcast
+  quote/pay content_view
+  audio player unlocks
+```
+
+---
+
+# 21. Commands to keep ready for next session
+
+## Run Tauri
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run tauri:dev:mac-media
+```
+
+## Build Tauri frontend
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+```
+
+## Fund wallet B
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+curl -fsS -X POST http://127.0.0.1:8088/v1/issue \
+  -H 'Authorization: Bearer dev' \
+  -H "Idempotency-Key: dev-fund-visitor-b-$(date +%s)" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "to": "acct_visitor_b",
+    "asset": "roc",
+    "amount_minor": "1776",
+    "memo": "dev fund visitor B for podcast content_view"
+  }' \
+  | jq .
+```
+
+## Check wallet B
+
+```bash
+curl -fsS "http://127.0.0.1:8088/v1/balance?account=acct_visitor_b&asset=roc" \
+  -H 'Authorization: Bearer dev' \
+  | jq .
+```
+
+## Backend checks after podcast route patch
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+cargo fmt -p omnigate
+cargo fmt -p svc-gateway
+
+cargo test -p svc-gateway --test product_routes_proxy
+cargo check -p omnigate --all-targets
+cargo check -p svc-gateway --all-targets
+```
+
+---
+
+# 22. Podcast page should feel impressive
+
+Design goal:
+
+```text
+A creator opens crab://podcasts and immediately feels like CrabLink is a real native creator studio.
+```
+
+Not too much clutter. Suggested visual blocks:
+
+```text
+Hero:
+  Podcast Studio
+  Record, polish, mint, and monetize podcast episodes through CrabLink.
+
+Studio panel:
+  local file or mic source
+  waveform/meter
+  gain knob
+  noise gate toggle/slider
+  voice leveler
+  monitor volume
+
+Episode draft:
+  show title
+  episode title
+  host
+  guest
+  category
+  description
+  show notes
+  tags
+
+Linked assets:
+  cover image crab URL
+  transcript crab URL
+  show page crab URL
+
+Rights gate:
+  voice/guest/music/clip permissions
+
+Mint flow:
+  prepare
+  hold
+  upload
+```
+
+Potential premium touches:
+
+```text
+Animated level meter
+Clipping warning
+“Room noise” indicator
+“Voice ready” badge
+Studio preset chips:
+  Clean Voice
+  Warm Interview
+  Noise Reduction
+```
+
+But do not overbuild.
+
+A good MVP set:
+
+```text
+Gain
+Noise Gate
+Voice Leveler
+Monitor
+```
+
+---
+
+# 23. Strong warning for next session
+
+Do not make podcast use music routes.
+
+Avoid shortcuts like:
+
+```text
+/assets/music/prepare for podcasts
+crab://<hash>.music for podcast episodes
+```
+
+That would make the flow work technically but corrupt the product model.
+
+Podcast must have:
+
+```text
+asset_kind: podcast
+crab://<hash>.podcast
+```
+
+---
+
+# 24. Where we are now
+
+Current status:
+
+```text
+Chrome proof: still preserved.
+Tauri app: primary.
+Video: minted and paid playback proven.
+Stream UX: locked for now, backend live playback remains future work.
+Music: minted and paid playback proven.
+Podcast: next target.
+```
+
+Music is now the best reference implementation for podcast because it includes:
+
+```text
+audio upload
+rights disclaimer
+cover-art reference-only policy
+paid listen flow
+audio player unlock
+backend music-lite routes
+```
+
+For podcast, use music as the main template and add the podcast studio UX layer.
+
+
+### END NOTE - MAY 20 2026 - 15:30 CST
+
+
+
+### BEGIN NOTE - MAY 20 2026 - 18:50 CST
+
+## Carry-over notes for next session: Podcast Studio polish + knobs
+
+We got the hard proof working: **recorded podcast → paid mint → new `.podcast` crab URL → wallet B quote/pay → backend receipt → audio playback works**. The final missing playback issue was not ROC/wallet related; it was a Tauri/WebView raw-audio loading problem. The working fix was the bounded Tauri gateway byte bridge plus the paid audio player path, so podcast playback now follows the same invariant as music: **audio bytes only appear after backend `content_view` receipt**.
+
+Working proof URL from this session:
+
+```text
+crab://9b1eb2a9c2caa171d6d36e2d8e91039645cd7ec5c962c313e61c99117dfca92f.podcast
+```
+
+The podcast route owner is `PodcastPage.jsx`, which already frames the page as a workspace combining studio recording, metadata, rights attestation, and paid minting, with explicit invariants against fake CIDs, fake receipts, silent ROC spend, and treating local recording as backend stream truth.  The current stream page is the style reference: it is organized around local preview, look controls, access/pricing, publish, and session controls, with backend truth reserved for stream URL, receipts, stream IDs, and viewer entitlement. 
+
+## What is working now
+
+The backend podcast-lite lane is green enough for MVP recorded podcasts. We added/validated:
+
+* `POST /assets/podcast/prepare`
+* `POST /assets/podcast`
+* `.podcast` asset resolution
+* `svc-index` acceptance of `podcast` manifest pointers
+* `content_view` quote/pay for podcast
+* fail-closed behavior so future podcast uploads should not claim success if the manifest pointer fails
+* wallet B paid listen flow
+* shared paid audio handling with a Tauri byte bridge for `.music` / `.podcast`
+
+The current podcast page already has rights/guest attestation before minting. The attestation explicitly requires creator ownership/permission, guest permission, third-party material clearance, no private conversations, no impersonation/voice clone, accurate metadata, review acknowledgement, and a creator signature before minting can proceed. 
+
+The current local studio manifest already records the important audio-processing values: preamp dB, input gain, noise gate enabled, noise gate threshold, gate reduction, voice leveler enabled, and monitor enabled.  This is important for the next session because we should make those controls visually impressive and confirm they truly affect the recorded output.
+
+## Do not redo next session
+
+Do **not** start over on podcast backend routes unless a fresh codebundle proves the patches are missing. Do **not** replace the paid content-view model. Do **not** fake playback unlock from local receipt cache. Do **not** add hidden auto-renewal or automatic ROC spend.
+
+The important proof already happened: wallet B paid and listened. Next session should be mostly **frontend UX + audio-control validation**, not backend route work.
+
+## Main next-session goal
+
+Make `crab://podcast` feel like a serious podcast studio, visually closer to the stream studio screenshot:
+
+* large polished studio stage
+* professional “ON AIR” / “READY” / “RECORDED” status
+* waveform or live meter area
+* modern transport controls
+* sleek mixer knobs
+* right-side checklist like the stream “Preview. Publish. Launch.” panel
+* clear paid minting status
+* rights checklist folded into the workflow instead of feeling like a form dump
+* developer JSON hidden behind a deliberate developer tab
+
+The target should be something that “wows” people before we even explain the backend.
+
+## Proposed UI direction
+
+Use the stream page as the model. The stream page has a strong left “stage” and a right rail with workflow cards. For podcasts, mirror that shape:
+
+```text
+Podcast Studio
+├─ Left: large studio console
+│  ├─ waveform / meter / cover art placeholder
+│  ├─ ON AIR badge
+│  ├─ record / stop / play / clear controls
+│  ├─ selected file / recording facts
+│  └─ local playback preview
+├─ Right rail
+│  ├─ Podcast launch checklist
+│  │  1. Mic or file ready
+│  │  2. Record / upload episode
+│  │  3. Rights + guest attestation
+│  │  4. Prepare + hold ROC
+│  │  5. Publish podcast asset
+│  ├─ Mixer / voice chain summary
+│  └─ publish proof / latest crab URL
+└─ Lower tabs
+   ├─ Episode details
+   ├─ Linked assets
+   ├─ Rights
+   ├─ Publish
+   └─ Developer
+```
+
+The current `PodcastPage.jsx` route already imports `PodcastDraft`, `PodcastStudio`, `PodcastOwnershipDisclaimer`, `PodcastPublishFlow`, and `JsonPreview`, so the next patch can reorganize those existing pieces rather than rebuilding from scratch. 
+
+## Files to work on next
+
+Primary frontend files:
+
+```text
+apps/crablink-tauri/src/pages/podcast/PodcastPage.jsx
+apps/crablink-tauri/src/pages/podcast/PodcastStudio.jsx
+apps/crablink-tauri/src/pages/podcast/podcast.css
+apps/crablink-tauri/src/pages/podcast/PodcastDraft.jsx
+apps/crablink-tauri/src/pages/podcast/PodcastPublishFlow.jsx
+apps/crablink-tauri/src/pages/podcast/PodcastOwnershipDisclaimer.jsx
+```
+
+Reference stream files for design patterns:
+
+```text
+apps/crablink-tauri/src/pages/stream/StreamPage.jsx
+apps/crablink-tauri/src/pages/stream/StreamLocalPreview.jsx
+apps/crablink-tauri/src/pages/stream/StreamGoLivePanel.jsx
+apps/crablink-tauri/src/pages/stream/StreamLookPanel.jsx
+apps/crablink-tauri/src/pages/stream/StreamPricingPanel.jsx
+apps/crablink-tauri/src/pages/stream/stream.css
+```
+
+The stream route is already organized around preview, saved scenes, look controls, access, publish, and session controls, so reuse its product structure for podcast rather than inventing a totally separate UI pattern. 
+
+## Knob/control validation plan
+
+Next session should verify that each knob is not just cosmetic:
+
+1. **Preamp** should change the signal before the gate.
+2. **Gain** should change the recorded signal after preamp.
+3. **Noise gate threshold** should visibly open/close the gate.
+4. **Noise gate reduction** should affect how quiet the closed-gate background becomes.
+5. **Voice leveler** should affect compression/smoothing.
+6. **Monitor volume** should only affect local monitoring, not secretly change wallet/backend truth.
+7. Add a clear **meter and status readout**: `Input`, `Processed`, `Peak`, `Gate Open/Closed`, `Clipping`.
+
+A very good next patch would add a small diagnostics strip to the mixer:
+
+```text
+Input: -32 dB
+Processed: -18 dB
+Gate: Open
+Peak: 72%
+Clipping: No
+Recorder: audio/mp4; codecs=mp4a.40.2
+```
+
+This makes it obvious to the creator that knobs are alive.
+
+## Audio format note
+
+The successful paid podcast proof used an `audio/mp4; codecs=mp4a.40.2` recording. It played only after the Tauri byte bridge fix. Do not assume direct `<audio src="/o/...">` is reliable in Tauri. The safe model is now:
+
+```text
+backend content_view receipt
+→ AssetPaidAudioPlayer
+→ Tauri fetch_asset_bytes_gateway command
+→ bounded gateway /o/b3:<hash> fetch
+→ typed Blob URL
+→ audio controls
+```
+
+If playback ever regresses, debug that bridge first before touching wallet or content-view.
+
+## Pay every X minutes feature
+
+We still want this, but it should be a deliberate backend entitlement window, not a local timer.
+
+Correct model:
+
+```text
+creator sets price + interval
+viewer requests quote
+viewer explicitly pays
+backend returns receipt + paid_until
+UI plays until paid_until
+UI prompts renewal before expiry
+playback stops/pauses when expired
+```
+
+For live podcast streams, reuse the stream interval model. For pre-recorded podcasts, add a future access policy such as:
+
+```json
+{
+  "mode": "paid_listen_window",
+  "price_roc": "5",
+  "window_seconds": 300,
+  "renewal": "manual_explicit"
+}
+```
+
+No hidden recurring spend. No automatic wallet transfer. No local-only unlock.
+
+## Suggested next patch order
+
+First patch: **UI-only polish**.
+
+* Rework `PodcastPage.jsx` layout to a stream-style studio shell.
+* Rework `PodcastStudio.jsx` into a modern console with a big stage, transport controls, live meters, and sleek knobs.
+* Rework `podcast.css` heavily.
+* Do not touch backend yet.
+
+Second patch: **knob verification**.
+
+* Add processed/output meter.
+* Add gate open/closed state.
+* Confirm recorded output uses processed graph, not raw mic.
+* Make monitor clearly separate from recorded volume.
+
+Third patch: **podcast access policy UI**.
+
+* Add “One-time listen” vs “Pay every X minutes” controls as UI draft/policy only.
+* Do not wire recurring backend charges yet.
+* Label it as future/backend-required unless backend support exists.
+
+Fourth patch: **live podcast stream mode**.
+
+* Reuse stream live/session components.
+* Podcast live stream should not be a fake podcast recording.
+* It should either launch a stream session or link to a stream asset.
+
+## Run commands for next session
+
+From Tauri app:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+
+npm run build
+npm run check:rust:mac-media
+npm run tauri:dev:mac-media
+```
+
+If backend was restarted, remember wallet B may need funding again before paid listen tests.
+
+## Manual test script for the next instance
+
+1. Open `crab://podcast`.
+2. Start mic.
+3. Move preamp/gain/gate knobs and confirm meter changes.
+4. Record 5 seconds.
+5. Stop recording.
+6. Confirm local playback works.
+7. Fill title/show/host fields.
+8. Complete rights attestation.
+9. Prepare / hold ROC / publish.
+10. Copy new `.podcast` URL.
+11. Switch to `passport:main:visitor-b`.
+12. Open the new `.podcast`.
+13. Quote/pay.
+14. Confirm player appears and audio plays.
+15. Confirm no audio source appears before payment.
+
+## Hard invariants to preserve
+
+* CrabLink Tauri is the client, not backend truth.
+* React never creates wallet truth, balances, receipts, CIDs, or index pointers.
+* Paid playback only after backend `content_view` receipt.
+* Receipt cache is display-only.
+* Podcast recording is local until paid upload succeeds.
+* Live podcast is not the same thing as recorded podcast minting.
+* No silent ROC spend.
+* No hidden renewal.
+* No fake “ON AIR” backend claim unless stream/session backend confirms it.
+* Keep gateway-first: Tauri → configured svc-gateway → omnigate/services.
+* Keep Chrome proof green, but build the polished podcast product for Tauri first.
+
+## One-sentence mission for next session
+
+Turn the now-working podcast proof into a **sleek, professional Podcast Studio** that visually matches the stream page, proves the audio knobs are real, preserves explicit paid mint/listen invariants, and sets up future pay-per-window podcast listening without adding hidden spend.
+
+
+### END NOTE - MAY 20 2026 - 18:50 CST

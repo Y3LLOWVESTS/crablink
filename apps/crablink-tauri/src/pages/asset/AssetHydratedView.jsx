@@ -2,11 +2,11 @@
  * RO:WHAT — Read-only hydrated view for gateway-returned typed asset DTOs.
  * RO:WHY — Gives b3/crab asset pages a useful React UI while preserving backend-truth boundaries.
  * RO:INTERACTS — AssetResolver, gateway asset DTOs, ContentViewAccess, JsonPreview, CopyButton, StatChip.
- * RO:INVARIANTS — display backend-returned fields only; article/post/comment raw content and image/video/stream preview bytes are gated by paid content_view proof; no unsafe HTML; no direct wallet mutation.
+ * RO:INVARIANTS — display backend-returned fields only; article/post/comment raw content and image/video/music/stream preview bytes are gated by paid content_view proof; no unsafe HTML; no direct wallet mutation.
  * RO:METRICS — displays gateway correlation/status fields returned by GatewayClient.
  * RO:CONFIG — gateway base URL through assetClient.
  * RO:SECURITY — no script execution; JSON preview is redacted by shared component.
- * RO:TEST — known-good paid image/video/stream view smoke, .post/.comment/.article raw content smoke, malformed/offline gateway smoke.
+ * RO:TEST — known-good paid image/video/music/stream view smoke, .post/.comment/.article raw content smoke, malformed/offline gateway smoke.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -18,12 +18,14 @@ import JsonPreview from '../../shared/components/JsonPreview.jsx';
 import StatChip from '../../shared/components/StatChip.jsx';
 import TruthBoundary from '../../shared/components/TruthBoundary.jsx';
 import AssetContentViewAccess from './AssetContentViewAccess.jsx';
+import AssetPaidAudioPlayer from './AssetPaidAudioPlayer.jsx';
 import StreamPaidSegmentViewer from './StreamPaidSegmentViewer.jsx';
 
 const TEXT_ASSET_KINDS = new Set(['post', 'comment', 'article']);
-const MEDIA_PREVIEW_KINDS = new Set(['image', 'video']);
-const PAID_CONTENT_VIEW_KINDS = new Set(['article', 'post', 'comment', 'image', 'video', 'stream']);
+const MEDIA_PREVIEW_KINDS = new Set(['image', 'video', 'music', 'podcast']);
+const PAID_CONTENT_VIEW_KINDS = new Set(['article', 'post', 'comment', 'image', 'video', 'music', 'podcast', 'stream']);
 const MAX_VIDEO_BLOB_PREVIEW_BYTES = 12 * 1024 * 1024;
+const MAX_AUDIO_BLOB_PREVIEW_BYTES = 50 * 1024 * 1024;
 
 const TEXT_CONTENT_IDLE = Object.freeze({
   status: 'idle',
@@ -87,6 +89,14 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
     attempts: [],
     error: null,
   });
+  const [audioObjectUrl, setAudioObjectUrl] = useState('');
+  const audioObjectUrlRef = useRef('');
+  const [audioFetchState, setAudioFetchState] = useState({
+    status: 'idle',
+    source: null,
+    attempts: [],
+    error: null,
+  });
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewRevision, setPreviewRevision] = useState(0);
   const [failedPreviewSources, setFailedPreviewSources] = useState([]);
@@ -109,6 +119,16 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
   const canReadTextContent = summary.isTextRoute && (!requiresPaidContentView || contentViewAccess.canView);
   const canPreviewImage = summary.isImageRoute && (!requiresPaidContentView || contentViewAccess.canView);
   const canPreviewVideo = summary.isVideoRoute && (!requiresPaidContentView || contentViewAccess.canView);
+  const canPreviewMusic = summary.isMusicRoute && (!requiresPaidContentView || contentViewAccess.canView);
+  const canPreviewPodcast = summary.isPodcastRoute && (!requiresPaidContentView || contentViewAccess.canView);
+  const canPreviewAudio = summary.isMusicRoute
+    ? canPreviewMusic
+    : summary.isPodcastRoute
+      ? canPreviewPodcast
+      : false;
+  const audioKindName = summary.isPodcastRoute ? 'Podcast' : 'Music';
+  const audioKindLower = audioKindName.toLowerCase();
+  const audioPlaybackNoun = summary.isPodcastRoute ? 'podcast episode' : 'music asset';
   const canPreviewMedia = summary.isMediaPreviewRoute && (!requiresPaidContentView || contentViewAccess.canView);
 
   const previewSources = useMemo(() => {
@@ -132,6 +152,7 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
   const previewSource = previewSources[previewIndex] || null;
   const previewUrl = previewSource?.url ? withCacheBuster(previewSource.url, previewRevision) : '';
   const videoPlaybackUrl = videoObjectUrl || previewUrl;
+  const audioPlaybackUrl = audioObjectUrl || previewUrl;
 
   useEffect(() => {
     setImagePreviewOk(true);
@@ -144,7 +165,14 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
       attempts: [],
       error: null,
     });
+    setAudioFetchState({
+      status: 'idle',
+      source: null,
+      attempts: [],
+      error: null,
+    });
     setOwnedVideoObjectUrl('');
+    setOwnedAudioObjectUrl('');
   }, [summary.hash, summary.kind, summary.crabUrl]);
 
   useEffect(() => {
@@ -152,6 +180,11 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
       if (videoObjectUrlRef.current) {
         URL.revokeObjectURL(videoObjectUrlRef.current);
         videoObjectUrlRef.current = '';
+      }
+
+      if (audioObjectUrlRef.current) {
+        URL.revokeObjectURL(audioObjectUrlRef.current);
+        audioObjectUrlRef.current = '';
       }
     };
   }, []);
@@ -279,6 +312,142 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
     summary.kind,
     summary.rawUrl,
   ]);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function run() {
+      if (!canPreviewAudio || !summary.hash || !assetClient?.gateway?.request) {
+        setAudioFetchState({
+          status: 'idle',
+          source: null,
+          attempts: [],
+          error: null,
+        });
+        setOwnedAudioObjectUrl('');
+        return;
+      }
+
+      const routes = audioBlobRoutes(summary);
+
+      if (routes.length === 0) {
+        setAudioFetchState({
+          status: 'error',
+          source: null,
+          attempts: [],
+          error: new Error('No gateway audio byte route was available.'),
+        });
+        setOwnedAudioObjectUrl('');
+        return;
+      }
+
+      setAudioFetchState({
+        status: 'loading',
+        source: null,
+        attempts: [],
+        error: null,
+      });
+
+      const attempts = [];
+
+      for (const routeCandidate of routes) {
+        try {
+          const response = await assetClient.gateway.request(routeCandidate.route, {
+            label: `${audioKindName} playback bytes`,
+            parseAs: 'blob',
+            headers: {
+              Accept: audioAcceptHeader(summary.contentType, summary.kind),
+            },
+          });
+
+          const blob = await normalizeAudioBlobResponse(response?.data, summary.contentType, summary.kind);
+
+          if (blob.size > MAX_AUDIO_BLOB_PREVIEW_BYTES) {
+            throw new Error(
+              `Audio playback blob exceeded ${formatBytes(MAX_AUDIO_BLOB_PREVIEW_BYTES)}. Future range/segment playback is required.`,
+            );
+          }
+
+          const objectUrl = URL.createObjectURL(blob);
+
+          attempts.push({
+            route: routeCandidate.route,
+            label: routeCandidate.label,
+            status: response?.status || 0,
+            ok: true,
+            bytes: blob.size,
+            contentType: blob.type || summary.contentType || '',
+          });
+
+          if (!alive) {
+            URL.revokeObjectURL(objectUrl);
+            return;
+          }
+
+          setOwnedAudioObjectUrl(objectUrl);
+          setAudioFetchState({
+            status: 'ready',
+            source: {
+              route: routeCandidate.route,
+              label: routeCandidate.label,
+              status: response?.status || 0,
+              bytes: blob.size,
+              contentType: blob.type || summary.contentType || '',
+              correlationId: response?.correlationId || '',
+            },
+            attempts,
+            error: null,
+          });
+          return;
+        } catch (error) {
+          attempts.push({
+            route: routeCandidate.route,
+            label: routeCandidate.label,
+            ok: false,
+            error: serializeError(error),
+          });
+        }
+      }
+
+      if (!alive) {
+        return;
+      }
+
+      setOwnedAudioObjectUrl('');
+      setAudioFetchState({
+        status: 'error',
+        source: null,
+        attempts,
+        error: attempts[attempts.length - 1]?.error || new Error('Audio byte fetch failed.'),
+      });
+    }
+
+    void run();
+
+    return () => {
+      alive = false;
+    };
+  }, [
+    assetClient,
+    audioKindName,
+    canPreviewAudio,
+    summary.cid,
+    summary.contentType,
+    summary.hash,
+    summary.kind,
+    summary.rawUrl,
+  ]);
+
+  function setOwnedAudioObjectUrl(nextUrl) {
+    const previous = audioObjectUrlRef.current;
+
+    if (previous && previous !== nextUrl) {
+      URL.revokeObjectURL(previous);
+    }
+
+    audioObjectUrlRef.current = nextUrl || '';
+    setAudioObjectUrl(nextUrl || '');
+  }
 
   function setOwnedVideoObjectUrl(nextUrl) {
     const previous = videoObjectUrlRef.current;
@@ -718,6 +887,17 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
         </Card>
       )}
 
+      {(summary.isMusicRoute || summary.isPodcastRoute) && (
+        <AssetPaidAudioPlayer
+          summary={summary}
+          canPreviewAudio={canPreviewAudio}
+          assetClient={assetClient}
+          audioKindName={audioKindName}
+          audioKindLower={audioKindLower}
+          audioPlaybackNoun={audioPlaybackNoun}
+        />
+      )}
+
       <section className="asset-detail-grid" aria-label="Asset details">
         <Card eyebrow="Storage" title="Storage availability">
           <div className="asset-fact-grid">
@@ -784,6 +964,8 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
               failed_preview_sources: canPreviewMedia ? failedPreviewSources : [],
               image_preview_locked: summary.isImageRoute && !canPreviewImage,
               video_preview_locked: summary.isVideoRoute && !canPreviewVideo,
+              music_preview_locked: summary.isMusicRoute && !canPreviewMusic,
+              podcast_preview_locked: summary.isPodcastRoute && !canPreviewPodcast,
             },
             truth_boundary:
               'This page is read-only. Gateway, storage, index, wallet, and ledger remain backend-owned truth.',
@@ -936,6 +1118,8 @@ function summarizeAsset(result, route) {
     kindLabel: labelFromKind(kind || 'asset'),
     isImageRoute: kind === 'image',
     isVideoRoute: kind === 'video',
+    isMusicRoute: kind === 'music',
+    isPodcastRoute: kind === 'podcast',
     isMediaPreviewRoute: MEDIA_PREVIEW_KINDS.has(kind),
     isTextRoute: TEXT_ASSET_KINDS.has(kind),
     hash,
@@ -1289,6 +1473,150 @@ function normalizePreviewUrl(value, gateway = null) {
   }
 
   return raw;
+}
+
+
+function audioBlobRoutes(summary = {}) {
+  const candidates = [
+    { route: summary.rawUrl, label: 'Resolved raw audio URL' },
+    { route: summary.cid ? `/o/${summary.cid}` : '', label: 'Content ID object' },
+    { route: summary.hash ? `/o/b3:${summary.hash}` : '', label: 'Hash object' },
+    { route: summary.hash && summary.kind ? `/b3/${summary.hash}.${summary.kind}` : '', label: 'Typed b3 route fallback' },
+  ];
+
+  const seen = new Set();
+  const out = [];
+
+  for (const candidate of candidates) {
+    const route = normalizeGatewayRoute(candidate.route);
+
+    if (!route || seen.has(route)) {
+      continue;
+    }
+
+    seen.add(route);
+    out.push({
+      route,
+      label: candidate.label,
+    });
+  }
+
+  return out;
+}
+
+function audioAcceptHeader(contentType, kind = 'music') {
+  const clean = String(contentType || '').trim();
+
+  if (clean.toLowerCase().startsWith('audio/')) {
+    return `${clean},audio/*,*/*`;
+  }
+
+  return kind === 'podcast'
+    ? 'audio/wav,audio/mp4,audio/aac,audio/mpeg,audio/webm,audio/ogg,audio/*,*/*'
+    : 'audio/mpeg,audio/mp4,audio/wav,audio/*,*/*';
+}
+
+async function normalizeAudioBlobResponse(blob, contentType, kind = 'music') {
+  if (!(blob instanceof Blob)) {
+    throw new Error('Gateway did not return an audio blob.');
+  }
+
+  if (blob.size <= 0) {
+    throw new Error('Gateway returned an empty audio blob.');
+  }
+
+  const returnedType = String(blob.type || '').toLowerCase();
+
+  if (returnedType.includes('json') || returnedType.startsWith('text/')) {
+    const text = await blob.text();
+    throw new Error(`Gateway returned non-audio data: ${text.slice(0, 180)}`);
+  }
+
+  if (returnedType.startsWith('audio/')) {
+    return blob;
+  }
+
+  const bytes = await blob.arrayBuffer();
+  const sniffedType = sniffAudioContentType(bytes);
+  const inferredType = sniffedType || inferAudioContentType(contentType, kind);
+
+  return new Blob([bytes], {
+    type: inferredType,
+  });
+}
+
+function sniffAudioContentType(buffer) {
+  const bytes = new Uint8Array(buffer || new ArrayBuffer(0));
+
+  if (bytes.length >= 12) {
+    const riff = ascii(bytes, 0, 4);
+    const wave = ascii(bytes, 8, 4);
+
+    if (riff === 'RIFF' && wave === 'WAVE') {
+      return 'audio/wav';
+    }
+
+    const ftyp = ascii(bytes, 4, 4);
+
+    if (ftyp === 'ftyp') {
+      return 'audio/mp4';
+    }
+  }
+
+  if (bytes.length >= 4) {
+    const prefix4 = ascii(bytes, 0, 4);
+
+    if (prefix4 === 'OggS') {
+      return 'audio/ogg';
+    }
+
+    if (prefix4 === 'ID3\x03' || prefix4 === 'ID3\x04') {
+      return 'audio/mpeg';
+    }
+  }
+
+  if (bytes.length >= 3 && bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0) {
+    return 'audio/mpeg';
+  }
+
+  if (bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) {
+    return 'audio/webm';
+  }
+
+  return '';
+}
+
+function ascii(bytes, start, length) {
+  let out = '';
+
+  for (let index = start; index < start + length && index < bytes.length; index += 1) {
+    out += String.fromCharCode(bytes[index]);
+  }
+
+  return out;
+}
+
+function inferAudioContentType(contentType, kind = 'music') {
+  const clean = String(contentType || '').trim().toLowerCase();
+
+  if (clean.startsWith('audio/')) {
+    return clean;
+  }
+
+  return kind === 'podcast' ? 'audio/webm' : 'audio/mpeg';
+}
+
+function audioModeLabel(status) {
+  switch (status) {
+    case 'loading':
+      return 'paid blob fetch loading';
+    case 'ready':
+      return 'paid blob playback';
+    case 'error':
+      return 'audio blob unavailable';
+    default:
+      return 'gateway audio bytes';
+  }
 }
 
 function videoBlobRoutes(summary = {}) {

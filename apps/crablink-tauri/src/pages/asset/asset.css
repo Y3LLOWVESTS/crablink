@@ -768,3 +768,16 @@
     grid-template-columns: 1fr;
   }
 }
+.asset-audio-preview-shell {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--cl-surface) 78%, var(--cl-card));
+  padding: 1rem;
+}
+
+.asset-audio-preview-shell audio {
+  display: block;
+  width: 100%;
+}

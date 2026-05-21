@@ -1,12 +1,12 @@
 /**
- * RO:WHAT — Explicit paid content_view gate for b3-backed text asset pages.
- * RO:WHY — NEXT_LEVEL creator economy proof: readers pay through gateway-backed wallet truth before protected content is displayed.
+ * RO:WHAT — Explicit paid content_view gate for b3-backed asset pages.
+ * RO:WHY — NEXT_LEVEL creator economy proof: viewers pay through gateway-backed wallet truth before protected content is displayed.
  * RO:INTERACTS — contentViewClient, AssetHydratedView, recentReceipts, localCatalog, GatewayClient.
  * RO:INVARIANTS — no silent spend; no fake unlock; no direct wallet/ledger calls; receipt cache is display-only.
  * RO:METRICS — displays returned gateway correlation IDs, txid, receipt_hash, and ledger_root.
  * RO:CONFIG — uses current CrabLink wallet/passport settings and configured gateway URL.
  * RO:SECURITY — pay button requires explicit click; local cache never grants authorization.
- * RO:TEST — open crab://<hash>.article, crab://<hash>.post, crab://<hash>.comment, and crab://<hash>.image, quote, click Pay, confirm protected content unlocks only after receipt.
+ * RO:TEST — open crab://<hash>.article, .post, .comment, .image, .video, .music, and .stream; quote, click Pay, confirm protected content unlocks only after receipt.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -21,7 +21,7 @@ import { createContentViewClient } from '../../shared/api/contentViewClient.js';
 import { writeLocalCatalogEntry } from '../../shared/catalog/localCatalog.js';
 import { writeRecentReceipt } from '../../shared/receipts/recentReceipts.js';
 
-const PAYABLE_KINDS = new Set(['article', 'post', 'comment', 'image', 'video', 'stream']);
+const PAYABLE_KINDS = new Set(['article', 'post', 'comment', 'image', 'video', 'music', 'podcast', 'stream']);
 
 const KIND_COPY = Object.freeze({
   article: {
@@ -98,6 +98,36 @@ const KIND_COPY = Object.freeze({
       'Video playback below is unlocked only after svc-gateway returned wallet receipt metadata for content_view. Local receipt memory is display-only.',
     lockedCopy:
       'CrabLink does not direct-call wallet or ledger, does not adjust local balances, and does not show video bytes until a backend content_view receipt is returned.',
+  },
+  music: {
+    noun: 'music',
+    bodyName: 'music playback',
+    payTitle: 'Pay to listen to this music',
+    paidTitle: 'Music view paid and unlocked',
+    badge: 'music content_view',
+    unavailableTitle: 'Paid music listening is not available yet',
+    unavailableCopy:
+      'The asset resolved, but the backend quote/pay route did not return a usable content_view proof. CrabLink will not unlock music playback from local state.',
+    unlockedTitle: 'Backend receipt unlocked this music view',
+    unlockedCopy:
+      'Music playback below is unlocked only after svc-gateway returned wallet receipt metadata for content_view. Local receipt memory is display-only.',
+    lockedCopy:
+      'CrabLink does not direct-call wallet or ledger, does not adjust local balances, and does not show music bytes until a backend content_view receipt is returned.',
+  },
+  podcast: {
+    noun: 'podcast',
+    bodyName: 'podcast playback',
+    payTitle: 'Pay to listen to this podcast',
+    paidTitle: 'Podcast view paid and unlocked',
+    badge: 'podcast content_view',
+    unavailableTitle: 'Paid podcast listening is not available yet',
+    unavailableCopy:
+      'The asset resolved, but the backend quote/pay route did not return a usable content_view proof. CrabLink will not unlock podcast playback from local state.',
+    unlockedTitle: 'Backend receipt unlocked this podcast view',
+    unlockedCopy:
+      'Podcast playback below is unlocked only after svc-gateway returned wallet receipt metadata for content_view. Local receipt memory is display-only.',
+    lockedCopy:
+      'CrabLink does not direct-call wallet or ledger, does not adjust local balances, and does not show podcast audio bytes until a backend content_view receipt is returned.',
   },
   stream: {
     noun: 'stream',

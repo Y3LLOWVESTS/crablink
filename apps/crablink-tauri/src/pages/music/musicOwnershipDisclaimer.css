@@ -1,0 +1,271 @@
+/*
+ * RO:WHAT — Styles for the crab://music legal/ownership attestation panel.
+ * RO:WHY — Keeps the pre-mint disclaimer visually strong without bloating music.css.
+ * RO:INTERACTS — MusicOwnershipDisclaimer.jsx and MusicPage.jsx.
+ * RO:INVARIANTS — must read as a required local pre-mint gate, not backend ownership proof.
+ * RO:TEST — visual smoke in light/dark theme and npm run build.
+ */
+
+.cl-music-ownership {
+  display: grid;
+  gap: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 42%, var(--cl-border));
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--cl-warning) 11%, transparent), transparent 44%),
+    color-mix(in srgb, var(--cl-card) 82%, var(--cl-surface));
+  padding: 1rem;
+  box-shadow: 0 18px 42px color-mix(in srgb, var(--cl-text) 6%, transparent);
+}
+
+.cl-music-ownership-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+}
+
+.cl-music-ownership-head h3 {
+  margin: 0;
+  font-size: 1.28rem;
+  line-height: 1.1;
+}
+
+.cl-music-ownership-head p:not(.cl-eyebrow) {
+  max-width: 860px;
+  margin: 0.45rem 0 0;
+  color: var(--cl-muted);
+  line-height: 1.52;
+}
+
+.cl-music-ownership-pill {
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 55%, var(--cl-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cl-warning) 12%, var(--cl-card));
+  color: var(--cl-text);
+  padding: 0.4rem 0.65rem;
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-music-ownership-pill.is-ready {
+  border-color: color-mix(in srgb, var(--cl-success, #16a34a) 55%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-success, #16a34a) 13%, var(--cl-card));
+}
+
+.cl-music-ownership-warning {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 50%, var(--cl-border));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--cl-warning) 12%, var(--cl-card));
+  padding: 0.85rem;
+}
+
+.cl-music-ownership-warning span {
+  color: var(--cl-muted);
+  line-height: 1.48;
+}
+
+.cl-music-ownership-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.cl-music-ownership-fact {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  border: 1px solid var(--cl-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--cl-surface) 74%, var(--cl-card));
+  padding: 0.72rem;
+}
+
+.cl-music-ownership-fact span {
+  color: var(--cl-muted);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-music-ownership-fact strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cl-music-ownership-checks {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.cl-music-ownership-checks legend {
+  margin-bottom: 0.35rem;
+  color: var(--cl-muted);
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-music-ownership-check {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: start;
+  border: 1px solid var(--cl-border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--cl-card) 78%, var(--cl-surface));
+  padding: 0.78rem;
+  cursor: pointer;
+}
+
+.cl-music-ownership-check:hover {
+  border-color: color-mix(in srgb, var(--cl-text) 28%, var(--cl-border));
+}
+
+.cl-music-ownership-check.is-checked {
+  border-color: color-mix(in srgb, var(--cl-success, #16a34a) 50%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-success, #16a34a) 8%, var(--cl-card));
+}
+
+.cl-music-ownership-check input {
+  width: 18px;
+  height: 18px;
+  margin-top: 0.16rem;
+  accent-color: var(--cl-accent);
+}
+
+.cl-music-ownership-check span {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.cl-music-ownership-check strong {
+  line-height: 1.25;
+}
+
+.cl-music-ownership-check small {
+  color: var(--cl-muted);
+  font-size: 0.86rem;
+  line-height: 1.42;
+}
+
+.cl-music-ownership-signature {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.cl-music-ownership-signature > span {
+  color: var(--cl-muted);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.cl-music-ownership-signature input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--cl-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--cl-surface) 82%, var(--cl-card));
+  color: var(--cl-text);
+  padding: 0 0.78rem;
+  font: inherit;
+  font-weight: 750;
+  outline: none;
+}
+
+.cl-music-ownership-signature input:focus {
+  border-color: color-mix(in srgb, var(--cl-accent) 55%, var(--cl-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cl-accent) 12%, transparent);
+}
+
+.cl-music-ownership-signature small {
+  color: var(--cl-muted);
+  line-height: 1.42;
+}
+
+.cl-music-ownership-status,
+.cl-music-mint-strip {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: center;
+  border: 1px solid var(--cl-border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--cl-surface) 74%, var(--cl-card));
+  padding: 0.85rem;
+}
+
+.cl-music-ownership-status > div,
+.cl-music-mint-strip > div {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.cl-music-ownership-status span,
+.cl-music-mint-strip span {
+  color: var(--cl-muted);
+  line-height: 1.42;
+}
+
+.cl-music-ownership-status button,
+.cl-music-mint-strip button {
+  flex-shrink: 0;
+  min-height: 40px;
+  border: 1px solid var(--cl-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cl-text) 9%, var(--cl-card));
+  color: var(--cl-muted);
+  padding: 0 0.85rem;
+  font: inherit;
+  font-weight: 950;
+}
+
+.cl-music-ownership-status button:disabled,
+.cl-music-mint-strip button:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.cl-music-mint-strip {
+  margin-top: 1rem;
+  border-color: color-mix(in srgb, var(--cl-warning) 38%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-warning) 8%, var(--cl-card));
+}
+
+@media (max-width: 920px) {
+  .cl-music-ownership-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cl-music-ownership-head,
+  .cl-music-ownership-status,
+  .cl-music-mint-strip {
+    display: grid;
+  }
+
+  .cl-music-ownership-status button,
+  .cl-music-mint-strip button {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 620px) {
+  .cl-music-ownership-facts {
+    grid-template-columns: 1fr;
+  }
+}
