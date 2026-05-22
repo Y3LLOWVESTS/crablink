@@ -29,6 +29,7 @@ export const ROUTES = Object.freeze({
   stream: lazy(() => import('../pages/stream/StreamPage.jsx')),
   podcast: lazy(() => import('../pages/podcast/PodcastPage.jsx')),
   podcasts: lazy(() => import('../pages/podcast/PodcastPage.jsx')),
+  chat: lazy(() => import('../pages/chat/ChatPage.jsx')),
   ad: lazy(() => import('../pages/ad/AdPage.jsx')),
   algo: lazy(() => import('../pages/algo/AlgoPage.jsx')),
   code: lazy(() => import('../pages/code/CodePage.jsx')),
@@ -53,10 +54,12 @@ export const CREATOR_ROUTE_KINDS = Object.freeze([
   'stream',
   'podcast',
   'podcasts',
+  'chat',
   'ad',
   'algo',
   'code',
   'game',
+  'chat',
 ]);
 
 export const LOW_RISK_STUB_ROUTE_KINDS = Object.freeze([
@@ -106,6 +109,10 @@ export function routeKindLabel(kind) {
 
   if (value === 'podcasts') {
     return 'Podcasts';
+  }
+
+  if (value === 'chat') {
+    return 'Chat';
   }
 
   return value
