@@ -1,8 +1,8 @@
 /**
- * RO:WHAT — Local-only chat composer for crab://chat.
- * RO:WHY — Lets creators preview message UX without claiming backend send/ROC/payment truth.
+ * RO:WHAT — Chat composer for local preview, backend free send, and paid-message quote.
+ * RO:WHY — Lets users exercise backend chat routes without pretending paid send/receipt exists.
  * RO:INTERACTS — ChatPage, ChatRoomView, chatDraftModel.
- * RO:INVARIANTS — preview only; backend send disabled until chat routes exist; no silent spend.
+ * RO:INVARIANTS — paid send is quote-only until svc-wallet receipt path exists; no silent spend.
  * RO:SECURITY — text input only; no HTML rendering; no capability/wallet authority.
  */
 
@@ -15,15 +15,31 @@ export default function ChatComposer({
   onPreview,
   onPaidIntent,
   disabled = false,
+  backendReady = false,
+  roomSendMode = '',
+  backendBusy = false,
 }) {
   const inspected = sanitizeMessageBody(value, draft);
-  const sendMode = draft?.sendMode || 'paid_per_message';
+  const sendMode = roomSendMode || draft?.sendMode || 'paid_per_message';
   const price = draft?.messagePriceRoc || '1';
-  const canPreview = inspected.body.length > 0 && !disabled;
-  const lockedReason =
-    sendMode === 'disabled'
-      ? 'Room send mode is disabled.'
-      : 'Backend chat send routes are not wired yet. Preview is local-only.';
+  const composerDisabled = disabled || backendBusy || (backendReady && sendMode === 'disabled');
+  const canSubmit = inspected.body.length > 0 && !composerDisabled;
+
+  const primaryLabel = backendReady
+    ? sendMode === 'free'
+      ? 'Send free message'
+      : sendMode === 'paid_per_message'
+        ? `Quote paid message · ${price} ROC`
+        : 'Sending disabled'
+    : 'Preview bubble';
+
+  const helperText = backendReady
+    ? sendMode === 'free'
+      ? 'This sends to the backend in-memory dev room. No ROC is spent and no receipt is created.'
+      : sendMode === 'paid_per_message'
+        ? 'This quotes the paid message only. Actual paid send remains locked until svc-wallet receipt integration.'
+        : 'This room is not accepting messages.'
+    : 'Backend room not loaded. Preview bubbles are local-only and do not spend ROC.';
 
   function appendEmoji(emoji) {
     onChange(`${value || ''}${emoji}`);
@@ -32,7 +48,7 @@ export default function ChatComposer({
   function handleSubmit(event) {
     event.preventDefault();
 
-    if (!canPreview) {
+    if (!canSubmit) {
       return;
     }
 
@@ -48,7 +64,7 @@ export default function ChatComposer({
             type="button"
             className="cl-chat-emoji"
             onClick={() => appendEmoji(emoji)}
-            disabled={disabled || draft?.allowEmoji === false}
+            disabled={composerDisabled || draft?.allowEmoji === false}
             aria-label={`Add emoji ${emoji}`}
           >
             {emoji}
@@ -60,10 +76,10 @@ export default function ChatComposer({
         <textarea
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="Write a chat message… emoji are welcome 🦀"
+          placeholder={backendReady ? 'Write a backend chat message… 🦀' : 'Write a local preview message… 🦀'}
           rows={2}
           maxLength={Number(draft?.maxMessageChars || 500) + 32}
-          disabled={disabled}
+          disabled={composerDisabled}
         />
 
         <div className="cl-chat-input-meta">
@@ -76,16 +92,16 @@ export default function ChatComposer({
       </div>
 
       <div className="cl-chat-composer-actions">
-        <button type="submit" disabled={!canPreview}>
-          Preview bubble
+        <button type="submit" disabled={!canSubmit}>
+          {backendBusy ? 'Working…' : primaryLabel}
         </button>
 
-        <button type="button" className="cl-chat-paid-send" onClick={onPaidIntent} disabled={disabled}>
-          {sendMode === 'paid_per_message' ? `Future paid send · ${price} ROC` : 'Future backend send'}
+        <button type="button" className="cl-chat-paid-send" onClick={onPaidIntent} disabled={composerDisabled}>
+          Explain paid path
         </button>
       </div>
 
-      <p className="cl-chat-composer-note">{lockedReason}</p>
+      <p className="cl-chat-composer-note">{helperText}</p>
     </form>
   );
 }

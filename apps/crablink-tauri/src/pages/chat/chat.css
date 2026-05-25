@@ -1040,3 +1040,179 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Chat backend route integration states                                      */
+/* -------------------------------------------------------------------------- */
+
+.cl-chat-hero-card.is-live,
+.cl-chat-contract-card.is-live {
+  border-color: color-mix(in srgb, #22c55e 54%, var(--cl-border));
+  box-shadow: 0 18px 45px color-mix(in srgb, #22c55e 14%, transparent);
+}
+
+.cl-chat-room.is-backend-ready {
+  border-color: color-mix(in srgb, #22c55e 38%, var(--cl-border));
+}
+
+.cl-chat-status-pill.is-ok {
+  border-color: color-mix(in srgb, #22c55e 46%, var(--cl-border));
+  background: color-mix(in srgb, #22c55e 8%, var(--cl-card));
+}
+
+.cl-chat-backend-proof,
+.cl-chat-quote-card,
+.cl-chat-contract-actions {
+  display: grid;
+  gap: 0.24rem;
+  border: 1px solid color-mix(in srgb, var(--cl-border) 74%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--cl-surface) 64%, transparent);
+  padding: 0.72rem;
+}
+
+.cl-chat-backend-proof {
+  border-color: color-mix(in srgb, #22c55e 46%, var(--cl-border));
+  background: color-mix(in srgb, #22c55e 8%, var(--cl-card));
+}
+
+.cl-chat-quote-card {
+  border-color: color-mix(in srgb, #f59e0b 52%, var(--cl-border));
+  background: color-mix(in srgb, #f59e0b 9%, var(--cl-card));
+}
+
+.cl-chat-backend-proof strong,
+.cl-chat-quote-card strong {
+  color: var(--cl-text);
+}
+
+.cl-chat-backend-proof span,
+.cl-chat-quote-card span {
+  color: var(--cl-muted);
+  line-height: 1.38;
+}
+
+.cl-chat-message.is-backend .cl-chat-message-proof span:first-child {
+  border-color: color-mix(in srgb, #22c55e 44%, var(--cl-border));
+  background: color-mix(in srgb, #22c55e 10%, var(--cl-card));
+  color: color-mix(in srgb, #22c55e 78%, var(--cl-text));
+}
+
+.cl-chat-message.is-local .cl-chat-message-proof span:first-child {
+  border-style: dashed;
+}
+
+.cl-chat-message.is-deleted .cl-chat-bubble {
+  opacity: 0.72;
+  font-style: italic;
+}
+
+.cl-chat-contract-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.cl-chat-contract-actions button {
+  border: 1px solid color-mix(in srgb, var(--cl-border) 76%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cl-card) 86%, transparent);
+  color: var(--cl-text);
+  padding: 0.55rem 0.78rem;
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.cl-chat-contract-actions button:hover {
+  border-color: color-mix(in srgb, var(--cl-accent) 50%, var(--cl-border));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Chat backend route integration states                                      */
+/* -------------------------------------------------------------------------- */
+
+.cl-chat-hero-card.is-live,
+.cl-chat-contract-card.is-live {
+  border-color: color-mix(in srgb, #22c55e 54%, var(--cl-border));
+  box-shadow: 0 18px 45px color-mix(in srgb, #22c55e 14%, transparent);
+}
+
+.cl-chat-room.is-backend-ready {
+  border-color: color-mix(in srgb, #22c55e 38%, var(--cl-border));
+}
+
+.cl-chat-status-pill.is-ok {
+  border-color: color-mix(in srgb, #22c55e 46%, var(--cl-border));
+  background: color-mix(in srgb, #22c55e 8%, var(--cl-card));
+}
+
+.cl-chat-backend-proof,
+.cl-chat-quote-card,
+.cl-chat-contract-actions {
+  display: grid;
+  gap: 0.24rem;
+  border: 1px solid color-mix(in srgb, var(--cl-border) 74%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--cl-surface) 64%, transparent);
+  padding: 0.72rem;
+}
+
+.cl-chat-backend-proof {
+  border-color: color-mix(in srgb, #22c55e 46%, var(--cl-border));
+  background: color-mix(in srgb, #22c55e 8%, var(--cl-card));
+}
+
+.cl-chat-quote-card {
+  border-color: color-mix(in srgb, #f59e0b 52%, var(--cl-border));
+  background: color-mix(in srgb, #f59e0b 9%, var(--cl-card));
+}
+
+.cl-chat-backend-proof strong,
+.cl-chat-quote-card strong {
+  color: var(--cl-text);
+}
+
+.cl-chat-backend-proof span,
+.cl-chat-quote-card span {
+  color: var(--cl-muted);
+  line-height: 1.38;
+}
+
+.cl-chat-message.is-backend .cl-chat-message-proof span:first-child {
+  border-color: color-mix(in srgb, #22c55e 44%, var(--cl-border));
+  background: color-mix(in srgb, #22c55e 10%, var(--cl-card));
+  color: color-mix(in srgb, #22c55e 78%, var(--cl-text));
+}
+
+.cl-chat-message.is-local .cl-chat-message-proof span:first-child {
+  border-style: dashed;
+}
+
+.cl-chat-message.is-deleted .cl-chat-bubble {
+  opacity: 0.72;
+  font-style: italic;
+}
+
+.cl-chat-contract-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.cl-chat-contract-actions button {
+  border: 1px solid color-mix(in srgb, var(--cl-border) 76%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cl-card) 86%, transparent);
+  color: var(--cl-text);
+  padding: 0.55rem 0.78rem;
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.cl-chat-contract-actions button:hover {
+  border-color: color-mix(in srgb, var(--cl-accent) 50%, var(--cl-border));
+}

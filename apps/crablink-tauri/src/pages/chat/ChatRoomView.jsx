@@ -1,8 +1,8 @@
 /**
- * RO:WHAT — Bubble-based local room preview for the React crab://chat route.
- * RO:WHY — Provides the polished iMessage-like chat feel while staying honest about missing backend chat truth.
+ * RO:WHAT — Bubble-based room view for local and backend-confirmed CrabLink chat messages.
+ * RO:WHY — Shows real backend messages when available while preserving honest local preview boundaries.
  * RO:INTERACTS — ChatPage, ChatComposer, chatDraftModel, chat.css.
- * RO:INVARIANTS — local preview bubbles are labeled; no fake backend messages; no fake receipts; no live fanout claim.
+ * RO:INVARIANTS — local preview bubbles are labeled; backend-confirmed bubbles are backend-derived; no fake receipts.
  * RO:SECURITY — renders text only; message body is never injected as HTML.
  */
 
@@ -12,24 +12,36 @@ import ChatComposer from './ChatComposer.jsx';
 export default function ChatRoomView({
   draft,
   descriptor,
-  messages,
+  backendRoomPage,
+  localMessages = [],
+  backendMessages = [],
+  pendingQuote,
   composerValue,
+  backendBusy = false,
   onComposerChange,
   onPreviewMessage,
   onPaidIntent,
   onClearPreview,
+  onClearBackendRoom,
+  onRefreshBackend,
 }) {
-  const sendMode = descriptor?.access?.sendMode || 'paid_per_message';
-  const price = descriptor?.access?.messagePriceRoc || 0;
-  const pinnedNote = descriptor?.pinnedNote || '';
+  const room = backendRoomPage?.room || descriptor;
+  const backendReady = Boolean(backendRoomPage?.room?.roomId);
+  const sendMode = room?.access?.sendMode || descriptor?.access?.sendMode || 'paid_per_message';
+  const price = room?.access?.messagePriceRoc ?? descriptor?.access?.messagePriceRoc ?? 0;
+  const pinnedNote = room?.pinnedNote || descriptor?.pinnedNote || '';
+  const allMessages = [
+    ...backendMessages.map((message) => ({ ...message, backendConfirmed: true })),
+    ...localMessages.map((message) => ({ ...message, backendConfirmed: false })),
+  ];
 
   return (
-    <section className="cl-chat-room" aria-label="Chat room preview">
+    <section className={backendReady ? 'cl-chat-room is-backend-ready' : 'cl-chat-room'} aria-label="Chat room">
       <div className="cl-chat-room-head">
         <div>
-          <p className="cl-eyebrow">Portable room</p>
-          <h2>{descriptor?.title || 'CrabLink Chat'}</h2>
-          <p>{descriptor?.description || 'A portable chat room for streams, podcasts, sites, and profiles.'}</p>
+          <p className="cl-eyebrow">{backendReady ? 'Backend room' : 'Portable room'}</p>
+          <h2>{room?.title || 'CrabLink Chat'}</h2>
+          <p>{room?.description || 'A portable chat room for streams, podcasts, sites, and profiles.'}</p>
         </div>
 
         <div className="cl-chat-room-price">
@@ -39,10 +51,10 @@ export default function ChatRoomView({
       </div>
 
       <div className="cl-chat-status-rail" aria-label="Chat route status">
-        <StatusPill label="Backend" value="Not connected" tone="warn" />
-        <StatusPill label="Messages" value="Local preview" tone="info" />
+        <StatusPill label="Backend" value={backendReady ? 'Connected' : 'Local only'} tone={backendReady ? 'ok' : 'warn'} />
+        <StatusPill label="Messages" value={backendReady ? 'Backend-confirmed' : 'Local preview'} tone="info" />
         <StatusPill label="Receipts" value="None" tone="warn" />
-        <StatusPill label="Expiry" value={labelForExpiry(descriptor)} tone="neutral" />
+        <StatusPill label="Expiry" value={labelForExpiry(room)} tone="neutral" />
       </div>
 
       {pinnedNote ? (
@@ -52,20 +64,45 @@ export default function ChatRoomView({
         </div>
       ) : null}
 
-      <div className="cl-chat-thread" aria-label="Local chat preview thread">
+      {backendReady ? (
+        <div className="cl-chat-backend-proof">
+          <strong>Backend room loaded</strong>
+          <span>
+            {room.roomUrl || room.roomId} · in-memory dev proof · free messages can be sent only
+            when room send mode is Free
+          </span>
+        </div>
+      ) : null}
+
+      {pendingQuote ? (
+        <div className="cl-chat-quote-card">
+          <strong>Paid-message quote ready</strong>
+          <span>
+            {pendingQuote.quote?.amountRoc ?? price} ROC · paid send intentionally locked until
+            svc-wallet receipt verification is wired
+          </span>
+        </div>
+      ) : null}
+
+      <div className="cl-chat-thread" aria-label="Chat thread">
         <SystemNotice>
-          Chat backend routes are not wired in this batch. These bubbles are local UI previews only.
+          {backendReady
+            ? 'Backend messages shown here are returned by gateway/omnigate. This room is still in-memory dev proof, not durable b3 chat.'
+            : 'Create or resolve a backend room from the Publish tab. Local bubbles are preview only.'}
         </SystemNotice>
 
-        {messages.length ? (
-          messages.map((message) => <MessageBubble key={message.messageId} message={message} />)
+        {allMessages.length ? (
+          allMessages.map((message) => (
+            <MessageBubble key={message.messageId || `${message.createdAt}-${message.body}`} message={message} />
+          ))
         ) : (
           <div className="cl-chat-empty-thread">
             <div className="cl-chat-empty-orb">💬</div>
-            <strong>No local preview bubbles yet</strong>
+            <strong>{backendReady ? 'No backend messages yet' : 'No local preview bubbles yet'}</strong>
             <p>
-              Type a message below and click Preview bubble. It will not send, spend ROC, create a
-              receipt, or become backend chat truth.
+              {backendReady
+                ? 'Send a message in a free backend room, or quote a paid message in a paid room.'
+                : 'Type a message below and click Preview bubble. It will not spend ROC or become backend truth.'}
             </p>
           </div>
         )}
@@ -74,29 +111,55 @@ export default function ChatRoomView({
       <ChatComposer
         draft={draft}
         value={composerValue}
+        backendReady={backendReady}
+        roomSendMode={sendMode}
+        backendBusy={backendBusy}
         onChange={onComposerChange}
         onPreview={onPreviewMessage}
         onPaidIntent={onPaidIntent}
       />
 
       <div className="cl-chat-room-actions">
-        <button type="button" onClick={onClearPreview} disabled={!messages.length}>
+        <button type="button" onClick={onRefreshBackend} disabled={!backendReady || backendBusy}>
+          Refresh backend messages
+        </button>
+        <button type="button" onClick={onClearPreview} disabled={!localMessages.length}>
           Clear local previews
         </button>
-        <span>Display cache only · no backend messages · no paid send yet</span>
+        <button type="button" onClick={onClearBackendRoom} disabled={!backendReady}>
+          Clear backend room view
+        </button>
+        <span>
+          {backendReady
+            ? 'Backend room is in-memory only · paid send locked · no receipt yet'
+            : 'Display cache only · no backend messages · no paid send yet'}
+        </span>
       </div>
     </section>
   );
 }
 
-
 export function MessageBubble({ message }) {
-  const own = String(message?.senderDisplay || '').includes('@you') || message?.senderDisplay === '@me';
+  const own =
+    String(message?.senderDisplay || '').includes('@you') ||
+    String(message?.senderDisplay || '').includes('@me') ||
+    message?.senderDisplay === '@anonymous';
+  const backendConfirmed = Boolean(message?.backendConfirmed);
+  const deleted = message?.moderation?.state && message.moderation.state !== 'visible';
 
   return (
-    <article className={own ? 'cl-chat-message is-own' : 'cl-chat-message'} aria-label="Local preview message">
+    <article
+      className={[
+        own ? 'cl-chat-message is-own' : 'cl-chat-message',
+        backendConfirmed ? 'is-backend' : 'is-local',
+        deleted ? 'is-deleted' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      aria-label={backendConfirmed ? 'Backend-confirmed message' : 'Local preview message'}
+    >
       <div className="cl-chat-message-avatar" aria-hidden="true">
-        {message?.avatar || (own ? '🦀' : '💬')}
+        {message?.avatar || (backendConfirmed ? '✅' : own ? '🦀' : '💬')}
       </div>
 
       <div className="cl-chat-message-main">
@@ -106,13 +169,13 @@ export function MessageBubble({ message }) {
         </div>
 
         <div className={message?.emojiOnly ? 'cl-chat-bubble is-emoji-only' : 'cl-chat-bubble'}>
-          {message?.body || ''}
+          {deleted ? 'Message removed by moderator.' : message?.body || ''}
         </div>
 
         <div className="cl-chat-message-proof">
-          <span>local preview only</span>
-          {message?.paid?.required ? <span>{message.paid.amountRoc} ROC future send</span> : <span>free future send</span>}
-          <span>no receipt</span>
+          <span>{backendConfirmed ? 'backend-confirmed' : 'local preview only'}</span>
+          {message?.paid?.required ? <span>{message.paid.amountRoc} ROC</span> : <span>free</span>}
+          {message?.paid?.receiptHash ? <span>receipt shown</span> : <span>no receipt</span>}
         </div>
       </div>
     </article>
@@ -142,8 +205,8 @@ function labelForSendMode(value) {
   return 'Paid';
 }
 
-function labelForExpiry(descriptor) {
-  const expiry = descriptor?.expiry || {};
+function labelForExpiry(room) {
+  const expiry = room?.expiry || {};
 
   if (expiry.mode === 'expires_at' && expiry.expiresAt) {
     return 'Scheduled';

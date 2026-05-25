@@ -1,12 +1,12 @@
 /**
- * RO:WHAT — Contract/publish panel for the React crab://chat workspace.
- * RO:WHY — Adds the next chat implementation layer: descriptor contract preview and backend route probes without fake backend truth.
- * RO:INTERACTS — chatClient, gatewayClient, ChatPage, ChatBuilder, future svc-gateway /chat routes.
- * RO:INVARIANTS — no room creation; no b3 CID; no message send; no ROC quote/spend; no fake receipt; no moderator authority.
- * RO:METRICS — displays route/status/reason/correlation IDs from gateway probes.
+ * RO:WHAT — Backend contract/publish panel for the React crab://chat workspace.
+ * RO:WHY — Uses the green gateway/omnigate chat route surface for prepare, create, and resolve without durable/fake truth.
+ * RO:INTERACTS — chatClient, gatewayClient, ChatPage, ChatBuilder, svc-gateway /chat routes.
+ * RO:INVARIANTS — create is in-memory dev proof only; no b3 CID; no index pointer; no paid send; no fake receipt.
+ * RO:METRICS — displays route/status/reason/correlation IDs from gateway calls.
  * RO:CONFIG — uses app settings to build a GatewayClient.
- * RO:SECURITY — all mutating contract calls remain disabled until backend routes exist and explicit confirmation is added.
- * RO:TEST — npm run build; crab://chat → Publish → Probe /chat/resolve.
+ * RO:SECURITY — all mutating calls require explicit button clicks; paid send remains disabled.
+ * RO:TEST — npm run build; crab://chat → Publish → Prepare → Create → Resolve.
  */
 
 import { useMemo, useState } from 'react';
@@ -18,15 +18,23 @@ import {
   stableIdempotencyKey,
 } from '../../shared/api/chatClient.js';
 
-export default function ChatPublishFlow({ draft, descriptor, stats, app, route }) {
-  const [probe, setProbe] = useState(null);
+export default function ChatPublishFlow({
+  draft,
+  descriptor,
+  stats,
+  app,
+  route,
+  backendRoomPage,
+  onRoomHydrated,
+}) {
+  const [lastResult, setLastResult] = useState(null);
   const [busy, setBusy] = useState(false);
   const [contractMode, setContractMode] = useState('prepare');
   const [notice, setNotice] = useState('');
 
   const gateway = useMemo(() => createGatewayClient(settingsFromApp(app)), [app]);
   const chatClient = useMemo(() => createChatClient(gateway), [gateway]);
-  const roomUrl = route?.normalizedInput || route?.rawInput || 'crab://chat';
+  const roomUrl = backendRoomPage?.room?.roomUrl || route?.normalizedInput || route?.rawInput || 'crab://chat';
 
   const contract = useMemo(
     () =>
@@ -52,21 +60,101 @@ export default function ChatPublishFlow({ draft, descriptor, stats, app, route }
       return contract.routes;
     }
 
-    return contract.sample_prepare_body;
-  }, [contract, contractMode]);
+    if (contractMode === 'last') {
+      return lastResult || {
+        status: 'no backend call yet',
+      };
+    }
 
-  async function probeResolveRoute() {
+    return contract.sample_prepare_body;
+  }, [contract, contractMode, lastResult]);
+
+  async function prepareRoom() {
+    setBusy(true);
+    setNotice('');
+
+    try {
+      const result = await chatClient.prepareRoom(
+        {
+          descriptor,
+          ownerPassport: draft.ownerPassport,
+          walletAccount: draft.ownerAccount,
+        },
+        {
+          confirmed: true,
+          idempotencyKey: stableIdempotencyKey('chat-prepare', descriptor.title, descriptor.ownerPassport),
+        },
+      );
+      const data = unwrapGatewayData(result);
+
+      setLastResult(data);
+      setContractMode('last');
+      setNotice('Prepare succeeded. This did not create a room, b3 CID, wallet event, or receipt.');
+    } catch (error) {
+      setLastResult(errorToObject(error));
+      setContractMode('last');
+      setNotice(`Prepare failed: ${safeErrorMessage(error)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createRoom() {
+    setBusy(true);
+    setNotice('');
+
+    try {
+      const result = await chatClient.createRoom(
+        {
+          descriptor,
+          ownerPassport: draft.ownerPassport,
+          walletAccount: draft.ownerAccount,
+        },
+        {
+          confirmed: true,
+          idempotencyKey: stableIdempotencyKey('chat-create', descriptor.title, descriptor.ownerPassport),
+        },
+      );
+      const data = unwrapGatewayData(result);
+
+      setLastResult(data);
+      setContractMode('last');
+      setNotice('Backend room created as an in-memory dev proof. It is not durable b3 chat yet.');
+
+      if (typeof onRoomHydrated === 'function') {
+        onRoomHydrated(data, 'created');
+      }
+    } catch (error) {
+      setLastResult(errorToObject(error));
+      setContractMode('last');
+      setNotice(`Create failed: ${safeErrorMessage(error)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resolveRoom() {
     setBusy(true);
     setNotice('');
 
     try {
       const result = await chatClient.resolveRoom({ roomUrl });
-      setProbe(normalizeChatRouteProbeResult(result));
-      setNotice('Gateway answered the chat resolve probe.');
+      const data = unwrapGatewayData(result);
+      const normalized = normalizeChatRouteProbeResult(result);
+
+      setLastResult(data || normalized);
+      setContractMode('last');
+      setNotice('Gateway answered the chat resolve route.');
+
+      if (typeof onRoomHydrated === 'function' && data?.room) {
+        onRoomHydrated(data, 'resolved');
+      }
     } catch (error) {
       const normalized = normalizeChatRouteProbeResult(error);
-      setProbe(normalized);
-      setNotice(normalized.message);
+
+      setLastResult(normalized);
+      setContractMode('last');
+      setNotice(normalized.message || `Resolve failed: ${safeErrorMessage(error)}`);
     } finally {
       setBusy(false);
     }
@@ -88,17 +176,17 @@ export default function ChatPublishFlow({ draft, descriptor, stats, app, route }
       <div className="cl-chat-publish-head">
         <div>
           <p className="cl-eyebrow">Publish contract</p>
-          <h2>Backend path staged, not live</h2>
+          <h2>Backend route proof</h2>
           <p>
-            This panel prepares the future gateway contract for chat room creation, paid messages,
-            polling, and moderation. It does not create a room, spend ROC, mint b3, or send messages.
+            Prepare and create now call the gateway/omnigate chat routes. Created rooms are
+            in-memory dev proof only: no b3 descriptor, no index pointer, no receipt, and no paid send.
           </p>
         </div>
 
-        <div className="cl-chat-contract-card">
-          <span>Route probe</span>
-          <strong>{probe ? probe.status || '0' : 'not run'}</strong>
-          <small>{probe ? probe.reason : 'safe to run'}</small>
+        <div className={backendRoomPage ? 'cl-chat-contract-card is-live' : 'cl-chat-contract-card'}>
+          <span>Loaded room</span>
+          <strong>{backendRoomPage?.room?.roomId ? 'yes' : 'no'}</strong>
+          <small>{backendRoomPage?.room?.roomUrl || 'not created'}</small>
         </div>
       </div>
 
@@ -112,37 +200,37 @@ export default function ChatPublishFlow({ draft, descriptor, stats, app, route }
       <div className="cl-chat-publish-grid">
         <article className="cl-chat-contract-step">
           <span>Step 1</span>
-          <h3>Descriptor preview</h3>
+          <h3>Prepare room</h3>
           <p>
-            Builder state is normalized into a chat-room descriptor. The descriptor is local preview
-            only until a backend create route stores and returns a real crab:// room.
+            Calls <code>POST /chat/prepare</code>. This is side-effect-safe in the current backend:
+            no room, b3, wallet event, or receipt is created.
           </p>
-          <button type="button" onClick={copyDescriptor}>
-            Copy descriptor JSON
+          <button type="button" onClick={prepareRoom} disabled={busy}>
+            {busy ? 'Working…' : 'Prepare chat room'}
           </button>
         </article>
 
         <article className="cl-chat-contract-step">
           <span>Step 2</span>
-          <h3>Probe gateway route</h3>
+          <h3>Create in-memory room</h3>
           <p>
-            Calls <code>GET /chat/resolve</code> through the gateway client. A 404/405/501 is treated
-            as expected “not implemented yet,” not a frontend crash.
+            Calls <code>POST /chat</code>. The backend returns a room URL and stores room state only
+            in omnigate memory for this dev process.
           </p>
-          <button type="button" onClick={probeResolveRoute} disabled={busy}>
-            {busy ? 'Probing…' : 'Probe /chat/resolve'}
+          <button type="button" onClick={createRoom} disabled={busy}>
+            {busy ? 'Working…' : 'Create backend room'}
           </button>
         </article>
 
-        <article className="cl-chat-contract-step is-locked">
+        <article className="cl-chat-contract-step">
           <span>Step 3</span>
-          <h3>Mutating routes locked</h3>
+          <h3>Resolve loaded room</h3>
           <p>
-            Prepare, create, paid send, delete, block, and pin are intentionally disabled until
-            Rust backend routes exist and explicit confirmation is wired.
+            Calls <code>GET /chat/resolve</code>. Use this after creating a room to hydrate the Room
+            tab with backend-confirmed policy and latest messages.
           </p>
-          <button type="button" disabled>
-            Backend create locked
+          <button type="button" onClick={resolveRoom} disabled={busy}>
+            {busy ? 'Working…' : 'Resolve room'}
           </button>
         </article>
       </div>
@@ -155,33 +243,6 @@ export default function ChatPublishFlow({ draft, descriptor, stats, app, route }
         <ContractFact label="Expiry" value={labelValue(descriptor?.expiry?.mode)} />
         <ContractFact label="Payout" value={stats?.payout_valid ? 'valid split' : 'check split'} />
       </div>
-
-      {probe ? (
-        <div className={probe.notImplemented ? 'cl-chat-probe-result is-expected' : probe.ok ? 'cl-chat-probe-result is-ok' : 'cl-chat-probe-result is-error'}>
-          <div>
-            <strong>{probe.title}</strong>
-            <span>{probe.message}</span>
-          </div>
-          <dl>
-            <div>
-              <dt>Status</dt>
-              <dd>{probe.status || '0'}</dd>
-            </div>
-            <div>
-              <dt>Route</dt>
-              <dd>{probe.route || '/chat/resolve'}</dd>
-            </div>
-            <div>
-              <dt>Reason</dt>
-              <dd>{probe.reason || 'n/a'}</dd>
-            </div>
-            <div>
-              <dt>Correlation</dt>
-              <dd>{probe.correlationId || 'not returned'}</dd>
-            </div>
-          </dl>
-        </div>
-      ) : null}
 
       <div className="cl-chat-contract-tabs" aria-label="Contract preview selector">
         <button
@@ -212,15 +273,28 @@ export default function ChatPublishFlow({ draft, descriptor, stats, app, route }
         >
           Routes
         </button>
+        <button
+          type="button"
+          className={contractMode === 'last' ? 'is-active' : ''}
+          onClick={() => setContractMode('last')}
+        >
+          Last result
+        </button>
       </div>
 
       <pre className="cl-chat-contract-json">{JSON.stringify(selectedPayload, null, 2)}</pre>
 
+      <div className="cl-chat-contract-actions">
+        <button type="button" onClick={copyDescriptor}>
+          Copy descriptor JSON
+        </button>
+      </div>
+
       <div className="cl-chat-contract-boundary">
-        <strong>Batch 2 boundary</strong>
+        <strong>Batch boundary</strong>
         <span>
-          Client contract only. No backend room, no message fanout, no paid quote, no ROC spend, no
-          receipt, no moderation authority, no b3 CID, and no index pointer are created here.
+          Backend create/resolve is live but in-memory only. Free messages can be accepted in free
+          rooms. Paid message send remains locked until svc-wallet receipt verification is wired.
         </span>
       </div>
 
@@ -266,4 +340,31 @@ function settingsFromApp(app) {
       app?.walletAccount ||
       'acct_dev',
   };
+}
+
+function unwrapGatewayData(response) {
+  if (response && typeof response === 'object' && 'data' in response) {
+    return response.data;
+  }
+
+  return response || null;
+}
+
+function errorToObject(error) {
+  return {
+    name: error?.name || 'Error',
+    message: safeErrorMessage(error),
+    reason: error?.reason || '',
+    status: error?.status || 0,
+    route: error?.route || '',
+    correlationId: error?.correlationId || '',
+    data: error?.data || null,
+  };
+}
+
+function safeErrorMessage(error) {
+  return String(error?.message || error || 'unknown error')
+    .replace(/Bearer\s+[^\s]+/gi, 'Bearer [redacted]')
+    .replace(/Authorization:\s*[^\s]+/gi, 'Authorization: [redacted]')
+    .slice(0, 300);
 }

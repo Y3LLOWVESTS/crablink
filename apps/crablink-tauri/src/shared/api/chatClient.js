@@ -73,6 +73,8 @@ export class ChatClient {
         body: {
           ...request,
           client_idempotency_key: idempotencyKey,
+          clientIdempotencyKey: idempotencyKey,
+          clientIdempotencyKey: idempotencyKey,
         },
         label: 'Chat room prepare',
         mutation: true,
@@ -105,6 +107,8 @@ export class ChatClient {
         body: {
           ...request,
           client_idempotency_key: idempotencyKey,
+          clientIdempotencyKey: idempotencyKey,
+          clientIdempotencyKey: idempotencyKey,
         },
         label: 'Chat room create',
         mutation: true,
@@ -162,11 +166,13 @@ export class ChatClient {
     const request = {
       roomId: safeRoomId,
       senderPassport: stringValue(payload.senderPassport),
+      senderDisplay: stringValue(payload.senderDisplay, payload.sender, '@anonymous'),
       walletAccount: stringValue(payload.walletAccount),
       body: normalizeMessageBody(payload.body),
       quote: payload.quote || null,
       paidProof: payload.paidProof || null,
       client_idempotency_key: idempotencyKey,
+      clientIdempotencyKey: idempotencyKey,
     };
 
     try {
@@ -520,9 +526,24 @@ function normalizeChatPrepareRequest(payload = {}) {
     schema: 'crablink.chat-room-prepare.v1',
     descriptor,
     owner_passport: stringValue(payload.ownerPassport, descriptor.ownerPassport),
+    ownerPassport: stringValue(payload.ownerPassport, descriptor.ownerPassport),
     wallet_account: stringValue(payload.walletAccount, descriptor.ownerAccount),
+    walletAccount: stringValue(payload.walletAccount, descriptor.ownerAccount),
     requested_action: 'prepare_chat_room',
+    requestedAction: 'prepare_chat_room',
     client_idempotency_key: compactIdempotencyKey(
+      payload.client_idempotency_key ||
+        payload.clientIdempotencyKey ||
+        stableIdempotencyKey('chat-prepare', descriptor.title, descriptor.ownerPassport),
+      'chat-prepare',
+    ),
+    clientIdempotencyKey: compactIdempotencyKey(
+      payload.client_idempotency_key ||
+        payload.clientIdempotencyKey ||
+        stableIdempotencyKey('chat-prepare', descriptor.title, descriptor.ownerPassport),
+      'chat-prepare',
+    ),
+    clientIdempotencyKey: compactIdempotencyKey(
       payload.client_idempotency_key ||
         payload.clientIdempotencyKey ||
         stableIdempotencyKey('chat-prepare', descriptor.title, descriptor.ownerPassport),
@@ -538,9 +559,24 @@ function normalizeChatCreateRequest(payload = {}) {
     schema: 'crablink.chat-room-create.v1',
     descriptor,
     owner_passport: stringValue(payload.ownerPassport, descriptor.ownerPassport),
+    ownerPassport: stringValue(payload.ownerPassport, descriptor.ownerPassport),
     wallet_account: stringValue(payload.walletAccount, descriptor.ownerAccount),
+    walletAccount: stringValue(payload.walletAccount, descriptor.ownerAccount),
     paid_proof: payload.paidProof || null,
+    paidProof: payload.paidProof || null,
     client_idempotency_key: compactIdempotencyKey(
+      payload.client_idempotency_key ||
+        payload.clientIdempotencyKey ||
+        stableIdempotencyKey('chat-create', descriptor.title, descriptor.ownerPassport),
+      'chat-create',
+    ),
+    clientIdempotencyKey: compactIdempotencyKey(
+      payload.client_idempotency_key ||
+        payload.clientIdempotencyKey ||
+        stableIdempotencyKey('chat-create', descriptor.title, descriptor.ownerPassport),
+      'chat-create',
+    ),
+    clientIdempotencyKey: compactIdempotencyKey(
       payload.client_idempotency_key ||
         payload.clientIdempotencyKey ||
         stableIdempotencyKey('chat-create', descriptor.title, descriptor.ownerPassport),
