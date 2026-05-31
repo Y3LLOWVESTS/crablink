@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
@@ -20,10 +21,12 @@ import TruthBoundary from '../../shared/components/TruthBoundary.jsx';
 import AssetContentViewAccess from './AssetContentViewAccess.jsx';
 import AssetPaidAudioPlayer from './AssetPaidAudioPlayer.jsx';
 import StreamPaidSegmentViewer from './StreamPaidSegmentViewer.jsx';
+import ImageAssetManifestFacts from './ImageAssetManifestFacts.jsx';
 
 const TEXT_ASSET_KINDS = new Set(['post', 'comment', 'article']);
 const MEDIA_PREVIEW_KINDS = new Set(['image', 'video', 'music', 'podcast']);
 const PAID_CONTENT_VIEW_KINDS = new Set(['article', 'post', 'comment', 'image', 'video', 'music', 'podcast', 'stream']);
+const MAX_IMAGE_BLOB_PREVIEW_BYTES = 64 * 1024 * 1024;
 const MAX_VIDEO_BLOB_PREVIEW_BYTES = 12 * 1024 * 1024;
 const MAX_AUDIO_BLOB_PREVIEW_BYTES = 50 * 1024 * 1024;
 
@@ -81,6 +84,14 @@ const KIND_COPY = Object.freeze({
 
 export default function AssetHydratedView({ route, app, result, assetClient, resolverState }) {
   const [imagePreviewOk, setImagePreviewOk] = useState(true);
+  const [imageObjectUrl, setImageObjectUrl] = useState('');
+  const imageObjectUrlRef = useRef('');
+  const [imageFetchState, setImageFetchState] = useState({
+    status: 'idle',
+    source: null,
+    attempts: [],
+    error: null,
+  });
   const [videoObjectUrl, setVideoObjectUrl] = useState('');
   const videoObjectUrlRef = useRef('');
   const [videoFetchState, setVideoFetchState] = useState({
@@ -114,6 +125,7 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
 
   const summary = useMemo(() => summarizeAsset(result, route), [result, route]);
   const copy = copyForKind(summary.kind);
+  const displayTitle = displayTitleForSummary(summary, textContent);
   const requiresPaidContentView = PAID_CONTENT_VIEW_KINDS.has(summary.kind);
   const contentFetchCid = summary.contentCid || summary.cid;
   const canReadTextContent = summary.isTextRoute && (!requiresPaidContentView || contentViewAccess.canView);
@@ -151,6 +163,7 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
 
   const previewSource = previewSources[previewIndex] || null;
   const previewUrl = previewSource?.url ? withCacheBuster(previewSource.url, previewRevision) : '';
+  const imagePlaybackUrl = imageObjectUrl || (!requiresPaidContentView ? previewUrl : '');
   const videoPlaybackUrl = videoObjectUrl || previewUrl;
   const audioPlaybackUrl = audioObjectUrl || previewUrl;
 
@@ -159,6 +172,12 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
     setPreviewIndex(0);
     setPreviewRevision((value) => value + 1);
     setFailedPreviewSources([]);
+    setImageFetchState({
+      status: 'idle',
+      source: null,
+      attempts: [],
+      error: null,
+    });
     setVideoFetchState({
       status: 'idle',
       source: null,
@@ -171,12 +190,18 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
       attempts: [],
       error: null,
     });
+    setOwnedImageObjectUrl('');
     setOwnedVideoObjectUrl('');
     setOwnedAudioObjectUrl('');
   }, [summary.hash, summary.kind, summary.crabUrl]);
 
   useEffect(() => {
     return () => {
+      if (imageObjectUrlRef.current) {
+        URL.revokeObjectURL(imageObjectUrlRef.current);
+        imageObjectUrlRef.current = '';
+      }
+
       if (videoObjectUrlRef.current) {
         URL.revokeObjectURL(videoObjectUrlRef.current);
         videoObjectUrlRef.current = '';
@@ -188,6 +213,130 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
       }
     };
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function run() {
+      if (!canPreviewImage || !summary.hash || !assetClient?.gateway?.request) {
+        setImageFetchState({
+          status: 'idle',
+          source: null,
+          attempts: [],
+          error: null,
+        });
+        setOwnedImageObjectUrl('');
+        return;
+      }
+
+      const routes = imageBlobRoutes(summary);
+
+      if (routes.length === 0) {
+        setImageFetchState({
+          status: 'error',
+          source: null,
+          attempts: [],
+          error: new Error('No gateway image byte route was available.'),
+        });
+        setOwnedImageObjectUrl('');
+        return;
+      }
+
+      setImageFetchState({
+        status: 'loading',
+        source: null,
+        attempts: [],
+        error: null,
+      });
+
+      const attempts = [];
+
+      for (const routeCandidate of routes) {
+        try {
+          const response = await fetchPaidImageBytes({
+            route: routeCandidate.route,
+            summary,
+            assetClient,
+          });
+
+          const blob = await normalizeImageBytesResponse(response, summary.contentType);
+
+          if (blob.size > MAX_IMAGE_BLOB_PREVIEW_BYTES) {
+            throw new Error(
+              `Image preview blob exceeded ${formatBytes(MAX_IMAGE_BLOB_PREVIEW_BYTES)}. Future range/thumbnail preview is required.`,
+            );
+          }
+
+          const objectUrl = URL.createObjectURL(blob);
+
+          attempts.push({
+            route: response?.route || routeCandidate.route,
+            label: routeCandidate.label,
+            status: response?.status || 0,
+            ok: true,
+            bytes: blob.size,
+            contentType: blob.type || response?.contentType || summary.contentType || '',
+          });
+
+          if (!alive) {
+            URL.revokeObjectURL(objectUrl);
+            return;
+          }
+
+          setOwnedImageObjectUrl(objectUrl);
+          setImagePreviewOk(true);
+          setImageFetchState({
+            status: 'ready',
+            source: {
+              route: response?.route || routeCandidate.route,
+              label: routeCandidate.label,
+              status: response?.status || 0,
+              bytes: blob.size,
+              contentType: blob.type || response?.contentType || summary.contentType || '',
+              correlationId: response?.correlationId || '',
+            },
+            attempts,
+            error: null,
+          });
+          return;
+        } catch (error) {
+          attempts.push({
+            route: routeCandidate.route,
+            label: routeCandidate.label,
+            ok: false,
+            error: serializeError(error),
+          });
+        }
+      }
+
+      if (!alive) {
+        return;
+      }
+
+      setOwnedImageObjectUrl('');
+      setImageFetchState({
+        status: 'error',
+        source: null,
+        attempts,
+        error: attempts[attempts.length - 1]?.error || new Error('Image byte fetch failed.'),
+      });
+    }
+
+    void run();
+
+    return () => {
+      alive = false;
+    };
+  }, [
+    assetClient,
+    canPreviewImage,
+    previewRevision,
+    summary.cid,
+    summary.contentType,
+    summary.hash,
+    summary.kind,
+    summary.rawUrl,
+  ]);
 
   useEffect(() => {
     let alive = true;
@@ -438,6 +587,17 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
     summary.rawUrl,
   ]);
 
+  function setOwnedImageObjectUrl(nextUrl) {
+    const previous = imageObjectUrlRef.current;
+
+    if (previous && previous !== nextUrl) {
+      URL.revokeObjectURL(previous);
+    }
+
+    imageObjectUrlRef.current = nextUrl || '';
+    setImageObjectUrl(nextUrl || '');
+  }
+
   function setOwnedAudioObjectUrl(nextUrl) {
     const previous = audioObjectUrlRef.current;
 
@@ -538,6 +698,10 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
   }, [assetClient, canReadTextContent, contentFetchCid, copy.singular, summary.kind]);
 
   function handlePreviewError() {
+    if (summary.isImageRoute && imageObjectUrl) {
+      setOwnedImageObjectUrl('');
+    }
+
     const failed = previewSource
       ? {
           key: previewSource.key,
@@ -575,12 +739,192 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
     window.open(previewSource.url, '_blank', 'noopener,noreferrer');
   }
 
+  if (summary.isImageRoute) {
+    return (
+      <section className="asset-hydrated-view asset-image-resolved-view asset-image-professional-view">
+        <section className="asset-image-product-hero" aria-label="Image preview and access">
+          <Card
+            eyebrow="Preview"
+            title={displayTitle}
+            className="asset-preview-card asset-image-preview-card asset-image-product-preview"
+            actions={
+              <div className="asset-copy-actions">
+                <Button variant="secondary" onClick={reloadPreview} disabled={!canPreviewImage || previewSources.length === 0}>
+                  Reload preview
+                </Button>
+                <Button variant="secondary" onClick={openPreviewSource} disabled={!canPreviewImage || !previewSource?.url}>
+                  Open source
+                </Button>
+              </div>
+            }
+          >
+            {canPreviewImage && imagePlaybackUrl && imagePreviewOk ? (
+              <div className="asset-image-preview-shell">
+                <img
+                  src={imagePlaybackUrl}
+                  alt={summary.rendition?.label || displayTitle || summary.crabUrl || 'CrabLink image asset'}
+                  onError={handlePreviewError}
+                />
+              </div>
+            ) : (
+              <div className="asset-preview-empty asset-image-locked-preview">
+                <strong>{canPreviewImage ? 'Image bytes were not previewable from the gateway.' : 'Image preview is locked until paid.'}</strong>
+                <span>
+                  {canPreviewImage
+                    ? 'The asset hydrated successfully, but the image byte route did not load inside the preview. Try Open source, check gateway /o support, or confirm the local dev storage still contains this object.'
+                    : 'The image manifest is visible, but CrabLink will not fetch or render protected image bytes until the backend returns a paid content_view receipt.'}
+                </span>
+              </div>
+            )}
+
+            <div className="asset-preview-source-strip" aria-label="Image preview source">
+              <div>
+                <span>Current source</span>
+                <strong>{canPreviewImage ? imageFetchState.source?.label || previewSource?.label || 'No source' : 'Locked'}</strong>
+              </div>
+              <div>
+                <span>Source URL</span>
+                <strong>{canPreviewImage ? imageFetchState.source?.route || previewSource?.url || 'n/a' : 'Hidden until paid'}</strong>
+              </div>
+              <div>
+                <span>Preview mode</span>
+                <strong>{canPreviewImage ? imageModeLabel(imageFetchState.status, Boolean(imageObjectUrl)) : 'paid view gate'}</strong>
+              </div>
+            </div>
+
+            {canPreviewImage && imageFetchState.status !== 'idle' && (
+              <details className="asset-preview-fallbacks">
+                <summary>Image byte fetch diagnostics</summary>
+                <div>
+                  <span>Status</span>
+                  <strong>{imageFetchState.status}</strong>
+                </div>
+                {imageFetchState.source && (
+                  <div>
+                    <span>Blob source</span>
+                    <strong>
+                      {imageFetchState.source.route} · {formatBytes(imageFetchState.source.bytes)} ·{' '}
+                      {imageFetchState.source.contentType || 'unknown type'}
+                    </strong>
+                  </div>
+                )}
+                {imageFetchState.attempts.map((attempt, index) => (
+                  <div key={`${attempt.route}:${index}`}>
+                    <span>{attempt.label || `Attempt ${index + 1}`}</span>
+                    <strong>
+                      {attempt.ok
+                        ? `${attempt.route} · ${formatBytes(attempt.bytes)} · ${attempt.contentType || 'unknown type'}`
+                        : `${attempt.route} · ${attempt.error?.message || 'failed'}`}
+                    </strong>
+                  </div>
+                ))}
+              </details>
+            )}
+
+            {canPreviewImage && failedPreviewSources.length > 0 && (
+              <details className="asset-preview-fallbacks">
+                <summary>Failed preview attempts</summary>
+                {failedPreviewSources.map((source, index) => (
+                  <div key={`${source.key}:${index}`}>
+                    <span>{source.label}</span>
+                    <strong>{source.url}</strong>
+                  </div>
+                ))}
+              </details>
+            )}
+          </Card>
+
+          <aside className="asset-image-access-column" aria-label="Image access controls">
+            {requiresPaidContentView ? (
+              <AssetContentViewAccess
+                app={app}
+                summary={summary}
+                onAccessChange={setContentViewAccess}
+              />
+            ) : (
+              <Card eyebrow="Content view" title="Direct image view">
+                <TruthBoundary
+                  tone="success"
+                  title="Gateway returned this image as directly viewable"
+                  copy="CrabLink did not create a local entitlement here. If this asset later requires payment, the backend content_view quote/pay route remains the unlock source."
+                />
+              </Card>
+            )}
+
+            <Card eyebrow="Asset status" title="Resolved by gateway" className="asset-image-status-card">
+              <div className="asset-image-status-grid">
+                <div>
+                  <span>Kind</span>
+                  <strong>{summary.kind || 'image'}</strong>
+                </div>
+                <div>
+                  <span>Status</span>
+                  <strong>{summary.status || 'OK'}</strong>
+                </div>
+                <div>
+                  <span>Receipts</span>
+                  <strong>{summary.receiptCount}</strong>
+                </div>
+                <div>
+                  <span>Versions</span>
+                  <strong>{summary.renditionCount || summary.renditionGroup?.renditions?.length || 1}</strong>
+                </div>
+              </div>
+
+              <div className="asset-image-status-actions">
+                <CopyButton text={summary.crabUrl} label="Copy URL" />
+                <CopyButton text={summary.cid} label="Copy CID" />
+              </div>
+
+              <p className="asset-image-status-note">
+                Display metadata is visible before payment. Protected image bytes remain locked until the backend paid view receipt is returned.
+              </p>
+            </Card>
+          </aside>
+        </section>
+
+        <ImageAssetManifestFacts
+          summary={summary}
+          fallbackText={
+            summary.description ||
+            textContent.summary?.bodyPreview ||
+            'The gateway returned this typed image response without a public description field.'
+          }
+        />
+
+        {summary.renditionGroup?.renditions?.length > 0 && (
+          <section className="asset-image-section-block" aria-label="Image versions">
+            <ImageRenditionGroupCard summary={summary} app={app} />
+          </section>
+        )}
+
+        <ImageTechnicalDetails
+          summary={summary}
+          contentFetchCid={contentFetchCid}
+          route={route}
+          resolverState={resolverState}
+          result={result}
+          contentViewAccess={contentViewAccess}
+          textContent={textContent}
+          canPreviewMedia={canPreviewMedia}
+          previewSources={previewSources}
+          previewSource={previewSource}
+          failedPreviewSources={failedPreviewSources}
+          imageFetchState={imageFetchState}
+          canPreviewImage={canPreviewImage}
+          developerOpen={developerOpen}
+          setDeveloperOpen={setDeveloperOpen}
+        />
+      </section>
+    );
+  }
+
   return (
     <section className="asset-hydrated-view">
       <section className="asset-overview-grid">
         <Card
           eyebrow="Resolved asset"
-          title={summary.title || textContent.summary?.title || `${summary.kindLabel} asset`}
+          title={displayTitle}
           className="asset-summary-card"
           actions={
             <div className="asset-copy-actions">
@@ -589,11 +933,22 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
             </div>
           }
         >
-          <p className="asset-description">
-            {summary.description ||
-              textContent.summary?.bodyPreview ||
-              'The gateway returned this typed asset response without a public description field.'}
-          </p>
+          {summary.isImageRoute ? (
+            <ImageAssetManifestFacts
+              summary={summary}
+              fallbackText={
+                summary.description ||
+                textContent.summary?.bodyPreview ||
+                'The gateway returned this typed asset response without a public description field.'
+              }
+            />
+          ) : (
+            <p className="asset-description">
+              {summary.description ||
+                textContent.summary?.bodyPreview ||
+                'The gateway returned this typed asset response without a public description field.'}
+            </p>
+          )}
 
           <div className="asset-fact-grid">
             <Fact label="Canonical crab URL" value={summary.crabUrl || 'Not returned'} monospace />
@@ -627,6 +982,9 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
             tone={summary.receiptCount > 0 ? 'success' : 'neutral'}
           />
           <StatChip label="Attempts" value={summary.attempts.length} tone="neutral" />
+          {summary.isImageRoute && summary.renditionCount > 0 && (
+            <StatChip label="Versions" value={summary.renditionCount} tone="info" />
+          )}
         </aside>
       </section>
 
@@ -742,10 +1100,10 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
             </div>
           }
         >
-          {canPreviewImage && previewSource && imagePreviewOk ? (
+          {canPreviewImage && imagePlaybackUrl && imagePreviewOk ? (
             <div className="asset-image-preview-shell">
               <img
-                src={previewUrl}
+                src={imagePlaybackUrl}
                 alt={summary.title || summary.crabUrl || 'CrabLink image asset'}
                 onError={handlePreviewError}
               />
@@ -764,17 +1122,46 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
           <div className="asset-preview-source-strip" aria-label="Image preview source">
             <div>
               <span>Current source</span>
-              <strong>{canPreviewImage ? previewSource?.label || 'No source' : 'Locked'}</strong>
+              <strong>{canPreviewImage ? imageFetchState.source?.label || previewSource?.label || 'No source' : 'Locked'}</strong>
             </div>
             <div>
               <span>Source URL</span>
-              <strong>{canPreviewImage ? previewSource?.url || 'n/a' : 'Hidden until paid'}</strong>
+              <strong>{canPreviewImage ? imageFetchState.source?.route || previewSource?.url || 'n/a' : 'Hidden until paid'}</strong>
             </div>
             <div>
               <span>Preview mode</span>
-              <strong>{canPreviewImage ? 'gateway raw bytes first' : 'paid view gate'}</strong>
+              <strong>{canPreviewImage ? imageModeLabel(imageFetchState.status, Boolean(imageObjectUrl)) : 'paid view gate'}</strong>
             </div>
           </div>
+
+          {canPreviewImage && imageFetchState.status !== 'idle' && (
+            <details className="asset-preview-fallbacks">
+              <summary>Image byte fetch diagnostics</summary>
+              <div>
+                <span>Status</span>
+                <strong>{imageFetchState.status}</strong>
+              </div>
+              {imageFetchState.source && (
+                <div>
+                  <span>Blob source</span>
+                  <strong>
+                    {imageFetchState.source.route} · {formatBytes(imageFetchState.source.bytes)} ·{' '}
+                    {imageFetchState.source.contentType || 'unknown type'}
+                  </strong>
+                </div>
+              )}
+              {imageFetchState.attempts.map((attempt, index) => (
+                <div key={`${attempt.route}:${index}`}>
+                  <span>{attempt.label || `Attempt ${index + 1}`}</span>
+                  <strong>
+                    {attempt.ok
+                      ? `${attempt.route} · ${formatBytes(attempt.bytes)} · ${attempt.contentType || 'unknown type'}`
+                      : `${attempt.route} · ${attempt.error?.message || 'failed'}`}
+                  </strong>
+                </div>
+              ))}
+            </details>
+          )}
 
           {canPreviewImage && failedPreviewSources.length > 0 && (
             <details className="asset-preview-fallbacks">
@@ -788,6 +1175,10 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
             </details>
           )}
         </Card>
+      )}
+
+      {summary.isImageRoute && summary.renditionGroup?.renditions?.length > 0 && (
+        <ImageRenditionGroupCard summary={summary} app={app} />
       )}
 
       {summary.isVideoRoute && (
@@ -962,6 +1353,7 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
               preview_sources: canPreviewMedia ? previewSources : [],
               current_preview_source: canPreviewMedia ? previewSource : null,
               failed_preview_sources: canPreviewMedia ? failedPreviewSources : [],
+              image_blob_fetch: summary.isImageRoute ? imageFetchState : null,
               image_preview_locked: summary.isImageRoute && !canPreviewImage,
               video_preview_locked: summary.isVideoRoute && !canPreviewVideo,
               music_preview_locked: summary.isMusicRoute && !canPreviewMusic,
@@ -977,6 +1369,168 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
   );
 }
 
+function displayTitleForSummary(summary, textContent) {
+  if (!summary?.isImageRoute) {
+    return summary?.title || textContent?.summary?.title || `${summary?.kindLabel || 'Asset'} asset`;
+  }
+
+  const groupRaw = objectValue(summary.renditionGroup?.raw);
+  const creatorIntent = objectValue(
+    groupRaw.creator_intent ||
+      groupRaw.creatorIntent ||
+      summary.raw?.creator_intent ||
+      summary.raw?.creatorIntent ||
+      summary.raw?.manifest?.creator_intent ||
+      summary.raw?.manifest?.creatorIntent,
+  );
+  const rawTitle = stringValue(summary.title, summary.raw?.title);
+  const intentTitle = stringValue(creatorIntent.title, creatorIntent.name);
+  const baseTitle = stringValue(isWeakImageTitle(rawTitle) ? '' : rawTitle, intentTitle, 'Image');
+  const role = stringValue(summary.rendition?.label, summary.rendition?.role);
+  const roleLabel = labelFromKind(role);
+
+  if (role && role !== 'original' && roleLabel && !baseTitle.toLowerCase().includes(roleLabel.toLowerCase())) {
+    return `${baseTitle} — ${roleLabel}`;
+  }
+
+  return baseTitle;
+}
+
+
+function isWeakImageTitle(value) {
+  const clean = String(value || '').trim().toLowerCase();
+  return !clean || clean === 'image' || clean === 'image asset' || clean === 'untitled image';
+}
+
+
+function ImageTechnicalDetails({
+  summary,
+  contentFetchCid,
+  route,
+  resolverState,
+  result,
+  contentViewAccess,
+  textContent,
+  canPreviewMedia,
+  previewSources,
+  previewSource,
+  failedPreviewSources,
+  imageFetchState,
+  canPreviewImage,
+  developerOpen,
+  setDeveloperOpen,
+}) {
+  return (
+    <section className="asset-image-technical-stack" aria-label="Technical image details">
+      <details className="asset-image-technical-details">
+        <summary>
+          <span>Technical details</span>
+          <strong>Canonical b3, storage, receipts, and gateway diagnostics</strong>
+        </summary>
+
+        <div className="asset-image-technical-grid">
+          <Card eyebrow="Canonical facts" title="Gateway and b3 identifiers">
+            <div className="asset-fact-grid">
+              <Fact label="Canonical crab URL" value={summary.crabUrl || 'Not returned'} monospace />
+              <Fact label="Content ID" value={summary.cid || 'Not returned'} monospace />
+              <Fact label="Content object CID" value={contentFetchCid || 'Not returned'} monospace />
+              <Fact label="Hash" value={summary.hash || 'Not returned'} monospace />
+              <Fact label="Asset kind" value={summary.kind || 'Not returned'} />
+              <Fact label="Manifest CID" value={summary.manifestCid || 'Not returned'} monospace />
+              <Fact label="Owner" value={summary.owner || 'Not returned'} />
+              <Fact label="Payout" value={summary.payout || 'Not returned'} />
+              <Fact label="Correlation" value={summary.correlationId || 'Not returned'} monospace />
+            </div>
+
+            {summary.tags.length > 0 && (
+              <div className="asset-tags" aria-label="Asset tags">
+                {summary.tags.map((tag) => (
+                  <Badge key={tag} tone="neutral" uppercase={false}>
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card eyebrow="Storage" title="Storage availability">
+            <div className="asset-fact-grid">
+              <Fact label="Available" value={summary.storageAvailable || 'Not returned'} />
+              <Fact label="Size" value={summary.sizeBytes || 'Not returned'} />
+              <Fact label="Content type" value={summary.contentType || 'Not returned'} />
+              <Fact label="Provider" value={summary.providerRef || 'Not returned'} />
+              <Fact label="Raw URL" value={!canPreviewImage ? 'Hidden until paid content_view receipt' : summary.rawUrl || 'Not returned'} monospace />
+            </div>
+          </Card>
+
+          <Card eyebrow="Receipts" title="Receipt references">
+            {summary.receipts.length > 0 ? (
+              <div className="asset-attempt-list">
+                {summary.receipts.map((receipt, index) => (
+                  <div key={`${receipt.kind || 'receipt'}:${receipt.txid || receipt.receipt_hash || index}`}>
+                    <span>{labelFromKind(receipt.kind || receipt.receipt_kind || 'receipt')}</span>
+                    <strong>{receipt.receipt_hash || receipt.receiptHash || receipt.txid || 'receipt returned'}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="asset-description">No receipt references were returned for this asset page.</p>
+            )}
+          </Card>
+
+          <Card eyebrow="Resolve diagnostics" title="Gateway attempts">
+            {summary.attempts.length > 0 ? (
+              <div className="asset-attempt-list">
+                {summary.attempts.map((attempt, index) => (
+                  <div key={`${attempt.route || attempt.path || 'attempt'}:${index}`}>
+                    <span>{attempt.ok ? 'ok' : 'failed'}</span>
+                    <strong>{attempt.route || attempt.path || attempt.url || 'unknown route'}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="asset-description">No attempt diagnostics were returned.</p>
+            )}
+          </Card>
+        </div>
+      </details>
+
+      <details className="asset-dev-json" open={developerOpen} onToggle={(event) => setDeveloperOpen(event.currentTarget.open)}>
+        <summary>Developer asset JSON</summary>
+        <JsonPreview
+          label="Image hydration result"
+          data={{
+            route,
+            resolver_state: resolverState || null,
+            summary,
+            result,
+            content_view_access: contentViewAccess,
+            content_fetch_cid: contentFetchCid,
+            text_content: {
+              status: textContent.status,
+              response_status: textContent.response?.status || null,
+              parsed: textContent.parsed,
+              summary: textContent.summary,
+              error: serializeError(textContent.error),
+            },
+            preview: {
+              preview_sources: canPreviewMedia ? previewSources : [],
+              current_preview_source: canPreviewMedia ? previewSource : null,
+              failed_preview_sources: canPreviewMedia ? failedPreviewSources : [],
+              image_blob_fetch: imageFetchState,
+              image_preview_locked: !canPreviewImage,
+            },
+            truth_boundary:
+              'This page is read-only. Gateway, storage, index, wallet, and ledger remain backend-owned truth.',
+          }}
+          initiallyOpen
+        />
+      </details>
+    </section>
+  );
+}
+
+
 function Fact({ label, value, monospace = false }) {
   const clean = value === null || value === undefined || value === '' ? 'n/a' : String(value);
 
@@ -987,6 +1541,127 @@ function Fact({ label, value, monospace = false }) {
         {clean}
       </strong>
     </div>
+  );
+}
+
+
+function ImageRenditionGroupCard({ summary, app }) {
+  const group = summary.renditionGroup || {};
+  const renditions = safeArray(group.renditions);
+
+  function openCrabUrl(crabUrl) {
+    const cleanUrl = String(crabUrl || '').trim();
+
+    if (!cleanUrl) {
+      return;
+    }
+
+    if (typeof app?.navigate === 'function') {
+      app.navigate(cleanUrl);
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      window.location.href = cleanUrl;
+    }
+  }
+
+  return (
+    <Card
+      eyebrow="Image versions"
+      title="Rendition group"
+      className="asset-rendition-card"
+      actions={
+        <div className="asset-copy-actions">
+          <CopyButton text={group.canonicalCrabUrl || summary.crabUrl || ''} label="Copy original URL" />
+          <CopyButton text={group.sourceCid || summary.cid || ''} label="Copy source CID" />
+        </div>
+      }
+    >
+      <p className="asset-description">
+        This structured block is the sibling map for the image bundle. Every row is still its own
+        backend-returned b3 image asset; the group is reference metadata, not a replacement for canonical b3 truth.
+      </p>
+
+      <div className="asset-fact-grid asset-rendition-facts">
+        <Fact label="Group ID" value={group.groupId || 'Not returned'} monospace />
+        <Fact label="Source CID" value={group.sourceCid || 'Not returned'} monospace />
+        <Fact label="Canonical original" value={group.canonicalCrabUrl || 'Not returned'} monospace />
+        <Fact label="Current role" value={summary.rendition?.label || summary.rendition?.role || 'Not returned'} />
+      </div>
+
+      <div className="asset-rendition-table" aria-label="Image rendition group rows">
+        <div className="asset-rendition-head" aria-hidden="true">
+          <span>Role</span>
+          <span>Crab URL / CID</span>
+          <span>Asset facts</span>
+          <span>Actions</span>
+        </div>
+
+        {renditions.map((item, index) => {
+          const dimensions = item.width || item.height ? `${item.width || 0}×${item.height || 0}` : 'Dimensions n/a';
+          const byteLabel = item.bytes ? formatBytes(item.bytes) : 'Size n/a';
+          const typeLabel = item.mime || 'Type n/a';
+          const rowTitle = [
+            item.label || labelFromKind(item.role || 'rendition'),
+            item.isCurrent ? 'current' : '',
+            item.isOriginal ? 'original' : '',
+          ]
+            .filter(Boolean)
+            .join(' · ');
+
+          return (
+            <article
+              key={`${item.role || 'rendition'}:${item.cid || index}`}
+              className={[
+                'asset-rendition-row',
+                item.isCurrent ? 'is-current' : '',
+                item.isOriginal ? 'is-original' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <div className="asset-rendition-role">
+                <Badge tone={item.isCurrent ? 'success' : item.isOriginal ? 'info' : 'neutral'}>
+                  {item.label || labelFromKind(item.role || 'rendition')}
+                </Badge>
+                <small>{rowTitle}</small>
+              </div>
+
+              <div className="asset-rendition-link-stack">
+                <strong>{item.crabUrl || 'No crab URL returned'}</strong>
+                <code>{item.cid || 'No CID returned'}</code>
+              </div>
+
+              <div className="asset-rendition-meta">
+                <span>{dimensions}</span>
+                <span>{byteLabel}</span>
+                <span>{typeLabel}</span>
+              </div>
+
+              <div className="asset-rendition-actions">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={!item.crabUrl}
+                  onClick={() => openCrabUrl(item.crabUrl)}
+                >
+                  Open
+                </Button>
+                {item.crabUrl && <CopyButton text={item.crabUrl} label="Copy URL" />}
+                {item.cid && <CopyButton text={item.cid} label="Copy CID" />}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <details className="asset-preview-fallbacks asset-rendition-json">
+        <summary>Raw rendition group JSON</summary>
+        <JsonPreview label="rendition_group" data={group.raw || group} initiallyOpen={false} />
+      </details>
+    </Card>
   );
 }
 
@@ -1113,6 +1788,16 @@ function summarizeAsset(result, route) {
     manifest.summary,
   );
 
+  const renditionGroup = normalizeImageRenditionGroup(
+    data.rendition_group || data.renditionGroup || manifest.rendition_group || manifest.renditionGroup,
+    cid,
+  );
+  const rendition = normalizeImageRenditionSelf(
+    data.rendition || data.image_rendition || data.imageRendition || manifest.rendition,
+    renditionGroup,
+    cid,
+  );
+
   return {
     kind,
     kindLabel: labelFromKind(kind || 'asset'),
@@ -1134,6 +1819,9 @@ function summarizeAsset(result, route) {
     owner: summarizeParty(owner),
     payout: summarizeParty(payout),
     tags: normalizeTags(data.tags || manifest.tags || metadata.tags),
+    rendition,
+    renditionGroup,
+    renditionCount: renditionGroup?.renditions?.length || 0,
     receipts,
     receiptCount: Number(receipts.length || data.receipt_count || data.receiptCount || 0),
     attempts,
@@ -1151,6 +1839,128 @@ function summarizeAsset(result, route) {
     rawUrl: stringValue(storage.raw_url, storage.rawUrl, links.raw, links.source, data.raw_url, data.rawUrl),
     raw: data,
   };
+}
+
+
+function normalizeImageRenditionGroup(value, selfCid = '') {
+  const raw = objectValue(value);
+  const items = safeArray(raw.renditions)
+    .map((item) => normalizeImageRenditionItem(item, raw, selfCid))
+    .filter(Boolean);
+
+  if (!Object.keys(raw).length || items.length === 0) {
+    return null;
+  }
+
+  const sourceCid = cleanCid(
+    raw.source_cid ||
+      raw.sourceCid ||
+      raw.original_cid ||
+      raw.originalCid ||
+      raw.source ||
+      items.find((item) => item.isOriginal)?.cid ||
+      items[0]?.cid,
+  );
+  const canonicalCrabUrl = stringValue(
+    raw.canonical_crab_url,
+    raw.canonicalCrabUrl,
+    raw.canonical_original,
+    raw.canonicalOriginal,
+    raw.original,
+    sourceCid ? `crab://${sourceCid.replace(/^b3:/, '')}.image` : '',
+  );
+
+  return {
+    schema: stringValue(raw.schema, 'crablink.image-rendition-group.v1'),
+    groupId: cleanCid(raw.group_id || raw.groupId || raw.id || sourceCid) || stringValue(raw.group_id, raw.groupId, raw.id),
+    sourceCid,
+    canonicalCrabUrl,
+    renditions: items.map((item) => ({
+      ...item,
+      isCurrent: Boolean(selfCid && item.cid === selfCid),
+      canonicalOriginal: item.canonicalOriginal || canonicalCrabUrl,
+      derivedFrom: item.derivedFrom || (!item.isOriginal ? sourceCid : ''),
+    })),
+    raw,
+  };
+}
+
+function normalizeImageRenditionItem(value, group = {}, selfCid = '') {
+  const raw = objectValue(value);
+  const cid = cleanCid(raw.cid || raw.asset_cid || raw.assetCid || raw.content_id || raw.contentId);
+
+  if (!cid) {
+    return null;
+  }
+
+  const groupSourceCid = cleanCid(group.source_cid || group.sourceCid || group.original_cid || group.originalCid);
+  const role = stringValue(raw.role, cid === groupSourceCid ? 'original' : 'rendition');
+  const crabUrl = stringValue(raw.crab_url, raw.crabUrl, raw.url, `crab://${cid.replace(/^b3:/, '')}.image`);
+  const isOriginal = Boolean(raw.is_original || raw.isOriginal || role === 'original' || (groupSourceCid && cid === groupSourceCid));
+
+  return {
+    role,
+    label: stringValue(raw.label, labelFromKind(role)),
+    cid,
+    hash: normalizeHash(raw.hash || cid),
+    crabUrl,
+    mime: stringValue(raw.mime, raw.content_type, raw.contentType),
+    bytes: numberValue(raw.bytes, raw.byte_length, raw.byteLength, raw.size_bytes, raw.sizeBytes),
+    width: numberValue(raw.width, raw.target_width, raw.targetWidth),
+    height: numberValue(raw.height, raw.target_height, raw.targetHeight),
+    isOriginal,
+    isCurrent: Boolean(selfCid && cid === selfCid),
+    derivedFrom: cleanCid(raw.derived_from || raw.derivedFrom || (!isOriginal ? groupSourceCid : '')),
+    canonicalOriginal: stringValue(raw.canonical_original, raw.canonicalOriginal, group.canonical_crab_url, group.canonicalCrabUrl, group.original),
+    raw,
+  };
+}
+
+function normalizeImageRenditionSelf(value, group, selfCid = '') {
+  const groupMatch = group?.renditions?.find((item) => item.cid === selfCid);
+
+  if (groupMatch) {
+    return groupMatch;
+  }
+
+  const raw = objectValue(value);
+  if (!Object.keys(raw).length && !selfCid) {
+    return null;
+  }
+
+  const cid = cleanCid(raw.cid || raw.asset_cid || raw.assetCid || selfCid);
+  if (!cid || (selfCid && cid !== selfCid)) {
+    return null;
+  }
+
+  const sourceCid = cleanCid(group?.sourceCid || raw.derived_from || raw.derivedFrom || cid);
+  const role = stringValue(raw.role, cid === sourceCid ? 'original' : 'rendition');
+
+  return {
+    role,
+    label: stringValue(raw.label, labelFromKind(role)),
+    cid,
+    crabUrl: stringValue(raw.crab_url, raw.crabUrl, raw.url, `crab://${cid.replace(/^b3:/, '')}.image`),
+    mime: stringValue(raw.mime, raw.content_type, raw.contentType),
+    bytes: numberValue(raw.bytes, raw.byte_length, raw.byteLength),
+    width: numberValue(raw.width),
+    height: numberValue(raw.height),
+    isOriginal: cid === sourceCid || role === 'original',
+    isCurrent: true,
+    derivedFrom: cid === sourceCid ? '' : sourceCid,
+    canonicalOriginal: stringValue(raw.canonical_original, raw.canonicalOriginal, group?.canonicalCrabUrl),
+    raw,
+  };
+}
+
+function numberValue(...values) {
+  for (const value of values) {
+    const number = Number(value);
+    if (Number.isFinite(number) && number > 0) {
+      return number;
+    }
+  }
+  return 0;
 }
 
 function normalizeTextAssetResponse(data, fallbackKind = 'asset') {
@@ -1476,6 +2286,271 @@ function normalizePreviewUrl(value, gateway = null) {
 }
 
 
+function imageBlobRoutes(summary = {}) {
+  const candidates = [
+    { route: summary.rawUrl, label: 'Resolved raw image URL' },
+    { route: summary.cid ? `/o/${summary.cid}` : '', label: 'Content ID object' },
+    { route: summary.hash ? `/o/b3:${summary.hash}` : '', label: 'Hash object' },
+    { route: summary.hash && summary.kind ? `/b3/${summary.hash}.${summary.kind}` : '', label: 'Typed b3 route fallback' },
+  ];
+
+  const seen = new Set();
+  const out = [];
+
+  for (const candidate of candidates) {
+    const route = normalizeGatewayRoute(candidate.route);
+
+    if (!route || seen.has(route)) {
+      continue;
+    }
+
+    seen.add(route);
+    out.push({
+      route,
+      label: candidate.label,
+    });
+  }
+
+  return out;
+}
+
+function imageAcceptHeader(contentType) {
+  const clean = String(contentType || '').trim();
+
+  if (clean.toLowerCase().startsWith('image/')) {
+    return `${clean},image/*,*/*`;
+  }
+
+  return 'image/avif,image/webp,image/png,image/jpeg,image/gif,image/svg+xml,image/*,*/*';
+}
+
+async function fetchPaidImageBytes({ route, summary = {}, assetClient }) {
+  const objectRoute = canonicalImageObjectRoute(route, summary);
+
+  if (canUseTauriInvoke()) {
+    if (!objectRoute) {
+      throw new Error('No canonical /o/b3:<hash> image route was available for the Tauri byte bridge.');
+    }
+
+    const response = await invoke('fetch_asset_bytes_gateway', {
+      request: {
+        route: objectRoute,
+        accept: imageAcceptHeader(summary?.contentType),
+        contentTypeHint: inferImageContentType(summary?.contentType),
+        maxBytes: MAX_IMAGE_BLOB_PREVIEW_BYTES,
+        headers: {
+          'x-ron-asset-kind': summary?.kind || 'image',
+        },
+      },
+    });
+
+    return {
+      status: Number(response?.status || 0),
+      route: response?.route || objectRoute,
+      correlationId: response?.correlationId || response?.correlation_id || '',
+      contentType: response?.contentType || response?.content_type || '',
+      bodyBytes: response?.bodyBytes || response?.body_bytes || [],
+    };
+  }
+
+  if (!assetClient?.gateway?.request) {
+    throw new Error('Gateway client is unavailable for image preview.');
+  }
+
+  const response = await assetClient.gateway.request(route, {
+    label: 'Image preview bytes',
+    parseAs: 'blob',
+    headers: {
+      Accept: imageAcceptHeader(summary?.contentType),
+    },
+  });
+
+  return {
+    status: Number(response?.status || 0),
+    route: response?.route || route,
+    correlationId: response?.correlationId || '',
+    contentType: response?.data?.type || summary?.contentType || '',
+    blob: response?.data,
+  };
+}
+
+async function normalizeImageBytesResponse(response, contentType) {
+  if (response?.blob) {
+    return normalizeImageBlobResponse(response.blob, contentType);
+  }
+
+  const bytes = normalizeByteList(response?.bodyBytes || response?.body_bytes);
+
+  if (!bytes.length) {
+    throw new Error('Gateway returned empty image bytes.');
+  }
+
+  const blob = new Blob([bytes], {
+    type: response?.contentType || response?.content_type || inferImageContentType(contentType),
+  });
+
+  return normalizeImageBlobResponse(blob, contentType);
+}
+
+function canonicalImageObjectRoute(route, summary = {}) {
+  const raw = normalizeGatewayRoute(route);
+  const objectMatch = raw.match(/^\/o\/b3:([0-9a-f]{64})$/i);
+
+  if (objectMatch) {
+    return `/o/b3:${objectMatch[1].toLowerCase()}`;
+  }
+
+  const cidHash = hashFromCid(summary?.cid || summary?.contentCid || summary?.assetCid);
+  const summaryHash = cleanHash(summary?.hash);
+  const hash = summaryHash || cidHash;
+
+  if (hash) {
+    return `/o/b3:${hash}`;
+  }
+
+  return '';
+}
+
+function hashFromCid(value) {
+  const clean = String(value || '').trim().replace(/^b3:/i, '').toLowerCase();
+  return cleanHash(clean);
+}
+
+function normalizeByteList(value) {
+  if (value instanceof Uint8Array) {
+    return value;
+  }
+
+  if (value instanceof ArrayBuffer) {
+    return new Uint8Array(value);
+  }
+
+  if (Array.isArray(value)) {
+    return new Uint8Array(value.map((item) => Number(item) & 0xff));
+  }
+
+  if (value && typeof value === 'object') {
+    return new Uint8Array(Object.values(value).map((item) => Number(item) & 0xff));
+  }
+
+  return new Uint8Array();
+}
+
+
+async function normalizeImageBlobResponse(blob, contentType) {
+  if (!(blob instanceof Blob)) {
+    throw new Error('Gateway did not return an image blob.');
+  }
+
+  if (blob.size <= 0) {
+    throw new Error('Gateway returned an empty image blob.');
+  }
+
+  const returnedType = String(blob.type || '').toLowerCase();
+  const bytes = await blob.arrayBuffer();
+  const sniffedType = sniffImageContentType(bytes);
+
+  if (returnedType.includes('json') || returnedType.startsWith('text/')) {
+    if (sniffedType) {
+      return new Blob([bytes], {
+        type: sniffedType,
+      });
+    }
+
+    const text = decodePreviewText(bytes);
+    throw new Error(`Gateway returned non-image data: ${text.slice(0, 180)}`);
+  }
+
+  if (returnedType.startsWith('image/')) {
+    return blob;
+  }
+
+  return new Blob([bytes], {
+    type: sniffedType || inferImageContentType(contentType),
+  });
+}
+
+function sniffImageContentType(buffer) {
+  const bytes = new Uint8Array(buffer || new ArrayBuffer(0));
+
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return 'image/png';
+  }
+
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return 'image/jpeg';
+  }
+
+  if (bytes.length >= 6 && ascii(bytes, 0, 4) === 'GIF8') {
+    return 'image/gif';
+  }
+
+  if (bytes.length >= 12 && ascii(bytes, 0, 4) === 'RIFF' && ascii(bytes, 8, 4) === 'WEBP') {
+    return 'image/webp';
+  }
+
+  if (bytes.length >= 12 && ascii(bytes, 4, 4) === 'ftyp') {
+    const brand = ascii(bytes, 8, 4).toLowerCase();
+
+    if (brand === 'avif' || brand === 'avis') {
+      return 'image/avif';
+    }
+  }
+
+  const text = decodePreviewText(bytes).trimStart().slice(0, 256).toLowerCase();
+
+  if (text.startsWith('<svg') || text.includes('<svg')) {
+    return 'image/svg+xml';
+  }
+
+  return '';
+}
+
+function inferImageContentType(contentType) {
+  const clean = String(contentType || '').trim().toLowerCase();
+
+  if (clean.startsWith('image/')) {
+    return clean;
+  }
+
+  return 'image/png';
+}
+
+function decodePreviewText(buffer) {
+  try {
+    return new TextDecoder('utf-8', { fatal: false }).decode(buffer).trim();
+  } catch (_error) {
+    return '';
+  }
+}
+
+function imageModeLabel(status, hasObjectUrl = false) {
+  if (hasObjectUrl) {
+    return 'gateway blob preview';
+  }
+
+  switch (status) {
+    case 'loading':
+      return canUseTauriInvoke() ? 'Tauri byte bridge loading' : 'paid blob fetch loading';
+    case 'ready':
+      return canUseTauriInvoke() ? 'Tauri blob preview' : 'gateway blob preview';
+    case 'error':
+      return 'image blob unavailable';
+    default:
+      return 'gateway raw bytes';
+  }
+}
+
 function audioBlobRoutes(summary = {}) {
   const candidates = [
     { route: summary.rawUrl, label: 'Resolved raw audio URL' },
@@ -1757,6 +2832,10 @@ function withCacheBuster(url, revision) {
 
   const separator = url.includes('?') ? '&' : '?';
   return `${url}${separator}crablink_preview_rev=${encodeURIComponent(String(revision || 0))}`;
+}
+
+function canUseTauriInvoke() {
+  return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__);
 }
 
 function serializeError(error) {

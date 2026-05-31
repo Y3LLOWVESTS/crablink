@@ -1,9 +1,10 @@
 //! RO:WHAT — In-memory Tauri app state for the first CrabLink native client lane.
 //! RO:WHY — Proves command boundaries before durable settings/vault/cache work.
-//! RO:INTERACTS — command handlers, svc-gateway HTTP client, local app settings, local stream session state.
-//! RO:INVARIANTS — no lock across await; settings/session state are preferences/display, not backend truth.
-//! RO:SECURITY — no private keys, seeds, raw capabilities, ingest secrets, receipts, or spend authority.
+//! RO:INTERACTS — command handlers, svc-gateway HTTP client, local app settings, stream session, video jobs/sources.
+//! RO:INVARIANTS — no lock across await; settings/session/jobs/sources are preferences/display, not backend truth.
+//! RO:SECURITY — no private keys, seeds, raw capabilities, ingest secrets, receipts, media bytes, or spend authority.
 
+use crate::media::{new_video_job_store, new_video_source_store, VideoJobStore, VideoSourceStore};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 
@@ -61,6 +62,8 @@ pub struct AppState {
     pub settings: Mutex<AppSettings>,
     pub http: reqwest::Client,
     pub local_stream_session: Mutex<Option<LocalStreamSession>>,
+    pub video_jobs: VideoJobStore,
+    pub video_sources: VideoSourceStore,
 }
 
 impl Default for AppState {
@@ -69,6 +72,8 @@ impl Default for AppState {
             settings: Mutex::new(AppSettings::default()),
             http: reqwest::Client::new(),
             local_stream_session: Mutex::new(None),
+            video_jobs: new_video_job_store(),
+            video_sources: new_video_source_store(),
         }
     }
 }

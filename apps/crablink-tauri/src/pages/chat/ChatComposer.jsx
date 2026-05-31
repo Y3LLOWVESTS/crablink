@@ -1,8 +1,8 @@
 /**
  * RO:WHAT — Chat composer for local preview, backend free send, and paid-message quote.
- * RO:WHY — Lets users exercise backend chat routes without pretending paid send/receipt exists.
+ * RO:WHY — Lets users type and submit while canonical room resolve is pending, without allowing silent spend or fake backend send.
  * RO:INTERACTS — ChatPage, ChatRoomView, chatDraftModel.
- * RO:INVARIANTS — paid send is quote-only until svc-wallet receipt path exists; no silent spend.
+ * RO:INVARIANTS — paid send starts as quote-only; confirmation happens through explicit UI; no silent spend.
  * RO:SECURITY — text input only; no HTML rendering; no capability/wallet authority.
  */
 
@@ -18,12 +18,18 @@ export default function ChatComposer({
   backendReady = false,
   roomSendMode = '',
   backendBusy = false,
+  resolving = false,
 }) {
   const inspected = sanitizeMessageBody(value, draft);
   const sendMode = roomSendMode || draft?.sendMode || 'paid_per_message';
   const price = draft?.messagePriceRoc || '1';
-  const composerDisabled = disabled || backendBusy || (backendReady && sendMode === 'disabled');
-  const canSubmit = inspected.body.length > 0 && !composerDisabled;
+
+  const inputDisabled = disabled || (backendReady && sendMode === 'disabled');
+
+  // Resolving is not a spend/send operation. It must not lock typing or local preview.
+  // If backendReady is false, ChatPage will create a clearly labeled local preview only.
+  const submitDisabled = inputDisabled || backendBusy;
+  const canSubmit = inspected.body.length > 0 && !submitDisabled;
 
   const primaryLabel = backendReady
     ? sendMode === 'free'
@@ -31,28 +37,52 @@ export default function ChatComposer({
       : sendMode === 'paid_per_message'
         ? `Quote paid message · ${price} ROC`
         : 'Sending disabled'
-    : 'Preview bubble';
+    : resolving
+      ? 'Preview while resolving'
+      : 'Preview bubble';
 
   const helperText = backendReady
     ? sendMode === 'free'
-      ? 'This sends to the backend in-memory dev room. No ROC is spent and no receipt is created.'
+      ? 'Press Enter to send to the backend room. Shift+Enter adds a new line. No ROC is spent and no receipt is created.'
       : sendMode === 'paid_per_message'
-        ? 'This quotes the paid message only. Actual paid send remains locked until svc-wallet receipt integration.'
+        ? 'Press Enter to quote the paid message. You must still click Confirm paid send before any backend wallet path is requested. Shift+Enter adds a new line.'
         : 'This room is not accepting messages.'
-    : 'Backend room not loaded. Preview bubbles are local-only and do not spend ROC.';
+    : resolving
+      ? 'Resolving the canonical chat descriptor. Press Enter to create a local preview bubble only. It will not spend ROC or become backend truth.'
+      : 'Backend room not loaded. Press Enter to create a local preview bubble only. Shift+Enter adds a new line.';
 
   function appendEmoji(emoji) {
+    if (inputDisabled || draft?.allowEmoji === false) {
+      return;
+    }
+
     onChange(`${value || ''}${emoji}`);
   }
 
-  function handleSubmit(event) {
-    event.preventDefault();
-
+  function submitMessage() {
     if (!canSubmit) {
       return;
     }
 
     onPreview(inspected.body);
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    submitMessage();
+  }
+
+  function handleKeyDown(event) {
+    const isEnter = event.key === 'Enter';
+    const wantsNewline = event.shiftKey || event.altKey || event.ctrlKey || event.metaKey;
+    const isComposing = Boolean(event.nativeEvent?.isComposing || event.isComposing);
+
+    if (!isEnter || wantsNewline || isComposing) {
+      return;
+    }
+
+    event.preventDefault();
+    submitMessage();
   }
 
   return (
@@ -64,7 +94,7 @@ export default function ChatComposer({
             type="button"
             className="cl-chat-emoji"
             onClick={() => appendEmoji(emoji)}
-            disabled={composerDisabled || draft?.allowEmoji === false}
+            disabled={inputDisabled || draft?.allowEmoji === false}
             aria-label={`Add emoji ${emoji}`}
           >
             {emoji}
@@ -76,10 +106,11 @@ export default function ChatComposer({
         <textarea
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder={backendReady ? 'Write a backend chat message… 🦀' : 'Write a local preview message… 🦀'}
           rows={2}
           maxLength={Number(draft?.maxMessageChars || 500) + 32}
-          disabled={composerDisabled}
+          disabled={inputDisabled}
         />
 
         <div className="cl-chat-input-meta">
@@ -96,7 +127,7 @@ export default function ChatComposer({
           {backendBusy ? 'Working…' : primaryLabel}
         </button>
 
-        <button type="button" className="cl-chat-paid-send" onClick={onPaidIntent} disabled={composerDisabled}>
+        <button type="button" className="cl-chat-paid-send" onClick={onPaidIntent} disabled={inputDisabled}>
           Explain paid path
         </button>
       </div>

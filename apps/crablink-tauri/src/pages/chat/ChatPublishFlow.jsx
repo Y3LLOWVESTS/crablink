@@ -1,11 +1,11 @@
 /**
  * RO:WHAT — Backend contract/publish panel for the React crab://chat workspace.
- * RO:WHY — Uses the green gateway/omnigate chat route surface for prepare, create, and resolve without durable/fake truth.
+ * RO:WHY — Creates canonical b3-addressed chat descriptors while keeping live messages honest as backend event state.
  * RO:INTERACTS — chatClient, gatewayClient, ChatPage, ChatBuilder, svc-gateway /chat routes.
- * RO:INVARIANTS — create is in-memory dev proof only; no b3 CID; no index pointer; no paid send; no fake receipt.
+ * RO:INVARIANTS — descriptor b3 comes from backend/storage; no fake receipt; no fake paid message; live messages are not descriptor truth.
  * RO:METRICS — displays route/status/reason/correlation IDs from gateway calls.
  * RO:CONFIG — uses app settings to build a GatewayClient.
- * RO:SECURITY — all mutating calls require explicit button clicks; paid send remains disabled.
+ * RO:SECURITY — all mutating calls require explicit button clicks; no wallet authority is stored in React.
  * RO:TEST — npm run build; crab://chat → Publish → Prepare → Create → Resolve.
  */
 
@@ -35,6 +35,12 @@ export default function ChatPublishFlow({
   const gateway = useMemo(() => createGatewayClient(settingsFromApp(app)), [app]);
   const chatClient = useMemo(() => createChatClient(gateway), [gateway]);
   const roomUrl = backendRoomPage?.room?.roomUrl || route?.normalizedInput || route?.rawInput || 'crab://chat';
+  const canonicalRoomUrl =
+    backendRoomPage?.room?.canonicalRoomUrl ||
+    backendRoomPage?.room?.roomUrl ||
+    lastResult?.canonicalRoomUrl ||
+    lastResult?.roomUrl ||
+    '';
 
   const contract = useMemo(
     () =>
@@ -89,7 +95,7 @@ export default function ChatPublishFlow({
 
       setLastResult(data);
       setContractMode('last');
-      setNotice('Prepare succeeded. This did not create a room, b3 CID, wallet event, or receipt.');
+      setNotice('Prepare succeeded. No room, wallet event, receipt, or b3 object was created yet.');
     } catch (error) {
       setLastResult(errorToObject(error));
       setContractMode('last');
@@ -119,7 +125,15 @@ export default function ChatPublishFlow({
 
       setLastResult(data);
       setContractMode('last');
-      setNotice('Backend room created as an in-memory dev proof. It is not durable b3 chat yet.');
+
+      const createdUrl = data?.canonicalRoomUrl || data?.roomUrl || data?.room?.roomUrl || '';
+      const b3Cid = data?.b3Cid || data?.descriptor?.cid || data?.room?.descriptorCid || '';
+
+      setNotice(
+        createdUrl
+          ? `Canonical chat descriptor created: ${createdUrl}${b3Cid ? ` · ${b3Cid}` : ''}. Live messages are still backend event state.`
+          : 'Backend room created. Check Last result for descriptor/storage details.',
+      );
 
       if (typeof onRoomHydrated === 'function') {
         onRoomHydrated(data, 'created');
@@ -138,13 +152,17 @@ export default function ChatPublishFlow({
     setNotice('');
 
     try {
-      const result = await chatClient.resolveRoom({ roomUrl });
+      const result = await chatClient.resolveRoom({ roomUrl: canonicalRoomUrl || roomUrl });
       const data = unwrapGatewayData(result);
       const normalized = normalizeChatRouteProbeResult(result);
 
       setLastResult(data || normalized);
       setContractMode('last');
-      setNotice('Gateway answered the chat resolve route.');
+      setNotice(
+        data?.room?.roomUrl
+          ? `Gateway resolved chat room: ${data.room.roomUrl}.`
+          : 'Gateway answered the chat resolve route.',
+      );
 
       if (typeof onRoomHydrated === 'function' && data?.room) {
         onRoomHydrated(data, 'resolved');
@@ -165,9 +183,25 @@ export default function ChatPublishFlow({
 
     try {
       await navigator.clipboard?.writeText(text);
-      setNotice('Copied local descriptor JSON. This is not a backend room or b3 asset.');
+      setNotice('Copied local descriptor JSON. This is not the backend b3 descriptor unless it has been created.');
     } catch (_error) {
       setNotice('Clipboard unavailable in this WebView. Use the Developer tab to copy JSON manually.');
+    }
+  }
+
+  async function copyCanonicalUrl() {
+    const text = canonicalRoomUrl;
+
+    if (!text) {
+      setNotice('No canonical chat URL yet. Create the backend room first.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard?.writeText(text);
+      setNotice(`Copied canonical chat URL: ${text}`);
+    } catch (_error) {
+      setNotice('Clipboard unavailable in this WebView.');
     }
   }
 
@@ -176,17 +210,18 @@ export default function ChatPublishFlow({
       <div className="cl-chat-publish-head">
         <div>
           <p className="cl-eyebrow">Publish contract</p>
-          <h2>Backend route proof</h2>
+          <h2>b3 chat descriptor</h2>
           <p>
-            Prepare and create now call the gateway/omnigate chat routes. Created rooms are
-            in-memory dev proof only: no b3 descriptor, no index pointer, no receipt, and no paid send.
+            Prepare is read-only. Create stores the normalized room descriptor in backend storage and
+            returns a canonical <code>crab://&lt;b3hash&gt;.chat</code> URL. Live messages remain backend
+            event state until mailbox/fanout is wired.
           </p>
         </div>
 
         <div className={backendRoomPage ? 'cl-chat-contract-card is-live' : 'cl-chat-contract-card'}>
-          <span>Loaded room</span>
-          <strong>{backendRoomPage?.room?.roomId ? 'yes' : 'no'}</strong>
-          <small>{backendRoomPage?.room?.roomUrl || 'not created'}</small>
+          <span>Canonical room</span>
+          <strong>{canonicalRoomUrl ? 'yes' : 'no'}</strong>
+          <small>{canonicalRoomUrl || 'not created'}</small>
         </div>
       </div>
 
@@ -202,8 +237,8 @@ export default function ChatPublishFlow({
           <span>Step 1</span>
           <h3>Prepare room</h3>
           <p>
-            Calls <code>POST /chat/prepare</code>. This is side-effect-safe in the current backend:
-            no room, b3, wallet event, or receipt is created.
+            Calls <code>POST /chat/prepare</code>. This normalizes the descriptor and estimates
+            descriptor size without storing, spending ROC, or creating a receipt.
           </p>
           <button type="button" onClick={prepareRoom} disabled={busy}>
             {busy ? 'Working…' : 'Prepare chat room'}
@@ -212,13 +247,13 @@ export default function ChatPublishFlow({
 
         <article className="cl-chat-contract-step">
           <span>Step 2</span>
-          <h3>Create in-memory room</h3>
+          <h3>Create b3 room</h3>
           <p>
-            Calls <code>POST /chat</code>. The backend returns a room URL and stores room state only
-            in omnigate memory for this dev process.
+            Calls <code>POST /chat</code>. The backend stores the immutable descriptor and returns
+            <code> crab://&lt;b3hash&gt;.chat</code>. Messages are still separate live backend state.
           </p>
           <button type="button" onClick={createRoom} disabled={busy}>
-            {busy ? 'Working…' : 'Create backend room'}
+            {busy ? 'Working…' : 'Create b3 chat room'}
           </button>
         </article>
 
@@ -226,14 +261,21 @@ export default function ChatPublishFlow({
           <span>Step 3</span>
           <h3>Resolve loaded room</h3>
           <p>
-            Calls <code>GET /chat/resolve</code>. Use this after creating a room to hydrate the Room
-            tab with backend-confirmed policy and latest messages.
+            Calls <code>GET /chat/resolve</code>. Canonical b3 chat URLs can be rehydrated from the
+            stored descriptor; current messages are returned only if still in backend memory.
           </p>
           <button type="button" onClick={resolveRoom} disabled={busy}>
             {busy ? 'Working…' : 'Resolve room'}
           </button>
         </article>
       </div>
+
+      {canonicalRoomUrl ? (
+        <div className="cl-chat-contract-notice is-success" role="status">
+          <strong>Canonical URL</strong>
+          <span>{canonicalRoomUrl}</span>
+        </div>
+      ) : null}
 
       <div className="cl-chat-contract-summary">
         <ContractFact label="Send mode" value={labelValue(descriptor?.access?.sendMode)} />
@@ -286,21 +328,20 @@ export default function ChatPublishFlow({
 
       <div className="cl-chat-contract-actions">
         <button type="button" onClick={copyDescriptor}>
-          Copy descriptor JSON
+          Copy local descriptor JSON
+        </button>
+        <button type="button" onClick={copyCanonicalUrl} disabled={!canonicalRoomUrl}>
+          Copy crab:// chat URL
         </button>
       </div>
 
       <div className="cl-chat-contract-boundary">
         <strong>Batch boundary</strong>
         <span>
-          Backend create/resolve is live but in-memory only. Free messages can be accepted in free
-          rooms. Paid message send remains locked until svc-wallet receipt verification is wired.
+          Room descriptor is b3-addressed after create. Message fanout, durable message logs, real
+          moderation authority, and index/name pointers remain future batches. Paid message receipts
+          still come only from the backend wallet path.
         </span>
-      </div>
-
-      <div className="cl-chat-future-idem">
-        <span>Future idempotency seed</span>
-        <strong>{stableIdempotencyKey('chat-room', descriptor?.title, descriptor?.ownerPassport)}</strong>
       </div>
     </section>
   );
@@ -308,17 +349,19 @@ export default function ChatPublishFlow({
 
 function ContractFact({ label, value }) {
   return (
-    <div className="cl-chat-contract-fact">
+    <div className="cl-chat-summary">
       <span>{label}</span>
-      <strong>{value}</strong>
+      <strong title={String(value || '')}>{value}</strong>
     </div>
   );
 }
 
-function labelValue(value) {
-  return String(value || 'n/a')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+function unwrapGatewayData(response) {
+  if (response && typeof response === 'object' && 'data' in response) {
+    return response.data;
+  }
+
+  return response || null;
 }
 
 function settingsFromApp(app) {
@@ -342,20 +385,12 @@ function settingsFromApp(app) {
   };
 }
 
-function unwrapGatewayData(response) {
-  if (response && typeof response === 'object' && 'data' in response) {
-    return response.data;
-  }
-
-  return response || null;
-}
-
 function errorToObject(error) {
   return {
-    name: error?.name || 'Error',
+    name: error?.name || 'ChatClientError',
     message: safeErrorMessage(error),
-    reason: error?.reason || '',
-    status: error?.status || 0,
+    reason: error?.reason || 'chat_request_failed',
+    status: Number(error?.status || 0),
     route: error?.route || '',
     correlationId: error?.correlationId || '',
     data: error?.data || null,
@@ -366,5 +401,11 @@ function safeErrorMessage(error) {
   return String(error?.message || error || 'unknown error')
     .replace(/Bearer\s+[^\s]+/gi, 'Bearer [redacted]')
     .replace(/Authorization:\s*[^\s]+/gi, 'Authorization: [redacted]')
-    .slice(0, 300);
+    .slice(0, 320);
+}
+
+function labelValue(value) {
+  return String(value || 'n/a')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (match) => match.toUpperCase());
 }

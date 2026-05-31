@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — Image metadata and file-selection form for crab://image.
- * RO:WHY — Gives image route a real React workspace feeding the explicit prepare/hold/upload publish panel.
- * RO:INTERACTS — ImagePage.jsx, ImagePublishFlow.jsx, imageDraftModel.js, shared form/card/button components.
+ * RO:WHY — Gives image route a real React workspace feeding local preview, rendition planning, and explicit publish flow.
+ * RO:INTERACTS — ImagePage.jsx, ImagePublishFlow.jsx, ImageRenditions.jsx, imageDraftModel.js, shared form/card/button components.
  * RO:INVARIANTS — selected file preview is local until explicit upload; no fake b3 CID; no fake manifest CID; no silent wallet mutation.
  * RO:METRICS — none.
  * RO:CONFIG — app settings can prefill display-only identity hints.
  * RO:SECURITY — file selection alone never uploads; publish panel performs explicit paid actions only.
- * RO:TEST — manual crab://image builder/developer/publish route smoke.
+ * RO:TEST — manual crab://image builder/developer/publish route smoke; scripts/check-tauri.sh.
  */
 
 import Badge from '../../shared/components/Badge.jsx';
@@ -19,7 +19,6 @@ import TextInput from '../../shared/components/TextInput.jsx';
 import {
   IMAGE_ACCESS_OPTIONS,
   IMAGE_MODERATION_OPTIONS,
-  IMAGE_PAYOUT_OPTIONS,
   IMAGE_RIGHTS_OPTIONS,
   IMAGE_ROLE_OPTIONS,
   IMAGE_SOURCE_OPTIONS,
@@ -215,16 +214,6 @@ export default function ImageCreate({
         <Field label="Access mode">
           <select value={draft.accessMode} onChange={updateField('accessMode')}>
             {IMAGE_ACCESS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="Payout mode">
-          <select value={draft.payoutMode} onChange={updateField('payoutMode')}>
-            {IMAGE_PAYOUT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

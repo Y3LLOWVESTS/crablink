@@ -1,29 +1,25 @@
 /**
- * RO:WHAT — Pure props-driven video draft workspace for the React-owned crab://video route.
- * RO:WHY — CrabLink refactor; reuses shared creator panels and keeps route state owned by VideoPage.
- * RO:INTERACTS — VideoPage.jsx, videoDraftModel.js, shared components, React shell app context.
- * RO:INVARIANTS — local draft only; no fake b3 CID; no fake manifest CID; no upload/stream claim; no silent ROC spend.
+ * RO:WHAT — Simple video mint form for the React-owned crab://video route.
+ * RO:WHY — Mirrors the clean image Simple Mint flow while keeping video prepare/mint truth explicit.
+ * RO:INTERACTS — VideoPage.jsx, videoDraftModel.js, VideoConverterPanel, VideoPublishFlow.
+ * RO:INVARIANTS — local preview only; no fake b3 CID; no fake manifest CID; no upload/stream claim; no silent ROC spend.
  * RO:METRICS — none.
  * RO:CONFIG — optional local passport/wallet display labels from app settings.
  * RO:SECURITY — trusted UI only; crab URLs remain inert strings; no direct internal-service calls.
- * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://video route smoke.
+ * RO:TEST — npm run build; manual crab://video source → prepare → hold → staged upload smoke.
  */
 
-import { useMemo, useState } from 'react';
-import ActionBar from '../../shared/components/ActionBar.jsx';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
-import CopyButton from '../../shared/components/CopyButton.jsx';
-import DraftStatsPanel from '../../shared/components/DraftStatsPanel.jsx';
 import Field from '../../shared/components/Field.jsx';
 import ManifestPreviewPanel from '../../shared/components/ManifestPreviewPanel.jsx';
 import RouteTruthPanel from '../../shared/components/RouteTruthPanel.jsx';
-import VideoLocalPlaybackPreview from './VideoLocalPlaybackPreview.jsx';
-import VideoPublishFlow from './VideoPublishFlow.jsx';
-import SegmentedControl from '../../shared/components/SegmentedControl.jsx';
 import TextArea from '../../shared/components/TextArea.jsx';
 import TextInput from '../../shared/components/TextInput.jsx';
+import VideoConverterPanel from './VideoConverterPanel.jsx';
+import VideoPublishFlow from './VideoPublishFlow.jsx';
 import {
   VIDEO_ACCESS_OPTIONS,
   VIDEO_CATEGORY_OPTIONS,
@@ -33,213 +29,339 @@ import {
   VIDEO_PAYOUT_OPTIONS,
   VIDEO_RENDITION_FIELDS,
   VIDEO_RIGHTS_OPTIONS,
-  VIDEO_VIEW_OPTIONS,
-  labelFromSnake,
 } from './videoDraftModel.js';
+
+const MAX_LOCAL_PREVIEW_BYTES = 750 * 1024 * 1024;
 
 export default function VideoDraft({ app, draftState }) {
   const {
     draft,
     updateDraft,
     clearDraft,
-    viewMode,
-    setViewMode,
     manifest,
-    manifestJson,
-    completeness,
   } = draftState;
 
+  const inputRef = useRef(null);
   const [selectedVideoFile, setSelectedVideoFile] = useState(null);
   const [selectedVideoFacts, setSelectedVideoFacts] = useState(null);
+  const [selectedPlaybackMeta, setSelectedPlaybackMeta] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewProblem, setPreviewProblem] = useState('');
 
-  const publishFileFacts = useMemo(() => {
-    if (selectedVideoFacts) {
-      return selectedVideoFacts;
+  useEffect(() => {
+    if (!selectedVideoFile) {
+      setPreviewUrl('');
+      return undefined;
     }
 
-    if (!selectedVideoFile) {
+    const nextPreviewUrl = URL.createObjectURL(selectedVideoFile);
+    setPreviewUrl(nextPreviewUrl);
+
+    return () => {
+      URL.revokeObjectURL(nextPreviewUrl);
+    };
+  }, [selectedVideoFile]);
+
+  const publishFileFacts = useMemo(() => {
+    if (!selectedVideoFacts && !selectedPlaybackMeta) {
       return null;
     }
 
     return {
-      name: selectedVideoFile.name || 'selected video',
-      type: selectedVideoFile.type || 'video/mp4',
-      size: selectedVideoFile.size || 0,
-      lastModified: selectedVideoFile.lastModified || 0,
+      ...(selectedVideoFacts || {}),
+      durationSeconds: selectedPlaybackMeta?.durationSeconds || selectedVideoFacts?.durationSeconds || 0,
+      durationLabel: selectedPlaybackMeta?.durationLabel || selectedVideoFacts?.durationLabel || '',
+      width: selectedPlaybackMeta?.width || selectedVideoFacts?.width || 0,
+      height: selectedPlaybackMeta?.height || selectedVideoFacts?.height || 0,
+      resolution: selectedPlaybackMeta?.resolution || selectedVideoFacts?.resolution || '',
+      aspectRatio: selectedPlaybackMeta?.aspectRatio || selectedVideoFacts?.aspectRatio || '',
     };
-  }, [selectedVideoFacts, selectedVideoFile]);
+  }, [selectedPlaybackMeta, selectedVideoFacts]);
 
-  function handleLocalPreviewFile(file, meta) {
-    setSelectedVideoFile(file || null);
-    setSelectedVideoFacts(meta || null);
+  function updateField(key) {
+    return (event) => updateDraft(key, event.target.value);
+  }
+
+  function handleFileChange(event) {
+    const file = event.target.files?.[0] || null;
+    setPreviewProblem('');
+    setSelectedPlaybackMeta(null);
+
+    if (!file) {
+      clearSelectedFile();
+      return;
+    }
+
+    if (file.size > MAX_LOCAL_PREVIEW_BYTES) {
+      setPreviewProblem(`Local preview is capped at ${formatBytes(MAX_LOCAL_PREVIEW_BYTES)}. Use the Rust native source picker below for large-source preparation.`);
+      setSelectedVideoFile(null);
+      setSelectedVideoFacts({
+        name: file.name || 'selected video',
+        fileName: file.name || 'selected video',
+        type: file.type || 'video/mp4',
+        contentType: file.type || 'video/mp4',
+        size: file.size || 0,
+        bytes: file.size || 0,
+        lastModified: file.lastModified || 0,
+      });
+      return;
+    }
+
+    setSelectedVideoFile(file);
+    setSelectedVideoFacts({
+      name: file.name || 'selected video',
+      fileName: file.name || 'selected video',
+      type: file.type || 'video/mp4',
+      contentType: file.type || 'video/mp4',
+      size: file.size || 0,
+      bytes: file.size || 0,
+      lastModified: file.lastModified || 0,
+    });
+  }
+
+  function clearSelectedFile() {
+    setSelectedVideoFile(null);
+    setSelectedVideoFacts(null);
+    setSelectedPlaybackMeta(null);
+    setPreviewProblem('');
+
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
+  }
+
+  function handleLoadedMetadata(event) {
+    const video = event.currentTarget;
+    const duration = Number(video.duration);
+    const width = Number(video.videoWidth);
+    const height = Number(video.videoHeight);
+    const durationLabel = Number.isFinite(duration) && duration > 0 ? formatDurationLabel(duration) : '';
+    const resolution = width > 0 && height > 0 ? `${Math.round(width)}x${Math.round(height)}` : '';
+    const aspectRatio = width > 0 && height > 0 ? aspectRatioFor(width, height) : '';
+
+    const nextMeta = {
+      durationSeconds: Number.isFinite(duration) && duration > 0 ? Math.round(duration) : 0,
+      durationLabel,
+      width: Number.isFinite(width) && width > 0 ? Math.round(width) : 0,
+      height: Number.isFinite(height) && height > 0 ? Math.round(height) : 0,
+      resolution,
+      aspectRatio,
+    };
+
+    setSelectedPlaybackMeta(nextMeta);
+
+    if (durationLabel && !draft.duration) {
+      updateDraft('duration', durationLabel);
+    }
+
+    if (resolution && !draft.resolution) {
+      updateDraft('resolution', resolution);
+    }
+
+    if (aspectRatio && !draft.aspectRatio) {
+      updateDraft('aspectRatio', aspectRatio);
+    }
   }
 
   return (
-    <Card
-      eyebrow="Local builder"
-      title="Video draft"
-      className="video-draft-card"
-      actions={
-        <SegmentedControl
-          options={VIDEO_VIEW_OPTIONS}
-          value={viewMode}
-          onChange={setViewMode}
-          ariaLabel="Video workspace mode"
-          size="sm"
-        />
-      }
-    >
-      <div className="video-draft-intro">
-        <Badge tone="neutral">crab://video</Badge>
-        <Badge tone="warning">Explicit paid mint</Badge>
-        <Badge tone="neutral">No silent spend</Badge>
-        <Badge tone="neutral">Local preview</Badge>
-      </div>
-
-      <div className="video-form-grid">
-        <Field label="Video title" help="Creator-facing video title. This is local draft text only.">
-          <TextInput
-            value={draft.title}
-            onChange={(event) => updateDraft('title', event.target.value)}
-            placeholder="Example: My first CrabLink video"
-          />
-        </Field>
-
-        <Field
-          label="Creator display"
-          help="Display label only. Backend identity truth must come from svc-gateway later."
+    <section className="video-one-card-shell" aria-label="Simple video mint">
+      <Card
+        eyebrow="Simple Mint"
+        title="Video bundle"
+        className="video-simple-mint-card"
+        actions={
+          <div className="video-simple-card-actions">
+            <Badge tone={selectedVideoFacts ? 'success' : 'neutral'}>
+              {selectedVideoFacts ? 'Source selected' : 'No source'}
+            </Badge>
+            <Badge tone="warning">Local until mint</Badge>
+          </div>
+        }
+      >
+        <section
+          className={previewUrl ? 'video-drop-preview has-video' : 'video-drop-preview'}
+          aria-label="Select video preview"
         >
-          <TextInput
-            value={draft.creatorDisplay}
-            onChange={(event) => updateDraft('creatorDisplay', event.target.value)}
-            placeholder={app?.settings?.handle || app?.settings?.passportSubject || '@creator'}
+          {previewUrl ? (
+            <video src={previewUrl} controls preload="metadata" playsInline onLoadedMetadata={handleLoadedMetadata}>
+              Your browser/WebView cannot play this local video file.
+            </video>
+          ) : (
+            <div className="video-drop-empty">
+              <strong>No video selected</strong>
+              <span>Choose a video to preview it before preparing MP4 versions.</span>
+            </div>
+          )}
+
+          <div className="video-drop-overlay">
+            <label className="video-hover-select">
+              {previewUrl ? 'Change video' : 'Choose video'}
+              <input
+                ref={inputRef}
+                type="file"
+                accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-m4v,.mp4,.webm,.ogv,.ogg,.mov,.m4v"
+                onChange={handleFileChange}
+              />
+            </label>
+
+            {selectedVideoFacts && (
+              <Button variant="secondary" onClick={clearSelectedFile}>
+                Clear
+              </Button>
+            )}
+          </div>
+        </section>
+
+        {previewProblem ? (
+          <div className="video-preview-problem" role="alert">
+            {previewProblem}
+          </div>
+        ) : null}
+
+        <div className="video-file-line">
+          <span>{publishFileFacts?.name || 'No local file selected'}</span>
+          <strong>{publishFileFacts?.size ? formatBytes(publishFileFacts.size) : 'Choose video'}</strong>
+        </div>
+
+        <section className="video-under-preview-form" aria-label="Video mint details">
+          <div className="video-form-grid video-simple-fields">
+            <Field label="Title" help="Shown on the video card and manifest preview.">
+              <TextInput
+                value={draft.title}
+                onChange={updateField('title')}
+                placeholder="Example: My first CrabLink video"
+                maxLength={140}
+              />
+            </Field>
+
+            <Field label="Description" help="Short creator-facing description.">
+              <TextArea
+                value={draft.description}
+                onChange={updateField('description')}
+                rows={3}
+                placeholder="Describe the video and what viewers should know..."
+                maxLength={1000}
+              />
+            </Field>
+          </div>
+
+          <details className="video-inline-advanced video-inline-advanced-slim">
+            <summary>
+              <span>
+                <strong>Advanced fields</strong>
+                <small>Tags, creator display, kind, rights, access, and metadata hints</small>
+              </span>
+            </summary>
+
+            <div className="video-inline-advanced-body">
+              <div className="video-form-grid">
+                <Field label="Tags" help="Comma-separated local tags.">
+                  <TextInput value={draft.tags} onChange={updateField('tags')} placeholder="video, demo, creator" />
+                </Field>
+
+                <Field label="Creator display" help="Display label only. Backend identity truth comes from gateway/passport services.">
+                  <TextInput
+                    value={draft.creatorDisplay}
+                    onChange={updateField('creatorDisplay')}
+                    placeholder={app?.settings?.handle || app?.settings?.passportSubject || '@creator'}
+                    maxLength={90}
+                  />
+                </Field>
+
+                <Field label="Video kind" help="Planning field only.">
+                  <select value={draft.videoKind} onChange={updateField('videoKind')}>
+                    {VIDEO_KIND_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Category" help="Future discovery/category intent only.">
+                  <select value={draft.category} onChange={updateField('category')}>
+                    {VIDEO_CATEGORY_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Language" help="Short language tag for future manifest metadata.">
+                  <TextInput value={draft.language} onChange={updateField('language')} placeholder="en" spellCheck={false} />
+                </Field>
+
+                <Field label="Duration" help="Use seconds, mm:ss, or hh:mm:ss. Parsed locally for preview only.">
+                  <TextInput value={draft.duration} onChange={updateField('duration')} placeholder="03:45" spellCheck={false} />
+                </Field>
+
+                <Field label="Resolution" help="Future rendition metadata.">
+                  <TextInput value={draft.resolution} onChange={updateField('resolution')} placeholder="1920x1080" spellCheck={false} />
+                </Field>
+
+                <Field label="Aspect ratio" help="Future playback/card hint only.">
+                  <TextInput value={draft.aspectRatio} onChange={updateField('aspectRatio')} placeholder="16:9" spellCheck={false} />
+                </Field>
+
+                <Field label="Rights mode" help="Planning field only; backend policy is not enforced here.">
+                  <select value={draft.rightsMode} onChange={updateField('rightsMode')}>
+                    {VIDEO_RIGHTS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Access mode" help="Planning field only; paid playback gates are backend-derived.">
+                  <select value={draft.accessMode} onChange={updateField('accessMode')}>
+                    {VIDEO_ACCESS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Payout mode" help="Planning field only; no ROC payout route is active here.">
+                  <select value={draft.payoutMode} onChange={updateField('payoutMode')}>
+                    {VIDEO_PAYOUT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Moderation mode" help="Planning field only; backend moderation is not active here.">
+                  <select value={draft.moderationMode} onChange={updateField('moderationMode')}>
+                    {VIDEO_MODERATION_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <div className="video-simple-footer-actions">
+          <Button variant="secondary" onClick={clearDraft}>
+            Clear draft
+          </Button>
+          <span>
+            Backend truth starts after prepare, ROC confirmation, and gateway mint response.
+          </span>
+        </div>
+      </Card>
+
+      <details className="video-advanced-drawer video-advanced-drawer-quiet" open>
+        <summary>
+          <span>
+            <strong>Prepare MP4 versions</strong>
+            <small>Use Rust to stage the master, device versions, poster, and thumbnail before minting.</small>
+          </span>
+        </summary>
+
+        <div className="video-advanced-stack">
+          <VideoConverterPanel
+            selectedFileFacts={publishFileFacts}
+            playbackMeta={selectedPlaybackMeta}
+            draft={draft}
           />
-        </Field>
-
-        <Field label="Video kind" help="Planning field only; no backend schema is claimed here.">
-          <select
-            className="cl-select"
-            value={draft.videoKind}
-            onChange={(event) => updateDraft('videoKind', event.target.value)}
-          >
-            {VIDEO_KIND_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="Category" help="Future discovery/category intent only.">
-          <select
-            className="cl-select"
-            value={draft.category}
-            onChange={(event) => updateDraft('category', event.target.value)}
-          >
-            {VIDEO_CATEGORY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="Language" help="Short language tag for future manifest metadata.">
-          <TextInput
-            value={draft.language}
-            onChange={(event) => updateDraft('language', event.target.value)}
-            placeholder="en"
-            spellCheck={false}
-          />
-        </Field>
-
-        <Field label="Duration" help="Use seconds, mm:ss, or hh:mm:ss. Parsed locally for preview only.">
-          <TextInput
-            value={draft.duration}
-            onChange={(event) => updateDraft('duration', event.target.value)}
-            placeholder="03:45"
-            spellCheck={false}
-          />
-        </Field>
-
-        <Field label="Resolution" help="Future rendition metadata; no video bytes are inspected here.">
-          <TextInput
-            value={draft.resolution}
-            onChange={(event) => updateDraft('resolution', event.target.value)}
-            placeholder="1920x1080"
-            spellCheck={false}
-          />
-        </Field>
-
-        <Field label="Aspect ratio" help="Future playback/card hint only.">
-          <TextInput
-            value={draft.aspectRatio}
-            onChange={(event) => updateDraft('aspectRatio', event.target.value)}
-            placeholder="16:9"
-            spellCheck={false}
-          />
-        </Field>
-
-        <Field label="Codec format" help="Planning field only; this route does not transcode media.">
-          <select
-            className="cl-select"
-            value={draft.codecFormat}
-            onChange={(event) => updateDraft('codecFormat', event.target.value)}
-          >
-            <option value="mp4_h264_aac">MP4 / H.264 / AAC</option>
-            <option value="mp4_h265_aac">MP4 / H.265 / AAC</option>
-            <option value="webm_vp9_opus">WebM / VP9 / Opus</option>
-            <option value="webm_av1_opus">WebM / AV1 / Opus</option>
-            <option value="source_unknown">Source unknown</option>
-          </select>
-        </Field>
-
-        <Field label="Frame rate" help="Plain metadata draft. No playback validation happens here.">
-          <TextInput
-            value={draft.frameRate}
-            onChange={(event) => updateDraft('frameRate', event.target.value)}
-            placeholder="30"
-            spellCheck={false}
-          />
-        </Field>
-
-        <Field label="Color profile" help="Planning field for future player/rendition metadata.">
-          <select
-            className="cl-select"
-            value={draft.colorProfile}
-            onChange={(event) => updateDraft('colorProfile', event.target.value)}
-          >
-            <option value="standard_dynamic_range">Standard dynamic range</option>
-            <option value="high_dynamic_range_future">High dynamic range future</option>
-            <option value="monochrome_or_archival">Monochrome / archival</option>
-            <option value="unknown">Unknown</option>
-          </select>
-        </Field>
-
-        <Field label="Content warning" help="Optional local label for future moderation/review surfaces.">
-          <TextInput
-            value={draft.contentWarning}
-            onChange={(event) => updateDraft('contentWarning', event.target.value)}
-            placeholder="optional"
-            maxLength={120}
-          />
-        </Field>
-      </div>
-
-      <Field label="Description" help="Plain text description for local manifest preview and future cards.">
-        <TextArea
-          value={draft.description}
-          onChange={(event) => updateDraft('description', event.target.value)}
-          rows={5}
-          placeholder="Describe the video and what viewers should know..."
-        />
-      </Field>
-
-      <VideoLocalPlaybackPreview
-        draft={draft}
-        updateDraft={updateDraft}
-        onFileSelected={handleLocalPreviewFile}
-      />
+        </div>
+      </details>
 
       <VideoPublishFlow
         app={app}
@@ -248,280 +370,90 @@ export default function VideoDraft({ app, draftState }) {
         fileFacts={publishFileFacts}
       />
 
-      <section className="video-form-section" aria-label="Video rendition references">
-        <div className="video-form-section-head">
-          <div>
-            <p className="cl-eyebrow">Renditions</p>
-            <h3>Independent video/audio variants</h3>
-          </div>
-          <Badge tone="neutral" uppercase={false}>
-            references only
-          </Badge>
-        </div>
+      <details className="video-advanced-drawer video-advanced-drawer-quiet">
+        <summary>
+          <span>
+            <strong>Advanced video options</strong>
+            <small>Manual rendition references, linked assets, manifest preview, and route truth</small>
+          </span>
+        </summary>
 
-        <div className="video-reference-grid">
-          {VIDEO_RENDITION_FIELDS.map((item) => (
-            <Field key={item.field} label={item.label} help={item.help}>
-              <TextInput
-                value={draft[item.field]}
-                onChange={(event) => updateDraft(item.field, event.target.value)}
-                placeholder={item.expectedKind === 'image' ? 'crab://<64 lowercase hex>.image' : `crab://<64 lowercase hex>.${item.expectedKind}`}
-                spellCheck={false}
-              />
-            </Field>
-          ))}
-        </div>
-      </section>
+        <div className="video-advanced-stack">
+          <section className="video-advanced-mini-section">
+            <div className="video-form-section-head">
+              <div>
+                <p className="cl-eyebrow">Manual references</p>
+                <h3>Renditions and linked assets</h3>
+              </div>
+              <Badge tone="neutral">Optional</Badge>
+            </div>
 
-      <section className="video-form-section" aria-label="Video linked asset references">
-        <div className="video-form-section-head">
-          <div>
-            <p className="cl-eyebrow">Linked assets</p>
-            <h3>Poster, thumbnail, captions, dubs, and context</h3>
-          </div>
-          <Badge tone="neutral" uppercase={false}>
-            immutable asset plan
-          </Badge>
-        </div>
+            <div className="video-reference-grid">
+              {VIDEO_RENDITION_FIELDS.map((item) => (
+                <Field key={item.field} label={item.label} help={item.help}>
+                  <TextInput
+                    value={draft[item.field]}
+                    onChange={updateField(item.field)}
+                    placeholder={placeholderForKind(item.expectedKind)}
+                    spellCheck={false}
+                  />
+                </Field>
+              ))}
 
-        <div className="video-reference-grid">
-          {VIDEO_LINKED_ASSET_FIELDS.map((item) => (
-            <Field key={item.field} label={item.label} help={item.help}>
-              <TextInput
-                value={draft[item.field]}
-                onChange={(event) => updateDraft(item.field, event.target.value)}
-                placeholder={placeholderForKind(item.expectedKind)}
-                spellCheck={false}
-              />
-            </Field>
-          ))}
-        </div>
-      </section>
+              {VIDEO_LINKED_ASSET_FIELDS.map((item) => (
+                <Field key={item.field} label={item.label} help={item.help}>
+                  <TextInput
+                    value={draft[item.field]}
+                    onChange={updateField(item.field)}
+                    placeholder={placeholderForKind(item.expectedKind)}
+                    spellCheck={false}
+                  />
+                </Field>
+              ))}
+            </div>
+          </section>
 
-      <div className="video-form-grid">
-        <Field label="Rights mode" help="Planning field only; no rights policy is enforced here.">
-          <select
-            className="cl-select"
-            value={draft.rightsMode}
-            onChange={(event) => updateDraft('rightsMode', event.target.value)}
-          >
-            {VIDEO_RIGHTS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="Access mode" help="Planning field only; this route does not gate playback.">
-          <select
-            className="cl-select"
-            value={draft.accessMode}
-            onChange={(event) => updateDraft('accessMode', event.target.value)}
-          >
-            {VIDEO_ACCESS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="Payout mode" help="Planning field only; no ROC spend or payout route is active here.">
-          <select
-            className="cl-select"
-            value={draft.payoutMode}
-            onChange={(event) => updateDraft('payoutMode', event.target.value)}
-          >
-            {VIDEO_PAYOUT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="Moderation mode" help="Planning field only; backend moderation is not active here.">
-          <select
-            className="cl-select"
-            value={draft.moderationMode}
-            onChange={(event) => updateDraft('moderationMode', event.target.value)}
-          >
-            {VIDEO_MODERATION_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-
-      <Field
-        label="Tags"
-        help="Comma-separated draft tags. These are not indexed until a real backend publish route exists."
-      >
-        <TextInput
-          value={draft.tags}
-          onChange={(event) => updateDraft('tags', event.target.value)}
-          placeholder="video, demo, creator"
-        />
-      </Field>
-
-      {viewMode === 'developer' && (
-        <div className="video-inline-dev">
           <ManifestPreviewPanel
             manifest={manifest}
             label="crablink.local.video-draft.v1"
-            title="Inline manifest"
+            title="Local video manifest"
             initiallyOpen={false}
           />
-        </div>
-      )}
 
-      <ActionBar align="between" className="video-actions">
-        <div className="video-action-status">
-          <Badge tone={completeness === 100 ? 'success' : 'neutral'}>
-            {completeness}% complete
-          </Badge>
-          <span>Local draft state</span>
-        </div>
-
-        <div className="video-action-buttons">
-          <CopyButton
-            text={manifestJson}
-            label="Copy manifest JSON"
-            successLabel="Manifest copied"
-            errorLabel="Copy unavailable"
-            variant="secondary"
+          <RouteTruthPanel
+            routeKind="video"
+            tone="info"
+            title="Video route truth boundary"
+            copy="This MVP prepares local MP4/JPEG outputs through Rust and mints selected outputs through gateway routes. Backend CIDs and crab URLs are accepted only from gateway responses."
+            allowed={[
+              'local video preview',
+              'Rust-owned source registration',
+              'Rust-staged MP4/JPEG outputs',
+              'prepare quote using selected staged output bytes',
+              'explicit ROC hold',
+              'paid /assets/video and /assets/image upload',
+              'backend-returned crab URL display',
+              'wallet refresh after mutation',
+            ]}
+            blocked={[
+              'no silent ROC spend',
+              'no fake b3 CID',
+              'no fake video URL',
+              'no fake manifest CID',
+              'no fake receipt',
+              'no direct storage/index/ledger call',
+              'no private path in React state',
+              'no DRM or anti-rip claim',
+            ]}
           />
-          <Button variant="secondary" onClick={clearDraft}>
-            Clear draft
-          </Button>
         </div>
-      </ActionBar>
-    </Card>
-  );
-}
-
-export function VideoSidePanel({ draftState }) {
-  const { draft, viewMode, stats, manifest, completeness } = draftState;
-  const tags = manifest?.metadata?.tags || [];
-  const renditions = manifest?.renditions || [];
-  const linkedAssets = manifest?.linked_assets || [];
-
-  return (
-    <>
-      <DraftStatsPanel
-        completeness={completeness}
-        stats={[
-          { label: 'Description words', value: stats.description_words || 0 },
-          { label: 'Tags', value: tags.length },
-          { label: 'Crab links', value: stats.crab_links || 0 },
-          { label: 'Renditions', value: renditions.length },
-          { label: 'Linked assets', value: linkedAssets.length },
-          { label: 'Duration min', value: stats.duration_minutes || 0 },
-        ]}
-        notes={['local draft', 'local preview optional', 'paid mint path']}
-      />
-
-      <RouteTruthPanel
-        routeKind="video"
-        tone="warning"
-        title="Not backend truth"
-        copy="The optional local player previews a selected file inside the WebView. The publish panel can send a bounded explicit paid upload through svc-gateway, but it still never creates fake CIDs, fake receipts, local balance truth, range streaming, transcoding, or DRM claims."
-      />
-
-      {viewMode === 'developer' ? (
-        <ManifestPreviewPanel
-          manifest={manifest}
-          label="crablink.local.video-draft.v1"
-          title="Manifest JSON"
-          initiallyOpen
-        />
-      ) : (
-        <Card eyebrow="Builder preview" title={draft.title || 'Untitled video'}>
-          <article className="video-preview">
-            <div className="video-preview-frame" aria-label="Video poster preview placeholder">
-              <span>{draft.posterImageCrabUrl ? 'Poster reference set' : 'No poster image yet'}</span>
-            </div>
-
-            <p className="video-preview-meta">
-              {manifest?.ownership?.owner_display || 'Unknown creator'} ·{' '}
-              {manifest?.metadata?.language || 'en'} · {labelFromSnake(draft.videoKind)}
-            </p>
-
-            <div className="video-preview-tags">
-              {draft.contentWarning ? (
-                <Badge tone="warning" uppercase={false}>
-                  CW: {draft.contentWarning}
-                </Badge>
-              ) : null}
-
-              {tags.length > 0 ? (
-                tags.map((tag) => (
-                  <Badge key={tag} tone="neutral" uppercase={false}>
-                    {tag}
-                  </Badge>
-                ))
-              ) : (
-                <Badge tone="neutral">No tags yet</Badge>
-              )}
-            </div>
-
-            <p className="video-preview-description">
-              {draft.description || 'Your video description preview will appear here.'}
-            </p>
-
-            <div className="video-preview-facts">
-              <PreviewFact label="Resolution" value={draft.resolution} />
-              <PreviewFact label="Aspect" value={draft.aspectRatio} />
-              <PreviewFact label="Codec" value={labelFromSnake(draft.codecFormat)} />
-              <PreviewFact label="Access" value={labelFromSnake(draft.accessMode)} />
-            </div>
-
-            <ReferenceList
-              title="Rendition plan"
-              items={renditions}
-              empty="No rendition references yet."
-            />
-            <ReferenceList
-              title="Linked asset plan"
-              items={linkedAssets}
-              empty="No linked asset references yet."
-            />
-          </article>
-        </Card>
-      )}
-    </>
-  );
-}
-
-function PreviewFact({ label, value }) {
-  return (
-    <div className="video-preview-fact">
-      <span>{label}</span>
-      <strong>{value || 'Not set'}</strong>
-    </div>
-  );
-}
-
-function ReferenceList({ title, items, empty }) {
-  return (
-    <section className="video-reference-list">
-      <h3>{title}</h3>
-      {items.length > 0 ? (
-        <div>
-          {items.map((item) => (
-            <span key={`${item.role}-${item.crab_url}`}>
-              {labelFromSnake(item.role)} · {item.expected_kind}
-            </span>
-          ))}
-        </div>
-      ) : (
-        <p>{empty}</p>
-      )}
+      </details>
     </section>
   );
+}
+
+export function VideoSidePanel() {
+  return null;
 }
 
 function placeholderForKind(kind) {
@@ -530,4 +462,54 @@ function placeholderForKind(kind) {
   }
 
   return `crab://<64 lowercase hex>.${kind}`;
+}
+
+function formatBytes(value) {
+  const bytes = Number(value || 0);
+
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function formatDurationLabel(seconds) {
+  const total = Math.max(0, Math.round(Number(seconds || 0)));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+
+  if (hours > 0) {
+    return [hours, minutes, secs]
+      .map((part, index) => (index === 0 ? String(part) : String(part).padStart(2, '0')))
+      .join(':');
+  }
+
+  return `${minutes}:${String(secs).padStart(2, '0')}`;
+}
+
+function aspectRatioFor(width, height) {
+  const w = Math.round(Number(width || 0));
+  const h = Math.round(Number(height || 0));
+
+  if (!w || !h) {
+    return '';
+  }
+
+  const divisor = gcd(w, h);
+  return `${Math.round(w / divisor)}:${Math.round(h / divisor)}`;
+}
+
+function gcd(a, b) {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+
+  while (y) {
+    const next = x % y;
+    x = y;
+    y = next;
+  }
+
+  return x || 1;
 }

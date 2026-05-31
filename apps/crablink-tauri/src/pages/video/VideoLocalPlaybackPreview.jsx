@@ -1,7 +1,7 @@
 /**
  * RO:WHAT — Local-only video playback preview for the crab://video workspace.
  * RO:WHY — Lets creators inspect a local video file before backend media upload/range contracts exist.
- * RO:INTERACTS — VideoDraft.jsx, video.css, browser/WebView object URLs, local draft metadata fields.
+ * RO:INTERACTS — VideoDraft.jsx, video.css, browser/WebView object URLs, local draft metadata fields, video converter panel.
  * RO:INVARIANTS — local preview only; no upload; no b3 CID; no manifest CID; no wallet/ROC action; no backend playback claim.
  * RO:METRICS — none.
  * RO:CONFIG — max local preview size is intentionally bounded in this component.
@@ -23,7 +23,7 @@ const ACCEPTED_VIDEO_TYPES = Object.freeze([
   'video/x-m4v',
 ]);
 
-export default function VideoLocalPlaybackPreview({ draft, updateDraft, onFileSelected }) {
+export default function VideoLocalPlaybackPreview({ draft, updateDraft, onFileSelected, onMetadataDetected }) {
   const inputRef = useRef(null);
   const [objectUrl, setObjectUrl] = useState('');
   const [fileMeta, setFileMeta] = useState(null);
@@ -56,11 +56,13 @@ export default function VideoLocalPlaybackPreview({ draft, updateDraft, onFileSe
     const file = event.target.files?.[0] || null;
     clearObjectUrlOnly();
     setVideoMeta(null);
+    notifyMetadata(onMetadataDetected, null);
     setProblem('');
 
     if (!file) {
       setFileMeta(null);
       notifySelectedFile(onFileSelected, null, null);
+      notifyMetadata(onMetadataDetected, null);
       return;
     }
 
@@ -74,6 +76,7 @@ export default function VideoLocalPlaybackPreview({ draft, updateDraft, onFileSe
       });
       setProblem(validation.message);
       notifySelectedFile(onFileSelected, null, null);
+      notifyMetadata(onMetadataDetected, null);
       return;
     }
 
@@ -100,14 +103,17 @@ export default function VideoLocalPlaybackPreview({ draft, updateDraft, onFileSe
       ? formatDurationLabel(duration)
       : '';
 
-    setVideoMeta({
+    const nextVideoMeta = {
       durationSeconds: Number.isFinite(duration) && duration > 0 ? Math.round(duration) : 0,
       durationLabel,
-      width: Number.isFinite(width) && width > 0 ? width : 0,
-      height: Number.isFinite(height) && height > 0 ? height : 0,
+      width: Number.isFinite(width) && width > 0 ? Math.round(width) : 0,
+      height: Number.isFinite(height) && height > 0 ? Math.round(height) : 0,
       resolution: width > 0 && height > 0 ? `${Math.round(width)}x${Math.round(height)}` : '',
       aspectRatio: width > 0 && height > 0 ? aspectRatioFor(width, height) : '',
-    });
+    };
+
+    setVideoMeta(nextVideoMeta);
+    notifyMetadata(onMetadataDetected, nextVideoMeta);
   }
 
   function applyMetadataToDraft() {
@@ -134,6 +140,7 @@ export default function VideoLocalPlaybackPreview({ draft, updateDraft, onFileSe
     setVideoMeta(null);
     setProblem('');
     notifySelectedFile(onFileSelected, null, null);
+    notifyMetadata(onMetadataDetected, null);
 
     if (inputRef.current) {
       inputRef.current.value = '';
@@ -263,6 +270,14 @@ function notifySelectedFile(listener, file, meta) {
   }
 
   listener(file, meta);
+}
+
+function notifyMetadata(listener, meta) {
+  if (typeof listener !== 'function') {
+    return;
+  }
+
+  listener(meta || null);
 }
 
 function validateVideoFile(file) {

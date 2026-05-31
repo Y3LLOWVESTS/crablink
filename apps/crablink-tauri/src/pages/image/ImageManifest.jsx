@@ -42,8 +42,8 @@ export default function ImageManifest({ draftState, fileFacts }) {
             <strong>{labelFromSnake(draft.imageRole)}</strong>
           </div>
           <div>
-            <span>Rights</span>
-            <strong>{labelFromSnake(draft.rightsMode)}</strong>
+            <span>Local previews</span>
+            <strong>{stats.generatedRenditionCount || 0}</strong>
           </div>
           <div>
             <span>Access</span>
@@ -54,7 +54,7 @@ export default function ImageManifest({ draftState, fileFacts }) {
         <TruthBoundary
           tone="warning"
           title="Local manifest only"
-          copy="This JSON is useful for UI and product-shape testing, but it is not a stored manifest, not a b3 CID, not a receipt, and not an ownership proof."
+          copy="This JSON is useful for UI and product-shape testing, but it is not a stored manifest, not a b3 CID, not a receipt, and not an ownership proof. Generated rendition entries are local preview metadata only."
         />
 
         <JsonPreview label="Image manifest JSON" data={manifest} initiallyOpen />
@@ -67,12 +67,12 @@ export default function ImageManifest({ draftState, fileFacts }) {
             copy="Title, description, alt text, role, MIME type, dimensions, color profile, tags, and content warning."
           />
           <Section
-            title="Renditions"
-            copy={`${stats.renditionCount} local rendition references are currently planned. Each future variant should be its own .image asset.`}
+            title="Rendition plan"
+            copy={`${stats.selectedRenditionTargetCount || 0} targets selected and ${stats.generatedRenditionCount || 0} local previews generated. Each real variant should later be minted as its own backend .image asset.`}
           />
           <Section
-            title="Rights / access / economics"
-            copy="Draft-only policy fields. Future backend policy, wallet hold, receipt, and payout split are not claimed here."
+            title="Rights / access"
+            copy="Draft-only policy fields. Future backend policy, wallet hold, receipt, and payout behavior are not claimed here."
           />
           <Section
             title="Storage"
@@ -98,7 +98,7 @@ export function ImageSidePanel({ draftState, fileFacts }) {
           <StatChip label="Complete" value={`${completeness}%`} help="Local draft completeness" tone="info" />
           <StatChip label="File" value={fileFacts?.name ? 'selected' : 'none'} help="Local preview file" tone={fileFacts?.name ? 'success' : 'neutral'} />
           <StatChip label="Tags" value={stats.tagCount} help="Local comma-separated tags" />
-          <StatChip label="Renditions" value={stats.renditionCount} help="Linked image variants" />
+          <StatChip label="Previews" value={stats.generatedRenditionCount || 0} help="Generated local renditions" />
         </div>
 
         <div className="image-completeness">
@@ -108,7 +108,7 @@ export function ImageSidePanel({ draftState, fileFacts }) {
         <div className="image-side-facts">
           <Fact label="Role" value={labelFromSnake(draft.imageRole)} />
           <Fact label="Access" value={labelFromSnake(draft.accessMode)} />
-          <Fact label="Rights" value={labelFromSnake(draft.rightsMode)} />
+          <Fact label="Targets" value={stats.selectedRenditionTargetCount || 0} />
           <Fact label="Local bytes" value={fileFacts?.size ? formatBytes(fileFacts.size) : '0 B'} />
         </div>
 
@@ -116,6 +116,7 @@ export function ImageSidePanel({ draftState, fileFacts }) {
           <Badge tone="warning">backend false</Badge>
           <Badge tone="neutral">b3 false</Badge>
           <Badge tone="neutral">wallet false</Badge>
+          <Badge tone="neutral">renditions local</Badge>
         </div>
       </Card>
     </aside>

@@ -12382,3 +12382,14865 @@ That order gives you the strongest demo: people can mint media, pay for media, c
 
 
 ### END NOTE - MAY 25 2026 - 07:30 CST
+
+
+
+### BEGIN NOTE - MAY 25 2026 - 08:05 CST
+
+Absolutely — redundancy is good. The important separation is:
+
+```text
+Storage redundancy:
+  Many nodes may store and serve the same bytes by b3.
+
+Ownership / mint uniqueness:
+  Only one canonical ownership mint should exist for the same canonical content, unless the original owner explicitly authorizes a derivative, remix, co-owner, license, or repost model.
+```
+
+The b3 hash proves **what the content is**. It does not, by itself, prove **who owns it**. Ownership has to be a separate backend truth claim bound to passport, wallet, receipt, timestamp, and policy.
+
+Below are carryover notes for the next session.
+
+---
+
+# RustyOnions / CrabLink Carryover Notes — Chat, Ownership Uniqueness, Redundancy, and Page Tidying
+
+## 1. Current session checkpoint
+
+We are working on the **CrabLink Tauri app** as the primary client. Chrome remains proof/companion only.
+
+Recent focus:
+
+```text
+1. Podcast page polish
+2. Global zoom-out fix
+3. Chat blueprint
+4. Chat frontend shell
+5. Chat backend route proof
+6. Chat frontend/backend integration
+7. Ownership uniqueness discussion
+```
+
+The app is now able to zoom out much farther globally. The previous minimum zoom was around `75%`; it was patched to allow down to about `40%`, giving much more overview across all pages.
+
+The chat page now visually works and looks good when zoomed out. It has:
+
+```text
+Room tab
+Builder tab
+Publish tab
+Moderation tab
+Developer tab
+iMessage-style bubbles
+emoji shortcut row
+paid-message price display
+truth boundary panel
+local preview messages
+backend route integration in progress
+```
+
+The user likes the direction.
+
+---
+
+## 2. Important new ownership doctrine
+
+The user emphasized a key point:
+
+```text
+Redundancy is good.
+Different nodes should be able to store and serve the same data like a CDN.
+But multiple users should not be able to mint the same thing as if they own it.
+```
+
+This is now an important RustyOnions/CrabLink invariant.
+
+### Correct model
+
+```text
+b3 address:
+  proves content identity/integrity
+
+storage replication:
+  many nodes may store and serve the same bytes
+
+mint / ownership claim:
+  should be unique and policy-governed
+
+receipt:
+  proves a backend-accepted economic action
+
+passport:
+  proves identity/capability
+
+wallet:
+  proves economic authority
+```
+
+The b3 hash is not the ownership record by itself. It is the content identity. Ownership must be recorded by backend-controlled mint/claim/index state.
+
+---
+
+## 3. Redundancy vs theft prevention
+
+We need to preserve both:
+
+### A. Redundancy / CDN behavior
+
+Allowed and desirable:
+
+```text
+Node A stores b3:abc...
+Node B stores b3:abc...
+Node C stores b3:abc...
+Any node may serve the exact bytes for b3:abc...
+```
+
+This improves:
+
+```text
+availability
+performance
+resilience
+cache locality
+offline support
+future distributed hosting
+```
+
+Serving bytes is not the same thing as owning or minting the content.
+
+### B. Unique mint / ownership behavior
+
+Not allowed:
+
+```text
+User A mints image/music/video/podcast/post as crab://abc.image
+User B uploads the exact same bytes later
+User B gets a new ownership mint claiming they created/own crab://abc.image
+```
+
+Correct behavior:
+
+```text
+Same canonical bytes/content already minted:
+  backend detects existing b3/content identity
+
+If same owner / same idempotency:
+  return existing mint/receipt/idempotent result
+
+If different user:
+  reject duplicate ownership mint
+  or return "already minted by another creator"
+  do not create new ownership claim
+  do not create fake receipt
+  do not create new asset pointer
+```
+
+Potential response:
+
+```json
+{
+  "ok": false,
+  "reason": "content_already_minted",
+  "cid": "b3:<hash>",
+  "existingOwner": "crab://@creator",
+  "canStoreReplica": true,
+  "canMintOwnership": false
+}
+```
+
+This gives the network redundancy while preventing theft-by-remint.
+
+---
+
+## 4. Important nuance: exact duplicate vs derivative
+
+We need a clear policy distinction.
+
+### Exact duplicate
+
+```text
+same canonical bytes
+same canonical manifest
+same asset kind
+same b3
+```
+
+Should not allow a second independent ownership mint.
+
+### Authorized repost / mirror
+
+A user may be allowed to mirror/store/serve the same content, but not claim authorship.
+
+Possible future model:
+
+```text
+mirror record
+pin record
+library save
+playlist add
+site embed
+reference graph edge
+```
+
+These are not ownership mints.
+
+### Derivative / remix
+
+A derivative can be a new asset only if it has new canonical bytes or a new canonical manifest and it references the original.
+
+Example:
+
+```json
+{
+  "schema": "crablink.derivative.v1",
+  "kind": "music",
+  "source": "crab://<original>.music",
+  "creator": "crab://@remixer",
+  "licenseProof": "...",
+  "derivativeBytes": "b3:<new_hash>"
+}
+```
+
+This produces a new b3 because the content/manifest is genuinely different.
+
+### Co-ownership / collaborator mint
+
+Possible future model:
+
+```text
+original creator explicitly grants co-owner
+or creator mints with collaborators at initial publish
+or backend accepts signed authorization
+```
+
+Do not implement casually. Needs policy and receipts.
+
+---
+
+## 5. Strong invariant to add to future notes/blueprints
+
+Use this exact invariant later:
+
+```text
+A b3 content ID may be redundantly stored and served by many nodes, but the canonical ownership mint for a given content identity is unique unless backend policy verifies an authorized derivative, mirror, repost, license, or co-owner relationship. Storage replication is not ownership. Cache possession is not ownership. Re-uploading bytes is not ownership. CrabLink must never create a second independent ownership claim for already-minted canonical content.
+```
+
+Short version:
+
+```text
+Many replicas. One canonical mint.
+```
+
+Or:
+
+```text
+Replicate bytes, not ownership.
+```
+
+---
+
+## 6. Collision / duplicate hash rule
+
+Earlier discussion covered birthday/collision concerns.
+
+Final rule should be:
+
+```text
+Same b3 + same canonical bytes:
+  valid duplicate storage / dedupe / replica
+
+Same b3 + different bytes:
+  reject, quarantine, audit
+
+Same canonical content + different user attempting new mint:
+  reject duplicate ownership claim unless authorized by policy
+```
+
+These are different protections:
+
+```text
+collision protection:
+  prevents integrity violations
+
+duplicate mint protection:
+  prevents ownership theft
+```
+
+Both are needed.
+
+Suggested fail-closed reasons:
+
+```text
+hash_collision_or_integrity_violation
+content_already_minted
+duplicate_ownership_claim
+unauthorized_remint
+canonical_content_conflict
+```
+
+---
+
+## 7. Static content addressing model
+
+For static files:
+
+```text
+image
+music
+video
+podcast audio file
+article manifest
+post manifest
+comment manifest
+site manifest
+```
+
+The b3 address is calculated from canonical bytes.
+
+Examples:
+
+```text
+raw file:
+  b3 = BLAKE3(file bytes)
+
+canonical JSON/manifest:
+  b3 = BLAKE3(canonical manifest bytes)
+```
+
+Public URL:
+
+```text
+crab://<64 lowercase hex>.<kind>
+```
+
+Examples:
+
+```text
+crab://<hash>.image
+crab://<hash>.music
+crab://<hash>.video
+crab://<hash>.podcast
+crab://<hash>.post
+crab://<hash>.chat
+```
+
+Important:
+
+```text
+b3 gives content identity
+mint registry gives ownership
+receipt gives economic proof
+index pointer gives navigation/discovery
+```
+
+Do not conflate these.
+
+---
+
+## 8. Dynamic content addressing model
+
+For dynamic/live content:
+
+```text
+streaming
+live podcast
+chat
+live comments
+event feeds
+```
+
+Do not hash the moving live state as one permanent object.
+
+Correct model:
+
+```text
+b3 hash:
+  immutable manifest / session descriptor / snapshot / segment / archive
+
+backend session:
+  live moving state
+
+receipt:
+  paid access proof
+
+event log:
+  message/segment/update sequence
+```
+
+### Stream
+
+```text
+crab://<stream_manifest_hash>.stream
+```
+
+Manifest contains:
+
+```text
+creator
+title
+description
+pricing
+start time
+chat room pointer
+stream policy
+archive policy
+```
+
+Live data is delivered through backend session routes:
+
+```text
+latest frame
+latest segment
+viewer receipt state
+stream status
+```
+
+Finalized segments/archives can each get their own b3.
+
+### Live podcast
+
+```text
+crab://<podcast_live_manifest_hash>.podcast-live
+```
+
+Live audio is session state.
+
+Final archived episode becomes:
+
+```text
+crab://<episode_hash>.podcast
+```
+
+or:
+
+```text
+crab://<archive_hash>.music / .audio / .podcast
+```
+
+depending on final asset kind.
+
+### Chat
+
+```text
+crab://<chat_manifest_hash>.chat
+```
+
+Manifest defines:
+
+```text
+owner
+price per message
+expiry
+mods
+blocklist policy
+attached stream/podcast/profile/site
+payout split
+```
+
+Live messages are backend event state.
+
+Later finalized transcript windows can become:
+
+```text
+crab://<chatlog_snapshot_hash>.chatlog
+```
+
+---
+
+## 9. Current chat implementation status
+
+### Frontend status
+
+CrabLink Tauri has a chat page at:
+
+```text
+crab://chat
+```
+
+It includes:
+
+```text
+Room tab
+Builder tab
+Publish tab
+Moderation tab
+Developer tab
+emoji shortcuts
+local preview bubbles
+backend status chips
+truth boundary panel
+backend route preparation UI
+```
+
+The UI looks good at 40% zoom and already feels like a polished chat product.
+
+### Backend status
+
+RustyOnions backend chat route proof is green.
+
+Proven tests:
+
+```text
+cargo test -p omnigate --test chat_routes
+cargo test -p svc-gateway --test product_routes_proxy
+```
+
+Both passed.
+
+Proven backend behaviors:
+
+```text
+omnigate /v1/chat/resolve works
+omnigate /v1/chat/prepare works
+omnigate /v1/chat create works
+free room message send/list/latest works
+paid message quote works without spending
+paid message send fails closed
+moderation routes exist but fail closed
+gateway /chat routes proxy correctly
+```
+
+Important boundary:
+
+```text
+Current backend chat is in-memory dev proof only.
+No durable chat storage.
+No b3 chat descriptor mint.
+No index pointer.
+No svc-mailbox fanout.
+No paid ROC transfer.
+No backend receipt.
+No real moderation authority.
+```
+
+---
+
+## 10. Next chat work: finish paid E2E
+
+The next major implementation target should be:
+
+```text
+paid chat message E2E
+```
+
+Desired flow:
+
+```text
+1. Creator creates paid chat room.
+2. Visitor B opens/resolves chat room.
+3. Visitor B types message.
+4. Backend quotes message price.
+5. UI shows explicit confirmation.
+6. Visitor B confirms.
+7. Backend routes payment through svc-wallet.
+8. ron-ledger records truth.
+9. svc-wallet returns receipt.
+10. Backend accepts message only after receipt.
+11. Message appears with receipt chip.
+12. Creator balance increases.
+13. Visitor B balance decreases.
+14. Refresh does not duplicate spend.
+15. Failed payment does not create message.
+```
+
+Invariants:
+
+```text
+no fake paid message
+no fake receipt
+no silent spend
+no optimistic paid message that looks confirmed
+no duplicate spend on refresh
+no paid unlock from cache
+```
+
+Need to decide whether paid chat is:
+
+```text
+transfer directly to room owner
+hold/capture operation
+split payout later
+```
+
+Given current project doctrine, use the existing safe wallet front-door and receipt model. Do not mutate ledger from omnigate or gateway directly.
+
+---
+
+## 11. After paid chat E2E: attach chat to other pages
+
+Once paid chat works, next integration should be:
+
+```text
+attach chat rooms to stream/podcast/video/site/profile
+```
+
+Priority:
+
+```text
+1. Stream page chat panel
+2. Podcast page episode discussion / live podcast chat
+3. Creator profile community chat
+4. Site chat
+5. Video/music watch/listen room
+```
+
+This makes chat portable, which fits CrabLink’s core concept.
+
+Important:
+
+```text
+chat attachment is a pointer/reference
+not ownership transfer
+not a second mint
+not a fake backend route
+```
+
+Stream/podcast descriptors can include:
+
+```json
+{
+  "chat": {
+    "enabled": true,
+    "room": "crab://<hash>.chat",
+    "mode": "paid_per_message"
+  }
+}
+```
+
+---
+
+## 12. Existing media status to remember
+
+Podcast page:
+
+```text
+audio file store/mint/pay/listen is proven
+local podcast studio UI is polished
+mic recording works locally
+knobs visually/functionally improved
+live podcast backend streaming is not proven yet
+```
+
+Stream page:
+
+```text
+stream-lite latest-frame/latest-segment proof exists
+roughly 1fps paid viewing has been shown
+full production backend streaming is not proven yet
+```
+
+Need to return later to:
+
+```text
+finish full backend stream media transport
+finish live podcast backend streaming
+support proper audio/video segments
+support bounded range/segment delivery
+support paid live access intervals
+support chat alongside live media
+```
+
+---
+
+## 13. Page tidying plan after chat paid E2E
+
+After paid chat works, pause new feature expansion and tidy the app.
+
+Goal:
+
+```text
+make CrabLink Tauri feel like one cohesive premium app
+```
+
+Do not rewrite from scratch. Standardize and polish existing pages.
+
+Priority order:
+
+```text
+1. Chat
+2. Podcast
+3. Music
+4. Video
+5. Stream
+6. Image
+7. Post / Comment / Article
+8. Site
+9. Profile / Passport drawer
+10. Library / Receipts
+11. Home
+```
+
+Shared polish goals:
+
+```text
+compact headers
+less wasted vertical space
+consistent tabs
+consistent dark/light theme
+consistent prepare/confirm/receipt flow
+consistent truth boundary cards
+consistent receipt chips
+consistent paid unlock panels
+consistent backend status chips
+developer JSON hidden by default
+no raw backend JSON in main user path
+better empty states
+better mobile/narrow layouts
+no overflow or receipt hash spilling
+```
+
+We already saw this pattern on podcast:
+
+```text
+big hero looked good but wasted space
+removed unnecessary hero/principle strip
+compacted studio
+compacted mixer knobs
+kept premium feel
+```
+
+Apply this same discipline across other pages.
+
+---
+
+## 14. Shared UI primitives to consider
+
+Before tidying every page manually, create reusable components.
+
+Potential shared components:
+
+```text
+CompactRouteHeader
+TruthBoundaryCard
+BackendStatusRail
+ReceiptChip
+PaidActionPanel
+PublishStepRail
+CreatorControlCard
+DeveloperDrawer
+EmptyState
+RouteTabs
+AssetSummaryCard
+CopyableCrabUrl
+```
+
+This would reduce duplicate page-specific CSS and help the app feel coherent.
+
+Important:
+
+```text
+React components display state only.
+They do not invent backend truth.
+They do not create receipts.
+They do not mutate wallet state.
+```
+
+---
+
+## 15. Ownership uniqueness implementation idea for future backend
+
+Need a backend ownership registry or mint index.
+
+Possible conceptual services/owners:
+
+```text
+svc-storage:
+  stores bytes by b3
+  dedupes exact bytes
+  rejects same b3/different bytes
+
+svc-index:
+  maps crab URLs / names / asset pages
+  can check existing content pointers
+
+omnigate:
+  coordinates product route/publish flow
+  refuses duplicate ownership mint if already claimed
+
+svc-wallet:
+  records paid mint/ownership action through wallet path
+
+ron-ledger:
+  durable economic truth
+
+future ownership registry:
+  canonical map from content identity to owner/passport/wallet/receipt
+```
+
+Potential canonical record:
+
+```json
+{
+  "schema": "ron.ownership-claim.v1",
+  "contentId": "b3:<hash>",
+  "kind": "image",
+  "canonicalAssetUrl": "crab://<hash>.image",
+  "ownerPassport": "crab://@creator",
+  "ownerAccount": "acct_creator",
+  "mintReceipt": "b3:<receipt_hash>",
+  "mintedAt": "2026-...",
+  "policy": {
+    "duplicatesAllowed": false,
+    "mirrorsAllowed": true,
+    "derivativesRequireSource": true
+  }
+}
+```
+
+Backend check on publish:
+
+```text
+1. Compute canonical content b3 server-side.
+2. Check storage for byte identity.
+3. Check ownership registry for existing mint.
+4. If none:
+     allow mint through explicit paid flow.
+5. If exists and same owner/idempotency:
+     return existing result.
+6. If exists and different user:
+     reject duplicate ownership claim.
+7. If derivative requested:
+     require source reference/license/authorization policy.
+8. If mirror requested:
+     allow mirror/pin/reference, not ownership mint.
+```
+
+This should become a future IDB or blueprint section.
+
+Possible filename:
+
+```text
+OWNERSHIP_AND_DEDUP_BLUEPRINT.MD
+```
+
+---
+
+## 16. Avoid a dangerous misconception
+
+Do not make the rule:
+
+```text
+reject all duplicate hashes
+```
+
+That would break CDN/dedupe.
+
+Correct rule:
+
+```text
+allow duplicate storage/replication of same bytes
+reject duplicate ownership mint by unauthorized user
+reject same hash with different bytes
+```
+
+This preserves:
+
+```text
+content-addressed storage
+dedupe
+multi-node redundancy
+creator ownership
+anti-theft behavior
+```
+
+---
+
+## 17. Near-term next session plan
+
+Start next session here:
+
+```text
+Goal:
+  finish chat page paid E2E or continue from current chat frontend/backend integration checkpoint
+```
+
+Recommended order:
+
+```text
+1. Verify current chat frontend build still passes.
+2. Run RustyOnions dev stack with new chat routes.
+3. In CrabLink Tauri:
+     open crab://chat
+     set Builder send mode = Free
+     Publish → Prepare
+     Publish → Create backend room
+     send free message
+     refresh backend messages
+4. Then test paid room:
+     set send mode = Paid Per Message
+     create room
+     type message
+     quote paid message
+     confirm paid send remains locked
+5. Implement paid message confirm flow.
+6. Add backend paid-send route wiring through svc-wallet.
+7. Add receipt chip display.
+8. Add no-double-spend/idempotency test.
+9. Add wallet B insufficient ROC failure test.
+10. Re-run omnigate/gateway/frontend checks.
+```
+
+Target tests:
+
+```text
+cargo test -p omnigate --test chat_routes
+cargo test -p svc-gateway --test product_routes_proxy
+npm run build
+npm run check:rust:mac-media
+npm run tauri:dev:mac-media
+```
+
+Possible new tests later:
+
+```text
+cargo test -p omnigate --test chat_paid_messages
+cargo test -p svc-gateway --test chat_paid_routes_proxy
+```
+
+---
+
+## 18. Demo vision after next few passes
+
+The impressive near-term demo should be:
+
+```text
+Creator creates a paid chat room.
+Visitor B pays ROC to send a message.
+Message appears with receipt chip.
+Creator balance increases.
+Chat can attach to stream or podcast.
+Podcast audio can be minted and paid-listened.
+Stream page can show stream-lite paid viewing.
+All pages look sleek and consistent.
+Zoom out works enough to demo full pages.
+```
+
+This creates a strong “next internet” demo:
+
+```text
+content-addressed assets
+portable identity
+internal ROC value plane
+paid access
+paid social actions
+creator ownership
+portable chats
+redundant storage without ownership theft
+```
+
+Do not jump to QuickChain, external settlement, public bridge, or arbitrary executable facets yet.
+
+---
+
+## 19. One-line direction
+
+The next phase should be:
+
+```text
+Finish paid chat E2E, then consolidate the app into a polished creator-native Tauri product, while adding ownership uniqueness so redundancy cannot become theft.
+```
+
+
+### END NOTE - MAY 25 2025 - 08:05 CST
+
+
+### BEGIN NOTE - MAY 26 2026 - 12:45 CST
+
+Absolutely, this is a good stopping point for chat. We proved the important pieces, and the remaining issues are now clear enough to carry forward cleanly.
+
+The current codebase has the right chat architecture direction: the Tauri bundle includes the chat page/component/client stack, and the Rust bundle shows `omnigate` chat now targets b3-addressed descriptors, in-memory live messages, and paid send through `svc-wallet`.   The frontend still has the five chat tabs defined as Room, Builder, Publish, Moderation, and Developer, which makes sense for `crab://chat` studio mode but is too much for a generated room link.  The generic `AssetPage` also still exposes a lot of “gateway truth boundary” developer framing, which is exactly the kind of clutter we should start removing or hiding behind advanced/debug modes. 
+
+## Carryover notes for next session
+
+### Current milestone status
+
+We made major progress on CrabLink Tauri chat.
+
+The working canonical chatroom test link is:
+
+```text
+crab://802419d6f56a8fe41a667a45a5097dd877fce7c5b8ed91666f09cea56ca2dd00.chat
+```
+
+What is proven:
+
+```text
+crab://chat studio page exists and looks modern.
+Builder / Publish / Room / Moderation / Developer tabs exist.
+Free backend chat room worked earlier.
+Paid in-memory chat room worked earlier.
+Wallet B paid Wallet A successfully earlier.
+ROC deducted correctly when the backend room was loaded in memory.
+Receipt / tx / ledger chips appeared on the message.
+Canonical .chat route now routes to ChatPage instead of generic AssetPage.
+Local preview no longer falsely says “Message removed by moderator.”
+Enter-to-send behavior was added.
+Shift+Enter remains the intended newline behavior.
+```
+
+What is not finished:
+
+```text
+Generated crab://<b3hash>.chat link is still stuck resolving.
+Because the canonical room is not hydrated, messages typed there are local preview only.
+No ROC transfer occurs from the generated canonical link yet.
+The UI correctly says local preview / resolving, but the actual paid backend room is not loaded.
+Live messages are still not durable and are not descriptor hash truth.
+No durable message log yet.
+No svc-mailbox fanout yet.
+No real moderation authority yet.
+```
+
+The key distinction to remember:
+
+```text
+crab://<b3hash>.chat = canonical b3 descriptor for the room.
+Live messages = still backend event state / in-memory proof for now.
+Paid message receipt = economic truth for a paid message send.
+Receipt display cache = display-only, not entitlement or ledger truth.
+```
+
+## Chat page note for when we return
+
+Do **not** start over. The chat page is mostly good from a UX/UI standpoint. The next chat-specific fix should be targeted.
+
+### Chat bug 1: canonical room resolve is not hydrating
+
+Observed behavior:
+
+```text
+Opening crab://802419d6f56a8fe41a667a45a5097dd877fce7c5b8ed91666f09cea56ca2dd00.chat
+routes to ChatPage correctly,
+but page remains stuck in “Resolving canonical chat descriptor.”
+```
+
+Consequences:
+
+```text
+backendRoomPage is empty
+backendReady is false
+typed messages become local preview only
+no quote call happens
+no paid send happens
+no ROC transfer happens
+```
+
+Next chat backend/frontend debugging path:
+
+```text
+1. Curl the route directly:
+   GET /chat/resolve?url=crab://<hash>.chat
+
+2. Confirm whether svc-gateway forwards /chat/resolve correctly.
+
+3. Confirm whether omnigate resolves:
+   a. in-memory room by room_id
+   b. canonical b3 CID by fetching descriptor from svc-storage
+
+4. Confirm svc-storage can read the stored descriptor at /o/b3:<hash> or whatever path the current storage API expects.
+
+5. Add bounded timeout / structured problem JSON for canonical chat resolve.
+   The UI should not spin forever.
+
+6. If storage fetch path is wrong, patch omnigate chat.rs to use the same storage read/write path style used by image/music/podcast assets.
+```
+
+Expected successful behavior after that patch:
+
+```text
+Open crab://<64hex>.chat
+→ ChatPage loads
+→ /chat/resolve returns room descriptor
+→ backendReady becomes true
+→ button changes to “Quote paid message · 1 ROC”
+→ Enter creates quote
+→ Confirm paid send moves ROC through svc-wallet
+→ message appears only after backend receipt
+```
+
+### Chat bug 2: canonical room view should not show all studio tabs
+
+The current tab set is appropriate for `crab://chat` builder/studio mode:
+
+```text
+Room
+Builder
+Publish
+Moderation
+Developer
+```
+
+But for a generated room URL like:
+
+```text
+crab://<64hex>.chat
+```
+
+the UI should be visitor-first and much cleaner.
+
+Recommended behavior:
+
+```text
+crab://chat
+  Full studio mode:
+    Room
+    Builder
+    Publish
+    Moderation
+    Developer
+
+crab://<64hex>.chat
+  Public room mode:
+    Room only by default
+    Info / Receipts maybe as subtle secondary panels
+    Hide Builder and Publish
+    Hide Developer unless debug mode is enabled
+    Show Moderation only if backend says viewer can moderate
+```
+
+Creator/admin controls should be conditional:
+
+```text
+If current passport/wallet matches room owner:
+  show “Manage room” button
+  expand Builder / Publish / Moderation controls behind a drawer or settings panel
+
+If visitor:
+  show only chat, pinned note, price, receipt chips, and room info
+```
+
+This will make generated room links feel like real user-facing pages instead of internal tooling.
+
+### Chat bug 3: local preview should not feel like sent chat
+
+Local preview is useful while resolving, but it should be visually distinct.
+
+Recommended copy:
+
+```text
+Local preview only
+Not sent
+Would cost 1 ROC
+No receipt
+```
+
+Avoid language that implies moderation or backend rejection unless the backend actually returned a moderation response.
+
+## Next major session direction: UI cleanup and UX enhancement
+
+The next session should shift away from deep chat plumbing and focus on **CrabLink Tauri product polish**.
+
+The pages that feel close to done:
+
+```text
+Chat page: mostly done visually; needs canonical resolve + simplified generated-room mode.
+Podcast page: mostly done UX; knobs/polish can come later.
+Stream page: impressive UX; backend streaming remains future, but current studio polish is strong.
+Music page: functional paid listen path already proven.
+```
+
+The pages that need cleanup:
+
+```text
+Image page
+Generic Asset page
+Post page
+Comment page
+Article page
+Video page if still cluttered
+Site builder / site view if developer panels are too exposed
+Library / receipts drawer if hashes overflow
+Any route that still shows large truth-boundary/dev JSON blocks by default
+```
+
+The codebundle confirms the Tauri app currently has a broad set of product pages, including image, asset, article, comment, music, podcast, stream, site, and many future facet routes.  The next work should not add more routes; it should make existing routes feel like real product surfaces.
+
+## UX doctrine for cleanup
+
+Use this rule:
+
+```text
+Default view = creator/user product experience.
+Advanced view = optional power-user settings.
+Developer view = hidden behind debug/advanced toggle.
+```
+
+Every page should answer these questions first:
+
+```text
+What is this?
+Who owns it?
+What can I do with it?
+Does it cost ROC?
+What will happen when I click the main button?
+Where is my receipt or link after success?
+```
+
+It should not lead with:
+
+```text
+route owner
+schema name
+gateway truth boundary
+raw JSON
+correlation ID
+debug status
+giant hash blocks
+internal warnings
+```
+
+Those can still exist, but behind:
+
+```text
+Advanced
+Details
+Developer JSON
+Diagnostics
+```
+
+## Two minting modes
+
+This is important and should become a common design pattern across assets.
+
+### 1. Simple Mint
+
+For normal users and demos.
+
+Fields should be minimal:
+
+```text
+Upload / choose file
+Title
+Optional description
+Price / access mode
+Mint button
+```
+
+Simple flow:
+
+```text
+Choose file
+Preview
+Prepare
+Show price
+Confirm mint
+Backend stores bytes
+Backend returns crab://<hash>.<kind>
+Show copy link + open link
+```
+
+Simple Mint should hide:
+
+```text
+raw descriptor JSON
+advanced metadata
+manual payout bps
+rendition internals
+policy objects
+correlation IDs
+receipt internals
+gateway route details
+```
+
+But it must still preserve invariants:
+
+```text
+no silent spend
+show ROC quote before mint
+backend receipt only
+b3 hash comes from backend/storage
+no fake ownership
+no local-only mint truth
+```
+
+### 2. Advanced Mint
+
+For creators, power users, and debugging.
+
+Fields can include:
+
+```text
+Title
+Description
+Tags
+Alt text
+License
+Creator display
+Owner passport
+Owner wallet account
+Payout split
+Attached chat room
+Attached site/profile
+Visibility
+Access mode
+Price
+Renditions
+Content warnings
+Policy notes
+Developer JSON preview
+Receipt details after success
+```
+
+Advanced Mint should still be safe:
+
+```text
+React owns display/user intent only.
+No private keys.
+No local wallet authority.
+No fake receipt.
+No direct ledger mutation.
+Backend truth only.
+```
+
+## Suggested component pattern
+
+Create reusable mint layout components eventually:
+
+```text
+MintModeToggle.jsx
+SimpleMintPanel.jsx
+AdvancedMintPanel.jsx
+MintQuoteCard.jsx
+MintSuccessCard.jsx
+ReceiptChip.jsx
+CrabUrlCopyCard.jsx
+DeveloperDetailsDisclosure.jsx
+```
+
+Use them across:
+
+```text
+Image
+Music
+Podcast
+Video
+Post
+Article
+Comment
+Stream descriptor publish
+Chat room descriptor publish
+```
+
+The goal is consistency: every minting lane should feel like the same product, not a different prototype.
+
+## Specific cleanup targets
+
+### Image page
+
+This should probably be first.
+
+Current issue:
+
+```text
+Image page likely still has too much dev/boundary clutter.
+It should become the cleanest example of Simple Mint vs Advanced Mint.
+```
+
+Target default layout:
+
+```text
+Hero: Mint an image
+Left: upload/dropzone + preview
+Right: Simple Mint card
+Bottom: recent result / copy link / open asset
+Advanced collapsed below
+```
+
+Simple fields:
+
+```text
+Image file
+Title
+Description optional
+Price/access
+Mint button
+```
+
+Advanced fields:
+
+```text
+Tags
+Alt text
+Payout split
+Owner wallet
+Owner passport
+Rendition options
+Attach chat
+Attach to site/profile
+Developer JSON
+```
+
+### Generic Asset page
+
+Current `AssetPage` is useful but developer-heavy. It explicitly presents itself as a typed asset route and truth-boundary reader, which is correct internally but too technical for normal users. 
+
+Better default:
+
+```text
+Asset title / kind
+Preview if available
+Owner / creator
+Price or access status
+Open / Pay / Copy link
+Receipt chips
+```
+
+Move to Advanced:
+
+```text
+CID
+hash
+manifest JSON
+gateway status
+correlation ID
+route owner
+diagnostics
+problem JSON
+```
+
+### Post / Comment / Article pages
+
+Use the same simple/advanced split.
+
+Simple:
+
+```text
+Write text
+Title if article
+Price/access
+Publish
+Copy crab URL
+```
+
+Advanced:
+
+```text
+Tags
+Parent thread/comment link
+Attached site/profile
+Payout split
+Developer JSON
+Policy details
+```
+
+### Video / Music / Podcast pages
+
+These are mostly functional, but later they should share a unified media publish pattern:
+
+```text
+Upload media
+Preview locally
+Set title/description
+Set paid access
+Mint
+Open paid view
+```
+
+Advanced:
+
+```text
+Renditions
+Duration metadata
+Cover art
+Transcript/lyrics
+Attached chat
+License
+Payout split
+Developer JSON
+```
+
+Podcast page note:
+
+```text
+Podcast file mint/play is proven.
+Live podcast backend streaming is not proven yet.
+Do not imply live podcast transport is production-ready.
+```
+
+Stream page note:
+
+```text
+Stream studio UX is strong.
+Bounded stream-lite latest-frame/segment paid viewing was proven around ~1fps.
+Full backend streaming remains future work.
+Do not over-polish backend streaming claims yet.
+```
+
+## Recommended next session plan
+
+Start with a Tauri-only UX cleanup batch. Avoid backend changes unless a route is directly blocking UI proof.
+
+### Batch 1: Image page simple/advanced mint
+
+Files likely needed:
+
+```text
+apps/crablink-tauri/src/pages/image/ImagePage.jsx
+apps/crablink-tauri/src/pages/image/ImageCreate.jsx
+apps/crablink-tauri/src/pages/image/ImagePreview.jsx
+apps/crablink-tauri/src/pages/image/ImagePublishFlow.jsx
+apps/crablink-tauri/src/pages/image/ImageManifest.jsx
+apps/crablink-tauri/src/pages/image/ImageRenditions.jsx
+apps/crablink-tauri/src/pages/image/image.css
+apps/crablink-tauri/src/pages/image/imageDraftModel.js
+```
+
+Goal:
+
+```text
+Make image minting feel like a consumer product.
+Keep advanced settings available but collapsed.
+Keep current paid upload/mint flow intact.
+Do not break backend headers or paid proof flow.
+```
+
+### Batch 2: Generic Asset page cleanup
+
+Files likely needed:
+
+```text
+apps/crablink-tauri/src/pages/asset/AssetPage.jsx
+apps/crablink-tauri/src/pages/asset/AssetResolver.jsx
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/pages/asset/AssetContentViewAccess.jsx
+apps/crablink-tauri/src/pages/asset/asset.css
+```
+
+Goal:
+
+```text
+Make asset pages reader/viewer-first.
+Hide problem JSON and gateway internals behind Details.
+Improve long hash wrapping.
+Make paid access state obvious.
+Make receipt chips attractive and compact.
+```
+
+### Batch 3: Text asset cleanup
+
+Files likely needed:
+
+```text
+apps/crablink-tauri/src/pages/post/*
+apps/crablink-tauri/src/pages/article/*
+apps/crablink-tauri/src/pages/comment/*
+```
+
+Goal:
+
+```text
+Unified text publish UI.
+Simple publish first.
+Advanced metadata collapsed.
+Receipt/link success card consistent.
+```
+
+### Batch 4: Shared UX primitives
+
+After cleaning one or two pages manually, extract common components.
+
+Possible shared components:
+
+```text
+ProductHero
+SimpleAdvancedToggle
+MintModeTabs
+ReceiptProofStrip
+CrabUrlSuccessCard
+HashDetailDisclosure
+TruthBoundaryDisclosure
+```
+
+Keep it lightweight; do not over-abstract before two pages prove the pattern.
+
+## Testing gates for next session
+
+Run Tauri checks after every batch:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+npm run check:rust:mac-media
+npm run tauri:dev:mac-media
+```
+
+For backend-sensitive pages, also keep RustyOnions stack green:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+cargo test -p omnigate --test chat_routes
+cargo test -p svc-gateway --test product_routes_proxy
+```
+
+But for the next UI cleanup session, prefer frontend-only changes unless backend behavior is required.
+
+## Non-negotiable invariants to preserve
+
+```text
+No fake ROC.
+No fake receipts.
+No silent spend.
+No local unlock of paid content from cache alone.
+No client-side ownership truth.
+No direct ledger mutation outside svc-wallet.
+No direct storage/index/wallet calls from Tauri React.
+Gateway-first.
+Tauri Rust remains native trust boundary.
+React displays intent and backend truth only.
+Receipt cache is display-only.
+b3 hash is canonical truth for stored assets/descriptors.
+crab:// links are navigation, not authority.
+```
+
+## Best immediate next action
+
+Next session should begin with:
+
+```text
+“Let’s clean up the Image page and create Simple Mint / Advanced Mint mode.”
+```
+
+Ask for or use the freshest Tauri bundle, then patch the image page first. That will establish the design language we can reuse across asset, post, article, comment, video, music, and podcast pages.
+
+
+### END NOTE - MAY 26 2026 - 12:45 CST
+
+
+
+### BEGIN NOTE - MAY 26 2026 - 14:55 CST
+
+Below are the carryover notes for the next session. These notes should be used as the starting point for implementing **automatic image rendition minting** in CrabLink Tauri.
+
+# CrabLink Tauri Carryover Notes — Image Rendition Minting
+
+## Current project state
+
+We are continuing work on **CrabLink Tauri**, which is now the primary product/client layer. Chrome remains proof/companion/smoke surface, but major new UX/product work should target Tauri first.
+
+The current Image page has been cleaned up into the desired **one-card Simple Mint UX**:
+
+```text
+Select image / preview surface
+→ title
+→ description
+→ backend quote
+→ explicit ROC confirmation
+→ mint
+→ returned crab:// URL
+→ advanced drawer collapsed
+```
+
+This one-card Simple Mint layout is now the reference pattern for other page types later: video, music, podcast, post, article, comment, site, chat room descriptor, and stream descriptor.
+
+The latest codebundle still shows the active Tauri image page lane, including `ImagePage.jsx`, `ImagePublishFlow.jsx`, `ImageRenditions.jsx`, `ImageManifest.jsx`, `imageDraftModel.js`, and `image.css`. The current bundle also confirms the Tauri image upload bridge is routed through `upload_image_asset_gateway`, a narrow Rust command that posts to `/assets/image` with bounded image bytes and paid proof headers. 
+
+## Important correction from this session
+
+Do **not** add payment splits or custom ROC price fields right now.
+
+Older carryover notes mentioned payout split fields as possible advanced metadata, but the current direction is different: the UI cleanup is about moving clutter into Advanced drawers, not expanding economics. The current Image page should only use backend quote/hold/mint behavior. Payment splits and custom pricing are future features and should stay out of this batch.
+
+Use this rule:
+
+```text
+Allowed now:
+  tags
+  alt text
+  image use cases
+  rendition preferences
+  source/provenance notes
+  rights hint
+  manifest preview
+  developer JSON
+
+Not now:
+  payment split UI
+  custom ROC price UI
+  local balance/receipt invention
+  fake b3/rendition links
+```
+
+## What we accomplished in the Image page cleanup
+
+The Image page was transformed from a developer-heavy form into a product-first Simple Mint page.
+
+The desired simple UX is:
+
+```text
+One primary creator card
+Preview/select image at top
+Title and description under preview
+Backend quote/confirm/mint controls below form
+Advanced options collapsed
+Developer JSON collapsed
+```
+
+This replaced the bad UX where the page had multiple screens worth of quote/hold/upload details visible. The current direction matches the Tauri migration principle that normal users should see product intent, while route truth, JSON, gateway status, and diagnostics stay behind details drawers. The notes already identify Image as the first cleanup target and say it should become the cleanest Simple Mint / Advanced Mint example. 
+
+The Image page now has the right advanced concept:
+
+```text
+Advanced image options
+  tags
+  alt text
+  source/provenance
+  rights hint
+  use cases
+  rendition preferences
+  manifest preview
+  route truth
+```
+
+The important UX insight: the creator should **not** manually paste rendition URLs. Rendition links are backend results, not form inputs.
+
+## Core idea for next session
+
+The next step is to implement automatic image rendition minting.
+
+The user wants this behavior:
+
+```text
+Creator uploads one source image
+→ CrabLink automatically creates selected resized versions
+→ original is minted as canonical .image
+→ each generated rendition is minted as its own .image asset
+→ main/original manifest links to all renditions
+→ each rendition manifest links back to the original
+→ embeds can automatically choose the best image for desktop/mobile/tablet/thumbnail/etc.
+```
+
+The user specifically mentioned:
+
+```text
+album cover
+video thumbnail
+film cover
+desktop
+mobile
+tablet
+thumbnail
+possibly other use cases later
+```
+
+Important product model:
+
+```text
+album cover is not a new asset kind
+video thumbnail is not a new asset kind
+film cover is not a new asset kind
+profile avatar is not a new asset kind
+site banner is not a new asset kind
+
+They are all use cases for canonical .image assets.
+```
+
+Every generated version should still be a real b3-backed image asset:
+
+```text
+original image  → b3:<hash> → crab://<hash>.image
+desktop image   → b3:<hash> → crab://<hash>.image
+tablet image    → b3:<hash> → crab://<hash>.image
+mobile image    → b3:<hash> → crab://<hash>.image
+thumbnail image → b3:<hash> → crab://<hash>.image
+album cover     → b3:<hash> → crab://<hash>.image
+video thumbnail → b3:<hash> → crab://<hash>.image
+film cover      → b3:<hash> → crab://<hash>.image
+```
+
+## Important architecture boundary
+
+This should not become a hidden multi-spend frontend trick.
+
+Paid actions must remain explicit. The current Image route uses an explicit prepare → ROC hold → upload flow, and the existing Tauri bridge has a narrow command for raw image upload. The carryover notes confirm the command is intentionally fixed-route, bounded, requires paid proof headers, requires `image/*`, uses the configured gateway, and does not call storage/index/ledger directly. 
+
+The risky shortcut would be:
+
+```text
+User clicks mint once
+→ frontend silently uploads 5 images
+→ same hold proof reused or multiple holds hidden
+→ unclear receipts
+→ unclear accounting
+```
+
+Do **not** do that.
+
+The correct long-term model is a backend-supported image bundle flow:
+
+```text
+POST /assets/image/bundle/prepare
+POST /assets/image/bundle
+```
+
+The frontend sends:
+
+```text
+original image bytes
+requested rendition targets
+use cases
+title/description/tags/alt text
+payer wallet
+passport subject
+```
+
+The backend/gateway/wallet path returns:
+
+```text
+canonical original image asset
+rendition group ID
+rendition asset list
+backend receipt/proof
+manifest links
+actual b3 CIDs
+actual crab URLs
+```
+
+## Recommended implementation strategy
+
+### Phase 0 — Inspect current code and clean dead pieces carefully
+
+Start by confirming the current Image route imports only the new one-card components.
+
+Run:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+grep -R "ImageCreate\|ImagePreview" -n src/pages/image src | cat
+```
+
+If `ImageCreate.jsx` and `ImagePreview.jsx` are no longer imported anywhere, delete them:
+
+```bash
+rm src/pages/image/ImageCreate.jsx
+rm src/pages/image/ImagePreview.jsx
+```
+
+Be careful: do not delete files simply because they look old. Delete only after import search proves they are unused. The current codebundle still lists those files in the image directory, so this cleanup check should happen at the start of the next session. 
+
+Also search for outdated manual rendition URL fields:
+
+```bash
+grep -R "canonicalImageCrabUrl\|desktopRenditionCrabUrl\|mobileRenditionCrabUrl\|thumbnailCrabUrl\|posterCrabUrl" -n src/pages/image src/shared | cat
+```
+
+Those fields should no longer be part of the normal Image advanced UX. If they remain in old components only, remove the old component. If they remain in the current draft model, replace them with `useCases` and `renditionTargets`.
+
+### Phase 1 — Frontend planning only, no hidden minting yet
+
+Make sure the Image page draft model cleanly expresses requested renditions and use cases.
+
+Expected draft shape:
+
+```js
+{
+  title: "",
+  description: "",
+  altText: "",
+  tags: "image, creator",
+  accessMode: "public_preview",
+  useCases: [
+    "standalone_image"
+  ],
+  renditionTargets: [
+    "desktop",
+    "tablet",
+    "mobile",
+    "thumbnail"
+  ],
+  sourceMode: "creator_original",
+  rightsMode: "creator_owned_original",
+  creatorDisplay: "",
+  provenanceNote: ""
+}
+```
+
+Possible use cases:
+
+```text
+standalone_image
+album_cover
+podcast_cover
+video_thumbnail
+film_cover
+article_hero
+profile_avatar
+profile_banner
+site_logo
+site_banner
+game_cover
+ad_creative
+```
+
+Possible rendition targets:
+
+```text
+desktop
+tablet
+mobile
+thumbnail
+square_avatar
+cover_square
+poster
+wide_banner
+```
+
+Simple form should remain clean. Use cases/renditions belong in Advanced, not on the default form.
+
+### Phase 2 — Add local rendition generation utility
+
+Create a new frontend utility for local image resizing, likely:
+
+```text
+apps/crablink-tauri/src/pages/image/imageRenditionGenerator.js
+```
+
+Purpose:
+
+```text
+Input:
+  original File/Blob
+  selected rendition targets
+  optional crop/fit policy
+
+Output:
+  array of generated Blob/File-like objects
+  role
+  width
+  height
+  contentType
+  bytes
+  local preview URL optional
+```
+
+Preferred browser APIs:
+
+```text
+createImageBitmap(file)
+OffscreenCanvas if available
+HTMLCanvasElement fallback
+canvas.toBlob()
+```
+
+Keep it bounded:
+
+```text
+maximum input file size: respect existing MVP cap unless intentionally changed
+maximum output count: selected targets only
+maximum output width/height per target
+prefer image/webp for generated renditions if supported
+fallback to image/png or original type when needed
+do not store generated bytes in localStorage
+revoke preview URLs
+do not generate unbounded canvases
+```
+
+Suggested target definitions:
+
+```js
+desktop: {
+  role: "desktop",
+  maxWidth: 1920,
+  maxHeight: 1920,
+  fit: "contain",
+  contentType: "image/webp",
+  quality: 0.86
+}
+
+tablet: {
+  role: "tablet",
+  maxWidth: 1280,
+  maxHeight: 1280,
+  fit: "contain",
+  contentType: "image/webp",
+  quality: 0.84
+}
+
+mobile: {
+  role: "mobile",
+  maxWidth: 768,
+  maxHeight: 768,
+  fit: "contain",
+  contentType: "image/webp",
+  quality: 0.82
+}
+
+thumbnail: {
+  role: "thumbnail",
+  maxWidth: 320,
+  maxHeight: 320,
+  fit: "contain",
+  contentType: "image/webp",
+  quality: 0.8
+}
+
+cover_square: {
+  role: "cover_square",
+  width: 1400,
+  height: 1400,
+  fit: "cover",
+  contentType: "image/webp",
+  quality: 0.86
+}
+
+square_avatar: {
+  role: "square_avatar",
+  width: 512,
+  height: 512,
+  fit: "cover",
+  contentType: "image/webp",
+  quality: 0.84
+}
+
+poster: {
+  role: "poster",
+  width: 1080,
+  height: 1600,
+  fit: "cover",
+  contentType: "image/webp",
+  quality: 0.86
+}
+
+wide_banner: {
+  role: "wide_banner",
+  width: 1600,
+  height: 500,
+  fit: "cover",
+  contentType: "image/webp",
+  quality: 0.84
+}
+```
+
+Do not overcomplicate crop controls yet. For the first implementation, use center crop for cover-style targets and contain for responsive targets. Later we can add manual crop framing.
+
+### Phase 3 — Add a result preview before actual backend bundle minting
+
+Add a collapsed or compact preview section in Advanced:
+
+```text
+Generated renditions preview
+  desktop — 1920 wide — estimated bytes
+  tablet — 1280 wide — estimated bytes
+  mobile — 768 wide — estimated bytes
+  thumbnail — 320 wide — estimated bytes
+  cover square — 1400x1400 — estimated bytes
+```
+
+This should be labeled clearly as local generated previews, not minted assets.
+
+Important text:
+
+```text
+These renditions are local generated bytes until the backend mint flow returns b3 CIDs and crab URLs.
+```
+
+### Phase 4 — Decide between two implementation paths
+
+There are two possible next-session implementation paths.
+
+## Path A — Tauri/frontend proof using current image upload route
+
+This can be done faster, but must be handled carefully.
+
+Process:
+
+```text
+1. User selects image and rendition targets.
+2. User clicks Get Quote.
+3. UI should quote the whole planned operation somehow.
+4. User confirms one explicit mint operation.
+5. Tauri generates renditions locally.
+6. Upload original and generated renditions sequentially through existing image upload route.
+7. Display returned URLs/CIDs in a bundle result card.
+```
+
+Problem: the current backend may not support one quote/hold covering multiple image uploads. Reusing a single paid proof across multiple uploads may be rejected or semantically wrong. Creating separate hidden holds for each rendition would be bad UX and could violate the explicit-spend rule.
+
+Therefore, Path A should be used only as a clearly labeled proof if we can make the spend confirmation honest:
+
+```text
+"Mint original + N generated renditions"
+"Backend quote covers this whole operation"
+```
+
+If the backend cannot quote the whole bundle, do not fake it.
+
+A safer Path A variation:
+
+```text
+Generate renditions locally
+Mint only the original through the existing paid flow
+Show local rendition previews as "not minted yet"
+Defer true rendition minting until backend bundle route exists
+```
+
+## Path B — Correct backend-supported image bundle route
+
+This is the preferred production direction.
+
+Need RustyOnions/backend changes, likely in:
+
+```text
+ron-proto       — DTOs for image bundle prepare/publish/result
+omnigate        — product route handling and hydration shape
+svc-gateway     — proxy route
+svc-storage     — stores bytes by b3 as usual
+svc-wallet      — quote/hold/capture remains wallet path
+ron-ledger      — unchanged durable economic truth
+```
+
+Possible new routes:
+
+```text
+POST /assets/image/bundle/prepare
+POST /assets/image/bundle
+GET  /b3/<hash>.image
+GET  /crab/resolve?url=crab://<hash>.image
+```
+
+Possible frontend client methods:
+
+```js
+assetClient.prepareImageBundle(payload)
+assetClient.uploadImageBundle({
+  originalFile,
+  renditions,
+  metadata,
+  paidProof,
+  idempotencyKey
+})
+```
+
+Possible Tauri command:
+
+```text
+upload_image_bundle_asset_gateway
+```
+
+But be careful: Tauri commands should stay small, typed, bounded, allowlisted, fixed-route, redacted, and gateway-first. The current fixed route `upload_image_asset_gateway` is the good model. The Tauri command bridge should not become generic `upload_anything`, `raw_request`, or `execute` style.
+
+A bundle command might accept:
+
+```json
+{
+  "headers": {},
+  "original": {
+    "contentType": "image/png",
+    "bodyBytes": []
+  },
+  "renditions": [
+    {
+      "role": "desktop",
+      "contentType": "image/webp",
+      "width": 1920,
+      "height": 1080,
+      "bodyBytes": []
+    }
+  ],
+  "idempotencyKey": "..."
+}
+```
+
+But this may be too large for the bridge if many renditions are included. Consider whether the backend route should accept multipart upload. If using JSON arrays of bytes, keep strict caps.
+
+## Recommended next-session plan
+
+Start with frontend groundwork, then decide whether RustyOnions backend bundle support is needed immediately.
+
+### Step 1 — Verify current Image page and upload still work
+
+Run:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+npm run tauri:dev:mac-media
+```
+
+Manual smoke:
+
+```text
+open crab://image
+choose image under current cap
+enter title/description
+get quote
+confirm ROC & mint
+copy/open returned crab://<hash>.image
+verify image renders
+```
+
+The current binary image upload path depends on `upload_image_asset_gateway`, which is already the dedicated Tauri bridge for image bytes. The current bundle shows that command posts to `/assets/image`, uses the image asset kind, sets schema `crablink.tauri.image-asset-upload-response.v1`, and enforces `image/` MIME prefix. 
+
+### Step 2 — Clean old Image files
+
+Only after imports are checked:
+
+```bash
+grep -R "ImageCreate\|ImagePreview" -n src | cat
+```
+
+If unused:
+
+```bash
+rm src/pages/image/ImageCreate.jsx
+rm src/pages/image/ImagePreview.jsx
+```
+
+Then:
+
+```bash
+npm run build
+```
+
+### Step 3 — Add `imageRenditionGenerator.js`
+
+Implement local browser-side generation for:
+
+```text
+desktop
+tablet
+mobile
+thumbnail
+cover_square
+square_avatar
+poster
+wide_banner
+```
+
+Keep it display/planning only at first.
+
+Return shape:
+
+```js
+{
+  role: "desktop",
+  label: "Desktop",
+  width: 1920,
+  height: 1080,
+  contentType: "image/webp",
+  bytes: 123456,
+  blob,
+  fileName: "original.desktop.webp",
+  previewUrl
+}
+```
+
+Need cleanup function for preview URLs.
+
+### Step 4 — Update `ImageRenditions.jsx`
+
+Add a button:
+
+```text
+Generate local previews
+```
+
+Show local generated outputs:
+
+```text
+Desktop      1920×1080    123 KB    local preview only
+Mobile       768×432      48 KB     local preview only
+Thumbnail    320×180      12 KB     local preview only
+```
+
+Label clearly:
+
+```text
+Not minted yet — no b3 CID or crab URL until backend mint returns.
+```
+
+### Step 5 — Update `ImagePublishFlow.jsx` to be bundle-aware, but not misleading
+
+Add awareness of selected rendition targets.
+
+The primary action can say:
+
+```text
+Get Bundle Quote
+```
+
+or, if backend bundle route is not implemented yet:
+
+```text
+Get Image Quote
+```
+
+Do not say “Mint all renditions” unless the code actually mints all renditions and returns backend truth for all of them.
+
+Possible interim wording:
+
+```text
+Mint original now
+```
+
+and in Advanced:
+
+```text
+Rendition generation is planned. Local previews do not mint b3 assets yet.
+```
+
+### Step 6 — If implementing MVP multi-upload proof, make spend semantics explicit
+
+If we choose to attempt multi-upload with the existing route, the UI must show:
+
+```text
+This will mint:
+  original
+  desktop
+  tablet
+  mobile
+  thumbnail
+
+Total backend quote:
+  <backend amount> ROC
+
+Confirm ROC & Mint Bundle
+```
+
+Do not make five independent hidden wallet holds. Do not silently spend.
+
+If the backend cannot quote the bundle, stop and implement backend route first.
+
+### Step 7 — Add backend bundle route in RustyOnions if needed
+
+For correct implementation, next session may need latest RustyOnions codebundle too.
+
+Potential DTOs:
+
+```rust
+ImageBundlePrepareRequest {
+    payer_account: String,
+    owner_passport_subject: Option<String>,
+    title: String,
+    description: Option<String>,
+    tags: Vec<String>,
+    use_cases: Vec<String>,
+    renditions: Vec<ImageRenditionTarget>,
+    original_bytes: u64,
+}
+
+ImageRenditionTarget {
+    role: String,
+    width: Option<u32>,
+    height: Option<u32>,
+    content_type: Option<String>,
+    fit: Option<String>,
+}
+
+ImageBundlePublishRequest {
+    metadata: ImageBundleMetadata,
+    original: ImageUploadPart,
+    renditions: Vec<ImageUploadPart>,
+    paid_proof: PaidProof,
+}
+
+ImageBundlePublishResponse {
+    canonical: ImageAssetRef,
+    rendition_group: ImageRenditionGroup,
+    receipt: WalletReceiptRef,
+}
+```
+
+Possible response shape:
+
+```json
+{
+  "schema": "crablink.image-bundle-publish-response.v1",
+  "canonical": {
+    "role": "original",
+    "cid": "b3:<original_hash>",
+    "url": "crab://<original_hash>.image",
+    "width": 3000,
+    "height": 2000,
+    "content_type": "image/png"
+  },
+  "rendition_group": {
+    "id": "img_rg_<stable_id>",
+    "original": "crab://<original_hash>.image",
+    "renditions": [
+      {
+        "role": "desktop",
+        "cid": "b3:<desktop_hash>",
+        "url": "crab://<desktop_hash>.image",
+        "width": 1920,
+        "height": 1280,
+        "content_type": "image/webp"
+      },
+      {
+        "role": "mobile",
+        "cid": "b3:<mobile_hash>",
+        "url": "crab://<mobile_hash>.image",
+        "width": 768,
+        "height": 512,
+        "content_type": "image/webp"
+      },
+      {
+        "role": "thumbnail",
+        "cid": "b3:<thumb_hash>",
+        "url": "crab://<thumb_hash>.image",
+        "width": 320,
+        "height": 213,
+        "content_type": "image/webp"
+      }
+    ]
+  },
+  "receipt": {
+    "txid": "...",
+    "receipt_hash": "..."
+  }
+}
+```
+
+Each rendition should also have enough manifest information to link back:
+
+```json
+{
+  "kind": "image",
+  "role": "mobile",
+  "cid": "b3:<mobile_hash>",
+  "url": "crab://<mobile_hash>.image",
+  "rendition_group_id": "img_rg_<stable_id>",
+  "canonical_original": "crab://<original_hash>.image",
+  "derived_from": "b3:<original_hash>",
+  "width": 768,
+  "height": 512,
+  "content_type": "image/webp"
+}
+```
+
+## Manifest doctrine for renditions
+
+The original image manifest should become the canonical manifest for the group:
+
+```json
+{
+  "kind": "image",
+  "canonical": {
+    "cid": "b3:<original_hash>",
+    "url": "crab://<original_hash>.image",
+    "width": 3000,
+    "height": 2000,
+    "content_type": "image/png"
+  },
+  "use_cases": [
+    "standalone_image",
+    "album_cover",
+    "video_thumbnail",
+    "film_cover"
+  ],
+  "rendition_group": {
+    "id": "img_rg_<stable_id>",
+    "original": "crab://<original_hash>.image",
+    "renditions": [
+      {
+        "role": "desktop",
+        "url": "crab://<desktop_hash>.image",
+        "cid": "b3:<desktop_hash>",
+        "width": 1920,
+        "height": 1280,
+        "content_type": "image/webp"
+      }
+    ]
+  }
+}
+```
+
+Each generated rendition should carry back-reference metadata:
+
+```json
+{
+  "kind": "image",
+  "role": "desktop",
+  "canonical_original": "crab://<original_hash>.image",
+  "rendition_group_id": "img_rg_<stable_id>",
+  "derived_from": "b3:<original_hash>"
+}
+```
+
+The embed rule should be simple:
+
+```text
+Load canonical image manifest.
+Read rendition_group.renditions.
+Pick best target for device/slot/DPR.
+Render that crab:// image.
+Fallback to original if no match exists.
+```
+
+## Key invariants for next session
+
+Preserve these strictly:
+
+```text
+Tauri is primary.
+Gateway-first.
+React owns display and intent only.
+Tauri Rust mediates native/binary operations.
+No raw generic command bridge.
+No run/execute/eval/shell/raw_* commands.
+No direct storage/index/ledger calls from UI.
+No fake b3 CIDs.
+No fake rendition URLs.
+No fake receipts.
+No fake balances.
+No silent ROC spend.
+No custom ROC pricing UI in this batch.
+No payment split UI in this batch.
+No local cache unlocking paid content.
+Every minted rendition must be backend-returned truth.
+Every paid action must be explicit.
+Receipts must be backend-derived.
+```
+
+## User-facing UX target
+
+The simple Image form should not become more complicated.
+
+Default visible page should still be:
+
+```text
+Select image
+Preview
+Title
+Description
+Get quote
+Confirm ROC & Mint
+Result link
+```
+
+Advanced drawer should show:
+
+```text
+Tags
+Alt text
+Source
+Rights hint
+Use cases
+Rendition preferences
+Local generated preview results
+Manifest preview
+Developer JSON
+```
+
+After successful bundle mint, show a polished result card:
+
+```text
+Image minted
+
+Original
+  crab://<original>.image
+  Copy / Open
+
+Generated versions
+  Desktop       crab://<desktop>.image       Copy
+  Tablet        crab://<tablet>.image        Copy
+  Mobile        crab://<mobile>.image        Copy
+  Thumbnail     crab://<thumbnail>.image     Copy
+  Album cover   crab://<cover>.image         Copy
+  Film cover    crab://<poster>.image        Copy
+
+Receipt
+  backend-derived receipt hash
+```
+
+Long hashes must wrap cleanly and not spill out of the UI.
+
+## Files likely needed next session
+
+Frontend/Tauri:
+
+```text
+apps/crablink-tauri/src/pages/image/ImagePage.jsx
+apps/crablink-tauri/src/pages/image/ImagePublishFlow.jsx
+apps/crablink-tauri/src/pages/image/ImageRenditions.jsx
+apps/crablink-tauri/src/pages/image/ImageManifest.jsx
+apps/crablink-tauri/src/pages/image/imageDraftModel.js
+apps/crablink-tauri/src/pages/image/image.css
+apps/crablink-tauri/src/shared/api/assetClient.js
+```
+
+New possible frontend file:
+
+```text
+apps/crablink-tauri/src/pages/image/imageRenditionGenerator.js
+```
+
+Possible Tauri Rust files if adding a bundle bridge:
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+apps/crablink-tauri/src-tauri/src/commands/mod.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+```
+
+Backend RustyOnions files if adding proper backend bundle route:
+
+```text
+crates/ron-proto/src/asset/*
+crates/omnigate/src/routes/v1/assets.rs
+crates/svc-gateway/*
+crates/svc-storage/*
+tests for omnigate and svc-gateway image bundle routes
+```
+
+Need a current RustyOnions codebundle before backend route work.
+
+## Testing plan for next session
+
+Start with current UI regression:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+npm run tauri:dev:mac-media
+```
+
+Then manual Image smoke:
+
+```text
+open crab://image
+choose a small image
+confirm preview works
+enter title/description
+open Advanced
+select album cover, video thumbnail, film cover
+select desktop/mobile/tablet/thumbnail
+confirm no manual rendition URL fields are visible
+get quote
+confirm ROC & mint original
+open returned crab URL
+```
+
+If adding local generation:
+
+```text
+generate renditions
+verify local previews display
+verify no b3/crab URL is shown for local generated renditions
+verify memory cleanup when changing image
+verify preview URLs are revoked
+verify large image fails politely
+```
+
+If adding bundle mint proof:
+
+```text
+mint original + selected renditions
+verify each returned URL is real crab://<hash>.image
+verify each URL opens
+verify each asset is b3-backed through gateway
+verify canonical result links to renditions
+verify renditions link back to original
+verify one explicit user confirmation covers the action honestly
+verify wallet balance/receipt behavior is backend-derived
+```
+
+Run project gates:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+bash scripts/check-tauri.sh
+```
+
+If backend changed, also run the relevant RustyOnions tests for omnigate/svc-gateway image routes.
+
+## Risk list
+
+The main risks are:
+
+```text
+1. Accidentally creating hidden multi-spend by uploading each rendition as a separate paid action.
+2. Reusing one receipt/proof for multiple uploads when backend does not support that semantic.
+3. Showing local generated previews as if they are minted b3 assets.
+4. Overloading the Tauri command bridge with too many bytes.
+5. Creating huge canvases from large source images.
+6. Forgetting to revoke object URLs.
+7. Letting long hashes/URLs spill out of result cards.
+8. Adding custom ROC price or payment split UI prematurely.
+9. Deleting old files before checking imports.
+10. Treating local manifest JSON as backend truth.
+```
+
+## Most likely next best implementation path
+
+Best next session sequence:
+
+```text
+1. Verify current Image one-card mint still builds and works.
+2. Delete unused ImageCreate/ImagePreview only if import search proves they are dead.
+3. Add imageRenditionGenerator.js for local bounded rendition generation.
+4. Show generated local rendition previews in Advanced.
+5. Keep actual minting to original only unless backend bundle route is ready.
+6. Design/implement backend image bundle prepare/publish route if we want true automatic rendition minting.
+7. Update ImagePublishFlow to use bundle route once backend truth exists.
+8. Show returned original + rendition crab URLs in a clean success card.
+```
+
+The guiding principle for the next session:
+
+```text
+Local generation can prepare bytes.
+Only backend minting can create truth.
+Only backend responses can show b3 CIDs, crab URLs, manifests, receipts, and ownership links.
+```
+
+This preserves the CrabLink/RustyOnions mental model and gives us a clean path to make Image the reference implementation for every other media/page type.
+
+
+### END NOTE - MAY 26 2026 - 14:55 CST
+
+
+
+### BEGIN NOTE - MAY 26 2026 - 20:55 CST
+
+Absolutely. Here are the carryover notes for the next session.
+
+# CrabLink Tauri / RustyOnions carryover notes — Image high-res upload + auto-rendition minting
+
+## 1. Current mission
+
+We are working on the **CrabLink Tauri Image page** and the RustyOnions backend upload path needed to support high-resolution image minting.
+
+The intended product behavior is:
+
+1. User opens `crab://image`.
+2. User selects one original image file.
+3. CrabLink keeps the simplified UI:
+
+   * image preview
+   * title
+   * description
+   * quote
+   * explicit ROC confirmation
+   * mint
+4. In the background, CrabLink can generate multiple resized versions:
+
+   * desktop
+   * tablet
+   * mobile
+   * thumbnail
+   * album cover
+   * video thumbnail
+   * film/cover poster
+5. The original image is uploaded first.
+6. Each generated rendition is uploaded after that.
+7. Each uploaded image/rendition gets its **own backend-returned `crab://<hash>.image` URL**.
+8. Generated renditions should point back to the original image through metadata for now.
+9. Long-term, this should become a proper backend image-bundle manifest route. For now, the frontend/Tauri proof mints each image separately and shows a display bundle map.
+
+Important invariant: **no fake b3, no fake crab URL, no fake receipt, no hidden ROC spend.** The app must only show backend-returned mint addresses.
+
+## 2. UI status
+
+The simplified Image UI was restored after a regression.
+
+Current desired UI state:
+
+```text
+crab://image
+Mint an image
+
+[large preview/select image area]
+
+Title
+Description
+
+Advanced fields collapsed:
+  tags
+  alt text
+  source/provenance
+  rights
+  use cases
+  rendition preferences
+  generated previews
+  manifest/debug route truth
+
+Publish card:
+  Get bundle quote
+  Review ROC hold
+  Confirm ROC & Hold
+  Mint image bundle
+```
+
+The user specifically does **not** want the default Image page to become a developer-heavy workspace. Advanced rendition controls should remain tucked away.
+
+## 3. Frontend/Tauri image-size cap status
+
+The original frontend/Tauri cap was around 1 MiB and rejected images like `2.70 MB` with:
+
+```text
+The source image is 2.70 MB, above the current 1.00 MB image upload bridge cap.
+```
+
+We decided the creator upload path should support high-resolution images. Target cap discussion:
+
+```text
+Preferred user-facing source image cap: around 25 MB
+Dev backend HTTP cap used during debugging: 64 MiB / 67,108,864 bytes
+```
+
+Why 64 MiB in backend env: it gives room for source + generated image versions during current proof work. OAP frame caps must remain separate and stay around 1 MiB.
+
+## 4. Persistent blocker
+
+Even after raising frontend/Tauri/backend cap attempts, both direct omnigate and gateway still return HTTP 413 for a 2.7 MB probe body:
+
+```text
+== omnigate /v1/assets/image direct ==
+HTTP/1.1 413 Payload Too Large
+x-omnigate-cap: 2048
+
+Failed to buffer the request body: length limit exceeded
+
+== gateway /assets/image ==
+HTTP/1.1 413 Payload Too Large
+
+Failed to buffer the request body: length limit exceeded
+```
+
+This means the request is still being rejected while Axum is buffering/extracting the body.
+
+## 5. Important correction: `x-omnigate-cap: 2048` is not the body-size cap
+
+We initially suspected `2048` might be a body cap. The grep scan proved that is wrong.
+
+The scan found:
+
+```text
+crates/omnigate/configs/omnigate.toml:27:max_inflight = 2048
+crates/omnigate/src/admission/fair_queue.rs:98: HeaderName::from_static("x-omnigate-cap")
+...
+crates/omnigate/tests/readiness_inflight.rs:58: max_inflight: 2048
+```
+
+So `x-omnigate-cap: 2048` is fair-queue/admission capacity, not upload bytes. Do **not** chase `2048` as the upload cap. 
+
+The real failing line is:
+
+```text
+Failed to buffer the request body: length limit exceeded
+```
+
+That points to Axum body extraction / `DefaultBodyLimit`.
+
+## 6. Body-limit scan results
+
+The scan showed actual body-limit locations:
+
+```text
+crates/omnigate/src/middleware/body_caps.rs
+crates/omnigate/src/middleware/mod.rs
+crates/omnigate/src/routes/v1/assets.rs
+scripts/web3_crablink_dev_stack.sh
+crates/svc-gateway/src/layers/body_caps.rs
+crates/svc-gateway/src/config/env.rs
+crates/svc-gateway/src/consts.rs
+```
+
+Relevant scan findings:
+
+```text
+crates/omnigate/src/middleware/body_caps.rs:
+  DEFAULT_MAX_BYTES: usize = 64 * MIB
+  MAX_CONFIGURABLE_BYTES: usize = 64 * MIB
+  configured_max_bytes()
+  DefaultBodyLimit::max(max)
+
+crates/omnigate/src/routes/v1/assets.rs:
+  extract::DefaultBodyLimit
+  .layer(DefaultBodyLimit::max(IMAGE_UPLOAD_BODY_LIMIT_BYTES))
+
+scripts/web3_crablink_dev_stack.sh:
+  SVC_GATEWAY_MAX_BODY_BYTES
+  OMNIGATE_MAX_BODY_BYTES
+  RON_STORAGE_MAX_BODY
+  max_content_length = ${OMNIGATE_MAX_BODY_BYTES}
+```
+
+This scan suggests the source is now patched toward 64 MiB, at least in the current repo working tree. 
+
+Gateway still has a default 1 MiB constant, but it should respect `SVC_GATEWAY_MAX_BODY_BYTES` if the environment is present. The scan found `svc-gateway/src/config/env.rs` reading `SVC_GATEWAY_MAX_BODY_BYTES`, plus a 1 MiB fallback in `svc-gateway/src/consts.rs`. 
+
+`svc-storage` likely is not the blocker because its runtime default already falls back to `64 * 1024 * 1024`. 
+
+## 7. Runtime process/env status
+
+We verified the running processes:
+
+```text
+9090 -> target/debug/omnigate
+8090 -> svc-gateway
+5303 -> svc-storage
+```
+
+The running omnigate process did have the correct env values:
+
+```text
+SVC_GATEWAY_MAX_BODY_BYTES=67108864
+CRABLINK_DEV_IMAGE_BODY_BYTES=67108864
+OMNIGATE_MAX_BODY_BYTES=67108864
+RON_STORAGE_MAX_BODY=67108864
+```
+
+So this is probably not just missing environment variables.
+
+## 8. Patch attempts made in this session
+
+### 8.1 Omnigate global body cap
+
+We patched / attempted to patch:
+
+```text
+crates/omnigate/src/middleware/body_caps.rs
+```
+
+Goal:
+
+```rust
+const DEFAULT_MAX_BYTES: usize = 64 * MIB;
+const MAX_CONFIGURABLE_BYTES: usize = 64 * MIB;
+
+pub fn configured_max_bytes() -> usize {
+    std::env::var("OMNIGATE_MAX_BODY_BYTES")
+        ...
+        .unwrap_or(DEFAULT_MAX_BYTES)
+        .min(MAX_CONFIGURABLE_BYTES)
+}
+```
+
+The scan later showed the current source has this shape. 
+
+### 8.2 Omnigate route-level cap
+
+We patched / attempted to patch:
+
+```text
+crates/omnigate/src/routes/v1/assets.rs
+```
+
+Goal:
+
+```rust
+use axum::extract::DefaultBodyLimit;
+
+const IMAGE_UPLOAD_BODY_LIMIT_BYTES: usize = 64 * 1024 * 1024;
+
+Router::new()
+    ...
+    .layer(DefaultBodyLimit::max(IMAGE_UPLOAD_BODY_LIMIT_BYTES))
+```
+
+The current codebundle showed `IMAGE_UPLOAD_BODY_LIMIT_BYTES` was added in `assets.rs`. 
+
+### 8.3 Omnigate `image_upload` handler
+
+We found the image upload handler still had this shape:
+
+```text
+pub async fn image_upload(headers: HeaderMap, body: Bytes) -> Response
+```
+
+A grep showed:
+
+```text
+576:pub async fn image_upload(headers: HeaderMap, body: Bytes) -> Response
+```
+
+We attempted to patch it toward:
+
+```rust
+pub async fn image_upload(headers: HeaderMap, body: Body) -> Response {
+    let body = match axum::body::to_bytes(body, IMAGE_UPLOAD_BODY_LIMIT_BYTES).await {
+        Ok(body) => body,
+        Err(_) => return problem(... StatusCode::PAYLOAD_TOO_LARGE ...),
+    };
+
+    send_to_storage(..., body, ...).await
+}
+```
+
+This is likely still the most important direction. The next session should verify the final file really changed from `body: Bytes` to `body: Body`.
+
+### 8.4 Gateway `image_upload` proxy
+
+We found `svc-gateway` can also become a body-buffer blocker after omnigate is fixed.
+
+We attempted to patch:
+
+```text
+crates/svc-gateway/src/routes/product.rs
+```
+
+from `body: Bytes` to `body: Body`, with manual `axum::body::to_bytes(body, IMAGE_UPLOAD_BODY_LIMIT_BYTES)`.
+
+There was a compile error because I suggested nonexistent helpers:
+
+```text
+errors::payload_too_large(...)
+errors::bad_request(...)
+```
+
+Then we changed direction to use the existing `errors::Problem` response type with `StatusCode::PAYLOAD_TOO_LARGE`.
+
+The compile status after that final patch is unknown from the final output. The last shown error was:
+
+```text
+cannot find function bad_request in module errors
+```
+
+Next session must inspect `crates/svc-gateway/src/routes/product.rs` around line ~399 and verify the bad helper call is gone.
+
+## 9. Critical next-session first checks
+
+Start next session by checking the actual current source files, not assuming all patch scripts applied cleanly.
+
+Run:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+echo "== omnigate image upload handler =="
+grep -n "pub async fn image_upload" -A35 crates/omnigate/src/routes/v1/assets.rs
+
+echo
+echo "== omnigate body caps =="
+sed -n '1,90p' crates/omnigate/src/middleware/body_caps.rs
+
+echo
+echo "== gateway image upload handler =="
+grep -n "pub async fn image_upload" -A35 crates/svc-gateway/src/routes/product.rs
+
+echo
+echo "== gateway bad helper leftovers =="
+grep -R "errors::bad_request\|errors::payload_too_large" crates/svc-gateway/src/routes/product.rs -n || true
+```
+
+What we want to see:
+
+```text
+omnigate image_upload uses body: Body, not body: Bytes
+svc-gateway image_upload uses body: Body, not body: Bytes
+no errors::bad_request
+no errors::payload_too_large
+```
+
+## 10. Rebuild commands for next session
+
+After source verification/fixes:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+cargo fmt -p omnigate -p svc-gateway
+cargo check -p omnigate
+cargo check -p svc-gateway
+cargo build -p omnigate
+cargo build -p svc-gateway
+```
+
+If `svc-gateway` still fails with the `bad_request` error, replace the offending `Err(_)` branch with a direct `Problem` response:
+
+```rust
+Err(_) => {
+    return errors::Problem {
+        code: "image_upload_body_too_large",
+        message: "image upload body exceeded the configured image upload cap",
+        retryable: false,
+        retry_after_ms: None,
+        reason: Some("image_upload_body_too_large"),
+    }
+    .into_response_with(StatusCode::PAYLOAD_TOO_LARGE);
+}
+```
+
+Also ensure `StatusCode` is imported:
+
+```rust
+http::{header, HeaderMap, HeaderName, Method, StatusCode, Uri},
+```
+
+## 11. Restart sequence
+
+After build, kill old listeners:
+
+```bash
+for port in 9090 8090 5303; do
+  PID="$(lsof -nP -iTCP:$port -sTCP:LISTEN -t | head -n 1)"
+  if [ -n "$PID" ]; then
+    echo "killing port $port pid $PID"
+    kill "$PID"
+  fi
+done
+
+sleep 1
+
+for port in 9090 8090 5303; do
+  echo "== port $port after kill =="
+  lsof -nP -iTCP:$port -sTCP:LISTEN || true
+done
+```
+
+Restart the stack with caps:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+CRABLINK_DEV_IMAGE_BODY_BYTES=67108864 \
+SVC_GATEWAY_MAX_BODY_BYTES=67108864 \
+OMNIGATE_MAX_BODY_BYTES=67108864 \
+RON_STORAGE_MAX_BODY=67108864 \
+OMNIGATE_PASSPORT_BASE_URL=http://127.0.0.1:5307 \
+OMNIGATE_WALLET_BASE_URL=http://127.0.0.1:8088 \
+OMNIGATE_WALLET_BEARER=dev \
+RON_STORAGE_ROC_ECONOMICS_PATH="$(pwd)/configs/roc-economics.dev.toml" \
+RON_STORAGE_ROC_ECONOMICS_ACTION=paid_storage_put \
+SVC_GATEWAY_STORAGE_BASE_URL=http://127.0.0.1:5303 \
+scripts/web3_crablink_dev_stack.sh
+```
+
+## 12. Probe command to rerun
+
+Use this exact probe before trying the Tauri UI again:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+TMP_BODY="$(mktemp)"
+head -c 2700000 /dev/zero > "$TMP_BODY"
+
+echo "== omnigate /v1/assets/image direct =="
+curl -sS -i \
+  -X POST "http://127.0.0.1:9090/v1/assets/image" \
+  -H "Authorization: Bearer dev" \
+  -H "Content-Type: image/png" \
+  -H "Idempotency-Key: cap-probe-omnigate-$(date +%s)" \
+  -H "x-ron-wallet-hold-txid: tx_probe" \
+  -H "x-ron-wallet-txid: tx_probe" \
+  -H "x-ron-wallet-receipt-hash: b3:0000000000000000000000000000000000000000000000000000000000000000" \
+  -H "x-ron-wallet-from: acct_dev" \
+  -H "x-ron-wallet-to: escrow_paid_write" \
+  --data-binary @"$TMP_BODY" | sed -n '1,80p'
+
+echo
+echo "== gateway /assets/image =="
+curl -sS -i \
+  -X POST "http://127.0.0.1:8090/assets/image" \
+  -H "Authorization: Bearer dev" \
+  -H "Content-Type: image/png" \
+  -H "Idempotency-Key: cap-probe-gateway-$(date +%s)" \
+  -H "x-ron-wallet-hold-txid: tx_probe" \
+  -H "x-ron-wallet-txid: tx_probe" \
+  -H "x-ron-wallet-receipt-hash: b3:0000000000000000000000000000000000000000000000000000000000000000" \
+  -H "x-ron-wallet-from: acct_dev" \
+  -H "x-ron-wallet-to: escrow_paid_write" \
+  --data-binary @"$TMP_BODY" | sed -n '1,80p'
+
+rm -f "$TMP_BODY"
+```
+
+Success condition:
+
+```text
+No HTTP 413
+No "Failed to buffer the request body: length limit exceeded"
+```
+
+A `400`, `401`, `402`, or `409` is acceptable for this fake-proof probe.
+
+## 13. If 413 persists after `Body` patches
+
+Next diagnostic should add a temporary debug response/header/log in omnigate body cap creation.
+
+Add a temporary startup/layer log in:
+
+```text
+crates/omnigate/src/middleware/body_caps.rs
+```
+
+near `pub fn layer()`:
+
+```rust
+pub fn layer() -> (PreflightContentLengthGuardLayer, DefaultBodyLimit) {
+    let max = configured_max_bytes();
+    eprintln!("RO_DEBUG omnigate body cap max bytes = {max}");
+
+    (
+        PreflightContentLengthGuardLayer { max },
+        DefaultBodyLimit::max(max),
+    )
+}
+```
+
+Then rebuild, restart stack, and confirm the terminal prints:
+
+```text
+RO_DEBUG omnigate body cap max bytes = 67108864
+```
+
+If it prints 64 MiB and still fails, the body rejection is probably from a different `DefaultBodyLimit` / extractor path, not `body_caps::layer()`.
+
+Then search again:
+
+```bash
+grep -R "DefaultBodyLimit::max\|to_bytes(body\|body: Bytes\|RequestBodyLimit\|BodyLimit" \
+  crates/omnigate crates/svc-gateway \
+  --include='*.rs' -n | sort
+```
+
+## 14. Why not test this repeatedly from the UI yet
+
+Do not keep testing through the CrabLink UI while this remains unresolved. The image mint flow can successfully:
+
+1. prepare quote
+2. create wallet hold
+3. fail upload at HTTP 413
+
+That means repeated UI tests may create multiple successful ROC holds before upload fails. Use the fake curl body probe until direct `9090` and gateway `8090` no longer return 413.
+
+## 15. Project invariants to preserve next session
+
+Do not weaken these:
+
+```text
+OAP frame cap remains separate and small.
+No direct ledger mutation outside svc-wallet.
+No fake receipts.
+No fake b3 CIDs.
+No fake crab URLs.
+No silent ROC spend.
+No frontend-owned truth.
+No cache unlock of paid content.
+Tauri is client, not backend.
+Gateway compatibility first.
+```
+
+For image uploads, the safe temporary dev stance is:
+
+```text
+HTTP image upload cap: 64 MiB in dev
+Tauri source image cap: about 25 MiB user-facing, or 64 MiB while debugging
+Generated renditions: bounded locally
+Each rendition: separate backend upload and backend-returned crab:// URL
+Bundle relation: display map only until backend-native bundle manifest exists
+```
+
+## 16. Recommended next-session work order
+
+1. Inspect current `assets.rs` and `product.rs` to verify whether `image_upload` is actually using `Body` or still `Bytes`.
+2. Fix any `svc-gateway` compile errors.
+3. Build both `omnigate` and `svc-gateway`.
+4. Kill old ports and restart stack with explicit cap env.
+5. Run direct `9090` probe.
+6. Only after direct `9090` stops returning 413, run gateway `8090` probe.
+7. Only after both stop returning 413, test a real image in CrabLink Tauri.
+8. After high-res original works, return to the multi-version/rendition mint flow and verify original + generated versions each return backend `crab://...image`.
+
+The highest-priority unresolved issue is still:
+
+```text
+HTTP 413 on /v1/assets/image direct omnigate for a 2.7 MB body:
+"Failed to buffer the request body: length limit exceeded"
+```
+
+The most likely next code fix is still:
+
+```text
+Use Body + explicit axum::body::to_bytes(..., 64 MiB cap) for image_upload in both omnigate and svc-gateway, then verify the final source and binary truly reflect that patch.
+```
+
+
+### END NOTE - MAY 26 2026 - 20:55 CST
+
+
+### BEGIN NOTE - MAY 27 2026 - 09:10 CST
+
+---
+
+# Carryover Notes — CrabLink Tauri Image Upload Limit Fix + Next Image Page Tasks
+
+## 0. Current checkpoint
+
+We continued debugging the CrabLink Tauri image upload problem where images around **2.7 MB** failed with:
+
+```text
+HTTP/1.1 413 Payload Too Large
+Failed to buffer the request body: length limit exceeded
+```
+
+The issue was **not** in the Tauri UI, and it was **not** fair-queue. It was ultimately a backend body extraction/cap problem that appeared in multiple layers.
+
+Final proof: a **2,700,000 byte image body** now succeeds through:
+
+```text
+svc-storage /paid/o          → 200 OK
+omnigate /v1/assets/image    → 200 OK
+svc-gateway /assets/image    → 200 OK
+```
+
+The final successful gateway/omnigate probe returned a full `omnigate.image-asset-upload.v1` response, with raw asset CID, crab URL, storage upload data, manifest CID, index pointer status, owner info, payout info, and links. The usage event showed `bytes_stored = 2700000`, proving the body made it through storage. 
+
+---
+
+## 1. Important cap outcome
+
+The current backend upload cap is now:
+
+```text
+67,108,864 bytes
+= 64 MiB
+≈ 67.1 decimal MB
+```
+
+This applies to the backend path when the stack is launched with the correct env vars:
+
+```bash
+SVC_GATEWAY_MAX_BODY_BYTES=67108864
+OMNIGATE_MAX_BODY_BYTES=67108864
+OMNIGATE_MAX_CONTENT_LENGTH=67108864
+CRABLINK_DEV_IMAGE_BODY_BYTES=67108864
+RON_STORAGE_MAX_BODY=67108864
+```
+
+Important caveat for next session:
+
+```text
+Backend image path: 64 MiB
+CrabLink Tauri command/UI path: may still be around 25 MiB unless raised separately
+```
+
+So if a 30+ MiB image works with curl but fails in the Tauri UI, the remaining cap is probably inside the CrabLink Tauri command bridge, not RustyOnions backend.
+
+---
+
+## 2. What was actually wrong
+
+### 2.1 Fair queue was not the blocker
+
+We investigated `crates/omnigate/src/admission/fair_queue.rs` because the response showed:
+
+```text
+x-omnigate-cap: 2048
+```
+
+Conclusion:
+
+```text
+x-omnigate-cap: 2048 is the inflight request capacity header.
+It is not a byte cap.
+It does not mean 2,048 bytes or 2,048 KB.
+```
+
+Fair queue would reject with:
+
+```text
+HTTP 503
+reason: overloaded
+message: server is shedding load; please retry
+```
+
+But our failure was:
+
+```text
+HTTP 413
+text/plain
+Failed to buffer the request body: length limit exceeded
+```
+
+So the request had already passed fair queue. Fair queue was only adding the `x-omnigate-cap` header to the downstream 413 response.
+
+### 2.2 Omnigate and gateway were partly fixed first
+
+We confirmed `omnigate` and `svc-gateway` image upload handlers now accept `Body` and explicitly buffer with the intended image upload cap, rather than relying on Axum’s default extractor limit.
+
+Relevant behavior now:
+
+```text
+omnigate /v1/assets/image:
+  Body → to_bytes(body, IMAGE_UPLOAD_BODY_LIMIT_BYTES)
+
+svc-gateway /assets/image:
+  Body → to_bytes(body, IMAGE_UPLOAD_BODY_LIMIT_BYTES)
+```
+
+Tests that passed after patches:
+
+```text
+cargo test -p omnigate --test image_asset_prepare
+cargo test -p omnigate --test middleware_contract
+cargo test -p svc-gateway --test product_routes_proxy
+cargo build -p omnigate -p svc-gateway
+```
+
+Final successful test state:
+
+```text
+omnigate image_asset_prepare: 5 passed
+omnigate middleware_contract: 5 passed
+svc-gateway product_routes_proxy: 8 passed
+omnigate + svc-gateway build: finished
+```
+
+### 2.3 Storage was the real remaining blocker
+
+The direct storage probe proved this:
+
+```bash
+POST http://127.0.0.1:5303/paid/o
+body bytes: 2700000
+```
+
+Before the fix, storage returned:
+
+```text
+HTTP/1.1 413 Payload Too Large
+Failed to buffer the request body: length limit exceeded
+```
+
+That meant `svc-storage` was still using a `bytes::Bytes` extractor on `/paid/o`, so Axum rejected the body before `RON_STORAGE_MAX_BODY` mattered.
+
+The fix was to patch:
+
+```text
+crates/svc-storage/src/http/routes/paid_object.rs
+```
+
+so the handler takes:
+
+```rust
+body: Body
+```
+
+and explicitly buffers:
+
+```rust
+to_bytes(body, paid_object_body_limit_bytes()).await
+```
+
+using:
+
+```text
+RON_STORAGE_MAX_BODY
+default 64 MiB
+max 64 MiB
+```
+
+After that, direct storage returned `200 OK` for a 2.7 MB upload and recorded:
+
+```json
+"value": 2700000,
+"route": "/paid/o"
+```
+
+---
+
+## 3. Patch summary that must be preserved
+
+### 3.1 Omnigate config/env patch
+
+File:
+
+```text
+crates/omnigate/src/config/env.rs
+```
+
+Purpose:
+
+```text
+Make OMNIGATE_MAX_BODY_BYTES / OMNIGATE_MAX_CONTENT_LENGTH / CRABLINK_DEV_IMAGE_BODY_BYTES flow into cfg.admission.body.max_content_length.
+```
+
+Important detail:
+
+```text
+Use String in first_u64_env return, not &'static str, to avoid lifetime compile errors.
+```
+
+### 3.2 Omnigate body cap middleware patch
+
+File:
+
+```text
+crates/omnigate/src/middleware/body_caps.rs
+```
+
+Purpose:
+
+```text
+Make HTTP body cap explicit and log active cap.
+Default/max: 64 MiB.
+Keep OAP frame cap separate.
+```
+
+Important invariant:
+
+```text
+OAP max frame remains 1 MiB.
+HTTP upload body cap is 64 MiB.
+Do not conflate these.
+```
+
+### 3.3 Omnigate image/media prepare message patch
+
+File:
+
+```text
+crates/omnigate/src/routes/v1/assets.rs
+```
+
+Purpose:
+
+```text
+fetch_storage_estimate now takes a rejection_message argument so image-specific tests remain correct.
+```
+
+Specific fixes made:
+
+```text
+image_prepare uses:
+  "storage estimate rejected image prepare request"
+
+stream_prepare descriptor estimate uses:
+  "storage estimate rejected stream prepare request"
+```
+
+### 3.4 Gateway image upload patch
+
+File:
+
+```text
+crates/svc-gateway/src/routes/product.rs
+```
+
+Purpose:
+
+```text
+/assets/image accepts Body and explicitly buffers with IMAGE_UPLOAD_BODY_LIMIT_BYTES before proxying to omnigate.
+```
+
+### 3.5 Storage paid object patch
+
+File:
+
+```text
+crates/svc-storage/src/http/routes/paid_object.rs
+```
+
+Purpose:
+
+```text
+/paid/o accepts Body and explicitly buffers with RON_STORAGE_MAX_BODY.
+This was the final blocker.
+```
+
+Tests that passed before unrelated disk/config issues:
+
+```text
+paid_write_policy: 5 passed
+paid_write_verifier: 19 passed
+paid_write_wallet_mode: 1 passed
+paid_write_settlement: 1 passed
+```
+
+Unrelated remaining issues:
+
+```text
+paid_write_economics.rs expects configs/roc-economics.toml, but that file is missing.
+Cargo also hit “No space left on device” during one later build.
+```
+
+Next session should restore or recreate:
+
+```text
+configs/roc-economics.toml
+```
+
+while keeping:
+
+```text
+configs/roc-economics.dev.toml
+```
+
+for local CrabLink testing.
+
+---
+
+## 4. Runtime launch order note
+
+The user noticed Wallet A/dev wallet did not automatically load ROC, but manual Wallet B loading worked.
+
+Likely explanation:
+
+```text
+The stack may have been started in a different order than usual.
+```
+
+The better dev order is still:
+
+```text
+1. Start svc-wallet.
+2. Start svc-passport.
+3. Start the WEB3_2 / CrabLink dev stack.
+4. Start CrabLink Tauri.
+```
+
+Do not over-debug the bootstrap issue yet unless it repeats with the proper service order.
+
+Known error seen:
+
+```text
+Passport bootstrap failed with HTTP 422.
+HTTP preview mode may not have extension storage or gateway host permissions.
+```
+
+Current interpretation:
+
+```text
+The UI error copy is misleading / inherited from preview-Chrome wording.
+The real issue is HTTP 422 from backend validation or wallet/passport bootstrap state.
+Manual funding still works, so not a blocker for image testing.
+```
+
+Manual funding command for Wallet A/dev if needed:
+
+```bash
+curl -fsS -X POST http://127.0.0.1:8088/v1/issue \
+  -H 'Authorization: Bearer dev' \
+  -H "Idempotency-Key: dev-fund-acct-dev-$(date +%s)" \
+  -H 'Content-Type: application/json' \
+  -d '{"to":"acct_dev","asset":"roc","amount_minor":"1776","memo":"dev fund acct_dev for Tauri"}' \
+  | jq .
+```
+
+Wallet B manual funding still works and was used successfully for testing.
+
+---
+
+## 5. Current image-page state
+
+The screenshot shows image minting now works in Tauri.
+
+The image page successfully mints an image bundle and displays:
+
+```text
+Original
+Desktop rendition
+Tablet rendition
+Mobile rendition
+Thumbnail rendition
+Receipt hash
+```
+
+Example from the screenshot:
+
+```text
+Original: 2.70 MB image/png
+Desktop: 1448x1086, 3.30 MB
+Tablet: 1280x960, 2.54 MB
+Mobile: 768x576, 1.03 MB
+Thumbnail: 320x320, 26.57 KB
+```
+
+The UI now says:
+
+```text
+Image bundle minted
+Every listed crab URL came from the backend upload response.
+Backend returned
+```
+
+This is good. The page is much cleaner than before and should be kept as the image-page reference model for other pages.
+
+---
+
+## 6. Next image-page feature: rendition manifests must cross-link
+
+The next requested image-page improvement:
+
+```text
+Each image link / rendition should have the block of alternate versions listed inside its own manifest.
+```
+
+Meaning:
+
+```text
+Original manifest should know:
+  - original CID
+  - desktop CID
+  - tablet CID
+  - mobile CID
+  - thumbnail CID
+
+Desktop manifest should know:
+  - original CID
+  - desktop CID/self
+  - tablet CID
+  - mobile CID
+  - thumbnail CID
+
+Tablet manifest should know the same group.
+
+Mobile manifest should know the same group.
+
+Thumbnail manifest should know the same group.
+```
+
+Recommended manifest structure for next implementation:
+
+```json
+{
+  "rendition_group": {
+    "group_id": "b3:<original-or-bundle-root>",
+    "source_cid": "b3:<original>",
+    "canonical_crab_url": "crab://<original>.image",
+    "renditions": [
+      {
+        "role": "original",
+        "cid": "b3:<hash>",
+        "crab_url": "crab://<hash>.image",
+        "mime": "image/png",
+        "bytes": 2700000,
+        "width": 0,
+        "height": 0
+      },
+      {
+        "role": "desktop",
+        "cid": "b3:<hash>",
+        "crab_url": "crab://<hash>.image",
+        "mime": "image/png",
+        "bytes": 3300000,
+        "width": 1448,
+        "height": 1086
+      },
+      {
+        "role": "tablet",
+        "cid": "b3:<hash>",
+        "crab_url": "crab://<hash>.image",
+        "mime": "image/png",
+        "bytes": 2540000,
+        "width": 1280,
+        "height": 960
+      },
+      {
+        "role": "mobile",
+        "cid": "b3:<hash>",
+        "crab_url": "crab://<hash>.image",
+        "mime": "image/png",
+        "bytes": 1030000,
+        "width": 768,
+        "height": 576
+      },
+      {
+        "role": "thumbnail",
+        "cid": "b3:<hash>",
+        "crab_url": "crab://<hash>.image",
+        "mime": "image/png",
+        "bytes": 26570,
+        "width": 320,
+        "height": 320
+      }
+    ]
+  }
+}
+```
+
+Important invariant:
+
+```text
+Every rendition is still its own canonical b3 asset.
+The rendition group is metadata/reference graph, not a replacement for b3 truth.
+```
+
+This matters for future:
+
+```text
+album covers
+video thumbnails
+film covers
+responsive image sites
+creator pages
+media pages
+large video renditions
+```
+
+---
+
+## 7. Next bug: paid image viewing does not render after payment
+
+Current new problem:
+
+```text
+When an image is minted and a different wallet pays to view it, the image does not load/render like it used to.
+```
+
+This is now the highest-priority functional bug for next session.
+
+Important distinction:
+
+```text
+Upload/mint path is now fixed.
+Paid view/render path is now broken or regressed.
+```
+
+Likely files to inspect in CrabLink Tauri next session:
+
+```text
+apps/crablink-tauri/src/pages/asset/AssetContentViewAccess.jsx
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/pages/asset/AssetPage.jsx
+apps/crablink-tauri/src/pages/image/ImagePage.jsx
+apps/crablink-tauri/src/shared/api/contentViewClient.js
+apps/crablink-tauri/src/shared/api/assetClient.js
+apps/crablink-tauri/src/shared/embed/crabImageEmbed.jsx
+apps/crablink-tauri/src/shared/manifest/uniformManifest.js
+apps/crablink-tauri/src/app/router.js
+```
+
+Likely backend routes to inspect if frontend looks correct:
+
+```text
+omnigate:
+  crates/omnigate/src/routes/v1/content_view.rs
+  crates/omnigate/src/routes/v1/assets.rs
+  crates/omnigate/src/routes/v1/crab.rs
+  crates/omnigate/src/routes/v1/objects.rs
+
+svc-gateway:
+  crates/svc-gateway/src/routes/product.rs
+  crates/svc-gateway/src/routes/content_view_routes_proxy.rs if present
+  crates/svc-gateway/tests/content_view_routes_proxy.rs
+```
+
+Likely failure possibilities:
+
+```text
+1. Paid content_view pay succeeds but frontend does not fetch/render the unlocked image bytes.
+2. The unlock response contains receipt/entitlement but the image renderer still points at a route requiring a different auth header.
+3. The asset page hydrates the manifest but not the raw image object.
+4. The Tauri image renderer is using a stale crab:// route instead of gateway HTTP b3/raw route.
+5. The owner wallet and viewer wallet are being confused after dev passport switching.
+6. Recent upload/rendition changes changed manifest shape, and paid render path expects the older single-image manifest shape.
+7. Cache or local catalog is displaying the crab URL but not triggering paid asset render after receipt.
+```
+
+Required next-session test matrix:
+
+```text
+A. Creator Wallet A mints image → Viewer Wallet B pays → image should render.
+B. Creator Wallet B mints image → Viewer Wallet A pays → image should render.
+C. Owner opens own image → decide whether owner bypass should exist or whether owner must pay.
+D. Viewer with 0 ROC attempts view → explicit insufficient funds / no fake unlock.
+E. Viewer after successful payment reloads page → receipt display cache may show, but backend entitlement/receipt remains truth.
+```
+
+Do not implement fake unlocks.
+
+Paid flow invariant remains:
+
+```text
+quote/prepare → explicit confirmation → backend wallet path → backend receipt → unlock/render → display receipt → balance refresh
+```
+
+Offline cache cannot unlock paid content alone.
+
+---
+
+## 8. Important commands for next session
+
+### Start Tauri dev app
+
+User runs:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run tauri:dev:mac-media
+```
+
+### Backend stack cap env
+
+Use these when launching the backend stack:
+
+```bash
+export OMNIGATE_MAX_BODY_BYTES=67108864
+export OMNIGATE_MAX_CONTENT_LENGTH=67108864
+export CRABLINK_DEV_IMAGE_BODY_BYTES=67108864
+export SVC_GATEWAY_MAX_BODY_BYTES=67108864
+export RON_STORAGE_MAX_BODY=67108864
+
+export OMNIGATE_PASSPORT_BASE_URL=http://127.0.0.1:5307
+export OMNIGATE_WALLET_BASE_URL=http://127.0.0.1:8088
+export OMNIGATE_WALLET_BEARER=dev
+export RON_STORAGE_ROC_ECONOMICS_PATH="$(pwd)/configs/roc-economics.dev.toml"
+export RON_STORAGE_ROC_ECONOMICS_ACTION=paid_storage_put
+export RON_STORAGE_PAID_WRITE_VERIFIER_MODE=dev-header
+```
+
+### Probe storage directly
+
+```bash
+curl -sS -i \
+  -X POST "http://127.0.0.1:5303/paid/o" \
+  -H "Authorization: Bearer dev" \
+  -H "Content-Type: image/png" \
+  -H "Idempotency-Key: cap-probe-storage-$(date +%s)" \
+  -H "x-ron-paid-op: hold" \
+  -H "x-ron-paid-asset: roc" \
+  -H "x-ron-paid-estimate-minor: 25" \
+  -H "x-ron-wallet-hold-txid: tx_probe" \
+  -H "x-ron-wallet-txid: tx_probe" \
+  -H "x-ron-wallet-receipt-hash: b3:0000000000000000000000000000000000000000000000000000000000000000" \
+  -H "x-ron-wallet-from: acct_dev" \
+  -H "x-ron-wallet-to: escrow_paid_write" \
+  --data-binary @"$TMP_BODY"
+```
+
+Expected:
+
+```text
+200 OK for 2.7 MB test body
+```
+
+### Probe Omnigate and gateway
+
+```text
+POST http://127.0.0.1:9090/v1/assets/image
+POST http://127.0.0.1:8090/assets/image
+```
+
+Expected:
+
+```text
+200 OK for 2.7 MB body
+schema: omnigate.image-asset-upload.v1
+```
+
+---
+
+## 9. Video/streaming implication
+
+This session matters for future large video and streaming work.
+
+Important lesson:
+
+```text
+Every layer can have its own body cap:
+  Tauri command bridge
+  svc-gateway
+  omnigate
+  svc-storage
+  Axum extractor defaults
+  explicit to_bytes caps
+  middleware DefaultBodyLimit caps
+```
+
+For future large video uploads:
+
+```text
+Do not push huge videos through a single command result or one unbounded buffer.
+Use bounded chunks/ranges/segments.
+Each layer must state its own cap clearly.
+```
+
+Recommended future model:
+
+```text
+Images:
+  single bounded upload, currently 64 MiB backend cap
+
+Videos:
+  chunked upload or segmented media path
+  explicit per-chunk cap
+  final manifest references chunks/renditions
+  each rendition owns b3
+  no full-file video through Tauri command result
+
+Live streaming:
+  latest-frame/segment proof now
+  future: range/segment/WebRTC/HLS/OAP media transport
+  keep OAP frame cap separate from HTTP upload cap
+```
+
+Important distinction:
+
+```text
+OAP max frame = 1 MiB
+Streaming chunk target = 64 KiB
+HTTP image upload body cap = 64 MiB
+These are different caps for different layers.
+```
+
+---
+
+## 10. Next-session recommended order
+
+Recommended order for next session:
+
+```text
+1. Generate fresh CODEBUNDLE_RS.md and CODEBUNDLE_TAURI_APP.md.
+2. Confirm backend image upload cap remains green with one quick 2.7 MB probe.
+3. Test real Tauri image upload with 3 MB / 10 MB / maybe 24 MB.
+4. Reproduce paid image viewing bug:
+   - mint with Wallet A, pay with Wallet B
+   - mint with Wallet B, pay with Wallet A
+5. Inspect frontend paid image render path.
+6. Fix image not rendering after paid unlock.
+7. Add rendition group metadata into each image/rendition manifest.
+8. Polish image page UI for linked versions.
+9. Add/adjust tests/smoke scripts for:
+   - large image upload
+   - rendition group manifest shape
+   - paid image view render after payment
+```
+
+---
+
+## 11. Final project state statement
+
+As of this checkpoint:
+
+```text
+Backend large image upload path is green up to 64 MiB.
+CrabLink Tauri can mint an image bundle with generated renditions.
+Manual wallet funding still works.
+Bootstrap/funding issue for Wallet A is secondary and probably startup-order related.
+Next critical bug is paid image viewing/rendering after payment with a different wallet.
+Next product enhancement is storing sibling rendition links inside every rendition manifest.
+```
+
+This is a strong checkpoint. The image upload cap problem was a real backend-layer issue, and it is now proven fixed end-to-end through storage, Omnigate, and gateway.
+
+
+### END NOTE - MAY 27 2026 - 09:10 CST
+
+
+
+
+### BEGIN NOTE - MAY 27 2026 - 12:50 CST
+
+
+# CrabLink Tauri / RustyOnions carryover notes — Image bundle manifests, paid image view, and manifest cleanup
+
+## 0. Current checkpoint
+
+We are continuing the **CrabLink Tauri Image page** work. The active goal is to make image bundle minting feel polished and product-ready while preserving RustyOnions truth boundaries:
+
+```text
+One selected source image
+→ CrabLink generates selected renditions
+→ original + renditions mint as real backend-returned .image assets
+→ every minted image has its own b3 CID and crab://<hash>.image URL
+→ every image manifest in the bundle cross-links to every other sibling version
+→ paid viewing works from Wallet B
+→ manifest display is detailed but less redundant
+```
+
+Current state is **much better than before**:
+
+```text
+✅ Full dev stack runner exists and mostly works.
+✅ Gateway storage upstream env is fixed.
+✅ Image upload bundle minting works again.
+✅ Generated versions are dimensionally correct.
+✅ Generated versions are byte-size correct.
+✅ Paid image view works again after Wallet B pays.
+✅ Image preview renders through gateway blob / Tauri-safe byte path.
+✅ Image page UX is much cleaner than the older developer-heavy layout.
+```
+
+The screenshot confirms paid viewing is working again: Wallet B paid 5 ROC, the receipt returned, and the image preview rendered successfully. The developer JSON also confirms the content-view quote/payment path is returning backend payment metadata, wallet receipt data, `asset_cid`, `asset_crab_url`, `manifest_cid`, and receipt hash fields. 
+
+The remaining image-manifest issue:
+
+```text
+Only the original crablink/back-reference is appearing in the manifest/page metadata.
+The full list of all minted versions is not yet present in each image’s manifest.
+```
+
+The prior notes already define the desired state: original, desktop, tablet, mobile, and thumbnail manifests should each know the same complete group of sibling renditions. 
+
+---
+
+## 1. What we proved today
+
+### 1.1 One-command runner works
+
+We created:
+
+```text
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Purpose:
+
+```text
+Start local RustyOnions services + CrabLink Tauri with one command.
+```
+
+The script starts:
+
+```text
+svc-wallet      → 127.0.0.1:8088
+svc-passport    → 127.0.0.1:5307
+svc-storage     → 127.0.0.1:5303
+svc-index       → 127.0.0.1:5304
+omnigate        → 127.0.0.1:9090
+svc-gateway     → 127.0.0.1:8090
+CrabLink Tauri  → Vite 127.0.0.1:1420 + Tauri native app
+```
+
+Important runner fixes already made:
+
+```text
+- Fixed Bash arithmetic bug in wait loops.
+- Added wallet health wait before funding.
+- Added stale Vite/Tauri port cleanup for :1420.
+- Added gateway storage env:
+  SVC_GATEWAY_STORAGE_BASE_URL=http://127.0.0.1:5303
+- Added long service-start timeout for first post-clean builds.
+- Added CARGO_INCREMENTAL=0 and CARGO_BUILD_JOBS=2 defaults to reduce disk/incremental bloat.
+```
+
+Important operational note:
+
+```text
+The runner does NOT run cargo clean.
+```
+
+The long rebuild happened because `cargo clean --manifest-path src-tauri/Cargo.toml` was run manually earlier, removing about 2.8 GiB from the Tauri Rust target. The runner itself only kills stale listeners/ports; it does not delete Rust build artifacts.
+
+Current preferred run command:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Optional environment:
+
+```bash
+CARGO_INCREMENTAL=0 CARGO_BUILD_JOBS=2 scripts/run-tauri-dev-full-stack.sh
+```
+
+Do not run `cargo clean` unless disk pressure forces it.
+
+---
+
+## 2. Backend / stack facts that must be preserved
+
+### 2.1 Gateway storage upstream was the root cause of paid image rendering failure
+
+We proved:
+
+```text
+svc-storage direct /o/b3:<hash> returned image bytes correctly.
+svc-gateway /o/b3:<hash> returned 502 storage_connect.
+```
+
+The gateway process was missing:
+
+```text
+SVC_GATEWAY_STORAGE_BASE_URL=http://127.0.0.1:5303
+```
+
+After the runner set that env correctly, gateway raw object fetch worked and paid image rendering recovered.
+
+This must stay in the stack runner and any future dev-stack docs.
+
+### 2.2 Backend upload cap is fixed
+
+The earlier high-resolution upload blocker is resolved. The notes record that a 2,700,000 byte image body now succeeds through:
+
+```text
+svc-storage /paid/o
+omnigate /v1/assets/image
+svc-gateway /assets/image
+```
+
+with the current dev cap:
+
+```text
+67,108,864 bytes = 64 MiB
+```
+
+The relevant launch env must stay:
+
+```text
+SVC_GATEWAY_MAX_BODY_BYTES=67108864
+OMNIGATE_MAX_BODY_BYTES=67108864
+OMNIGATE_MAX_CONTENT_LENGTH=67108864
+CRABLINK_DEV_IMAGE_BODY_BYTES=67108864
+RON_STORAGE_MAX_BODY=67108864
+```
+
+Important doctrine:
+
+```text
+HTTP upload body cap may be 64 MiB for dev image uploads.
+OAP max frame remains separate and should not be confused with image upload body cap.
+```
+
+The IDBs warn against unbounded media transfer and full-file command buffering for larger media, so this is acceptable for the current image proof but not a general media/streaming strategy. 
+
+---
+
+## 3. Image page state
+
+### 3.1 Current UI status
+
+The image page now has the right product direction:
+
+```text
+crab://image
+Mint an image
+
+Simple visible flow:
+  select image
+  preview
+  title
+  description
+  quote
+  explicit ROC hold/confirm
+  mint result
+
+Advanced collapsed:
+  tags
+  alt text
+  source/provenance
+  rights/use-case hints
+  rendition preferences
+  local rendition preview
+  manifest preview
+  developer JSON
+```
+
+The existing notes describe this desired UX: simple mint should stay the default, with advanced fields tucked away. 
+
+### 3.2 Bundle minting works
+
+Confirmed from screenshot and live test:
+
+```text
+Original image minted.
+Desktop rendition minted.
+Tablet rendition minted.
+Mobile rendition minted.
+Thumbnail rendition minted.
+Receipt returned.
+Every displayed crab URL came from a backend upload response.
+Dimensions are correct.
+Byte sizes are correct.
+```
+
+Earlier example bundle shape:
+
+```text
+Original: 2.70 MB image/png
+Desktop: 1448×1086, 3.30 MB
+Tablet: 1280×960, 2.54 MB
+Mobile: 768×576, 1.03 MB
+Thumbnail: 320×320, 26.57 KB
+```
+
+The carryover notes already say this page should become the reference model for other creator pages because it is much cleaner than before. 
+
+---
+
+## 4. Current manifest problem
+
+### 4.1 What is currently happening
+
+The current minted rendition manifests appear to have only a **back-reference** to the original image, not the full sibling list.
+
+The developer JSON for the thumbnail route shows the current structure coming back inside `asset_page`:
+
+```text
+description:
+  "... Thumbnail generated rendition. Original image: crab://<original>.image Original CID: b3:<original>"
+
+tags:
+  image
+  creator
+  rendition
+  role:thumbnail
+  original:b3:<original>
+```
+
+That proves the current manifest/page metadata has a back-reference to original, but not the full `rendition_group.renditions[]` block. 
+
+### 4.2 Desired behavior
+
+Every image in the bundle should include the same complete rendition group:
+
+```text
+Original manifest:
+  knows original/self
+  knows desktop
+  knows tablet
+  knows mobile
+  knows thumbnail
+
+Desktop manifest:
+  knows original
+  knows desktop/self
+  knows tablet
+  knows mobile
+  knows thumbnail
+
+Tablet manifest:
+  knows original
+  knows desktop
+  knows tablet/self
+  knows mobile
+  knows thumbnail
+
+Mobile manifest:
+  knows original
+  knows desktop
+  knows tablet
+  knows mobile/self
+  knows thumbnail
+
+Thumbnail manifest:
+  knows original
+  knows desktop
+  knows tablet
+  knows mobile
+  knows thumbnail/self
+```
+
+The prior notes include the recommended structure with `rendition_group`, `group_id`, `source_cid`, `canonical_crab_url`, and a `renditions[]` array containing every role, CID, crab URL, MIME type, byte length, width, and height. 
+
+---
+
+## 5. Desired manifest model for next session
+
+Use this as the target structure.
+
+```json
+{
+  "schema": "crablink.image-asset.v1",
+  "kind": "image",
+  "asset_cid": "b3:<self>",
+  "crab_url": "crab://<self>.image",
+  "title": "Creator title",
+  "description": "User-authored description only",
+  "content_type": "image/png",
+  "byte_length": 26570,
+  "width": 320,
+  "height": 320,
+  "owner": {
+    "passport_subject": "passport:main:dev",
+    "wallet_account": "acct_dev"
+  },
+  "storage": {
+    "available": true,
+    "raw_url": "/o/b3:<self>",
+    "content_type": "image/png"
+  },
+  "rendition": {
+    "role": "thumbnail",
+    "label": "Thumbnail",
+    "is_original": false,
+    "derived_from": "b3:<original>",
+    "canonical_original": "crab://<original>.image"
+  },
+  "rendition_group": {
+    "schema": "crablink.image-rendition-group.v1",
+    "group_id": "b3:<original-or-bundle-root>",
+    "source_cid": "b3:<original>",
+    "canonical_crab_url": "crab://<original>.image",
+    "renditions": [
+      {
+        "role": "original",
+        "label": "Original",
+        "cid": "b3:<original>",
+        "crab_url": "crab://<original>.image",
+        "mime": "image/png",
+        "bytes": 2700000,
+        "width": 3000,
+        "height": 2000
+      },
+      {
+        "role": "desktop",
+        "label": "Desktop",
+        "cid": "b3:<desktop>",
+        "crab_url": "crab://<desktop>.image",
+        "mime": "image/png",
+        "bytes": 3300000,
+        "width": 1448,
+        "height": 1086
+      },
+      {
+        "role": "tablet",
+        "label": "Tablet",
+        "cid": "b3:<tablet>",
+        "crab_url": "crab://<tablet>.image",
+        "mime": "image/png",
+        "bytes": 2540000,
+        "width": 1280,
+        "height": 960
+      },
+      {
+        "role": "mobile",
+        "label": "Mobile",
+        "cid": "b3:<mobile>",
+        "crab_url": "crab://<mobile>.image",
+        "mime": "image/png",
+        "bytes": 1030000,
+        "width": 768,
+        "height": 576
+      },
+      {
+        "role": "thumbnail",
+        "label": "Thumbnail",
+        "cid": "b3:<thumbnail>",
+        "crab_url": "crab://<thumbnail>.image",
+        "mime": "image/png",
+        "bytes": 26570,
+        "width": 320,
+        "height": 320
+      }
+    ]
+  },
+  "receipts": [
+    {
+      "kind": "paid_storage",
+      "receipt_hash": "b3:<receipt>"
+    }
+  ]
+}
+```
+
+Important:
+
+```text
+description should stay user-authored.
+Do not stuff original URL/CID into description once structured fields exist.
+Do not rely on tags like original:b3:<hash> as the real relationship model.
+Tags may remain for search/display, but the rendition_group is the durable relationship.
+```
+
+---
+
+## 6. Manifest cleanup / redundancy reduction target
+
+The user wants manifests to stay **detail rich** but less repetitive.
+
+Current problem areas:
+
+```text
+- asset_cid appears in many places.
+- asset_crab_url appears in quote, payment, target, summary, raw, receipt.
+- content_view quote and payment data are repeated in multiple nested raw blocks.
+- asset page repeats original URL/CID in the human description.
+- tags repeat structured facts like role and original pointer.
+- top asset panels show canonical URL, content ID, hash, content object ID, raw URL in separate places.
+- some fields show “manifest CID not returned” while paid content JSON has a manifest_cid elsewhere.
+```
+
+Next session should distinguish:
+
+```text
+Display summary:
+  compact, deduped, human-readable
+
+Developer JSON:
+  full backend response, collapsed by default
+
+Manifest:
+  structured, durable, not bloated with repeated copies
+
+Receipt display cache:
+  display-only copy of backend receipt metadata
+```
+
+### Recommended UI display cleanup
+
+For image asset pages, display:
+
+```text
+Hero summary:
+  title
+  kind/image role
+  crab URL
+  owner
+  paid/unlocked status
+  copy buttons
+
+Preview:
+  image
+
+Image versions:
+  compact rendition table/card list
+  role | dimensions | bytes | crab URL | copy/open
+  mark current/self row
+
+Storage:
+  available yes/no
+  content type
+  raw URL
+  size
+
+Receipts:
+  paid storage receipt
+  content view receipt if present
+
+Developer:
+  collapsed raw asset JSON
+  collapsed content_view JSON
+  collapsed gateway diagnostics
+```
+
+Avoid separate duplicated panels for every equivalent CID/hash unless they add a distinct meaning.
+
+---
+
+## 7. Important architecture decision for rendition manifests
+
+There are two possible implementation paths next session.
+
+### Option A — Short-term proof path
+
+Current proof behavior:
+
+```text
+Frontend/Tauri generates renditions locally.
+Frontend uploads original and each rendition separately.
+Each upload gets a backend-returned crab URL.
+Frontend builds a bundle display map after all uploads.
+```
+
+Short-term manifest cross-link can be added by:
+
+```text
+1. Pre-hash original + all generated rendition bytes with Tauri Rust / BLAKE3.
+2. Build a full predicted rendition_group before uploads.
+3. Send that rendition_group with every image upload.
+4. Backend stores it into each image manifest only if that manifest’s self CID appears in the group.
+5. Frontend verifies backend-returned CID matches predicted CID.
+6. Asset page reads and displays rendition_group from the hydrated asset manifest.
+```
+
+Risks:
+
+```text
+- Header size if the group is sent as an HTTP header.
+- Partial failures if original uploads but one rendition fails.
+- Current proof may reuse one hold for multiple uploads; this is acceptable only as a temporary dev proof if the backend policy accepts it, but should not become final product economics.
+- Some partial patch attempts may already exist in the working tree; inspect before editing.
+```
+
+### Option B — Correct long-term path
+
+The better long-term path is a backend-supported route:
+
+```text
+POST /assets/image/bundle/prepare
+POST /assets/image/bundle
+```
+
+The backend/gateway/omnigate route would:
+
+```text
+- accept bundle metadata
+- price the whole bundle explicitly
+- require one explicit user confirmation
+- hold/capture/release correctly
+- upload/store original + renditions
+- write every per-image manifest with the same rendition_group
+- return all crab URLs and receipt data
+- fail or settle consistently if a rendition upload fails
+```
+
+This is cleaner for accounting, receipts, and durability.
+
+Recommended next-session approach:
+
+```text
+Use short-term proof only if we want to finish the current UI quickly.
+Document that the final product wants a backend bundle route.
+Do not hide multiple paid actions from the user.
+Do not fake receipts or fake relationships.
+```
+
+---
+
+## 8. Partial patch state warning
+
+A patch attempt was made to add richer rendition manifest support, but it failed partway with:
+
+```text
+Could not find summarizeAsset return marker.
+```
+
+Because the patch was a multi-file Python patch, assume the working tree may be **partially modified**.
+
+Next session must begin with:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+git diff -- apps/crablink-tauri/src/pages/image/ImagePublishFlow.jsx
+git diff -- apps/crablink-tauri/src/shared/api/assetClient.js
+git diff -- apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+git diff -- apps/crablink-tauri/src-tauri/src/commands/assets.rs
+git diff -- apps/crablink-tauri/src-tauri/src/lib.rs
+git diff -- apps/crablink-tauri/src-tauri/Cargo.toml
+
+cd /Users/mymac/Desktop/RustyOnions
+git diff -- crates/omnigate/src/routes/v1/assets.rs
+```
+
+Do not assume all intended changes landed.
+
+Known likely partial changes:
+
+```text
+- assetClient.js may include hashImageAssetBytes / rendition group header helpers.
+- Tauri Cargo.toml may include blake3.
+- Tauri assets.rs may include hash_image_asset_bytes.
+- Tauri lib.rs may register the command.
+- ImagePublishFlow.jsx may be partially changed.
+- AssetHydratedView.jsx likely did not receive the full normalizeRenditionGroup/summarizeAsset patch.
+- omnigate assets.rs may or may not include rendition_group header storage support.
+```
+
+Before making next changes, generate a fresh codebundle:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+bash scripts/make_codebundle.sh
+
+cd /Users/mymac/Desktop/RustyOnions
+# use the current RustyOnions codebundle generator if needed
+```
+
+---
+
+## 9. Current developer JSON observation
+
+The uploaded developer JSON for a paid thumbnail view confirms:
+
+```text
+target.hash = 48629c4c...
+target.kind = image
+state = paid
+quote ok = true
+payment ok = true
+content_view price = 5 ROC
+payer = acct_visitor_b
+recipient = acct_dev
+asset_page.content_type = image/png
+asset_page.description contains “Thumbnail generated rendition. Original image: ... Original CID: ...”
+asset_page.tags include rendition, role:thumbnail, original:b3:<original>
+manifest_cid is present in content_view quote/payment data
+```
+
+The key missing piece:
+
+```text
+No visible full rendition_group.renditions[] block in the pasted JSON.
+```
+
+That matches the screenshot and user observation: only the original link/back-reference appears, not every minted version. 
+
+---
+
+## 10. Files to inspect next session
+
+### CrabLink Tauri frontend
+
+```text
+apps/crablink-tauri/src/pages/image/ImagePage.jsx
+apps/crablink-tauri/src/pages/image/ImagePublishFlow.jsx
+apps/crablink-tauri/src/pages/image/ImageManifest.jsx
+apps/crablink-tauri/src/pages/image/ImageRenditions.jsx
+apps/crablink-tauri/src/pages/image/imageRenditionGenerator.js
+apps/crablink-tauri/src/pages/image/imageDraftModel.js
+apps/crablink-tauri/src/shared/api/assetClient.js
+apps/crablink-tauri/src/pages/asset/AssetPage.jsx
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/pages/asset/AssetContentViewAccess.jsx
+apps/crablink-tauri/src/shared/manifest/renditionGroups.js
+apps/crablink-tauri/src/shared/manifest/uniformManifest.js
+```
+
+### CrabLink Tauri Rust
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+apps/crablink-tauri/src-tauri/Cargo.toml
+```
+
+### RustyOnions backend
+
+```text
+crates/omnigate/src/routes/v1/assets.rs
+crates/omnigate/src/routes/v1/content_view.rs
+crates/svc-gateway/src/routes/product.rs
+crates/svc-storage/src/http/routes/paid_object.rs
+crates/ron-proto/src/... if formal DTOs are introduced later
+```
+
+---
+
+## 11. Testing plan for next session
+
+### 11.1 Baseline checks
+
+```bash
+cd /Users/mymac/Desktop/crablink
+bash scripts/check-tauri.sh
+```
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+cargo test -p omnigate --test image_asset_prepare
+cargo test -p svc-gateway --test product_routes_proxy
+```
+
+If disk pressure returns:
+
+```bash
+df -h /
+rm -rf /Users/mymac/Desktop/RustyOnions/target/debug/incremental
+rm -rf /Users/mymac/Desktop/crablink/apps/crablink-tauri/src-tauri/target/debug/incremental
+rm -rf /tmp/crablink-tauri-dev-*
+```
+
+Avoid full `cargo clean` unless absolutely needed.
+
+### 11.2 Runtime smoke
+
+Start:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Then smoke manually:
+
+```text
+1. Open crab://image.
+2. Select source image.
+3. Generate auto versions.
+4. Mint image bundle.
+5. Confirm result card lists:
+   - original
+   - desktop
+   - tablet
+   - mobile
+   - thumbnail
+6. Open original crab URL.
+7. Confirm original manifest page shows full rendition group.
+8. Open desktop crab URL.
+9. Confirm desktop manifest page shows same full rendition group and marks desktop/self.
+10. Repeat for tablet/mobile/thumbnail.
+11. Switch to Wallet B.
+12. Pay 5 ROC to view one image.
+13. Confirm image renders.
+14. Confirm content_view receipt is backend-derived.
+15. Inspect developer JSON and confirm rendition_group is present.
+```
+
+### 11.3 Expected JSON assertion
+
+For every minted image page:
+
+```text
+data.rendition_group.renditions.length >= 5
+data.rendition_group.renditions includes role=original
+data.rendition_group.renditions includes role=desktop
+data.rendition_group.renditions includes role=tablet
+data.rendition_group.renditions includes role=mobile
+data.rendition_group.renditions includes role=thumbnail
+current self CID appears exactly once in renditions
+canonical_crab_url points to original
+source_cid points to original
+```
+
+### 11.4 Negative tests
+
+```text
+If a rendition upload fails:
+  do not display fake link
+  do not claim complete bundle
+  show partial failure clearly
+  keep backend-returned successful links visible
+  mark bundle relationship incomplete
+
+If backend CID does not match predicted CID:
+  fail closed
+  do not write/display rendition_group
+  show exact mismatch
+
+If paid view receipt is absent:
+  do not render paid image bytes from cache alone
+
+If gateway /o/b3:<hash> returns JSON/problem:
+  display gateway byte fetch diagnostic
+  do not show broken image silently
+```
+
+---
+
+## 12. Manifest UX cleanup principles
+
+Next session should clean the manifest page without stripping useful truth.
+
+### Keep visible
+
+```text
+crab URL
+CID
+kind
+role/self rendition
+original/canonical pointer
+dimensions
+byte size
+content type
+owner passport
+owner wallet/payout
+storage availability
+paid receipt summary
+content view receipt summary
+rendition group table
+copy/open buttons
+```
+
+### Move behind details
+
+```text
+full gateway response
+full content_view quote raw JSON
+full content_view payment raw JSON
+full wallet_receipt raw object
+route diagnostics
+attempt lists
+correlation IDs
+ledger root details
+```
+
+### Avoid repeating
+
+```text
+same CID in five places
+same crab URL in five places
+same wallet receipt in three places
+same manifest CID in quote/payment/receipt panels
+same original URL inside description, tags, and structured fields
+```
+
+Use one visible field plus raw JSON for auditing.
+
+---
+
+## 13. Invariants to preserve
+
+```text
+Tauri is primary.
+Chrome remains proof/companion.
+Gateway-first.
+React owns display and user intent only.
+Tauri Rust owns native/binary bridge work.
+No fake b3 CIDs.
+No fake crab URLs.
+No fake receipts.
+No fake balances.
+No silent ROC spend.
+Every paid action must be explicit.
+Every minted image/rendition URL must come from the backend.
+Every rendition remains its own canonical b3-backed asset.
+The rendition group is metadata/reference graph, not a replacement for b3 truth.
+Wallet mutation remains through svc-wallet.
+Ledger truth remains ron-ledger.
+Cache/display data cannot unlock paid content alone.
+No arbitrary crab:// execution.
+No QuickChain/ROX/Solana/external settlement creep.
+```
+
+The notes repeatedly emphasize that every generated version must still be a real b3-backed `.image` asset and that album covers, thumbnails, posters, and other future uses are image roles/use-cases, not new asset kinds. 
+
+---
+
+## 14. Suggested next-session opening prompt
+
+Use this next time:
+
+```text
+We are continuing CrabLink Tauri image bundle manifest work. Current status: the full-stack runner works, gateway storage upstream is fixed, image bundle minting works, generated image versions are correct dimensionally and byte-wise, and paid image view works again through Wallet B. The remaining issue is that each minted image/rendition manifest only has a back-reference to the original image in description/tags, not the full rendition_group block listing original/desktop/tablet/mobile/thumbnail.
+
+Before coding, inspect git diff because the prior rendition_group patch partially applied and failed at “Could not find summarizeAsset return marker.” We need to make every image manifest in a bundle contain the same complete rendition_group.renditions array while keeping each image its own canonical b3 asset. We also need to clean up the manifest display so it stays detail-rich but less redundant. Do not fake b3, crab URLs, receipts, balances, or paid unlocks. Keep Tauri primary, gateway-first, backend truth authoritative, and no silent spend.
+```
+
+This is the best stopping point: image minting and paid viewing are green again; next session should focus only on durable rendition manifest cross-linking and manifest UI cleanup.
+
+
+### END NOTE - MAY 27 2026 - 12:50 CST
+
+### PRIVACY TODO - MAY 27 2026 - 15:25 CST
+
+Yes, I agree with your instinct: **strip sensitive metadata by default, but do not blindly strip everything.**
+
+The best policy for CrabLink is probably:
+
+```text
+Default: privacy-safe publish
+Advanced: preserve selected creator metadata
+Always: warn before publishing exact original metadata
+```
+
+For images, I would strip by default:
+
+```text
+GPS / location
+camera serial numbers
+device owner names
+software paths
+EXIF maker notes when they may leak device info
+capture timestamps if user chooses extra privacy
+```
+
+For video, I would strip by default:
+
+```text
+GPS / location atoms
+device/camera identifiers
+creation location
+creator machine/software path fields
+private QuickTime/iPhone metadata
+```
+
+For music and indie film, I would **not** automatically destroy useful public metadata like:
+
+```text
+artist
+title
+album/project
+copyright
+ISRC/UPC if present
+cover art
+credits
+chapters
+subtitle tracks
+language labels
+```
+
+A better long-term CrabLink model is: put important creator/provenance fields into the **manifest**, not hidden file metadata. The file can be privacy-clean, while the manifest intentionally says:
+
+```text
+creator
+title
+rights
+credits
+license
+release date
+renditions
+source relationship
+```
+
+The big b3 issue is important: **if we strip metadata, the bytes change, so the CID changes.** That means CrabLink must be honest in the UI:
+
+```text
+Selected source file ≠ published canonical file if metadata was stripped.
+Published original = privacy-clean canonical original.
+```
+
+I would avoid backend byte mutation. The cleanest architecture is:
+
+```text
+CrabLink Tauri detects metadata
+→ shows a privacy report
+→ strips/keeps based on creator choice
+→ computes/uploads the final bytes
+→ backend stores exactly those bytes by b3
+```
+
+The backend can later reject dangerous uploads or warn on geodata, but `svc-storage` should not silently rewrite bytes after upload because that breaks predicted CIDs and content-addressed truth.
+
+My opinion: **mandatory default geodata stripping is the right call.** Allow an advanced “keep location metadata” override only with a strong warning, because there are rare cases where location is part of the work, but most normal users will not realize they are publishing where a photo/video was taken.
+
+A good UX would be:
+
+```text
+Privacy cleanup: On by default
+[✓] Remove location data
+[✓] Remove device identifiers
+[✓] Remove hidden app/system metadata
+[ ] Preserve creator credits/tags when safe
+[Advanced] Publish exact original metadata
+```
+
+So no, stripping metadata is not going too far — **stripping all metadata blindly is going too far**. The right answer is a privacy-preserving sanitizer with creator-controlled preservation of intentional public metadata.
+
+
+### END PRIVACY TODO NOTE - MAY 27 2026 - 15:25 CST
+
+
+### BEGIN NOTE - MAY 27 2026 - 15:40 CST
+
+### BEGIN CARRYOVER NOTES — MAY 27 2026 — CrabLink Tauri image completion, image metadata stripping, and video rendition roadmap
+
+## 0. Current checkpoint
+
+We are at a very good stopping point for the **CrabLink Tauri image page**.
+
+The image page is now close to the desired product shape:
+
+```text
+✅ Image bundle minting works.
+✅ Original + generated sizes mint as real backend-returned .image assets.
+✅ Each version receives its own b3 CID and crab://<hash>.image URL.
+✅ Paid image viewing works again with Wallet B.
+✅ The image preview renders after backend content_view payment receipt.
+✅ The original image crab URL appears correctly.
+✅ The full rendition/sibling group now appears in the image manifest/page.
+✅ The rendition group UI is now clean and useful.
+✅ The UI style is very close to final and should be used as the reference pattern for video.
+```
+
+The main remaining image task is now:
+
+```text
+Add privacy-safe metadata stripping for image uploads.
+```
+
+After that, images can probably be considered mostly complete, aside from final polish/tiny UI tweaks.
+
+---
+
+## 1. What we accomplished for images
+
+### 1.1 Image bundle minting is working
+
+The current flow supports a creator selecting one image and minting a bundle of generated image versions.
+
+Current conceptual flow:
+
+```text
+selected source image
+→ generated original/desktop/tablet/mobile/thumbnail variants
+→ each uploaded through backend paid publish path
+→ each receives backend-returned CID + crab:// URL
+→ each manifest/page exposes the sibling rendition group
+```
+
+Important product result:
+
+```text
+The creator gets a family of real image assets, not fake local-only variants.
+```
+
+Each version is still canonical b3 truth as its own object.
+
+---
+
+### 1.2 Paid image view works again
+
+The screenshots confirmed that Wallet B can pay for a minted image and unlock/render the preview.
+
+Important invariant preserved:
+
+```text
+The app does not unlock from cache alone.
+The image preview appears only after backend content_view payment returns receipt metadata.
+```
+
+The receipt display is display-only. The backend wallet/ledger path remains the source of truth.
+
+---
+
+### 1.3 Rendition group metadata now appears
+
+We fixed the earlier issue where only the original/back-reference appeared in the page/manifest display.
+
+Current desired manifest/page behavior is now working:
+
+```text
+original page shows all siblings
+desktop page shows all siblings
+tablet page shows all siblings
+mobile page shows all siblings
+thumbnail page shows all siblings
+```
+
+Each page should be able to show:
+
+```text
+group ID
+source CID
+canonical original crab URL
+current role
+all sibling rows
+each sibling CID
+each sibling crab URL
+dimensions
+byte size
+MIME type
+open/copy controls
+raw rendition_group JSON in collapsible developer view
+```
+
+Important note for future debugging:
+
+```text
+Fresh mints are required to test this correctly.
+Old mints created before the rendition_group work may not contain the structured group metadata.
+```
+
+---
+
+### 1.4 Image page UI is now the reference design for video
+
+The current image rendition group UI is close to ideal:
+
+```text
+Clean card layout
+Role badge
+Crab URL + CID
+Facts for dimensions/size/type
+Open button
+Copy URL
+Copy CID
+Collapsible raw JSON
+```
+
+This should become the model for video rendition groups, except video will need additional fields:
+
+```text
+duration
+codec
+audio codec
+container
+bitrate
+frame rate
+poster/thumbnail link
+range/segment support later
+```
+
+User preference:
+
+```text
+The video page should use the same or very similar UI language as the image page.
+```
+
+---
+
+## 2. Important architecture boundaries to preserve
+
+### 2.1 CrabLink Tauri is the client, not the backend
+
+CrabLink Tauri may:
+
+```text
+generate local previews
+prepare local files
+sanitize metadata before upload
+resize images client-side
+eventually encode video client-side
+call gateway routes
+display backend truth
+cache display receipts
+```
+
+CrabLink Tauri must not:
+
+```text
+invent CIDs after backend disagrees
+invent receipts
+invent balances
+mutate ledger truth
+unlock paid content from cache alone
+act as storage authority
+act as wallet authority
+silently spend ROC
+```
+
+---
+
+### 2.2 Backend truth remains backend truth
+
+Correct ownership remains:
+
+```text
+svc-storage stores bytes by b3 content ID.
+svc-index resolves pointers/names.
+svc-gateway is the public route boundary.
+omnigate hydrates product views.
+svc-wallet is the wallet mutation front-door.
+ron-ledger is durable economic truth.
+CrabLink displays/request actions only.
+```
+
+---
+
+### 2.3 Metadata stripping must happen before upload
+
+This is critical.
+
+If the app strips metadata, the bytes change. If the bytes change, the b3 CID changes.
+
+Therefore the correct flow is:
+
+```text
+user selects source file
+→ CrabLink inspects metadata
+→ CrabLink shows privacy report
+→ CrabLink strips/keeps metadata according to settings
+→ cleaned bytes become the canonical publish bytes
+→ b3 prediction/prepare/upload use those cleaned bytes
+→ backend stores exactly those bytes
+→ manifest discloses privacy-cleaned source relationship
+```
+
+Wrong flow:
+
+```text
+upload raw bytes
+→ backend silently rewrites metadata
+→ CID mismatch / broken content-addressed truth
+```
+
+Do not silently mutate bytes server-side after the client predicts or submits CIDs.
+
+---
+
+## 3. Next session primary task: image metadata stripping
+
+### 3.1 Goal
+
+Add a privacy-safe image metadata cleanup path that runs before image minting.
+
+Default product behavior should be:
+
+```text
+Privacy cleanup: ON
+Remove geolocation: ON
+Remove device identifiers: ON
+Remove hidden app/system metadata: ON
+Preserve intentional creator metadata through the manifest, not hidden EXIF.
+```
+
+---
+
+### 3.2 What to strip by default for images
+
+Default stripping should remove:
+
+```text
+GPS latitude/longitude/altitude
+GPS timestamps
+camera serial number
+lens serial number
+device owner name
+author fields if hidden/unintended
+software paths
+local file paths
+EXIF maker notes when likely to leak device/private data
+thumbnail EXIF blobs if they contain hidden data
+possibly capture timestamp, depending on privacy setting
+```
+
+Recommended default:
+
+```text
+Always remove geodata.
+Always remove device serial / owner / local path metadata.
+Make capture timestamp removal configurable.
+```
+
+Rationale:
+
+```text
+Geodata is the highest-risk accidental privacy leak.
+A normal creator may not realize an image exposes where it was taken.
+```
+
+---
+
+### 3.3 What not to blindly destroy
+
+Do not blindly destroy useful creator information if it is intentionally public.
+
+However, for images specifically, most public-facing creator info should move to the CrabLink manifest:
+
+```text
+title
+description
+creator
+rights/license
+tags
+credit
+source relationship
+release context
+```
+
+The image file itself can be privacy-clean while the manifest carries intentional public metadata.
+
+---
+
+### 3.4 UI requirements for image metadata cleanup
+
+Add a small but clear privacy panel to the image upload/create flow.
+
+Suggested UX:
+
+```text
+Privacy cleanup
+On by default
+
+✓ Remove location data
+✓ Remove device identifiers
+✓ Remove hidden app/system metadata
+□ Remove capture date/time
+□ Preserve safe creator metadata, if detected
+Advanced: Publish exact original metadata
+```
+
+The “publish exact original metadata” option should require a strong warning.
+
+Suggested warning language:
+
+```text
+Exact original metadata may reveal location, device, software, timestamps, or private creator information. Use only if you intentionally want the file metadata preserved.
+```
+
+---
+
+### 3.5 Manifest disclosure for sanitized images
+
+The manifest should honestly record that the published bytes were cleaned.
+
+Suggested structured fields, names can be adjusted to match existing manifest helpers:
+
+```json
+{
+  "privacy": {
+    "metadata_policy": "privacy_cleaned",
+    "removed": ["gps", "device_identifiers", "software_paths", "maker_notes"],
+    "kept": ["none"],
+    "source_file_was_rewritten_before_publish": true
+  }
+}
+```
+
+For exact-original mode:
+
+```json
+{
+  "privacy": {
+    "metadata_policy": "exact_original_metadata_requested",
+    "warning_acknowledged": true
+  }
+}
+```
+
+Important wording:
+
+```text
+Published original = canonical privacy-cleaned original
+Selected source file = local file the creator chose
+```
+
+Do not imply the b3 CID belongs to the raw unmodified local file if metadata was stripped.
+
+---
+
+### 3.6 Image metadata testing checklist
+
+After implementation, test:
+
+```text
+1. Upload image with known GPS EXIF.
+2. Confirm privacy panel detects/flags geodata.
+3. Mint with cleanup ON.
+4. Confirm minted CID is based on cleaned bytes.
+5. Confirm paid view still works.
+6. Confirm rendition group still works.
+7. Confirm downloaded/rendered image no longer contains GPS.
+8. Confirm manifest says privacy_cleaned.
+9. Confirm exact-original advanced mode is possible only after warning.
+10. Confirm no fake receipts/balances were introduced.
+```
+
+---
+
+## 4. After images: begin video page cleanup and video rendition system
+
+### 4.1 Product goal for video
+
+Use the image page as the product reference.
+
+Video should support:
+
+```text
+one selected source video
+→ one canonical publish version
+→ optional generated device renditions
+→ each rendition minted as a real .video asset
+→ every video manifest cross-links to every sibling version
+→ paid viewing works through backend receipt
+→ page displays clean rendition group UI
+```
+
+---
+
+### 4.2 MP4 should be the default format
+
+User preference / project direction:
+
+```text
+MP4 should be the default creator-facing video output format because it is the most broadly compatible.
+```
+
+Recommended default target:
+
+```text
+container: MP4
+video: H.264
+audio: AAC
+```
+
+Advanced/import formats can still be accepted where supported:
+
+```text
+WebM
+MOV
+M4V
+Ogg/Theora
+other browser/native-supported sources
+```
+
+But the product-facing default should be:
+
+```text
+“Publish as MP4”
+```
+
+---
+
+### 4.3 Client-side video processing is preferred for the early product
+
+The desired direction is:
+
+```text
+CrabLink Tauri does the heavy video resizing/conversion locally
+→ backend stores final bytes by b3
+→ backend does not have to transcode every creator upload
+```
+
+This is the right instinct because it reduces early backend complexity and cost.
+
+However, this must be done carefully:
+
+```text
+No arbitrary shell commands from Tauri.
+No unsafe “run ffmpeg command string” bridge.
+No unbounded command results with full video bytes.
+No fake claims that every machine can encode every format.
+No silent client-side rewrite without user awareness.
+```
+
+The correct framing is:
+
+```text
+Client-side controlled media preparation
+not
+server-side silent transcode
+not
+arbitrary local command execution
+```
+
+---
+
+### 4.4 Important caution: MP4 encoding client-side is non-trivial
+
+This will likely be a heavier code batch than image resizing.
+
+Reasons:
+
+```text
+image resizing can use canvas/blob paths
+video resizing requires decoding frames, scaling, encoding, muxing, and preserving audio
+MP4/H.264/AAC browser encoding support may vary by platform
+MediaRecorder often outputs WebM depending on browser/runtime
+ffmpeg.wasm is possible but heavy
+native Tauri/Rust encoding adapters may be better but must be controlled and feature-gated
+```
+
+Next session should not assume this is a tiny patch.
+
+Recommended implementation posture:
+
+```text
+Start with feasibility and staged rollout.
+Do not build an OBS/Adobe/FFmpeg clone all at once.
+```
+
+---
+
+## 5. Recommended staged video plan
+
+### Phase V1 — Video UI cleanup first
+
+Before heavy encoding, make the video page match the image page quality.
+
+Tasks:
+
+```text
+clean developer clutter
+make paid view section clear
+make source/manifest facts readable
+add modern preview/player card
+add video truth boundary messaging
+add collapsible developer JSON
+style page like image page
+```
+
+Goal:
+
+```text
+Video page feels as polished as image page before adding heavy processing.
+```
+
+---
+
+### Phase V2 — Video rendition manifest/display support
+
+Add video rendition group display first, even if renditions are manually or simply generated.
+
+Manifest/page should support:
+
+```text
+video_rendition_group
+renditions[]
+role
+label
+cid
+crab_url
+container
+mime
+width
+height
+duration
+bytes
+video_codec
+audio_codec
+bitrate
+frame_rate
+poster_image_cid
+thumbnail_image_cid
+derived_from
+canonical_original
+is_original
+```
+
+UI should mirror image rendition card:
+
+```text
+Role badge
+Crab URL + CID
+resolution/duration/size/type
+codec facts
+Open/Copy buttons
+Raw JSON collapse
+```
+
+---
+
+### Phase V3 — Client-side video metadata stripping
+
+Before resizing/encoding, add metadata privacy cleanup for video.
+
+Default strip:
+
+```text
+GPS/location atoms
+creation location
+device/camera identifiers
+software paths
+local machine/app metadata
+private QuickTime/iPhone metadata
+serial numbers
+```
+
+Preserve or move to manifest:
+
+```text
+title
+creator
+credits
+copyright
+license
+project name
+subtitle/language labels, if intentional
+```
+
+Important:
+
+```text
+For indie filmmakers, some metadata can be meaningful.
+Do not blindly destroy intentional public metadata.
+```
+
+Best approach:
+
+```text
+strip privacy-sensitive metadata by default
+preserve creator-facing fields only if user explicitly opts in
+write intentional information into CrabLink manifest
+```
+
+---
+
+### Phase V4 — Client-side MP4 preparation
+
+Target product action:
+
+```text
+Prepare MP4 versions
+```
+
+Suggested default output ladder:
+
+```text
+source/original cleaned MP4
+1080p desktop, if source is >=1080p
+720p standard
+480p mobile
+360p low-bandwidth/mobile
+poster image
+thumbnail image
+```
+
+Do not generate renditions larger than the source.
+
+Example:
+
+```text
+source is 720p
+→ original/source
+→ 720p
+→ 480p
+→ 360p
+→ poster/thumbnail
+not 1080p
+```
+
+---
+
+### Phase V5 — Mint video bundle
+
+Once generated locally:
+
+```text
+each video file uploads/mints as a real .video asset
+poster/thumbnail may mint as .image assets or linked image auxiliaries
+every video manifest gets full video_rendition_group
+each video page can show all siblings
+paid view uses backend content_view receipt
+```
+
+The bundle mint flow should follow the image approach:
+
+```text
+prepare/quote
+explicit confirmation
+backend wallet path
+backend receipt
+upload/publish
+backend-returned CIDs
+manifest/rendition group hydration
+paid unlock/render
+```
+
+No silent spend.
+
+---
+
+## 6. Possible technical approaches for client-side MP4
+
+Next session should evaluate one of these carefully.
+
+### Option A — Browser/Web APIs where supported
+
+Pros:
+
+```text
+uses platform capabilities
+no giant dependency
+can be good for previews/simple exports
+```
+
+Cons:
+
+```text
+MP4/H.264/AAC encoding support may vary
+MediaRecorder may prefer WebM
+muxing support may be inconsistent
+hard to guarantee universal MP4 output
+```
+
+---
+
+### Option B — ffmpeg.wasm in a worker
+
+Pros:
+
+```text
+predictable format conversion
+can produce MP4/H.264/AAC-like workflows depending on build
+works fully client-side
+```
+
+Cons:
+
+```text
+large dependency
+high CPU/memory
+slow for long videos
+licensing/build considerations
+bad for low-power machines
+must be bounded and cancellable
+```
+
+Important invariant:
+
+```text
+If used, it should run in a worker-like bounded job with progress/cancel.
+Do not block the main UI.
+Do not pass huge bytes through Tauri command results.
+```
+
+---
+
+### Option C — Controlled Tauri native media adapter
+
+Pros:
+
+```text
+better performance
+can use platform-native encoders
+better for desktop app long term
+```
+
+Cons:
+
+```text
+platform-specific complexity
+requires careful Rust/Tauri bridge design
+must not become arbitrary command execution
+more testing burden
+```
+
+Allowed shape:
+
+```text
+tauri command: prepare_video_renditions(request)
+request is typed/bounded/allowlisted
+output is file handles/paths or staged local artifacts
+no shell/eval/raw command
+no secrets
+redacted errors
+progress events
+cancel support
+```
+
+Forbidden shape:
+
+```text
+tauri command: run_ffmpeg(command_string)
+```
+
+---
+
+## 7. Recommended video implementation strategy
+
+Best path:
+
+```text
+1. Clean video UI.
+2. Add video rendition_group display support.
+3. Add video metadata scan/strip UX.
+4. Add simple poster/thumbnail generation first.
+5. Add “keep original MP4 cleaned” path.
+6. Add one generated lower-resolution MP4 path.
+7. Expand to full ladder after first proof.
+```
+
+Avoid trying to ship this all in one giant patch.
+
+First practical video proof could be:
+
+```text
+source MP4
+→ cleaned original MP4
+→ 480p MP4
+→ poster image
+→ thumbnail image
+→ mint as bundle
+→ display rendition group
+→ paid view works
+```
+
+Then expand to:
+
+```text
+1080p / 720p / 480p / 360p
+```
+
+---
+
+## 8. Metadata policy across asset kinds
+
+### 8.1 Global policy
+
+CrabLink should become privacy-safe by default:
+
+```text
+default: strip sensitive metadata
+advanced: preserve selected metadata
+manifest: intentional public metadata
+```
+
+This should apply to:
+
+```text
+image
+video
+music
+podcast
+possibly documents later
+```
+
+---
+
+### 8.2 Music/podcast nuance
+
+Do not blindly strip all audio metadata.
+
+Music creators may need:
+
+```text
+artist
+title
+album
+track number
+cover art
+ISRC
+UPC
+copyright
+lyrics markers
+credits
+genre
+release date
+```
+
+Podcast creators may need:
+
+```text
+episode title
+show title
+chapter markers
+cover art
+author
+copyright
+description
+language
+```
+
+But still strip sensitive/private fields:
+
+```text
+local file paths
+device identifiers
+software/private workstation metadata
+geolocation if present
+hidden comments not intended for publishing
+```
+
+The right model:
+
+```text
+privacy-sensitive metadata is stripped by default
+creator/public metadata is preserved only intentionally
+important public fields also go into the CrabLink manifest
+```
+
+---
+
+## 9. Testing/gates for next sessions
+
+### 9.1 Standard runner
+
+Use:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+The runner starts the local RustyOnions services and CrabLink Tauri.
+
+---
+
+### 9.2 Image final test checklist
+
+After metadata stripping:
+
+```text
+fresh image with EXIF GPS
+privacy cleanup ON
+mint bundle
+verify all versions render
+verify rendition group is present on each version
+verify paid view with Wallet B works
+verify no GPS remains in published bytes
+verify manifest records privacy cleanup
+verify old exact-original advanced mode requires warning
+run build/check gates
+```
+
+---
+
+### 9.3 Video future test checklist
+
+For the video work:
+
+```text
+import MP4 source
+scan metadata
+strip privacy-sensitive metadata
+generate poster/thumbnail
+generate at least one lower-resolution MP4
+mint bundle
+open each .video page
+verify rendition group display
+pay from Wallet B
+verify paid playback
+verify no full-file giant Tauri command result path
+verify backend returns real CIDs/receipts
+```
+
+---
+
+## 10. Important UI/product preferences to preserve
+
+The user is happy with the current image UI.
+
+Preserve this design language:
+
+```text
+clean cards
+rounded borders
+readable facts
+big clear copy/open controls
+minimal developer clutter
+developer JSON collapsible
+truth boundary messages
+paid/unpaid state clearly visible
+same light/dark theme behavior
+```
+
+Use the image page as the video UI template.
+
+The video page should not look like a developer test harness. It should look like a product page.
+
+---
+
+## 11. Known project preferences to remember
+
+```text
+Do not provide downloadable artifact files for code patches.
+Provide paste-ready code directly in chat.
+Prefer exact paths and full files when code is requested.
+Tauri is primary.
+Chrome remains green proof/companion.
+Gateway compatibility first.
+ROC is internal.
+Do not introduce external settlement/QuickChain/Solana/ROX here.
+Do not use “ROC minor” in UI/user-facing copy unless wire compatibility requires it.
+No fake balances.
+No fake receipts.
+No silent spend.
+No arbitrary shell/native run commands.
+```
+
+---
+
+## 12. Next-session recommended opening plan
+
+Start next session with:
+
+```text
+Task 1: finish image metadata stripping
+Task 2: final image UI sanity pass
+Task 3: begin video page UI cleanup using image page as reference
+Task 4: design video metadata/rendition manifest fields
+Task 5: prototype client-side MP4 feasibility path cautiously
+```
+
+Do **not** jump straight into full video transcoding without first deciding the safe local encoding approach.
+
+The safe order is:
+
+```text
+image metadata cleanup
+→ image final gate
+→ video UI polish
+→ video manifest/rendition display
+→ video metadata cleanup
+→ MP4 client-side encoding/resizing prototype
+→ video bundle minting
+```
+
+### END CARRYOVER NOTES
+
+
+### END NOTE - MAY 27 2026 - 15:40 CST
+
+
+### BEGIN NOTE - MAY 28 2026 - 09:05 CST
+
+Below are the carryover notes for the next session.
+
+# CrabLink Tauri Carryover Notes — Images Manifest Finish → Video Page Start
+
+## Current run path
+
+Use this as the default local dev startup unless debugging needs split terminals:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+This script runs both the RustyOnions backend stack and CrabLink Tauri frontend.
+
+## Current priority for next session
+
+The immediate next session should **finish the image resolved/manifest page display**, then move to the video page.
+
+The image minting form itself is in good shape. Do **not** redesign the image minting page unless absolutely necessary. The advanced form is good as-is. The remaining issue is the **resolved image asset page layout and display of image manifest data**.
+
+## Image work accomplished so far
+
+We made excellent progress on image minting and image privacy handling.
+
+The current image flow now does this:
+
+```text
+select source image
+→ strip/clean metadata locally
+→ verify cleaned bytes before quote/mint
+→ generate image versions from the privacy-cleaned source
+→ predict b3 CIDs from cleaned bytes
+→ get backend quote
+→ explicit ROC hold
+→ mint cleaned original first
+→ mint generated versions
+→ verify backend CID matches predicted CID
+→ display backend-returned crab URLs
+```
+
+The important privacy cleanup behavior is now:
+
+```text
+EXIF/GPS/XMP/IPTC/comment/time/text metadata is stripped or blocked
+PNG eXIf is detected
+PNG unsafe chunks can be stripped directly if WebView re-exports dirty PNG
+cleaned blob is rescanned before b3 prediction/upload
+mint fails closed if risky metadata remains
+```
+
+The sanitizer files touched recently:
+
+```text
+apps/crablink-tauri/src/pages/image/imageMetadataSanitizer.js
+apps/crablink-tauri/src/pages/image/ImagePublishFlow.jsx
+```
+
+Known sanitizer behavior to preserve:
+
+```text
+- hash change alone is not treated as proof
+- cleaned bytes are rescanned
+- mint is blocked if cleaned blocking metadata remains
+- PNG eXIf/iTXt/tEXt/zTXt/tIME are stripped when necessary
+- metadata cleanup happens before quote, b3 prediction, and upload
+- backend CID mismatch still fails the mint
+```
+
+This is architecturally correct because the frontend is only preparing local bytes. Backend truth still comes from gateway/wallet/storage responses.
+
+## Current image resolved-page issue
+
+The latest screenshots show that the data is now coming through, but the page still needs layout polish.
+
+Current problem:
+
+```text
+1. The image information block exists but needs to be more visually coherent.
+2. Some generated version pages now show most data, but title handling is still weak.
+3. The page order is not ideal.
+4. Preview/pay area is too far down.
+5. Versions are buried below payment/preview and info blocks.
+6. Mundane gateway facts are too prominent near the top.
+```
+
+The user wants this order:
+
+```text
+1. Image preview + paid view controls at the top
+2. Clean image information / manifest block underneath
+3. Image versions / rendition group underneath that
+4. Mundane gateway/canonical/storage/receipt/developer facts beneath all of that
+```
+
+This should be handled mostly as a display/layout refactor of the resolved asset page, not a minting-flow refactor.
+
+## Image resolved-page files likely involved next
+
+Focus on these files:
+
+```text
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/pages/asset/ImageAssetManifestFacts.jsx
+apps/crablink-tauri/src/pages/asset/AssetContentViewAccess.jsx
+apps/crablink-tauri/src/pages/asset/asset.css
+```
+
+Possibly inspect:
+
+```text
+apps/crablink-tauri/src/pages/image/ImagePublishFlow.jsx
+```
+
+Only touch `ImagePublishFlow.jsx` if title/creator_intent data is not being stored cleanly for future mints.
+
+## What should happen next for image manifest page
+
+The next patch should not touch the image minting form. It should refactor the image asset display page.
+
+Recommended target layout:
+
+```text
+Image Asset
+- title/header
+- status chips
+
+Paid content view / preview card
+- quote/pay buttons
+- locked/unlocked state
+- image preview box
+- backend content_view receipt warning
+- no preview bytes until backend receipt
+
+Image manifest information
+- title
+- image description
+- creator display
+- source hint
+- rights hint
+- alt text
+- provenance note
+- image role
+- use cases
+- current rendition
+- privacy cleanup
+
+Image versions
+- original
+- desktop
+- tablet
+- mobile
+- thumbnail
+- current row highlighted
+- open/copy URL/copy CID controls
+
+Gateway/canonical facts
+- crab URL
+- CID
+- hash
+- kind
+- owner
+- payout
+- correlation
+- storage availability
+- receipt references
+- diagnostics
+- developer JSON
+```
+
+Important invariant: paid image bytes must stay locked until content_view pay returns a backend receipt. It is okay for metadata/manifest facts to be visible before payment, but not the protected image bytes.
+
+## Title issue on generated image pages
+
+Generated pages are still not title-perfect. The fix should derive display title in this order:
+
+```text
+summary.title
+→ rendition_group.creator_intent.title + current rendition label
+→ raw title from gateway
+→ "Image"
+```
+
+For generated versions, ideal display examples:
+
+```text
+Example Title — Desktop
+Example Title — Tablet
+Example Title — Mobile
+Example Title — Thumbnail
+```
+
+Instead of:
+
+```text
+Untitled image
+```
+
+This can likely be fixed inside `ImageAssetManifestFacts.jsx` or wherever `AssetHydratedView.jsx` computes the image heading.
+
+Do not fake backend truth. This is only a display title derived from backend-returned manifest/rendition group data.
+
+## Image manifest information display goal
+
+The latest “neat boxes” direction is correct. Preserve it, but polish it.
+
+The page should show image information as boxes, not as a single text blob:
+
+```text
+Image Description
+example description
+
+Creator Display
+@skinnycrabby
+
+Source Hint
+Creator Original
+
+Rights Hint
+Creator Owned Original
+
+Alt Text
+alt text example
+
+Provenance Note
+provenance note example
+
+Image Role
+Thumbnail
+
+Use Cases
+Standalone Image
+
+Current Rendition
+Thumbnail · 320×320 · current version
+
+Privacy Cleanup
+Verified before minting
+```
+
+The note should be short and readable:
+
+```text
+These are intentional CrabLink manifest fields. Hidden file metadata such as EXIF/GPS/XMP/IPTC was stripped before minting when privacy verification passed.
+```
+
+## Image versions display goal
+
+The versions block is good functionally. Keep the data-rich table, but place it under the image info block.
+
+Current rows:
+
+```text
+Original
+Desktop
+Tablet
+Mobile
+Thumbnail
+```
+
+Each row should continue to show:
+
+```text
+role
+crab URL / CID
+dimensions
+size
+content type
+Open
+Copy URL
+Copy CID
+```
+
+Current version should remain highlighted.
+
+## Mundane info placement
+
+Move or visually demote these below the more useful user-facing sections:
+
+```text
+canonical crab URL
+content ID
+content object CID
+hash
+asset kind
+manifest CID
+owner
+payout
+correlation
+storage availability
+receipt references
+resolve diagnostics
+developer JSON
+```
+
+These are important, but they should not dominate the top of an image page.
+
+## Do not regress image invariants
+
+Do not break:
+
+```text
+- no silent ROC spend
+- no fake receipt
+- no fake balance
+- no fake CID
+- no fake backend URL
+- no local cache unlock
+- no direct storage/index/wallet/ledger mutation from UI
+- no image bytes before backend paid content_view receipt
+- no raw EXIF/GPS mint by default
+- no full backend bypass
+```
+
+## Known image status
+
+Image minting is close to complete. Remaining image tasks:
+
+```text
+1. Finish resolved image page ordering/layout.
+2. Fix generated version display title.
+3. Make image manifest info clean and compact.
+4. Keep versions block detail-rich but placed lower.
+5. Keep mundane gateway facts available but visually lower priority.
+6. Run build.
+7. Run full local stack with the default script.
+8. Mint one fresh test image bundle.
+9. Test original, desktop, tablet, mobile, thumbnail pages.
+10. Test Wallet B/visitor paid image preview.
+```
+
+Suggested test script flow for next session:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Then in the Tauri app:
+
+```text
+1. Go to crab://image
+2. Mint a new image with:
+   - title
+   - description
+   - tags
+   - creator display
+   - source hint
+   - rights hint
+   - alt text
+   - provenance note
+   - versions enabled
+3. Open original image URL.
+4. Open generated desktop/tablet/mobile/thumbnail URLs.
+5. Confirm each page shows:
+   - title
+   - paid preview section at top
+   - neat image info block
+   - versions below info
+   - mundane facts below versions
+6. Switch to visitor wallet/passport.
+7. Pay to view image.
+8. Confirm preview unlocks only after backend receipt.
+```
+
+## Next phase after images: video page
+
+After the image manifest page is finished, move to video.
+
+The video page should follow the same UX pattern we developed for images:
+
+```text
+simple mint surface
+advanced fields available but not cluttering the main flow
+clear local preview
+explicit quote
+explicit ROC hold
+backend receipt
+backend-returned crab URL
+paid view gate
+manifest info displayed neatly
+versions/renditions displayed cleanly
+mundane gateway facts below user-facing content
+```
+
+The first video work should be UI/UX, not conversion yet.
+
+Recommended video UI order:
+
+```text
+1. Video preview / selected file card
+2. Simple title + description
+3. Quote / confirm / mint controls
+4. Advanced fields drawer
+5. Local video details
+6. Manifest preview
+7. Paid view route display
+8. Renditions / versions planning area
+```
+
+Video page files likely involved:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPage.jsx
+apps/crablink-tauri/src/pages/video/VideoDraft.jsx
+apps/crablink-tauri/src/pages/video/VideoLocalPlaybackPreview.jsx
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+apps/crablink-tauri/src/pages/video/videoDraftModel.js
+apps/crablink-tauri/src/pages/video/video.css
+apps/crablink-tauri/src/pages/asset/AssetPaidAudioPlayer.jsx maybe not relevant
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx for paid video display
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+```
+
+## Video metadata stripping and conversion plan
+
+The user specifically wants the video converter written in **Rust for efficiency**, and modular so the code can be reused later when building a full browser.
+
+This is important. Do not implement heavy video conversion in React/JavaScript.
+
+Preferred direction:
+
+```text
+Rust-owned video processing
+modular core
+Tauri command bridge only exposes small typed allowlisted commands
+React only displays progress and asks for user intent
+no raw shell/eval/run arbitrary commands
+no secrets in frontend state
+bounded input/output
+bounded progress events
+clear cancellation
+```
+
+Recommended architecture for future video conversion:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/
+  mod.rs
+  video_probe.rs
+  video_metadata.rs
+  video_transcode.rs
+  video_renditions.rs
+  video_jobs.rs
+  limits.rs
+```
+
+Or, better for future reuse:
+
+```text
+packages or crates:
+  crablink-media-core/
+    Rust library for probing, metadata stripping, rendition planning, output manifest
+  crablink-tauri/
+    Tauri command adapter that calls crablink-media-core
+```
+
+Since the current repo is the CrabLink frontend repo, we need to inspect the workspace before deciding exact crate placement. But the design goal should be:
+
+```text
+core media processing is reusable Rust
+Tauri command layer is thin
+React does not own media processing
+future CrabLink browser can reuse the Rust media core
+```
+
+Possible Rust interface:
+
+```text
+probe_video(path) -> VideoProbeSummary
+plan_video_renditions(probe, device_targets) -> VideoRenditionPlan
+strip_video_metadata(input, output, policy) -> VideoCleanResult
+transcode_video_bundle(input, plan, output_dir) -> VideoBundleResult
+cancel_video_job(job_id)
+get_video_job_status(job_id)
+```
+
+Tauri command bridge rules to preserve:
+
+```text
+- typed commands only
+- allowlisted commands only
+- bounded paths, preferably selected-file handles/temp dirs
+- no arbitrary shell command
+- no run/eval/native raw command
+- no private keys/secrets
+- redacted errors
+- progress events contain no sensitive paths unless necessary
+- user explicitly confirms before mint/spend
+```
+
+## Video converter technology decision
+
+When we reach video conversion, we need to decide whether to:
+
+```text
+A. Use a Rust video processing library directly.
+B. Use FFmpeg through a controlled Rust wrapper/sidecar.
+C. Use platform-native codecs where possible.
+```
+
+Important warning: if using FFmpeg, do not expose arbitrary FFmpeg command strings from React. The React UI should select safe options, and Rust should build the bounded command internally.
+
+Preferred safe model:
+
+```text
+React:
+  "Make mobile/tablet/desktop MP4 renditions"
+
+Rust:
+  validates source
+  probes duration/size/container
+  enforces caps
+  strips metadata
+  builds known-safe transcode plan
+  produces MP4/H.264/AAC or selected supported profile
+  returns b3-ready output file descriptors
+```
+
+## Video rendition bundle goal
+
+Eventually, video minting should work like image bundles:
+
+```text
+original or cleaned master
+desktop rendition
+tablet rendition
+mobile rendition
+thumbnail/poster image
+manifest with all renditions
+each rendition has own b3 CID
+each rendition has own backend-returned crab URL
+all versions link back to cleaned canonical/master source
+paid access uses backend quote/pay/receipt
+```
+
+Important media invariant:
+
+```text
+No full large media file should be returned through Tauri command results.
+```
+
+Use file paths, byte ranges, segments, or streaming-safe handles. Command results should be small DTOs.
+
+## Video metadata stripping goal
+
+Video metadata to strip eventually:
+
+```text
+container metadata
+creation time
+device/software tags
+GPS/location if present
+artist/comment/title metadata unless user intentionally sets public fields
+embedded thumbnails if they carry metadata
+track-level metadata
+chapter metadata if not intentionally kept
+```
+
+Public CrabLink manifest fields are different and should be preserved intentionally:
+
+```text
+title
+description
+creator display
+source hint
+rights hint
+alt text / poster alt text
+provenance note
+video role
+use cases
+rendition list
+privacy cleanup verification
+```
+
+Same principle as images:
+
+```text
+Strip hidden file metadata.
+Add intentional CrabLink manifest metadata.
+```
+
+## Suggested next-session implementation order
+
+Do not jump straight to video conversion. Finish images first.
+
+### Step 1 — Inspect current image asset display files
+
+Review:
+
+```text
+AssetHydratedView.jsx
+ImageAssetManifestFacts.jsx
+asset.css
+ImagePublishFlow.jsx only if needed
+```
+
+Confirm how the page currently lays out sections.
+
+### Step 2 — Reorder resolved image asset page
+
+Patch `AssetHydratedView.jsx` so image routes use a dedicated order:
+
+```text
+paid preview/access block first
+image manifest facts second
+rendition group third
+mundane asset facts fourth
+storage/receipts/diagnostics last
+```
+
+Non-image asset routes should remain mostly unchanged.
+
+### Step 3 — Fix display title for generated image pages
+
+Patch image title derivation:
+
+```text
+summary.title
+creator_intent.title + current rendition label
+raw title
+fallback
+```
+
+Make sure generated pages no longer show `Untitled image` when the structured creator intent has a real title.
+
+### Step 4 — Polish image manifest CSS
+
+Make the info boxes compact and readable at normal zoom and 40–80% zoom.
+
+Avoid giant spacing. Keep:
+
+```text
+two-column grid on desktop
+one-column on narrow screens
+wide boxes for description/alt/provenance
+small badges for role/privacy/source
+```
+
+### Step 5 — Build and smoke test
+
+Run:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+```
+
+Then run full stack:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+### Step 6 — Fresh image bundle test
+
+Mint a new image bundle after the patch. Do not rely on old mints because old backend metadata may not include the newest structured fields.
+
+Test:
+
+```text
+original page
+desktop page
+tablet page
+mobile page
+thumbnail page
+visitor paid view
+```
+
+### Step 7 — Move to video UI/UX
+
+Once image page is acceptable, begin video UI cleanup using image page as reference.
+
+First video session should focus on:
+
+```text
+clean layout
+simple mint form
+advanced drawer
+preview placement
+paid view area
+manifest display
+versions/rendition planning UI
+```
+
+Do not start heavy Rust video conversion until video UI is coherent.
+
+### Step 8 — Plan Rust video media core
+
+After video UI is clean, start Rust media core design.
+
+Do this deliberately:
+
+```text
+define DTOs
+define limits
+define probe command
+define metadata-clean command
+define rendition-plan command
+define transcode job command
+define progress event format
+define cancellation
+define test matrix
+```
+
+## Important user preferences to preserve
+
+```text
+- Provide paste-ready code directly in chat.
+- Do not provide downloadable patch files.
+- Do not redesign image mint form unnecessarily.
+- Tauri-first.
+- Gateway-first.
+- Keep Chrome as proof/companion only.
+- No localhost mandatory for normal users.
+- No fake balances.
+- No fake receipts.
+- No fake CIDs.
+- No silent spend.
+- No external settlement / QuickChain / ROX / Solana creep.
+- Use ROC, ROC units, or just ROC in UI/docs; avoid “minor units” wording in user-facing text where possible.
+- RustyOnions backend owns durable truth.
+- CrabLink Tauri is client/display/user-intent layer.
+```
+
+## Current status summary
+
+Images are nearly complete. The privacy cleaner is solid enough to continue testing, including PNG eXIf handling. Image minting and version minting are working. The main remaining image task is **resolved image page polish**: order, title derivation, neat info block, versions placement, mundane info demotion.
+
+After that, move to video page UI/UX. Then build Rust-based modular video metadata stripping and conversion, designed for reuse in a future CrabLink browser.
+
+
+### END NOTE - MAY 28 2026 - 09:05 CST
+
+
+
+### BEGIN NOTE - MAY 28 2026 - 20:10 CST
+
+I reviewed the uploaded carryover notes and newer Tauri codebundle. The notes already define the video goal: MP4 as the default creator-facing output, Rust-owned modular processing, no arbitrary shell bridge, no full video bytes returned through commands, and a video rendition bundle model like images. The current codebundle confirms the relevant Tauri video files already exist: `VideoPage.jsx`, `VideoDraft.jsx`, `VideoLocalPlaybackPreview.jsx`, `VideoPublishFlow.jsx`, `VideoRenditions.jsx`, `videoDraftModel.js`, `video.css`, and `videoAssetClient.js`.   
+
+Here are the carryover notes for the next session:
+
+# Carryover Notes — CrabLink Tauri Image Manifest Complete Enough, Begin Video MP4/Rendition System
+
+## 0. Session checkpoint
+
+We are continuing the RustyOnions / CrabLink Tauri-first project.
+
+Current project doctrine remains:
+
+```text
+RustyOnions backend owns durable truth.
+CrabLink Tauri is the primary native client.
+Chrome remains green proof / companion / gateway smoke surface.
+Gateway compatibility comes first.
+Tauri Rust mediates native privilege.
+React owns display and user intent, not backend authority.
+b3 is canonical.
+crab:// is navigation, not authority.
+ROC is internal.
+Paid actions require explicit confirmation.
+Wallet mutation goes through svc-wallet.
+ron-ledger is durable economic truth.
+Cache is convenience, not truth.
+```
+
+The immediate image-page work is complete enough for now. The resolved image asset manifest page is presentable and professional enough to move on. It now follows the desired structure:
+
+```text
+preview / paid access first
+image manifest second
+rendition versions third
+technical/canonical/storage/receipt/developer facts lower
+```
+
+The user is content with the image manifest page for now. Do not keep polishing images unless a regression appears.
+
+The next major work area is video.
+
+---
+
+## 1. What we completed in the latest image sessions
+
+### 1.1 Resolved image pages no longer look like generic asset dumps
+
+We discovered that changing only files in:
+
+```text
+apps/crablink-tauri/src/pages/image/
+```
+
+was not enough because resolved `crab://<hash>.image` pages are owned by the generic typed asset route:
+
+```text
+apps/crablink-tauri/src/pages/asset/AssetPage.jsx
+apps/crablink-tauri/src/pages/asset/AssetResolver.jsx
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+```
+
+The important fix was to handle `.image` routes specially inside the resolved asset display layer while leaving non-image asset routes intact.
+
+Current image route layout is now:
+
+```text
+top:
+  paid preview / pay gate
+  asset status summary
+
+middle:
+  clean image manifest/certificate
+  creator, rendition, rights, privacy strip
+  description, alt text, provenance, source, role, use cases
+
+below:
+  image rendition group
+  original / desktop / tablet / mobile / thumbnail rows
+  open/copy actions
+
+bottom:
+  technical details
+  canonical b3 facts
+  storage
+  receipts
+  gateway attempts
+  developer JSON
+```
+
+This is acceptable for now.
+
+---
+
+### 1.2 Image manifest page is display-only and preserves truth boundaries
+
+The page must continue to obey:
+
+```text
+No fake receipt.
+No fake balance.
+No fake CID.
+No fake backend URL.
+No silent ROC spend.
+No local cache unlock.
+No image bytes before backend paid content_view receipt.
+No direct storage/index/wallet/ledger mutation from UI.
+```
+
+Image manifests are allowed to show public/intentional manifest metadata before payment, but protected image bytes must remain locked until backend paid view receipt exists.
+
+---
+
+### 1.3 Image rendition group model is the reference for video
+
+The image bundle model now gives us a usable reference for video:
+
+```text
+one original/canonical asset
+generated sibling renditions
+each rendition has its own b3 CID
+each rendition has its own crab:// URL
+each rendition links back to original/source group
+resolved pages show all versions
+current version is highlighted
+technical facts are preserved but demoted visually
+```
+
+This should be the model for video, with video-specific fields.
+
+---
+
+## 2. Current image status
+
+Treat images as “complete enough” for now.
+
+Known image capabilities/status:
+
+```text
+image upload/mint works
+image versions/renditions work
+generated versions show in each manifest
+resolved image page layout is acceptable
+paid view gate remains explicit
+preview remains locked until paid content_view receipt
+metadata-stripped / privacy cleanup status is displayable
+technical details remain available lower on page
+```
+
+Possible future image polish only if needed:
+
+```text
+small spacing tweaks
+more beautiful locked preview empty state
+final visual polish for 100% zoom
+metadata verification proof display improvements
+```
+
+Do not let this block video work.
+
+---
+
+## 3. Next phase: video page and video rendition system
+
+The next phase is video.
+
+The user wants:
+
+```text
+convert most/any common video inputs to MP4
+MP4 as the default publishing output
+generate different sizes for different devices
+mint each version like images
+strip unwanted metadata
+keep intentional CrabLink manifest metadata
+write converter in Rust for efficiency
+make the Rust media code modular so it can later be reused in a full CrabLink browser
+```
+
+Important user preference:
+
+```text
+Do not implement heavy video conversion in React/JavaScript.
+Video conversion should be Rust-owned.
+React should only display UI, preview, user choices, progress, and confirmation.
+```
+
+---
+
+## 4. Current video code already exists
+
+The current Tauri codebundle includes these video-related files:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPage.jsx
+apps/crablink-tauri/src/pages/video/VideoDraft.jsx
+apps/crablink-tauri/src/pages/video/VideoLocalPlaybackPreview.jsx
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+apps/crablink-tauri/src/pages/video/videoDraftModel.js
+apps/crablink-tauri/src/pages/video/video.css
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+```
+
+The current `VideoPage.jsx` is already framed as:
+
+```text
+crab://video
+Video Workspace
+bounded video-lite uploads
+explicit prepare → ROC hold → upload
+larger range/segment streaming future
+rendition graph ready
+linked assets stay separate
+local preview is honest
+```
+
+That means the page is not empty. We should build on the existing structure instead of starting over.
+
+---
+
+## 5. Video product goal
+
+Use the polished image workflow as the reference.
+
+Video should eventually support:
+
+```text
+1. User selects source video.
+2. CrabLink probes the source video.
+3. CrabLink shows local preview and source facts.
+4. User chooses output plan:
+   - publish cleaned original/master
+   - generate desktop/tablet/mobile/low-bandwidth renditions
+   - generate poster/thumbnail assets
+5. Rust media pipeline converts/cleans/renders local output files.
+6. Each generated video output is minted as a backend .video asset.
+7. Each generated poster/thumbnail image is minted as a backend .image asset or linked asset.
+8. Backend returns real b3 CIDs/crab URLs for every generated asset.
+9. A video rendition group manifest cross-links all sibling versions.
+10. Resolved video pages show the same kind of clean versions table as image pages.
+11. Paid access uses backend quote/pay/receipt only.
+12. No local processed file is treated as published truth until backend mint returns real CIDs.
+```
+
+Short product model:
+
+```text
+source input
+→ cleaned MP4 master
+→ desktop/tablet/mobile renditions
+→ poster/thumbnail
+→ mint each as real backend assets
+→ cross-linked video_rendition_group
+→ paid view gate
+→ clean resolved page
+```
+
+---
+
+## 6. Default output format decision
+
+MP4 should be the default creator-facing output format.
+
+Recommended default target:
+
+```text
+container: MP4
+video codec: H.264
+audio codec: AAC
+```
+
+Why:
+
+```text
+broad browser support
+broad mobile support
+broad desktop support
+good default for creators
+easier user story than WebM/MOV fragmentation
+```
+
+Supported/import input formats can eventually include:
+
+```text
+MP4
+MOV
+M4V
+WebM
+Ogg/Theora
+possibly AVI/MKV depending on backend/local codec support
+```
+
+But the product-facing default should be:
+
+```text
+Publish as MP4
+```
+
+Important caution:
+
+```text
+Do not promise every possible video file can be converted on every machine.
+Codec/container support varies.
+The UI should say “supported formats” rather than “any file guaranteed.”
+```
+
+---
+
+## 7. Recommended default video rendition ladder
+
+The first practical default ladder should be simple.
+
+Suggested output roles:
+
+```text
+source_clean_master
+desktop_1080p
+tablet_720p
+mobile_480p
+low_360p
+poster
+thumbnail
+```
+
+Do not upscale above source resolution.
+
+Examples:
+
+```text
+If source is 4K:
+  master/original cleaned
+  1080p desktop
+  720p tablet
+  480p mobile
+  360p low
+  poster
+  thumbnail
+
+If source is 1080p:
+  master/original cleaned
+  1080p desktop may be same as master or skipped
+  720p tablet
+  480p mobile
+  360p low
+  poster
+  thumbnail
+
+If source is 720p:
+  master/original cleaned
+  720p tablet/standard
+  480p mobile
+  360p low
+  poster
+  thumbnail
+
+If source is 480p:
+  master/original cleaned
+  480p mobile
+  360p low
+  poster
+  thumbnail
+
+If source is 360p:
+  master/original cleaned
+  360p low
+  poster
+  thumbnail
+```
+
+Each rendition should have metadata like:
+
+```text
+role
+label
+width
+height
+duration
+container
+mime
+video_codec
+audio_codec
+bitrate
+frame_rate
+bytes
+cid
+hash
+crab_url
+derived_from
+source_cid
+poster_image_cid
+thumbnail_image_cid
+is_current
+is_original
+```
+
+---
+
+## 8. Video manifest/rendition group target
+
+The video equivalent of the image rendition group should look like:
+
+```json
+{
+  "schema": "crablink.video_rendition_group.v1",
+  "group_id": "...",
+  "source_cid": "b3:<hash>",
+  "canonical_original_crab_url": "crab://<hash>.video",
+  "current_role": "mobile_480p",
+  "creator_intent": {
+    "title": "...",
+    "description": "...",
+    "creator_display": "...",
+    "source_hint": "...",
+    "rights_hint": "...",
+    "poster_alt_text": "...",
+    "provenance_note": "...",
+    "video_role": "...",
+    "use_cases": [...]
+  },
+  "privacy_cleanup": {
+    "status": "metadata_stripped",
+    "verified": true,
+    "policy": "default_video_privacy"
+  },
+  "renditions": [
+    {
+      "role": "original",
+      "label": "Original",
+      "cid": "b3:<hash>",
+      "crab_url": "crab://<hash>.video",
+      "container": "mp4",
+      "mime": "video/mp4",
+      "width": 1920,
+      "height": 1080,
+      "duration_ms": 123456,
+      "bytes": 12345678,
+      "video_codec": "h264",
+      "audio_codec": "aac",
+      "bitrate": 5000000,
+      "frame_rate": "30",
+      "is_original": true
+    }
+  ],
+  "linked_assets": {
+    "poster": "crab://<hash>.image",
+    "thumbnail": "crab://<hash>.image",
+    "captions": [],
+    "transcript": null
+  }
+}
+```
+
+Backend shape may differ, but this is the desired product model.
+
+---
+
+## 9. Video metadata stripping goal
+
+We need the same principle as images:
+
+```text
+Strip hidden file metadata.
+Keep intentional CrabLink manifest metadata.
+```
+
+Video metadata that should be stripped by default:
+
+```text
+container creation time
+device/camera identifiers
+software tags
+GPS/location atoms
+QuickTime/iPhone location metadata
+serial numbers
+local filesystem paths
+editing app/project metadata
+artist/comment/title metadata if it came from source file and was not intentionally selected
+track-level metadata
+chapter metadata if not intentionally preserved
+embedded thumbnails if they carry private metadata
+```
+
+Metadata that may be intentionally preserved or moved into CrabLink manifest:
+
+```text
+title
+description
+creator display
+credits
+copyright
+license
+source hint
+rights hint
+language
+subtitle/caption labels
+provenance note
+poster alt text
+use cases
+```
+
+Important UX rule:
+
+```text
+Do not silently destroy meaningful filmmaker metadata without telling the user.
+Default should strip privacy-sensitive hidden metadata.
+Creator-facing public fields should be entered intentionally into the CrabLink manifest.
+```
+
+---
+
+## 10. Rust video converter architecture
+
+The user specifically wants Rust for efficiency and modularity.
+
+Preferred architecture:
+
+```text
+crablink-media-core/
+  Rust library for reusable media processing
+
+apps/crablink-tauri/src-tauri/
+  thin Tauri command adapter calling crablink-media-core
+```
+
+If adding a separate crate inside the CrabLink repo is too much for the first patch, an acceptable temporary structure is:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/
+  mod.rs
+  video_probe.rs
+  video_metadata.rs
+  video_renditions.rs
+  video_transcode.rs
+  video_jobs.rs
+  limits.rs
+```
+
+But the design should still keep reusable core logic separated from Tauri command glue.
+
+Best long-term shape:
+
+```text
+crates/crablink-media-core/
+  Cargo.toml
+  src/
+    lib.rs
+    error.rs
+    limits.rs
+    probe.rs
+    metadata.rs
+    rendition.rs
+    transcode.rs
+    jobs.rs
+    manifest.rs
+```
+
+Tauri adapter:
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src-tauri/src/media_adapter.rs
+```
+
+React adapter:
+
+```text
+apps/crablink-tauri/src/shared/api/mediaDiagnosticsClient.js
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src/pages/video/*
+```
+
+---
+
+## 11. Rust media core interface target
+
+Possible Rust interface:
+
+```rust
+probe_video(path) -> VideoProbeSummary
+
+plan_video_renditions(
+    probe: VideoProbeSummary,
+    targets: DeviceRenditionTargets,
+) -> VideoRenditionPlan
+
+strip_video_metadata(
+    input_path,
+    output_path,
+    policy: VideoPrivacyPolicy,
+) -> VideoCleanResult
+
+transcode_video_bundle(
+    input_path,
+    plan: VideoRenditionPlan,
+    output_dir,
+) -> VideoBundleResult
+
+cancel_video_job(job_id)
+
+get_video_job_status(job_id)
+```
+
+DTOs should be small and safe:
+
+```text
+No full video bytes in command result.
+No raw private filesystem path unless needed for internal follow-up command.
+No secrets.
+No stack traces.
+No raw process command string.
+No uncapped logs.
+```
+
+React should receive:
+
+```text
+job_id
+status
+progress percentage
+current step
+output descriptors
+warnings
+safe error messages
+```
+
+Not:
+
+```text
+full output bytes
+raw FFmpeg command
+private temp directory paths unless explicitly needed
+unredacted stderr
+platform secrets
+```
+
+---
+
+## 12. Technology decision for conversion
+
+We need to choose an implementation strategy.
+
+Options:
+
+```text
+A. Pure Rust video processing library
+B. FFmpeg through a controlled Rust wrapper/sidecar
+C. Platform-native codec APIs where possible
+```
+
+Most realistic path for broad conversion:
+
+```text
+Controlled FFmpeg wrapper in Rust, feature-gated and bounded
+```
+
+But do not expose arbitrary FFmpeg commands to React.
+
+Correct model:
+
+```text
+React:
+  user selects “Make MP4 renditions”
+
+Rust:
+  validates input file
+  probes container/codecs/duration/resolution
+  chooses safe known command internally
+  enforces limits
+  strips metadata
+  transcodes to MP4/H.264/AAC
+  creates device renditions
+  emits progress
+  returns output descriptors
+```
+
+Forbidden model:
+
+```text
+React sends arbitrary ffmpeg args.
+Tauri runs shell command.
+Tauri exposes run/exec/eval/native raw command.
+Unbounded stderr/logs returned to UI.
+Full videos passed through command results.
+```
+
+If FFmpeg is used:
+
+```text
+Use std::process::Command directly with fixed argument construction.
+Never use shell=true.
+Never accept raw argument strings from UI.
+Use allowlisted output profiles.
+Use bounded temp directories.
+Kill/cancel long jobs.
+Redact errors.
+Validate file extension/content/probe.
+```
+
+---
+
+## 13. Tauri command bridge rules for video
+
+Any Tauri commands added for video must be:
+
+```text
+typed
+allowlisted
+small-surface
+bounded
+redacted
+testable
+feature-gated if heavy
+no arbitrary native execution
+```
+
+Good command families:
+
+```text
+media_probe_video
+media_plan_video_renditions
+media_prepare_video_bundle
+media_video_job_status
+media_cancel_video_job
+media_clear_video_job
+media_pick_video_file maybe if file picker is Rust-owned
+```
+
+Avoid names like:
+
+```text
+run_ffmpeg
+execute_media_command
+shell_media
+raw_transcode
+native_exec
+raw_file_process
+```
+
+The names matter because they signal the trust boundary.
+
+---
+
+## 14. Media job model
+
+Video conversion cannot be a simple blocking command once files get large.
+
+Recommended model:
+
+```text
+1. User selects file.
+2. React asks Rust to probe.
+3. Rust returns probe summary.
+4. React displays plan options.
+5. User confirms “Prepare MP4 renditions.”
+6. Rust creates media job.
+7. React polls or subscribes to progress events.
+8. User can cancel.
+9. Rust writes outputs to bounded temp/staging dir.
+10. React displays output descriptors.
+11. User confirms mint.
+12. Upload/mint happens via existing paid backend path.
+```
+
+Job states:
+
+```text
+idle
+probing
+planning
+queued
+transcoding
+stripping_metadata
+generating_poster
+generating_thumbnail
+ready_to_mint
+failed
+cancelled
+minting
+minted
+```
+
+Progress events should include:
+
+```text
+job_id
+stage
+current_rendition_role
+percent
+message
+warning_count
+elapsed_ms
+```
+
+Avoid:
+
+```text
+full local path spam
+large logs
+raw stderr dumps
+private user filesystem data
+```
+
+---
+
+## 15. Backend/minting boundary
+
+Very important:
+
+```text
+Client-side video conversion prepares local bytes.
+It does not mint.
+It does not create backend truth.
+It does not create ownership truth.
+It does not create paid access truth.
+```
+
+Minting still must be:
+
+```text
+prepare/quote
+→ explicit confirmation
+→ backend wallet hold
+→ upload generated bytes with paid proof
+→ backend returns real CID/crab URL/receipt
+→ display backend result
+→ refresh wallet
+```
+
+For video bundles, minting likely requires a batch-like frontend orchestration at first:
+
+```text
+for each output rendition:
+  prepare video asset
+  hold/pay if needed or use one bundle quote if backend supports later
+  upload rendition
+  collect backend returned CID/crab URL
+
+then:
+  build rendition group manifest using backend returned facts
+  possibly publish/update canonical original manifest if backend supports
+```
+
+If backend only supports single `/assets/video` upload today, start with a sequential client-side orchestration similar to images.
+
+Do not invent CIDs before backend returns them, except local b3 prediction for display/debug if clearly marked non-authoritative. Backend truth wins.
+
+---
+
+## 16. Video route display target
+
+Resolved `crab://<hash>.video` should eventually mirror the polished image route.
+
+Target order:
+
+```text
+video player / paid access first
+video manifest/certificate second
+video rendition group third
+technical/canonical/storage/receipt/developer facts lower
+```
+
+Video manifest fields:
+
+```text
+title
+description
+creator display
+source hint
+rights hint
+poster alt text
+provenance note
+video role
+use cases
+privacy cleanup
+current rendition
+duration
+resolution
+codec/container
+```
+
+Video rendition group rows:
+
+```text
+role
+label
+crab URL / CID
+resolution
+duration
+size
+container/mime
+video codec
+audio codec
+bitrate
+Open
+Copy URL
+Copy CID
+```
+
+Current rendition should be highlighted.
+
+Technical details lower:
+
+```text
+canonical crab URL
+content ID
+content object CID
+hash
+asset kind
+manifest CID
+owner
+payout
+storage availability
+receipt references
+gateway attempts
+developer JSON
+```
+
+---
+
+## 17. Existing video page UI target
+
+The video workspace should be cleaned up to match the successful image page design.
+
+Suggested video workspace order:
+
+```text
+1. Video preview / selected file card
+2. Simple title + description
+3. Quote / confirm / mint controls
+4. Output plan / rendition plan
+5. Advanced fields drawer
+6. Local video details
+7. Manifest preview
+8. Paid view route display
+9. Developer JSON/details lower or collapsed
+```
+
+The page should feel like:
+
+```text
+creator chooses source
+creator previews locally
+creator chooses simple/advanced metadata
+creator prepares MP4/renditions
+creator mints
+creator receives backend crab URLs
+```
+
+Not like:
+
+```text
+developer form dump
+unbounded backend debug surface
+raw JSON-first workflow
+```
+
+---
+
+## 18. First next-session implementation decision
+
+There are two possible starts for next session.
+
+### Option A — Video UI cleanup first
+
+Pros:
+
+```text
+fast
+visible progress
+uses image page as design reference
+low risk
+does not require solving conversion immediately
+```
+
+Files:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPage.jsx
+apps/crablink-tauri/src/pages/video/VideoDraft.jsx
+apps/crablink-tauri/src/pages/video/VideoLocalPlaybackPreview.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+apps/crablink-tauri/src/pages/video/video.css
+```
+
+### Option B — Rust media core scaffold first
+
+Pros:
+
+```text
+sets correct architecture before UI depends on it
+prevents React-owned heavy media processing
+starts the reusable converter foundation
+```
+
+Files likely:
+
+```text
+apps/crablink-tauri/src-tauri/Cargo.toml
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src-tauri/src/commands/mod.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/media/limits.rs
+apps/crablink-tauri/src-tauri/src/media/video_probe.rs
+apps/crablink-tauri/src-tauri/src/media/video_renditions.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+```
+
+Recommended next-session path:
+
+```text
+Start with a small Rust media scaffold and probe/plan DTOs, not full conversion.
+Then wire the video UI to show probe and rendition plan.
+Then add actual transcode/metadata strip in a later batch.
+```
+
+This avoids a risky giant patch.
+
+---
+
+## 19. Recommended next-session implementation order
+
+### Step 1 — Inspect current video files
+
+Open/review:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPage.jsx
+apps/crablink-tauri/src/pages/video/VideoDraft.jsx
+apps/crablink-tauri/src/pages/video/VideoLocalPlaybackPreview.jsx
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+apps/crablink-tauri/src/pages/video/videoDraftModel.js
+apps/crablink-tauri/src/pages/video/video.css
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+```
+
+### Step 2 — Confirm current video upload/mint status
+
+Before changing conversion, verify what currently works:
+
+```text
+Can select local video?
+Can local preview play?
+Can prepare video asset?
+Can explicit ROC hold happen?
+Can upload bounded video-lite file?
+Does backend return crab://<hash>.video?
+Can visitor pay to view?
+Does resolved video page play after receipt?
+```
+
+This gives the baseline.
+
+### Step 3 — Add or refine Rust media DTO scaffold
+
+Target first commands:
+
+```text
+media_probe_video
+media_plan_video_renditions
+```
+
+These should not transcode yet. They should let us safely inspect:
+
+```text
+file name
+safe display name
+size
+duration if known
+width/height if known
+container if known
+mime guess
+video/audio codec if known
+warnings
+supported/unsupported status
+recommended output ladder
+```
+
+If duration/codec probing is not available without FFmpeg yet, return honest limited info and mark deeper probe unavailable.
+
+### Step 4 — Add video output plan UI
+
+Video page should show:
+
+```text
+source facts
+recommended MP4 output plan
+which renditions will be generated
+which renditions are skipped because source too small
+estimated output roles
+poster/thumbnail plan
+privacy cleanup status
+```
+
+### Step 5 — Add controlled conversion implementation later
+
+Only after probe/plan UI is clean:
+
+```text
+media_prepare_video_bundle
+```
+
+This will do:
+
+```text
+metadata stripping
+MP4 conversion
+device renditions
+poster/thumbnail extraction
+job progress
+cancel
+output descriptors
+```
+
+### Step 6 — Mint generated outputs
+
+After outputs exist locally:
+
+```text
+mint original/cleaned master
+mint desktop/tablet/mobile/low variants
+mint poster/thumbnail if generated
+assemble backend-returned facts into rendition group
+open resolved video pages
+pay/view as visitor
+```
+
+---
+
+## 20. Important limits and safety rules
+
+Video files can be large. Do not repeat earlier command-size mistakes.
+
+Rules:
+
+```text
+No full large video file through Tauri command result.
+No base64 video payloads in React state.
+No full-file command buffering for large media.
+No unbounded logs.
+No raw FFmpeg args from React.
+No shell command bridge.
+No hidden sidecar execution.
+No direct storage/index/wallet/ledger mutation.
+No silent ROC spend.
+No fake CIDs/receipts/balances.
+No paid unlock from local cache alone.
+```
+
+Use:
+
+```text
+bounded file paths
+selected-file handles
+temp/staging directories
+small DTOs
+job IDs
+progress events
+explicit user confirmation
+backend upload path
+backend receipts
+```
+
+---
+
+## 21. Suggested media limits for first implementation
+
+Initial conservative limits:
+
+```text
+max input duration: maybe 10 minutes for MVP
+max input size: maybe 250 MB for first local test
+max output renditions: 4 video + 2 image assets
+max parallel transcodes: 1
+max command result DTO: small JSON only
+max progress log lines retained: maybe 100
+cancel supported before/while processing
+```
+
+These can increase later.
+
+UI should say:
+
+```text
+Video preparation is local and may be slow.
+Large videos are future work.
+Some source formats may not be supported yet.
+```
+
+Do not overpromise.
+
+---
+
+## 22. Video asset upload/client status to watch
+
+`videoAssetClient.js` already has:
+
+```text
+prepareVideoAsset()
+uploadVideoAsset()
+```
+
+Current upload shape appears to use a `Blob` normalization path. For true large media, that may not be acceptable long-term.
+
+Need inspect carefully next session:
+
+```text
+Does uploadVideoAsset pass Blob through gateway.request?
+Does gateway.request route Blob safely through Tauri?
+Does it use a dedicated asset upload command?
+Is there a current video upload size cap?
+Does it attach the paid proof headers correctly?
+Does it attach x-ron-passport and x-ron-wallet-account correctly?
+```
+
+For final video rendition minting, prefer a dedicated bounded Tauri asset upload command similar to image upload, but designed for video size realities.
+
+Possible command:
+
+```text
+upload_video_asset_gateway
+```
+
+or more general but still allowlisted:
+
+```text
+upload_media_asset_gateway
+```
+
+If general, it must still be constrained to known asset kinds and routes:
+
+```text
+POST /assets/video
+POST /assets/music
+POST /assets/podcast
+```
+
+Do not create arbitrary upload URL authority.
+
+---
+
+## 23. Asset page paid video display
+
+Resolved `.video` pages likely use:
+
+```text
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/shared/embed/crabVideoEmbed.jsx
+apps/crablink-tauri/src/shared/api/contentViewClient.js
+```
+
+Next session should verify:
+
+```text
+paid content_view quote works for .video
+pay works for visitor wallet
+receipt unlocks video source
+video player loads only after receipt
+technical details are lower priority
+developer JSON is collapsible
+```
+
+If current resolved video pages still look like older generic asset pages, apply the same pattern we used for images, but after the video workspace/conversion plan is clear.
+
+---
+
+## 24. What not to do next session
+
+Do not:
+
+```text
+Do not start from scratch.
+Do not rewrite the whole video page.
+Do not convert videos in React.
+Do not use ffmpeg.wasm as the default plan unless explicitly chosen after discussion.
+Do not add raw shell/eval/run/execute commands.
+Do not expose arbitrary FFmpeg strings to the frontend.
+Do not make localhost mandatory for users.
+Do not bypass gateway.
+Do not mint local CIDs as truth.
+Do not fake receipts.
+Do not fake balances.
+Do not silently spend ROC.
+Do not add QuickChain/ROX/Solana/external settlement.
+Do not claim DRM/anti-rip protection.
+Do not execute creator-provided code.
+```
+
+---
+
+## 25. Testing workflow for next session
+
+Use the current normal run path:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Build check:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+```
+
+Rust check if Tauri Rust changes:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run check:rust:mac-media
+```
+
+If full Tauri check script is needed:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+bash scripts/check-tauri.sh
+```
+
+Manual video smoke after each batch:
+
+```text
+1. Open crab://video.
+2. Select a small MP4 test file.
+3. Confirm local preview plays.
+4. Confirm source facts show.
+5. Confirm no backend truth is claimed before mint.
+6. Prepare/quote.
+7. Explicitly confirm ROC hold.
+8. Upload/mint.
+9. Confirm backend returned crab://<hash>.video.
+10. Open resolved video route.
+11. Switch visitor wallet/passport.
+12. Pay to view if gated.
+13. Confirm video bytes render only after backend receipt.
+```
+
+Future conversion smoke:
+
+```text
+1. Select source MOV/WebM/MP4.
+2. Probe.
+3. Plan MP4 renditions.
+4. Prepare MP4 bundle.
+5. Confirm outputs are file descriptors, not command-returned bytes.
+6. Mint each generated output.
+7. Confirm rendition group cross-links.
+8. Confirm each resolved version page shows the group.
+```
+
+---
+
+## 26. Suggested opening prompt for next session
+
+Use this to restart smoothly:
+
+```text
+We are continuing CrabLink Tauri after finishing the image manifest cleanup. Images are complete enough for now. The next phase is video. We want video conversion/preparation in Rust, modular and reusable for a future CrabLink browser, not heavy React/JS conversion. Default creator-facing output should be MP4/H.264/AAC. We need device renditions like images: cleaned original/master, desktop/tablet/mobile/low versions, poster/thumbnail, and each generated version should mint as its own real backend .video or linked .image asset with backend-returned b3 CIDs/crab URLs. Preserve all invariants: gateway-first, no fake balances/receipts/CIDs, no silent ROC spend, no direct wallet/storage/index/ledger mutation, no full video bytes through command results, no arbitrary shell/ffmpeg command strings from React, paid unlock only after backend content_view receipt. Please inspect the current video files and media command files first, then propose the first small safe batch.
+```
+
+---
+
+## 27. Recommended first batch for next assistant
+
+Best first batch should be small and safe:
+
+```text
+Batch V0:
+  inspect current video files
+  summarize current flow
+  identify exact gaps
+
+Batch V1:
+  add/refine Rust media probe/plan scaffold
+  no actual transcode yet
+  expose small typed commands only
+
+Batch V2:
+  wire video page to show probe facts and recommended rendition plan
+  keep UI polished like images
+
+Batch V3:
+  add controlled MP4 preparation job
+  metadata stripping + output descriptors
+  progress/cancel
+
+Batch V4:
+  mint all generated renditions
+  build video rendition group
+  display versions on resolved video pages
+```
+
+Do not jump directly into a giant full converter patch.
+
+
+### END NOTE - MAY 28 2026 - 20:10 CST
+
+
+
+### BEGIN NOTE - MAY 28 2026 - 18:00 CST
+
+Here are the carryover notes to paste into the next session so we can continue cleanly.
+
+# CrabLink Tauri Video Page / Video Converter Carryover Notes
+
+## Current project doctrine to preserve
+
+We are continuing RustyOnions / CrabLink with the Tauri-first architecture. CrabLink Tauri is the primary native Rust-backed client. Chrome remains a proof/companion surface only. Gateway compatibility comes first.
+
+The video work must follow the core CrabLink/RustyOnions boundaries:
+
+* React owns display and user intent only.
+* Tauri Rust owns native privilege, local file authority, converter jobs, and source staging.
+* RustyOnions backend owns durable truth.
+* `svc-wallet` / `ron-ledger` own economic mutation truth.
+* `svc-storage` / gateway paths own backend asset truth.
+* The client must not invent balances, receipts, paid unlocks, ownership, CIDs, or backend truth.
+* `crab://` links are navigation/display, not authority.
+* b3 hashes are canonical asset truth only after real bytes are stored/confirmed by the backend.
+* Local cache/source handles/job descriptors are convenience/status only, not ownership or storage truth.
+* No external settlement, ROX, Solana, staking, liquidity, bridge logic, or public-chain code belongs in this work.
+
+## User preference reminders
+
+The user does **not** want downloadable patch files. Provide full paste-ready files directly in chat.
+
+The user prefers complete file replacements with exact paths.
+
+The user runs the full local development program from:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+For app-only checks, use:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run check:rust:mac-media
+npm run build
+```
+
+The user is on a MacBook Pro 2019 Intel Mac.
+
+The user uses a trackpad, so do not assume easy right-click workflows. For copying a file path in Finder, use:
+
+```text
+Select file once → Command + Option + C
+```
+
+The manual path paste box is a temporary developer bridge and should be replaced with a proper native file picker soon.
+
+## Current video page mission
+
+We are building the CrabLink Tauri `crab://video` page into a real creator video workflow.
+
+Long-term target:
+
+1. Select/import video source.
+2. Strip unnecessary metadata.
+3. Convert common input formats to MP4/H.264/AAC for broad compatibility.
+4. Generate multiple device-friendly renditions:
+
+   * clean master
+   * desktop 1080p
+   * tablet 720p
+   * mobile 480p
+   * low bandwidth 360p
+   * poster image
+   * thumbnail image
+5. Mint/upload each real generated asset through backend-owned routes.
+6. Build a video bundle/manifest tying all real backend-returned b3 assets together.
+7. Show receipts, CIDs, and crab URLs only after backend confirmation.
+8. Avoid fake CIDs, fake receipts, fake balances, silent spend, or local-only paid unlock.
+
+## What was proven before this carryover
+
+### 1. Rust media probe/plan scaffold is green
+
+We added a Rust-owned video planning module under:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/
+```
+
+Key files:
+
+```text
+limits.rs
+mod.rs
+video_probe.rs
+video_renditions.rs
+```
+
+The first Rust compile error was fixed. The issue was that `VideoProbeSource` needed `Deserialize`, and an attempted edit accidentally duplicated `VideoProbeSource` while removing `VideoProbeInput`. The final fix was to replace `video_probe.rs` cleanly and ensure:
+
+* `VideoProbeInput` exists.
+* `VideoProbeSource` derives `Serialize, Deserialize`.
+* `VideoProbeSummary` derives `Serialize, Deserialize`.
+* `media/mod.rs` does not re-export unused `VideoProbeSource` or `VideoRenditionEntry` unless needed.
+
+Confirmed Rust command:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run check:rust:mac-media
+```
+
+returned:
+
+```text
+Finished `dev` profile [unoptimized + debuginfo] target(s)
+```
+
+### 2. Video converter panel can build a Rust MP4 plan
+
+The UI now has a `VideoConverterPanel.jsx` section on `crab://video`.
+
+It receives local WebView preview facts:
+
+* file name
+* MIME/content type
+* file size
+* duration
+* width
+* height
+* frame rate if available
+
+It calls Rust commands:
+
+```text
+media_probe_video
+media_plan_video_renditions
+```
+
+The plan is display/planning only. It does not transcode, upload, mint, or write output files.
+
+The planned outputs are:
+
+```text
+source_clean_master
+desktop_1080p
+tablet_720p
+mobile_480p
+low_360p
+poster_image
+thumbnail_image
+```
+
+The output ladder avoids upscaling when source resolution is smaller.
+
+### 3. Prepare-job scaffold works
+
+We added the prepare-job scaffold.
+
+Key Rust file:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+```
+
+Key state addition:
+
+```text
+AppState.video_jobs
+```
+
+Key Rust commands:
+
+```text
+media_prepare_video_bundle
+media_get_video_job_status
+media_cancel_video_job
+```
+
+Key UI behavior:
+
+* Click **Build MP4 plan**.
+* Click **Start prepare job**.
+* Progress moves through phases.
+* On completion, descriptor-only `staged://...` handles appear.
+* Cancel works.
+
+The user tested this successfully. Screenshot showed:
+
+```text
+Prepare Job: completed
+Progress: 100%
+Phase: Completed Descriptor Scaffold
+Outputs: 7
+```
+
+The generated descriptors looked like:
+
+```text
+staged://video-job/video_prepare_<timestamp>_<counter>/source_clean_master.mp4
+staged://video-job/video_prepare_<timestamp>_<counter>/desktop_1080p.mp4
+staged://video-job/video_prepare_<timestamp>_<counter>/tablet_720p.mp4
+staged://video-job/video_prepare_<timestamp>_<counter>/mobile_480p.mp4
+staged://video-job/video_prepare_<timestamp>_<counter>/low_360p.mp4
+staged://video-job/video_prepare_<timestamp>_<counter>/poster_image.image
+staged://video-job/video_prepare_<timestamp>_<counter>/thumbnail_image.image
+```
+
+These are **not real files yet**. They are descriptor-only handles. That wording is correct and must remain clear until real staged output writing exists.
+
+Cancel was also tested successfully by the user.
+
+### 4. Native source registration batch was added
+
+The most recent batch added native video source staging.
+
+New Rust file:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_sources.rs
+```
+
+Updated Rust state:
+
+```text
+AppState.video_sources
+```
+
+New commands:
+
+```text
+media_register_video_source
+media_get_video_source
+media_clear_video_source
+```
+
+The goal is to give Rust native file authority without returning private paths to React.
+
+Current manual developer flow:
+
+1. Select local video in the browser/WebView local preview picker.
+2. Copy the same file’s full path from Finder.
+3. Paste into Native source staging.
+4. Click **Register native source**.
+5. Rust validates the file and returns a redacted `video_source_*` handle.
+6. React sees only the handle and facts, not the private filesystem path.
+7. Start prepare job with `sourceHandle`.
+8. The job should show source authority as `native handle`.
+
+Important implementation detail:
+
+`media_prepare_video_bundle` currently checks that a supplied `sourceHandle` exists and that the registered source size matches the plan source size. This is good because it prevents the plan from being prepared against a different file than the registered native file.
+
+Important path entry details on macOS:
+
+* Use exact path casing: `Desktop`, not `desktop`.
+* Do not include surrounding quotes.
+* Correct example:
+
+```text
+/Users/mymac/Desktop/Screen Recording 2026-05-19 at 7.09.39 PM.mov
+```
+
+Incorrect example:
+
+```text
+'/Users/mymac/desktop/Screen Recording 2026-05-19 at 7.09.39 PM.mov'
+```
+
+The incorrect example has both lowercase `desktop` and single quotes.
+
+### 5. Current tested sample video
+
+The user tested with a macOS QuickTime screen recording:
+
+```text
+Screen Recording 2026-05-19 at 7.09.39 PM.mov
+```
+
+Observed facts from UI:
+
+```text
+Type: video/quicktime
+Size: about 20.4 MiB / 20.37 MB
+Resolution: 2880×1578
+Duration: 0:10
+Target: MP4 / H.264 / AAC
+```
+
+This is a good test file because it is bigger than the current video-lite mint cap and is a MOV/QuickTime input that should later be converted to MP4.
+
+## Current file map for video converter work
+
+Important Rust files:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/limits.rs
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/media/video_probe.rs
+apps/crablink-tauri/src-tauri/src/media/video_renditions.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+apps/crablink-tauri/src-tauri/src/media/video_sources.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src-tauri/src/state.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+```
+
+Important React/JS files:
+
+```text
+apps/crablink-tauri/src/shared/api/videoConverterClient.js
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+apps/crablink-tauri/src/pages/video/VideoDraft.jsx
+apps/crablink-tauri/src/pages/video/VideoLocalPlaybackPreview.jsx
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/video.css
+```
+
+## Current command bridge state
+
+The Tauri command bridge currently exposes media commands similar to:
+
+```text
+media_status
+media_register_video_source
+media_get_video_source
+media_clear_video_source
+media_probe_video
+media_plan_video_renditions
+media_prepare_video_bundle
+media_get_video_job_status
+media_cancel_video_job
+```
+
+These must stay typed, allowlisted, source-labeled, redacted, and bounded.
+
+Never add commands like:
+
+```text
+run
+execute
+eval
+shell
+raw_command
+raw_ffmpeg
+native_exec
+```
+
+No raw FFmpeg args or arbitrary native command strings should be passed from React.
+
+## Current UI state
+
+The video page now has:
+
+1. Local video preview picker/player.
+2. Video facts display.
+3. Native source staging panel with a manual path box.
+4. Build MP4 plan button.
+5. Start prepare job button.
+6. Cancel job button.
+7. Output ladder display.
+8. Prepare job progress/status display.
+9. JSON preview for developer details.
+10. Existing paid video mint flow below.
+
+The native source staging UI is currently developer-ish and should be improved later. The immediate UX improvement is a native file picker button so the user does not have to copy/paste paths.
+
+## Critical known issue: current video-lite mint cap
+
+The current video-lite mint/upload path is capped at:
+
+```text
+10 MB
+```
+
+The user selected a 20.37 MB / 20.4 MiB video and the current paid video mint flow showed:
+
+```text
+Mint flow blocked
+This video-lite upload path is capped at 10.00 MB. Larger media needs the future bounded range/segment path.
+```
+
+This is expected for now, but it must be fixed before real video minting is complete.
+
+Do **not** solve this by blindly pushing full large video bytes through the Tauri command bridge.
+
+Correct future fix:
+
+1. Keep tiny video-lite upload only for quick proof tests.
+2. Add a real bounded large-media upload path.
+3. Use staged files/range/segment/chunk upload.
+4. Avoid full-file command result buffering.
+5. Upload each generated rendition separately.
+6. Backend returns real b3/crab URLs.
+7. Bundle/manifest references only backend-confirmed assets.
+8. Receipt/balance state remains backend-derived.
+
+The current 10 MB cap is a marker showing where the old video-lite path ends and the real staged media path must begin.
+
+## What should happen at the start of the next session
+
+First, confirm the latest native source registration batch is green.
+
+Run:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run check:rust:mac-media
+npm run build
+```
+
+Then run the app:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Then smoke test:
+
+```text
+1. Open crab://video.
+2. Select the 20.4 MiB MOV in the local preview picker.
+3. Let metadata load.
+4. Copy the same file path from Finder using Command + Option + C.
+5. Paste raw path into Native source staging.
+6. Click Register native source.
+7. Confirm a video_source_* handle appears.
+8. Confirm JSON does not show the private path.
+9. Click Build MP4 plan.
+10. Click Start prepare job.
+11. Confirm the job says source/native handle, not preview facts only.
+12. Confirm descriptor-only outputs still appear.
+13. Test Clear source handle.
+```
+
+If registration fails, check:
+
+```text
+- No single quotes around the path.
+- Desktop capitalized correctly.
+- File still exists.
+- The selected preview file and native path file are the same file.
+- File size is under current native source registration cap.
+```
+
+## Recommended next batch
+
+The next best batch is:
+
+```text
+Native file picker for video source registration
+```
+
+Reason: the manual path box works as a developer bridge, but the user is on a MacBook trackpad and copying paths is awkward. A native picker also reduces path casing/quote mistakes.
+
+Desired behavior:
+
+```text
+1. Add button: Choose native source.
+2. Native OS picker opens.
+3. User selects video file.
+4. Rust validates source immediately.
+5. Rust registers source internally.
+6. React receives redacted VideoSourceRegistration DTO.
+7. UI shows video_source_* handle, file name, size, type, and authority.
+8. Private canonical path never returns to React.
+9. Manual path paste can remain hidden under Developer / Advanced.
+```
+
+Likely implementation approach:
+
+* Add Tauri v2 dialog support.
+* Use a controlled file picker, not shell.
+* Accept video extensions only:
+
+  * `.mp4`
+  * `.m4v`
+  * `.mov`
+  * `.webm`
+  * `.ogv`
+  * `.ogg`
+  * `.mkv`
+  * `.avi`
+* Register the selected path using the existing `video_sources.rs` logic.
+* Return only the existing redacted `VideoSourceRegistration` DTO.
+* Preserve current manual path registration as fallback/developer-only.
+
+Possible files for that batch:
+
+```text
+apps/crablink-tauri/package.json
+apps/crablink-tauri/src-tauri/Cargo.toml
+apps/crablink-tauri/src-tauri/capabilities/default.json
+apps/crablink-tauri/src-tauri/src/lib.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src/shared/api/videoConverterClient.js
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+apps/crablink-tauri/src/pages/video/video.css
+```
+
+Verify exact Tauri v2 dialog plugin package/permission names before generating code.
+
+## Batch after native file picker
+
+After source selection is clean, start real staged-file output.
+
+Target batch:
+
+```text
+Real staged output skeleton
+```
+
+This should still avoid a full codec engine at first. Start by proving that Rust can create a job staging directory and write small manifest/descriptor files safely.
+
+Possible staged path model:
+
+```text
+app cache / CrabLink / media-jobs / <job_id> /
+  source_clean_master.mp4      future
+  desktop_1080p.mp4            future
+  tablet_720p.mp4              future
+  mobile_480p.mp4              future
+  low_360p.mp4                 future
+  poster_image.png             future
+  thumbnail_image.jpg          future
+  bundle_plan.json             first real file to write
+```
+
+Important:
+
+* Do not expose absolute output filesystem paths to React.
+* Return redacted staged handles.
+* Add a Rust command later to open/reveal staged output directory only if safe and explicit.
+* Track cleanup later.
+* No backend truth yet.
+
+Potential command additions later:
+
+```text
+media_get_video_job_output
+media_clear_video_job
+media_clear_completed_video_jobs
+media_open_staged_output_folder
+```
+
+Be careful with “open folder” commands. They should be allowlisted and never accept arbitrary paths from React.
+
+## Real conversion strategy notes
+
+The user wants the converter written in Rust for efficiency and modularity so the code can be reused later in a future CrabLink browser.
+
+Important distinction:
+
+* The converter/job orchestration should be Rust-owned.
+* The UI should not do conversion.
+* The UI should not pass raw codec args.
+* The UI should not buffer full files.
+* The codec backend must be controlled and allowlisted.
+
+Possible long-term options:
+
+1. Rust-owned adapter around a controlled encoding engine.
+2. Platform-native media APIs for macOS where practical.
+3. A bundled/sidecar codec engine only if tightly controlled, explicit, and not exposed as shell/args.
+4. Pure Rust encoding if feasible for the limited required codecs, but this may be much larger than the app-level job system.
+
+For CrabLink architecture, the crucial part is not whether the encoder internally uses a library; the crucial part is:
+
+* Rust owns the job.
+* Inputs are handles, not arbitrary commands.
+* Outputs are staged descriptors/files.
+* Codec/rendition profiles are allowlisted.
+* No user-supplied execution.
+* No raw shell bridge.
+* No fake backend truth.
+
+## Future real transcode job shape
+
+When replacing descriptor scaffold with real work:
+
+* Use a Rust job record with status/progress/cancel.
+* Do not hold locks across blocking/long-running work.
+* Spawn blocking CPU/media work outside UI thread.
+* Use a cancellation flag/token.
+* Bound max source size for MVP.
+* Bound output count.
+* Bound output dimensions.
+* Bound bitrate profiles.
+* Bound temp/staging directory.
+* Use fixed profiles:
+
+  * clean MP4 master
+  * desktop 1080p
+  * tablet 720p
+  * mobile 480p
+  * low 360p
+  * poster
+  * thumbnail
+* Do not upscale.
+* Preserve aspect ratio.
+* Strip hidden metadata by default.
+* Preserve intentional manifest fields separately.
+* Return progress and staged output facts only.
+* Never return raw video bytes through command results.
+
+Output descriptors should eventually include:
+
+```text
+role
+label
+assetKind
+targetMime
+container
+videoCodec
+audioCodec
+width
+height
+durationSeconds
+stagedHandle
+existsOnDisk
+bytes
+localVerificationHash maybe
+backendCid null until upload
+crabUrl null until backend upload/mint
+readyForMint true only when staged file exists and passed local checks
+```
+
+Use “local verification hash” carefully. Do not label it as canonical backend truth until backend confirms.
+
+## Future large-media upload path
+
+The video mint/publish flow must be upgraded after conversion works.
+
+Current `VideoPublishFlow.jsx` is video-lite and blocks files over 10 MB. That path should not be the final route for generated videos.
+
+Target large-media path:
+
+1. Prepare quote/policy.
+2. Explicit user confirmation.
+3. Wallet hold/capture through backend.
+4. Upload staged rendition by chunks/ranges/segments.
+5. Backend stores by b3 and returns confirmed b3/crab URL.
+6. Repeat for each rendition/poster/thumbnail.
+7. Create video bundle/manifest referencing backend-confirmed outputs.
+8. Display backend receipt and refreshed balance.
+
+Do not:
+
+* Base64 large video in JSON.
+* Put full video bytes in React state.
+* Put full video bytes in Tauri command return values.
+* Claim local cache unlocks paid content.
+* Fake CIDs or receipts.
+* Use local descriptors as backend truth.
+
+## Known UI/UX follow-up items
+
+1. Add native file picker.
+2. Hide manual path paste under Advanced/Developer after picker exists.
+3. Make the converter panel less developer-heavy once real conversion works.
+4. Add “Convert to MP4” button only when real transcode exists.
+5. Add “Open staged outputs” only after safe output directory handling is implemented.
+6. Add clear status language:
+
+   * preview facts only
+   * native source registered
+   * descriptor scaffold
+   * real staged files
+   * uploaded/backend-confirmed
+   * minted/backend-confirmed
+7. Keep detail-rich JSON previews available in developer mode.
+8. Avoid cluttering the main creator view once the path is proven.
+
+## Current safety invariants to keep testing
+
+Every batch must preserve:
+
+```text
+No fake b3 CIDs.
+No fake crab URLs.
+No fake receipts.
+No fake balances.
+No silent ROC spend.
+No arbitrary execution.
+No shell/eval/raw command bridge.
+No raw FFmpeg args from React.
+No private path returned to React.
+No full large-media command result buffering.
+No wallet mutation from video/source/cache/job code.
+No backend truth claimed from local descriptors.
+No paid unlock from cache alone.
+```
+
+## Current green gates
+
+Run these after each batch:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run check:rust:mac-media
+npm run build
+```
+
+Manual gates:
+
+```text
+1. crab://video route loads.
+2. Local preview picker still works.
+3. Video metadata still loads.
+4. Native source registration works.
+5. Registered source handle does not reveal private path.
+6. Build MP4 plan works.
+7. Start prepare job works.
+8. Cancel job works.
+9. Completed job shows 7 descriptor-only outputs.
+10. Publish flow still blocks >10 MB until large-media path is implemented.
+11. No wallet/balance/receipt changes occur from converter/source/job buttons.
+```
+
+## Best next-session opening request
+
+Use this at the next session start:
+
+```text
+We are continuing CrabLink Tauri video page work. We have Rust video probe/plan, prepare-job scaffold, cancel/status polling, and native source registration via manual path. The next batch should add a proper native file picker for video source registration so the user does not need to copy/paste paths. Preserve Tauri-first rules: Rust owns native file authority, React gets only a redacted source handle, no full video bytes through commands, no shell bridge, no raw FFmpeg args, no fake CIDs/receipts, no wallet mutation. Provide full paste-ready files only, no downloads.
+```
+
+## Summary of where we are
+
+The video converter is now structurally on the right path.
+
+Proven:
+
+* UI can preview local video.
+* Rust can receive safe preview facts.
+* Rust can plan MP4 renditions.
+* Rust can run a prepare-job scaffold.
+* Progress/status/cancel works.
+* Descriptor-only outputs appear.
+* Native source registration infrastructure has been added.
+
+Not yet done:
+
+* Native file picker.
+* Real staged output files.
+* Real MP4 conversion.
+* Metadata stripping.
+* Poster/thumbnail extraction.
+* Large-media upload path.
+* Backend-confirmed b3 for each rendition.
+* Video bundle minting.
+* Removal/replacement of the 10 MB video-lite cap.
+* Paid viewing of generated videos through the final range/segment media path.
+
+The next session should start with the native file picker batch, then move into real staged-file output once that is green.
+
+
+### END NOTE - MAY 28 2026 - 18:00 CST
+
+
+### BEGIN NOTE - MAY 30 2026 - 09:40 CST
+
+I built these notes around the current carryover, the Tauri-first IDB, and the video-page notes. The existing notes establish the hard boundaries: React owns display/user intent, Tauri Rust owns native file/media authority, backend services own durable truth, and local source/job descriptors are not CIDs, receipts, ownership, or unlock truth.  The next work should move toward actual conversion, but still avoid raw shell bridges, raw FFmpeg args from React, full video bytes in command results, fake CIDs, and the current 10 MB video-lite shortcut path.  The Tauri IDB also reinforces that Tauri is the native trust boundary, gateway compatibility comes first, OAP is Rust-side only, and wallet/ledger truth stays backend-owned. 
+
+# CrabLink Tauri Video Page / Video Converter Carryover Notes
+
+## 0. Session checkpoint
+
+We are continuing work on the CrabLink Tauri app, specifically the `crab://video` creator workflow.
+
+The project is now firmly in the **Tauri-first** phase:
+
+```text
+CrabLink Tauri = primary native Rust-backed RON client
+Chrome extension = green proof client / browser companion / gateway smoke surface
+RustyOnions backend = durable substrate/value-plane truth
+```
+
+The current video-page mission is to move from:
+
+```text
+local video preview
++ Rust-owned source registration
++ MP4/rendition planning
++ descriptor-only prepare job
+```
+
+toward:
+
+```text
+real local video preparation
++ metadata stripping
++ MOV/WebM/etc. → MP4/H.264/AAC conversion
++ device renditions
++ poster/thumbnail extraction
++ safe staged outputs
++ later backend-confirmed mint/upload for each generated asset
+```
+
+The user specifically wants to start getting to actual conversions soon.
+
+Do not jump straight to a giant unsafe media patch. The right next phase is:
+
+```text
+1. Confirm latest UI/native picker batches are green.
+2. Add real Rust-side converter capability detection/status.
+3. Add safe staging directory model.
+4. Convert exactly one simple output first: source MOV/WebM/etc. → cleaned MP4 master.
+5. Prove staged file exists, has bounded metadata, and can be previewed locally.
+6. Only then expand to 1080p/720p/480p/360p plus poster/thumbnail.
+7. Only after real outputs exist, design the large-media upload/mint path.
+```
+
+---
+
+## 1. User preferences to preserve
+
+The user does **not** want downloadable patch files.
+
+Always provide:
+
+```text
+full paste-ready files
+exact paths
+complete file replacements when practical
+Cargo.toml changes if dependencies change
+commands to run after each batch
+manual smoke tests
+```
+
+Do not provide artifact downloads or patch files.
+
+The user is on:
+
+```text
+MacBook Pro 2019
+Intel Mac
+macOS
+trackpad
+```
+
+The user runs the full local dev program from:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+For app-only checks:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run check:rust:mac-media
+npm run build
+```
+
+For the media-enabled Tauri dev profile:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run tauri:dev:mac-media
+```
+
+The manual path paste workflow was only a temporary developer bridge. The newer native picker batch should replace it as the normal path. The manual field should remain hidden under Advanced/Developer only.
+
+---
+
+## 2. Hard architecture doctrine
+
+Preserve these boundaries in every future batch:
+
+```text
+React:
+  - display
+  - route rendering
+  - user intent
+  - small DTOs
+  - local preview UI
+  - no private path authority
+  - no backend truth
+
+TypeScript adapters:
+  - call allowlisted Tauri commands
+  - normalize small DTOs
+  - no secrets
+  - no media bytes
+  - no raw native commands
+
+Tauri Rust:
+  - native file picker
+  - local file authority
+  - source handle registry
+  - converter jobs
+  - staging directory management
+  - redaction
+  - bounded progress/status
+  - future local verification hashes
+  - no wallet/ledger mutation
+
+RustyOnions backend:
+  - durable storage truth
+  - b3/canonical asset confirmation
+  - wallet/ledger truth
+  - paid access receipt truth
+  - bundle/manifest truth after backend confirmation
+```
+
+Never let CrabLink Tauri become:
+
+```text
+wallet truth
+ledger truth
+storage truth
+index truth
+receipt truth
+ownership truth
+paid unlock truth
+```
+
+`crab://` remains navigation, not authority.
+
+Local video source handles and local staged output descriptors are local convenience/status only. They are not backend truth.
+
+---
+
+## 3. Current state before next session
+
+### 3.1 What was already proven before the newest two batches
+
+The existing carryover notes say the Rust media probe/plan scaffold is green.
+
+Rust media module area:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/
+```
+
+Key files:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/limits.rs
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/media/video_probe.rs
+apps/crablink-tauri/src-tauri/src/media/video_renditions.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+apps/crablink-tauri/src-tauri/src/media/video_sources.rs
+```
+
+The video page could already:
+
+```text
+select local video in WebView preview picker
+read local preview metadata
+build Rust MP4 plan
+show planned output ladder
+start descriptor-only prepare job
+show job progress
+cancel job
+complete descriptor scaffold
+show staged:// descriptor handles
+```
+
+The planned outputs are:
+
+```text
+source_clean_master
+desktop_1080p
+tablet_720p
+mobile_480p
+low_360p
+poster_image
+thumbnail_image
+```
+
+Important: these were descriptor-only. They were not real files yet.
+
+### 3.2 Current tested sample video
+
+The user tested with a macOS QuickTime screen recording:
+
+```text
+Screen Recording 2026-05-19 at 7.09.39 PM.mov
+```
+
+Observed facts:
+
+```text
+Type: video/quicktime
+Size: about 20.4 MiB / 20.37 MB
+Resolution: 2880×1578
+Duration: 0:10
+Target: MP4 / H.264 / AAC
+```
+
+This is an ideal next test file because:
+
+```text
+it is a MOV/QuickTime input
+it should be converted to MP4
+it is larger than the current 10 MB video-lite mint cap
+it is short enough for early conversion tests
+it proves large-media work cannot rely on the old lite path
+```
+
+### 3.3 Current known video-lite mint cap
+
+The current `VideoPublishFlow.jsx` video-lite upload path blocks files over:
+
+```text
+10 MB
+```
+
+The tested 20.4 MiB MOV hits:
+
+```text
+Mint flow blocked
+This video-lite upload path is capped at 10.00 MB. Larger media needs the future bounded range/segment path.
+```
+
+This is expected for now.
+
+Do **not** solve this by pushing full large video bytes through React, JSON, or Tauri command return values.
+
+Correct future solution:
+
+```text
+staged output files
+bounded range/segment/chunk upload
+explicit prepare/quote
+explicit confirmation
+backend wallet path
+backend receipt
+backend b3/crab URL confirmation
+bundle manifest after backend confirmation
+```
+
+---
+
+## 4. Newest batches provided in the current conversation
+
+These were provided as paste-ready code but may not yet be user-confirmed green.
+
+### 4.1 Batch: native video source picker
+
+Purpose:
+
+```text
+replace manual path copying with a native macOS/Tauri file picker
+return only a redacted video_source_* handle to React
+keep private filesystem path in Rust state only
+```
+
+Expected files changed:
+
+```text
+apps/crablink-tauri/src-tauri/Cargo.toml
+apps/crablink-tauri/src-tauri/src/lib.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src/shared/api/videoConverterClient.js
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+```
+
+Expected dependency addition:
+
+```toml
+tauri-plugin-dialog = "2"
+```
+
+Expected command added:
+
+```text
+media_choose_video_source
+```
+
+Expected behavior:
+
+```text
+crab://video
+→ select local preview video
+→ Choose native source
+→ native OS picker opens
+→ user selects same file
+→ Rust registers source
+→ React receives redacted handle/facts
+→ no private path visible in developer JSON
+```
+
+Manual path input should become Advanced/Developer fallback only.
+
+### 4.2 Batch: wire converter panel into video draft and improve local metadata flow
+
+Purpose:
+
+```text
+pass selected local video facts and playback metadata into VideoConverterPanel
+make VideoLocalPlaybackPreview report metadata up to VideoDraft
+place MP4 preparation panel under local preview
+add missing converter styles
+```
+
+Expected files changed:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoDraft.jsx
+apps/crablink-tauri/src/pages/video/VideoLocalPlaybackPreview.jsx
+apps/crablink-tauri/src/pages/video/video.css
+```
+
+Expected behavior:
+
+```text
+local preview picker loads file
+metadata detected: duration/resolution/aspect
+VideoConverterPanel receives selectedFileFacts + playbackMeta
+Build MP4 plan works from those facts
+Choose native source registers Rust source handle
+Start prepare job uses native_handle when available
+```
+
+### 4.3 Important status caveat
+
+The newest two batches were provided but not yet confirmed by the user as compiled/tested.
+
+Next session must start by confirming:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run check:rust:mac-media
+npm run build
+```
+
+Then:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Manual smoke:
+
+```text
+1. Open crab://video.
+2. Select the 20.4 MiB MOV in the local preview picker.
+3. Confirm local playback and metadata.
+4. Click Choose native source.
+5. Pick the same MOV through native picker.
+6. Confirm a video_source_* handle appears.
+7. Confirm developer JSON does not reveal private path.
+8. Click Build MP4 plan.
+9. Click Start prepare job.
+10. Confirm job source says native_handle.
+11. Confirm descriptor outputs still appear.
+12. Confirm Clear source handle works.
+13. Confirm video-lite publish still blocks >10 MB.
+```
+
+If the build fails, fix compile/build issues first before starting conversion.
+
+---
+
+## 5. Current important file map
+
+### Rust / Tauri
+
+```text
+apps/crablink-tauri/src-tauri/Cargo.toml
+apps/crablink-tauri/src-tauri/src/lib.rs
+apps/crablink-tauri/src-tauri/src/state.rs
+
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+
+apps/crablink-tauri/src-tauri/src/media/limits.rs
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/media/video_probe.rs
+apps/crablink-tauri/src-tauri/src/media/video_renditions.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+apps/crablink-tauri/src-tauri/src/media/video_sources.rs
+```
+
+### React / JS
+
+```text
+apps/crablink-tauri/src/shared/api/videoConverterClient.js
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src/platform/tauriPlatform.js
+
+apps/crablink-tauri/src/pages/video/VideoPage.jsx
+apps/crablink-tauri/src/pages/video/VideoDraft.jsx
+apps/crablink-tauri/src/pages/video/VideoLocalPlaybackPreview.jsx
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+apps/crablink-tauri/src/pages/video/videoDraftModel.js
+apps/crablink-tauri/src/pages/video/video.css
+```
+
+### Asset / resolved media playback area to inspect later
+
+```text
+apps/crablink-tauri/src/pages/asset/AssetPage.jsx
+apps/crablink-tauri/src/pages/asset/AssetResolver.jsx
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/shared/embed/crabVideoEmbed.jsx
+```
+
+---
+
+## 6. Current command bridge state
+
+Current media commands are expected to include:
+
+```text
+media_status
+media_choose_video_source
+media_register_video_source
+media_get_video_source
+media_clear_video_source
+media_probe_video
+media_plan_video_renditions
+media_prepare_video_bundle
+media_get_video_job_status
+media_cancel_video_job
+```
+
+These must stay:
+
+```text
+typed
+allowlisted
+small DTO only
+redacted
+bounded
+source-labeled
+policy-aware where needed
+testable
+```
+
+Do not add commands named:
+
+```text
+run
+execute
+eval
+shell
+raw_command
+raw_ffmpeg
+native_exec
+raw_args
+raw_process
+```
+
+Do not let React pass arbitrary command lines, raw FFmpeg arguments, shell fragments, paths to output anywhere, or environment variables.
+
+The converter command model should be:
+
+```text
+React requests intent:
+  prepare source_clean_master
+  include 1080p true/false
+  include poster true/false
+
+Rust owns implementation:
+  chooses safe encoder backend
+  chooses safe args internally
+  chooses staging directory
+  validates source handle
+  reports progress
+  returns small DTOs
+```
+
+---
+
+## 7. Safety invariants for every future video batch
+
+Never violate:
+
+```text
+No fake b3 CIDs.
+No fake crab URLs.
+No fake receipts.
+No fake balances.
+No silent ROC spend.
+No arbitrary execution.
+No shell/eval/raw command bridge.
+No raw FFmpeg args from React.
+No private path returned to React.
+No full large-media command result buffering.
+No full video bytes in React state.
+No base64 video payloads in JSON.
+No wallet mutation from video/source/cache/job code.
+No direct storage/index/wallet/ledger mutation from Tauri media code.
+No backend truth claimed from local descriptors.
+No paid unlock from local cache alone.
+No hidden sidecar execution.
+No fake DRM/anti-rip claims.
+No auto-spend from autoplay/preload.
+```
+
+Use:
+
+```text
+native source handles
+Rust-owned private paths
+safe app-local staging directories
+small DTOs
+job IDs
+bounded progress logs
+bounded progress events
+cancel tokens
+explicit confirmation before spend/upload
+backend-confirmed b3/crab URLs
+backend receipts
+```
+
+---
+
+## 8. Actual conversion strategy: recommended next architecture
+
+The user wants to start actual conversions soon. The safest way is to implement conversion in layers.
+
+### 8.1 Do not start with a full rendition ladder
+
+Do not start by generating all seven outputs in one patch.
+
+Start with:
+
+```text
+source_clean_master.mp4
+```
+
+Only this first.
+
+First real conversion should prove:
+
+```text
+source handle can be opened by Rust
+staging directory can be created
+output path is app-owned
+source MOV can become MP4
+metadata stripping policy is applied
+job progress updates honestly
+cancel works if possible
+output descriptor reports real existsOnDisk=true
+output descriptor reports bytes
+output descriptor can optionally report localVerificationHash
+React can preview staged output through a safe local preview mechanism later
+no backend CID is claimed
+```
+
+### 8.2 Recommended progression
+
+Batch VC1 — converter capability/status and staging model:
+
+```text
+Add converter backend status DTO.
+Add safe staging root.
+Add job output descriptor fields for real files.
+Add no-op capability checks.
+No conversion yet.
+```
+
+Batch VC2 — real clean master conversion:
+
+```text
+Given a registered native source handle:
+  create safe job directory
+  create source_clean_master.mp4
+  strip unneeded metadata if supported
+  transcode/remux to MP4/H.264/AAC if supported
+  report progress and final descriptor
+```
+
+Batch VC3 — local staged output preview:
+
+```text
+Add safe read/preview of staged source_clean_master.mp4.
+Avoid returning raw private path.
+Prefer safe app protocol/asset URL later.
+For first proof, use a controlled command to provide metadata and maybe small preview handle only.
+```
+
+Batch VC4 — poster/thumbnail extraction:
+
+```text
+Generate poster_image and thumbnail_image from a frame.
+Use safe dimensions and output formats.
+No backend mint yet.
+```
+
+Batch VC5 — device rendition ladder:
+
+```text
+desktop_1080p
+tablet_720p
+mobile_480p
+low_360p
+```
+
+Rules:
+
+```text
+do not upscale
+skip outputs larger than source
+one transcode at a time
+clear progress
+bounded log lines
+cancel support
+```
+
+Batch VC6 — local manifest/rendition group from real staged outputs:
+
+```text
+local rendition group references staged outputs only
+backendCid=null
+crabUrl=null
+readyForMint=true only for real staged files that passed local checks
+```
+
+Batch VC7 — large-media upload/mint design:
+
+```text
+dedicated staged file upload command
+bounded chunks/ranges/segments
+backend returns real b3/crab URLs
+explicit quote/confirm/wallet receipt path
+no full-file React buffering
+```
+
+---
+
+## 9. Converter backend decision notes
+
+We need actual conversion in Rust-side code, but there are tradeoffs.
+
+### 9.1 What not to do
+
+Do not implement conversion by:
+
+```text
+React passing ffmpeg args
+React passing shell commands
+Tauri command named raw_ffmpeg
+Tauri command that accepts arbitrary executable path
+Tauri command that accepts arbitrary output path
+Tauri command that pipes full video bytes through JSON
+Tauri command returning MP4 bytes/base64
+```
+
+### 9.2 Practical conversion options to evaluate
+
+The next assistant should inspect current `Cargo.toml`, current macOS dev environment, and decide the smallest green path.
+
+Possible paths:
+
+```text
+Option A: Rust wrapper around an internally controlled FFmpeg binary/process
+  Pros:
+    most practical for MOV/WebM/MP4/H.264/AAC
+    best codec coverage
+    easiest to generate renditions/posters
+  Cons:
+    process execution risk
+    packaging/licensing concerns
+    must never expose raw args to React
+    must define controlled arg templates in Rust only
+
+Option B: ffmpeg-next crate / native libav bindings
+  Pros:
+    Rust API wrapper
+    no shell command strings
+  Cons:
+    requires system libraries
+    can be painful on macOS packaging
+    more complex code
+    still has FFmpeg licensing/dependency concerns
+
+Option C: GStreamer bindings
+  Pros:
+    powerful media pipeline
+  Cons:
+    heavy dependency
+    macOS packaging complexity
+    likely too much for current MVP
+
+Option D: pure Rust crates only
+  Pros:
+    cleaner supply chain if available
+  Cons:
+    likely not enough codec/container support for MOV → MP4/H.264/AAC
+    may be unrealistic for “any/most video file types”
+```
+
+Most likely practical route:
+
+```text
+Use an internally controlled Rust-side FFmpeg integration for MVP conversion,
+but wrap it behind a safe VideoTranscoder trait so the implementation can be swapped later.
+```
+
+Critical rule:
+
+```text
+React chooses roles/policy, not command args.
+Rust owns safe templates.
+```
+
+Recommended Rust abstraction:
+
+```rust
+trait VideoTranscoder {
+    fn backend_status(&self) -> VideoConverterBackendStatus;
+    fn prepare_clean_master(&self, job: VideoPrepareRequest) -> Result<VideoPrepareOutput, VideoError>;
+    fn prepare_rendition(&self, job: VideoPrepareRequest, role: VideoRenditionRole) -> Result<VideoPrepareOutput, VideoError>;
+    fn extract_still(&self, job: VideoPrepareRequest, role: StillRole) -> Result<VideoPrepareOutput, VideoError>;
+}
+```
+
+Possible modules:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+apps/crablink-tauri/src-tauri/src/media/video_staging.rs
+apps/crablink-tauri/src-tauri/src/media/video_progress.rs
+apps/crablink-tauri/src-tauri/src/media/video_backend.rs
+```
+
+Keep the code modular so it can later be reused in a future Rust-backed CrabLink browser.
+
+---
+
+## 10. Staging directory model
+
+Before real conversion, define a staging model.
+
+### 10.1 Staging root
+
+Use an app-owned local data/cache directory.
+
+Potential structure:
+
+```text
+<app_local_data>/media_staging/video/<job_id>/
+  source_clean_master.mp4
+  desktop_1080p.mp4
+  tablet_720p.mp4
+  mobile_480p.mp4
+  low_360p.mp4
+  poster_image.jpg
+  thumbnail_image.jpg
+  job_manifest.local.json
+```
+
+Do not stage into arbitrary user-selected directories for MVP.
+
+Do not let React choose output paths.
+
+### 10.2 Staging cleanup
+
+Need future controls:
+
+```text
+Clear staged outputs for job
+Clear all failed jobs
+Clear all media staging
+Keep last N jobs
+Max staging bytes
+Show storage usage
+```
+
+Initial conservative policy:
+
+```text
+max input size: 250 MB for first conversion tests
+max input duration: 10 minutes
+max parallel jobs: 1
+max staged jobs retained: small number, maybe 5
+max progress log lines: 100
+```
+
+### 10.3 Output descriptor shape
+
+Real output descriptor should eventually include:
+
+```text
+role
+label
+assetKind
+targetMime
+container
+videoCodec
+audioCodec
+width
+height
+durationSeconds
+stagedHandle
+existsOnDisk
+bytes
+localVerificationHash
+localVerificationHashKind
+backendCid
+crabUrl
+readyForMint
+warning
+```
+
+Important:
+
+```text
+backendCid = null until backend confirms upload/storage
+crabUrl = null until backend confirms typed asset URL
+readyForMint = true only if real staged file exists and passed local checks
+localVerificationHash is not backend truth
+```
+
+Use wording like:
+
+```text
+local verification hash
+```
+
+Do not call it canonical b3 truth unless it is confirmed by backend storage route semantics.
+
+---
+
+## 11. Actual conversion scope for first real patch
+
+The next actual conversion patch should be small.
+
+Recommended first conversion batch:
+
+```text
+Batch VC1/VC2 combined if manageable:
+  add video_staging.rs
+  add video_transcode.rs
+  add converter backend status
+  implement clean-master-only conversion
+  keep all other outputs descriptor-only or pending
+```
+
+Better if split:
+
+```text
+VC1:
+  staging + backend status + DTO expansion
+  no conversion
+
+VC2:
+  clean-master conversion
+```
+
+### 11.1 First conversion acceptance criteria
+
+For the 20.4 MiB MOV test file:
+
+```text
+Choose native source works.
+Build MP4 plan works.
+Start prepare job creates real job directory.
+source_clean_master.mp4 exists on disk.
+source_clean_master.mp4 bytes > 0.
+descriptor shows existsOnDisk=true.
+descriptor shows bytes.
+descriptor shows readyForMint=true for clean master only.
+other renditions may remain pending/descriptor-only.
+no backendCid/crabUrl shown.
+no private source path shown in React.
+no private output path shown in React unless in developer-only redacted form.
+cancel does not leave UI stuck.
+npm run check:rust:mac-media passes.
+npm run build passes.
+```
+
+### 11.2 UI wording for first conversion
+
+Do not overpromise. Use clear labels:
+
+```text
+Converter backend: available/unavailable
+Clean master: ready/pending/failed
+Renditions: future
+Poster/thumbnail: future
+Backend mint: not yet
+```
+
+Main button could become:
+
+```text
+Prepare clean MP4
+```
+
+Not yet:
+
+```text
+Mint final video
+Full conversion complete
+DRM protected
+Published
+```
+
+---
+
+## 12. Large-media upload path after conversion
+
+Do not use current `VideoPublishFlow.jsx` as final large-media route.
+
+Current video-lite path exists for proof, but it is capped at 10 MB.
+
+Final path should be staged-file based:
+
+```text
+1. User prepares local video bundle.
+2. App shows real staged outputs.
+3. User chooses which outputs to mint.
+4. App asks backend for quote/policy.
+5. User explicitly confirms paid action.
+6. Backend wallet path creates hold/capture/release/receipt.
+7. Tauri uploads each staged file via bounded chunks/ranges/segments.
+8. Backend stores each object by canonical b3.
+9. Backend returns confirmed b3 and crab URL for each asset.
+10. App builds bundle/manifest referencing backend-confirmed assets only.
+11. App displays backend receipt and refreshed balance.
+12. Resolved `.video` page uses backend-confirmed rendition group.
+```
+
+Do not:
+
+```text
+upload one giant Blob through React
+base64 video in JSON
+return file bytes from Tauri
+invent b3 locally and call it backend CID
+unlock paid video from staged file alone
+```
+
+Potential future command family:
+
+```text
+media_upload_staged_video_asset_gateway
+media_upload_staged_media_asset_gateway
+media_mint_video_bundle_gateway
+```
+
+If general upload command exists, constrain it to known routes and asset kinds:
+
+```text
+POST /assets/video
+POST /assets/music
+POST /assets/podcast
+POST /assets/image
+```
+
+No arbitrary upload URL authority.
+
+---
+
+## 13. Resolved video playback future
+
+After minting works, resolved `.video` pages need real playback behavior.
+
+Long-term playback should support:
+
+```text
+paid gate
+backend content_view receipt
+rendition selection
+poster/thumbnail
+range/segment reads
+safe player source handle
+verified cache later
+no autoplay spend
+bounded preload
+cancelable requests
+```
+
+React owns:
+
+```text
+player UI
+controls
+source labels
+progress display
+error display
+```
+
+Tauri Rust owns:
+
+```text
+safe media source resolution
+range/segment access later
+cache handles later
+local path safety
+redaction
+verification state
+```
+
+Avoid:
+
+```text
+file:///Users/... raw paths in React
+arbitrary local path playback
+unverified remote URLs
+full bytes in JS memory
+fake paid unlocks
+```
+
+---
+
+## 14. UI/UX follow-up items
+
+Current goal is a professional creator workflow, not a backend test panel.
+
+Keep:
+
+```text
+detailed developer JSON
+truth boundary labels
+clear source status
+clear job status
+clear no-transcode/no-backend language
+```
+
+But improve main UX over time:
+
+```text
+large clean local preview at top
+native source picker near preview
+MP4 preparation below preview
+planned outputs as cards
+job progress simple and visual
+advanced JSON collapsible
+manual path hidden under Advanced
+publish/mint separate and clearly backend-confirmed only
+```
+
+Recommended status ladder labels:
+
+```text
+Preview facts only
+Native source registered
+Plan ready
+Clean MP4 preparing
+Staged file ready
+Uploaded/backend-confirmed
+Minted/backend-confirmed
+```
+
+Use these labels so the user knows exactly where truth comes from.
+
+---
+
+## 15. Testing gates
+
+Run after every batch:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run check:rust:mac-media
+npm run build
+```
+
+Full stack:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Manual current smoke:
+
+```text
+1. crab://video route loads.
+2. Local preview picker works.
+3. Video metadata loads.
+4. Native source picker opens.
+5. Registered source handle appears.
+6. Registered source handle does not reveal private path.
+7. Build MP4 plan works.
+8. Start prepare job works.
+9. Cancel job works.
+10. Completed job shows outputs.
+11. No fake backend CIDs/crab URLs appear.
+12. No wallet/balance/receipt changes occur from converter/source/job buttons.
+13. Video-lite publish still blocks >10 MB until large-media upload path exists.
+```
+
+Manual first-conversion smoke once implemented:
+
+```text
+1. Use the 20.4 MiB MOV test file.
+2. Choose native source.
+3. Build plan.
+4. Click Prepare clean MP4.
+5. Confirm progress updates.
+6. Confirm source_clean_master.mp4 staged output reports existsOnDisk=true.
+7. Confirm bytes > 0.
+8. Confirm readyForMint=true only for real staged file.
+9. Confirm no backendCid/crabUrl until upload.
+10. Confirm no private path in React/developer JSON.
+11. Confirm app can clear/cancel/retry without stuck state.
+```
+
+---
+
+## 16. Known risks
+
+### 16.1 FFmpeg/process execution risk
+
+Actual conversion likely requires FFmpeg or a media backend.
+
+Risk:
+
+```text
+arbitrary execution
+raw args from React
+platform packaging
+licensing
+large logs
+stuck process
+unbounded stderr
+zombie process
+cancel not killing child
+```
+
+Mitigation:
+
+```text
+controlled Rust-only templates
+no raw args from React
+bounded logs
+job timeout
+kill process on cancel
+one job at a time
+redacted errors
+backend status command
+clear packaging notes
+```
+
+### 16.2 Large-file memory risk
+
+Risk:
+
+```text
+full-file buffer in memory
+base64 in JS
+command result too large
+WebView freeze
+Tauri invoke failure
+```
+
+Mitigation:
+
+```text
+file paths/handles only in Rust
+streaming/chunked process IO
+small DTOs
+staged files on disk
+no media bytes returned
+```
+
+### 16.3 Truth-boundary drift
+
+Risk:
+
+```text
+local hash displayed as backend CID
+staged file shown as minted
+local preview treated as paid unlock
+```
+
+Mitigation:
+
+```text
+backendCid=null until upload
+crabUrl=null until backend response
+receipt=null until backend wallet/content route
+labels: local/staged/backend-confirmed
+```
+
+### 16.4 UX clutter
+
+Risk:
+
+```text
+video page becomes too developer-heavy
+JSON panels crowd creator workflow
+too many status badges
+```
+
+Mitigation:
+
+```text
+simple main creator flow
+developer details collapsible
+advanced manual path hidden
+clear primary buttons
+one next action at a time
+```
+
+---
+
+## 17. Recommended next-session opening request
+
+Use this message to begin the next session:
+
+```text
+We are continuing the CrabLink Tauri video page. Please review the latest codebundle, NOTES.MD, COMBINED_IDB.MD, and the recent carryover notes. The newest batches attempted to add the Tauri native video source picker and wire VideoConverterPanel into VideoDraft/VideoLocalPlaybackPreview with improved converter CSS. First confirm/fix the green gates: npm run check:rust:mac-media and npm run build. Then smoke test crab://video with the 20.4 MiB MOV sample: local preview, metadata, Choose native source, Build MP4 plan, Start prepare job, no private path leaked.
+
+After that, I want to start actual conversions. Do not jump to a huge full converter. Please propose the smallest safe batch toward real conversion: staging directory + converter backend status + clean-master-only MP4 output first. Keep React as display/user intent only, keep all raw native media authority in Rust, no raw FFmpeg args from React, no shell/eval/raw command bridge, no full video bytes through Tauri/React, no fake CIDs/receipts/balances, and no large-media upload until staged output files are proven.
+```
+
+---
+
+## 18. Best next batch recommendation
+
+The best next code batch should probably be:
+
+```text
+Batch VC1 — Staging + backend status, no conversion yet
+```
+
+Files likely touched:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+apps/crablink-tauri/src-tauri/src/media/video_staging.rs
+apps/crablink-tauri/src-tauri/src/media/video_backend.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src-tauri/src/state.rs
+apps/crablink-tauri/src/shared/api/videoConverterClient.js
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+apps/crablink-tauri/src/pages/video/video.css
+```
+
+Goals:
+
+```text
+add app-owned media staging root
+add job directory allocation
+add converter backend status DTO
+add output descriptor fields for real files
+add status panel showing conversion backend unavailable/available
+do not convert yet unless backend is already simple and safe
+```
+
+Then:
+
+```text
+Batch VC2 — Clean master conversion
+```
+
+Files likely touched:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src/shared/api/videoConverterClient.js
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+```
+
+Goal:
+
+```text
+first real source_clean_master.mp4 staged file from registered native source handle
+```
+
+Only after VC2 is green should we expand the rendition ladder.
+
+---
+
+## 19. Bottom-line handoff
+
+We are now at the threshold where the video page has enough foundation to start real conversion work.
+
+The foundation now is:
+
+```text
+local video preview
+metadata detection
+Rust-owned source handle registration
+native file picker batch proposed
+MP4/rendition plan
+prepare job scaffold
+descriptor outputs
+cancel/status flow
+paid video-lite path still present but capped at 10 MB
+```
+
+The next real milestone is:
+
+```text
+A MOV selected through CrabLink becomes a real staged MP4 file on disk through Rust-owned conversion, with no path leaks, no large JS buffers, no fake backend truth, and clear UI status.
+```
+
+That is the first serious conversion proof.
+
+After that:
+
+```text
+poster/thumbnail
+device renditions
+local staged rendition group
+bounded large-media upload
+backend-confirmed b3/crab URLs
+paid viewer playback
+```
+
+Keep every step small, green, and honest.
+
+
+### END NOTE - MAY 30 2026 - 09:40 CST
+
+
+### BEGIN NOTE - MAY 30 2026 - 10:45 CST
+
+The notes below capture the current proven checkpoint and the next work sequence. The important architectural guardrails are still: Tauri Rust owns native media authority, React only displays/user intent, large media must not cross the command bridge as a full blob, local paths stay hidden, and b3/crab/receipt/wallet truth must remain backend-derived.  
+
+# CrabLink Tauri Video Page Carryover Notes — Clean MP4 Conversion Proven, Next Steps to Complete Video Page
+
+## 0. Session checkpoint
+
+We continued work on the CrabLink Tauri video page and moved from a descriptor-only video conversion scaffold to the first real Rust-owned local video conversion proof.
+
+The major milestone achieved:
+
+```text
+MOV source selected once through Rust-owned native picker
+→ Rust registered source internally
+→ React received only redacted video_source_* handle
+→ Rust ran controlled FFmpeg clean-MP4 job
+→ source_clean_master.mp4 was written locally
+→ no private path returned to React
+→ no full video bytes returned through command bridge
+→ no fake backend CID/crab URL/receipt/wallet truth claimed
+```
+
+This is the first successful proof that CrabLink Tauri can perform a real local video conversion in Rust-owned native code while preserving the project’s media/security boundaries.
+
+Current result from user-provided developer JSON:
+
+```text
+nativeSourceRegistered: true
+sourceAuthority: native_registered_source
+sourceHandle: video_source_1780154984219_1
+job.status: completed
+job.phase: completed_clean_master
+source_clean_master.existsOnDisk: true
+source_clean_master.bytes: 101868
+source_clean_master.readyForMint: true
+truthBoundary.simulatedJob: false
+truthBoundary.hasNativeSourceHandle: true
+truthBoundary.runsTranscode: true
+truthBoundary.stripsMetadata: true
+truthBoundary.writesOutputFiles: true
+truthBoundary.returnsVideoBytes: false
+truthBoundary.returnsPrivatePath: false
+contentId: null
+crabUrl: null
+```
+
+This means conversion worked locally. It does **not** mean the video was minted or uploaded yet. `contentId: null` and `crabUrl: null` are correct at this stage.
+
+---
+
+## 1. User preference / workflow reminder
+
+The user does **not** want downloadable patch files. Provide full paste-ready files directly in chat.
+
+The user runs the full local CrabLink/RustyOnions dev environment from:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+For Tauri Rust/media checks, the user runs:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run check:rust:mac-media
+npm run build
+```
+
+The user is on a 2019 Intel MacBook Pro.
+
+FFmpeg is installed and available:
+
+```text
+ffmpeg version 8.1.1
+built with Apple clang version 16.0.0
+enabled libs include libx264, aac/audiotoolbox, videotoolbox, etc.
+```
+
+Do not waste time asking them to install FFmpeg unless the backend status later says unavailable.
+
+---
+
+## 2. What was broken before this session
+
+Initially, the video page had a bad UX:
+
+```text
+1. User selected a file through the browser/WebView local preview picker.
+2. User had to select the same file again through “Choose native source.”
+```
+
+This felt redundant and bad, and the user correctly objected.
+
+The technical reason was:
+
+```text
+Browser/WebView file picker:
+  good for preview and metadata
+  bad for Rust-side FFmpeg authority
+
+Native file picker:
+  gives Rust internal path/file authority
+  returns only redacted handle to React
+```
+
+But as a product flow, selecting the same file twice is unacceptable.
+
+The native picker also appeared to hang/spin and forced the user to force quit. The likely cause was the original synchronous/blocking picker path being called in a way that made the UI feel stuck.
+
+---
+
+## 3. Patch applied in this session
+
+We changed the intended UX to a one-selection conversion flow:
+
+```text
+Select video for conversion
+→ Rust native picker opens
+→ Rust registers source internally
+→ React receives safe video_source_* DTO
+→ UI auto-builds MP4 plan
+→ Prepare clean MP4 runs from sourceHandle
+```
+
+Important updated files from the latest patch:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+```
+
+Important Rust behavior:
+
+```text
+media_choose_video_source is async
+native file picker runs through tauri::async_runtime::spawn_blocking
+Rust registers selected path internally
+React receives safe VideoSourceRegistration
+React does not receive path
+React does not receive video bytes
+```
+
+Important UI behavior:
+
+```text
+Primary button is now “Select video for conversion”
+No need to load the local preview first
+Local preview metadata is optional
+After native selection, the MP4 plan appears automatically
+Prepare clean MP4 uses the registered source handle
+```
+
+---
+
+## 4. Current proven result
+
+The latest test used:
+
+```text
+Screen Recording 2026-05-18 at 5.36.56 PM.mov
+contentType: video/quicktime
+bytes: 827063
+```
+
+The app successfully produced:
+
+```text
+source_clean_master.mp4
+existsOnDisk: true
+bytes: 101868
+readyForMint: true
+```
+
+The successful conversion proves:
+
+```text
+Rust can access the selected native file internally.
+FFmpeg can run from the controlled Rust template.
+The source MOV can be converted to MP4.
+The staged clean MP4 output is created.
+The command bridge does not expose private path.
+The command bridge does not return media bytes.
+The output remains local/staged only.
+No backend CID/crab URL is faked.
+No receipt/wallet mutation occurs.
+```
+
+This is the correct current milestone.
+
+---
+
+## 5. What is still descriptor-only / not complete
+
+The following outputs are still placeholders/descriptors:
+
+```text
+desktop_1080p.mp4
+tablet_720p.mp4
+mobile_480p.mp4
+low_360p.mp4
+poster_image.jpg
+thumbnail_image.jpg
+```
+
+In the successful JSON, they correctly show:
+
+```text
+existsOnDisk: false
+bytes: null
+contentId: null
+crabUrl: null
+readyForMint: false
+note: Descriptor only in this batch.
+```
+
+This is expected. The first real proof was only:
+
+```text
+source_clean_master.mp4
+```
+
+Do not treat the missing device renditions/posters as a bug yet.
+
+---
+
+## 6. Current known limitation: metadata still missing
+
+The latest JSON shows:
+
+```text
+durationSeconds: null
+width: null
+height: null
+frameRate: null
+resolution: null
+aspectRatio: null
+```
+
+This means the current Rust path can register and convert the file, but the planning metadata is still based on shallow facts and does not yet perform Rust-side deep probing.
+
+The current warning is accurate:
+
+```text
+Duration is not known yet.
+Resolution is not known yet.
+The rendition ladder will stay conservative.
+```
+
+This must be fixed next.
+
+The app currently uses WebView/browser metadata if available, but for a clean native conversion path, Rust should deep-probe the selected source using a controlled `ffprobe` path.
+
+---
+
+## 7. Current warning duplication issue
+
+The latest JSON shows duplicate warnings, such as:
+
+```text
+Duration is not known yet.
+Resolution is not known yet.
+Source should be converted...
+```
+
+appearing more than once because warnings from probe/plan/job are being accumulated without deduplication.
+
+This is a cleanup item for the next session.
+
+A helper should deduplicate warnings while preserving order, likely in:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+```
+
+or a small shared media utility module, for example:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_warnings.rs
+```
+
+Do not over-engineer this. A simple `Vec<String>` + `HashSet<String>` helper is fine.
+
+---
+
+## 8. Current staging behavior
+
+The conversion writes local staged output under a Rust-owned temp/staging area, expected roughly like:
+
+```text
+std::env::temp_dir()/crablink-tauri/video-staging/<job_id>/source_clean_master.mp4
+```
+
+The app only returns a staged handle like:
+
+```text
+staged://video-job/<job_id>/source_clean_master.mp4
+```
+
+The UI does not receive the real filesystem path.
+
+This is good.
+
+Needed next:
+
+```text
+1. Add clear/cleanup command for staged job output.
+2. Add optional reveal/open command that accepts staged:// handle only.
+3. Add optional preview/play command or safe local staged media URL.
+4. Add staging quota and cleanup policy later.
+```
+
+Do not return raw private paths to React.
+
+---
+
+## 9. Important architectural invariants to preserve
+
+These must remain true for all future video work:
+
+```text
+Tauri Rust owns native media authority.
+React does not receive private paths.
+React does not receive full video bytes.
+React does not receive raw FFmpeg commands.
+React does not construct shell commands.
+No run/eval/shell/native raw command bridge.
+FFmpeg use is fixed-template and Rust-owned.
+All outputs are bounded and source-labeled.
+Clean local output is not automatically backend truth.
+No fake b3 CID.
+No fake crab URL.
+No fake receipt.
+No silent ROC spend.
+No wallet mutation from video page.
+No ledger mutation from video page.
+No upload/mint until explicit user action and backend confirmation.
+No cache/offline unlock for paid media.
+No DRM/anti-rip claims.
+No creator-supplied player execution.
+```
+
+---
+
+## 10. Current relevant files
+
+### Rust media command bridge
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+```
+
+Owns:
+
+```text
+media_status
+media_choose_video_source
+media_register_video_source
+media_get_video_source
+media_clear_video_source
+media_probe_video
+media_plan_video_renditions
+media_prepare_video_bundle
+media_get_video_job_status
+media_cancel_video_job
+```
+
+Important behavior:
+
+```text
+media_choose_video_source should remain async.
+Native picker should stay inside spawn_blocking.
+Picker returns VideoSourceRegistration only.
+```
+
+### Rust media modules
+
+```text
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/media/limits.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+apps/crablink-tauri/src-tauri/src/media/video_probe.rs
+apps/crablink-tauri/src-tauri/src/media/video_renditions.rs
+apps/crablink-tauri/src-tauri/src/media/video_sources.rs
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+```
+
+Note: `video_transcode.rs` was introduced in the conversion patch. If the user generates a new codebundle and it is missing, confirm whether the file was actually created.
+
+### React video page / UI
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPage.jsx
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+apps/crablink-tauri/src/pages/video/VideoDraft.jsx
+apps/crablink-tauri/src/pages/video/VideoLocalPlaybackPreview.jsx
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+apps/crablink-tauri/src/pages/video/video.css
+apps/crablink-tauri/src/pages/video/videoDraftModel.js
+```
+
+### Video converter client
+
+```text
+apps/crablink-tauri/src/shared/api/videoConverterClient.js
+```
+
+Make sure it supports:
+
+```text
+chooseVideoSource
+registerVideoSource
+getVideoSource
+clearVideoSource
+probeVideo
+planVideoRenditions
+prepareVideoBundle
+getVideoJobStatus
+cancelVideoJob
+```
+
+### Tauri capability
+
+```text
+apps/crablink-tauri/src-tauri/capabilities/default.json
+```
+
+Must include:
+
+```json
+"permissions": ["core:default", "dialog:default"]
+```
+
+or equivalent dialog permission.
+
+---
+
+## 11. Exact next-session goal
+
+The next session should aim to move from:
+
+```text
+One real clean MP4 output
+```
+
+to:
+
+```text
+Full local video preparation bundle proof:
+  clean MP4 master
+  one or more device MP4 renditions
+  poster image
+  thumbnail image
+  local staged manifest
+  accurate metadata
+  optional local preview/reveal
+```
+
+Backend upload/mint can be after that, but the video page is not truly complete until it can upload/mint the bundle and then view/pay/play the minted asset through the backend paid path.
+
+---
+
+## 12. Recommended next-session batch order
+
+### Batch V1 — Stabilize current conversion and add Rust-side deep probe
+
+Highest priority.
+
+Purpose:
+
+```text
+Make Rust determine duration, width, height, frame rate, codecs, audio presence, and rotation from the registered native file.
+```
+
+Implementation plan:
+
+```text
+Add controlled ffprobe wrapper.
+No shell.
+No raw args from React.
+No private path returned.
+No giant stdout.
+Bound process duration.
+Bound parsed JSON output.
+Return redacted VideoProbeSummary.
+```
+
+Recommended file:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_deep_probe.rs
+```
+
+or extend:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_probe.rs
+```
+
+Recommended Rust function shape:
+
+```text
+deep_probe_registered_video(source: &RegisteredVideoSource) -> Result<VideoDeepProbeSummary, VideoProbeError>
+```
+
+Suggested ffprobe template:
+
+```text
+ffprobe
+  -v error
+  -print_format json
+  -show_format
+  -show_streams
+  <input_path>
+```
+
+But implement as controlled `Command::new("ffprobe")`, not shell string.
+
+Returned metadata should include:
+
+```text
+container/format
+durationSeconds
+width
+height
+displayAspectRatio
+sampleAspectRatio
+frameRate
+videoCodec
+audioCodec
+hasAudio
+hasVideo
+rotation/side data if present
+bitrate if available
+```
+
+Then update:
+
+```text
+video_sources.rs
+video_probe.rs
+video_renditions.rs
+commands/media.rs
+VideoConverterPanel.jsx
+```
+
+Expected result after V1:
+
+```text
+durationSeconds no longer null
+width no longer null
+height no longer null
+aspect ratio known
+rendition ladder avoids upscaling accurately
+warnings reduced
+```
+
+Acceptance test:
+
+```text
+Select MOV once.
+Developer JSON shows nativeSourceRegistered=true.
+probe.width/height/durationSeconds populated.
+plan entries have real width/height.
+desktop_1080p skipped when source is below 1080p.
+```
+
+---
+
+### Batch V2 — Deduplicate warnings and clean developer JSON
+
+Purpose:
+
+```text
+Make developer details less noisy and professional.
+```
+
+Current problem:
+
+```text
+Warnings are repeated from probe → plan → job.
+```
+
+Implementation plan:
+
+```text
+Add dedupe_warnings helper.
+Apply before storing VideoJobRecord.warnings.
+Optionally categorize warnings:
+  source warnings
+  plan warnings
+  job warnings
+```
+
+Acceptance test:
+
+```text
+Each warning appears once.
+Developer JSON remains rich but not redundant.
+UI warning block is readable.
+```
+
+This can be done in the same session as V1.
+
+---
+
+### Batch V3 — Generate first actual derived rendition: 720p MP4
+
+Purpose:
+
+```text
+Prove clean master → device rendition pipeline.
+```
+
+Start with exactly one derived output:
+
+```text
+tablet_720p.mp4
+```
+
+Do not jump immediately to all renditions. Prove one derived rendition first.
+
+Expected behavior:
+
+```text
+If source height > 720:
+  produce tablet_720p.mp4
+  existsOnDisk=true
+  bytes > 0
+  readyForMint=true
+
+If source height <= 720:
+  skip 720p to avoid upscaling
+```
+
+The current source had unknown dimensions. After deep probe, skipping decisions should become accurate.
+
+Controlled FFmpeg template should:
+
+```text
+Use clean master as input.
+Scale down only.
+Preserve aspect ratio.
+Force even dimensions for H.264.
+Use libx264.
+Use yuv420p.
+Use AAC audio if audio exists.
+Strip metadata/chapters/subtitle/data streams unless intentionally supported.
+Use +faststart.
+```
+
+Do not upscale.
+
+Potential output descriptor updates:
+
+```text
+tablet_720p.existsOnDisk: true
+tablet_720p.bytes: <nonzero>
+tablet_720p.readyForMint: true
+contentId: null
+crabUrl: null
+```
+
+Backend fields remain null until upload/mint.
+
+Acceptance test:
+
+```text
+Use source >720p if possible.
+Prepare job completes.
+Clean master exists.
+720p output exists.
+Other outputs remain descriptor-only or skipped.
+No private path returned.
+No raw FFmpeg args exposed.
+```
+
+---
+
+### Batch V4 — Generate mobile/low renditions
+
+After 720p proof is green, add:
+
+```text
+mobile_480p.mp4
+low_360p.mp4
+```
+
+Rules:
+
+```text
+Only generate lower renditions when source height is higher than target.
+Skip if source is already smaller.
+Never upscale.
+Output descriptors must mark skipped or descriptor-only clearly.
+```
+
+Expected output states:
+
+```text
+existsOnDisk=true only for real files.
+readyForMint=true only for real staged files.
+contentId/crabUrl remain null until upload.
+```
+
+---
+
+### Batch V5 — Poster and thumbnail extraction
+
+Generate:
+
+```text
+poster_image.jpg
+thumbnail_image.jpg
+```
+
+Suggested approach:
+
+```text
+Use clean master as input.
+Pick frame at 1 second or 10% duration.
+Fallback to first frame if very short.
+Scale poster to max 1280x720 preserving aspect.
+Scale thumbnail to 480x270 preserving aspect.
+Use JPEG or PNG consistently.
+Strip metadata.
+```
+
+Suggested outputs:
+
+```text
+poster_image.jpg
+thumbnail_image.jpg
+```
+
+Expected descriptors:
+
+```text
+assetKind: image
+existsOnDisk: true
+bytes > 0
+readyForMint: true
+contentId: null
+crabUrl: null
+```
+
+Later these should mint as separate `.image` assets or as linked assets inside the video manifest.
+
+---
+
+### Batch V6 — Local staged manifest and local predicted hashes
+
+Purpose:
+
+```text
+Create a complete local preparation manifest describing the bundle before backend upload.
+```
+
+Potential staged file:
+
+```text
+video_prepare_manifest.json
+```
+
+Fields:
+
+```text
+schema: crablink.local.video-prepare-manifest.v1
+jobId
+source safe display info
+probe metadata
+clean master descriptor
+rendition descriptors
+poster/thumbnail descriptors
+warnings
+createdAt
+truthBoundary
+```
+
+Local BLAKE3:
+
+It is safe to compute local BLAKE3 fingerprints of staged files, but label them carefully:
+
+```text
+localPredictedB3
+localFingerprint
+expectedBackendB3
+```
+
+Do **not** call them minted `contentId` until backend upload confirms.
+
+Recommended field naming:
+
+```text
+localPredictedContentId: "b3:<hash>"
+backendContentId: null
+backendCrabUrl: null
+backendVerified: false
+```
+
+When upload/mint later happens:
+
+```text
+backendContentId must equal localPredictedContentId
+otherwise show hard mismatch and fail
+```
+
+This mirrors the image CID mismatch lesson from earlier sessions.
+
+---
+
+### Batch V7 — Add “Open staged output” or “Preview clean MP4” safely
+
+The user will need a way to confirm the converted MP4 visually.
+
+Do not return raw path to React.
+
+Preferred options:
+
+Option A:
+
+```text
+media_reveal_staged_output(stagedHandle)
+```
+
+Rust validates:
+
+```text
+staged://video-job/<job_id>/<allowed_file>
+job exists
+file is under staging root
+file exists
+```
+
+Then Rust opens/reveals the file using native OS behavior. It does not return the filesystem path.
+
+Option B:
+
+```text
+media_open_staged_output(stagedHandle)
+```
+
+Rust opens the file in the default system player.
+
+Option C, later:
+
+```text
+Safe local media protocol / range endpoint for staged handles
+```
+
+Example:
+
+```text
+crablink-staged://video-job/<job_id>/source_clean_master.mp4
+```
+
+or Tauri custom protocol.
+
+For now, Option A or B is simpler and safer.
+
+Acceptance test:
+
+```text
+Click Open/Revealed staged clean MP4.
+Finder/player opens.
+React never sees the private path.
+Invalid stagedHandle is rejected.
+Path traversal is rejected.
+```
+
+---
+
+### Batch V8 — Cleanup, quotas, and amnesia behavior
+
+Current staging likely leaves files in temp.
+
+Need:
+
+```text
+Clear current job output
+Clear all video staging
+Auto-clean old staging jobs
+Staging quota
+Amnesia-mode purge
+```
+
+Suggested commands:
+
+```text
+media_clear_video_job(jobId)
+media_clear_all_video_staging()
+media_get_video_staging_status()
+```
+
+Staging status should return safe summary only:
+
+```text
+jobCount
+bytesTotal
+oldestCreatedAt
+quotaBytes
+warnings
+```
+
+No raw paths.
+
+Acceptance test:
+
+```text
+Clear job removes staged files.
+Developer JSON no longer reports stale existsOnDisk.
+App restart does not claim stale truth.
+Amnesia mode can purge staging.
+```
+
+---
+
+### Batch V9 — Backend upload/mint path for video bundle
+
+This is the point where local conversion becomes a real CrabLink video asset.
+
+Current local conversion is not enough. To complete the video page, the app eventually needs:
+
+```text
+prepare upload quote
+explicit confirmation
+upload staged outputs
+backend returns real b3 IDs
+backend returns crab:// URLs
+manifest stores all variants
+receipt returned by backend wallet path if paid
+balance refresh
+video page render/playback via backend route
+```
+
+Do not use the old small-file path blindly for large media.
+
+Known issue from prior memory:
+
+```text
+Current video-lite mint/upload path has a 10 MB cap that blocks larger videos.
+User wants this removed/reworked later using a proper bounded large-media range/segment/staged upload path rather than unsafe full-file command buffering.
+```
+
+Video upload must be designed as:
+
+```text
+bounded staged upload
+chunk/range aware
+backend-derived b3 verification
+no full large media bytes in Tauri command result
+no silent spend
+```
+
+Potential route families to inspect later:
+
+```text
+shared/api/videoAssetClient.js
+src/pages/video/VideoPublishFlow.jsx
+src/pages/video/VideoRenditions.jsx
+RustyOnions svc-gateway product routes
+omnigate routes/v1/assets or video routes
+svc-storage object routes
+```
+
+Backend completion rules:
+
+```text
+Storage stores bytes by b3.
+Gateway/omnigate route boundaries remain authoritative.
+Wallet/ledger mutation only through backend wallet path.
+Video manifest references all version assets.
+Each rendition gets its own b3.
+Public URL form: crab://<64hex>.video
+Poster/thumbnail may be separate crab://<hash>.image assets.
+```
+
+---
+
+## 13. What “video page complete” should mean
+
+The video page is complete when it supports this creator flow:
+
+```text
+1. User opens crab://video.
+2. User clicks Select video for conversion.
+3. Rust native picker selects source once.
+4. Rust deep-probes source.
+5. UI shows accurate metadata.
+6. User clicks Prepare video bundle.
+7. Rust creates:
+   - clean master MP4
+   - device renditions
+   - poster image
+   - thumbnail image
+   - local prepare manifest
+8. UI previews/reveals staged outputs safely.
+9. User chooses title/description/tags/access/price/rights.
+10. User clicks Publish/mint.
+11. App shows quote/confirmation for paid storage or minting if applicable.
+12. Backend receives upload bytes through bounded route.
+13. Backend returns b3 IDs and crab URLs.
+14. App verifies backend b3 matches local predicted hashes.
+15. Manifest includes all versions and linked assets.
+16. App displays minted crab:// video link.
+17. Another wallet/user can pay and view/play the video through backend-derived paid access.
+```
+
+The video page should not be considered complete if it only stages local files.
+
+---
+
+## 14. UI/UX cleanup needed for video page
+
+Current video page likely still has some dev/scaffold feel.
+
+Need to align it with the cleaned image page style:
+
+```text
+Top:
+  preview / selected source / conversion status
+
+Middle:
+  prepare controls and output cards
+
+Below:
+  manifest/access/pricing/publish flow
+
+Developer details:
+  collapsible
+  rich but not visually dominant
+```
+
+Recommended UX labels:
+
+```text
+Select video for conversion
+Prepare video bundle
+Clean MP4 master
+Device versions
+Poster & thumbnail
+Ready to publish
+Backend not minted yet
+```
+
+Avoid confusing terms:
+
+```text
+Do not call staged local output “minted.”
+Do not call localPredictedB3 “backend CID.”
+Do not call local staged handle “crab URL.”
+Do not show null contentId as an error if upload has not happened.
+```
+
+Suggested output card states:
+
+```text
+Planned
+Skipped
+Converting
+Ready locally
+Ready to publish
+Published
+Failed
+Cancelled
+```
+
+---
+
+## 15. Testing matrix for next session
+
+### Required local checks
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run check:rust:mac-media
+npm run build
+```
+
+### Full stack launch
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+### Manual tests
+
+Test at least:
+
+```text
+Small MOV screen recording
+Small MP4 already compatible
+MOV with audio
+MOV without audio
+MP4 with audio
+Very short video, around 5 seconds
+A file with spaces/special characters in name
+Cancel picker
+Cancel running conversion
+Clear staged output
+```
+
+### Success criteria for clean master
+
+```text
+sourceHandle starts with video_source_
+nativeFileAuthority=true
+sourceAuthority=native_registered_source
+phase=completed_clean_master
+source_clean_master.existsOnDisk=true
+source_clean_master.bytes > 0
+source_clean_master.readyForMint=true
+truthBoundary.simulatedJob=false
+truthBoundary.runsTranscode=true
+truthBoundary.writesOutputFiles=true
+truthBoundary.returnsPrivatePath=false
+truthBoundary.returnsVideoBytes=false
+contentId=null before upload
+crabUrl=null before upload
+```
+
+### Success criteria after deep probe
+
+```text
+durationSeconds populated
+width populated
+height populated
+aspectRatio populated
+frameRate populated if discoverable
+videoCodec populated
+audioCodec populated if audio exists
+hasAudio true/false known
+1080p skipped if source below 1080p
+720p/480p/360p generated only when not upscaling
+```
+
+### Failure states to test
+
+```text
+ffmpeg unavailable
+ffprobe unavailable
+unsupported extension
+missing file after registration
+invalid staged handle
+corrupt/empty video
+conversion timeout
+user cancel
+staging cleanup failure
+```
+
+Failures should be typed/redacted:
+
+```text
+No stack traces.
+No private path.
+No shell command output dump.
+No raw stderr dump unless redacted and bounded.
+```
+
+---
+
+## 16. Do not do next session
+
+Avoid these traps:
+
+```text
+Do not return local filesystem paths to React.
+Do not stream full video bytes through Tauri command result.
+Do not make React pass raw FFmpeg arguments.
+Do not add a generic shell/run command.
+Do not mint fake crab URLs.
+Do not invent content IDs before backend confirmation.
+Do not silently upload or spend ROC.
+Do not unlock video from local staged cache.
+Do not call local staged output “owned.”
+Do not claim DRM/anti-rip protection.
+Do not jump to QuickChain/ROX/Solana/external settlement.
+Do not build production transcoding farm inside CrabLink Tauri.
+Do not require sidecar/local node for normal video page flow.
+Do not make localhost mandatory for normal users beyond dev mode.
+```
+
+---
+
+## 17. Ideal exact next patch plan
+
+### Patch 1: Deep probe + warning dedupe
+
+Files likely touched:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/media/video_probe.rs
+apps/crablink-tauri/src-tauri/src/media/video_sources.rs
+apps/crablink-tauri/src-tauri/src/media/video_deep_probe.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+```
+
+Expected result:
+
+```text
+Selecting a video once populates true duration/width/height.
+Warnings are not duplicated.
+Plan accurately skips 1080p when needed.
+```
+
+### Patch 2: One real derived rendition
+
+Files likely touched:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+apps/crablink-tauri/src-tauri/src/media/video_renditions.rs
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+```
+
+Expected result:
+
+```text
+clean master exists
+tablet_720p exists if source is above 720p
+tablet_720p skipped if source is <=720p
+```
+
+### Patch 3: Poster/thumbnail extraction
+
+Files likely touched:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+```
+
+Expected result:
+
+```text
+poster_image.jpg exists
+thumbnail_image.jpg exists
+both readyForMint=true locally
+contentId/crabUrl remain null until upload
+```
+
+### Patch 4: Local staged manifest + clear/reveal actions
+
+Files likely touched:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_staging.rs
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src/shared/api/videoConverterClient.js
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+apps/crablink-tauri/src/pages/video/video.css
+```
+
+Expected result:
+
+```text
+prepare manifest exists
+clear staging works
+reveal/open staged output works without exposing path
+staging status shows safe summary only
+```
+
+### Patch 5: Video publish/mint integration
+
+Files likely touched:
+
+```text
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+apps/crablink-tauri/src/shared/manifest/renditionGroups.js
+apps/crablink-tauri/src/shared/manifest/linkedAssets.js
+apps/crablink-tauri/src/shared/manifest/uniformManifest.js
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/shared/embed/crabVideoEmbed.jsx
+```
+
+Likely also needs backend inspection/patch later:
+
+```text
+RustyOnions svc-gateway video asset routes
+omnigate asset/video hydration
+svc-storage upload/large object path
+svc-index manifest pointer/indexing
+```
+
+Expected result:
+
+```text
+backend returns real b3/crab URLs
+UI verifies local predicted hash vs backend hash
+manifest includes all variants
+video page can render minted video asset
+paid access works through backend receipt path
+```
+
+---
+
+## 18. Current completion estimate
+
+Current video page status:
+
+```text
+UI shell exists: yes
+video draft/page exists: yes
+local preview exists: yes
+native one-pick source registration: yes
+real clean MP4 conversion: yes
+device rendition planning: yes
+real device renditions: no
+poster/thumbnail real extraction: no
+deep metadata probe: no
+local staged manifest: no
+safe staged preview/reveal: no
+cleanup/quota: no
+backend upload/mint bundle: no
+paid playback of minted video: not yet proven in this session
+large media upload beyond 10 MB: not solved
+```
+
+Estimated progress:
+
+```text
+Local conversion foundation: 55–65% complete
+Full video page as creator product: 35–45% complete
+Backend-integrated paid video asset flow: 20–30% complete
+```
+
+The biggest breakthrough was proving Rust-owned conversion without violating the Tauri security boundary.
+
+---
+
+## 19. Highest priority next action
+
+Start the next session with this exact request:
+
+```text
+We have proven source_clean_master.mp4 conversion from a native registered MOV source. Next patch should add Rust-side ffprobe deep metadata probing, deduplicate warning accumulation, and update the video page so the plan uses real duration/width/height/aspect ratio after single native source selection. Keep paths redacted, no full video bytes through command results, no raw FFmpeg args from React, and no fake b3/crab/receipt/wallet truth.
+```
+
+After that patch is green, request:
+
+```text
+Next patch: generate one real 720p MP4 rendition from the clean master, only when it does not upscale, then mark that output existsOnDisk=true/readyForMint=true while keeping backend contentId/crabUrl null until upload.
+```
+
+Then:
+
+```text
+Next patch: add poster and thumbnail extraction from clean master.
+```
+
+Then:
+
+```text
+Next patch: add local staged manifest, cleanup, and safe reveal/open staged output by staged handle.
+```
+
+Then:
+
+```text
+Next patch: integrate staged video bundle with backend upload/mint route and verify backend b3 against local predicted b3.
+```
+
+---
+
+## 20. Short summary for the next AI instance
+
+We are working on CrabLink Tauri video page.
+
+The project is Tauri-first. Chrome is only proof/companion. React owns display/user intent only. Tauri Rust owns native privilege. No private paths, no video bytes, no raw FFmpeg args, no fake CIDs, no fake receipts, no silent spend.
+
+We fixed the bad two-file-pick UX. The video page now has a single “Select video for conversion” path that opens the Rust-owned native picker, registers a redacted `video_source_*` handle, auto-builds an MP4 plan, and prepares a clean MP4 master.
+
+The latest test succeeded. Developer JSON showed `nativeSourceRegistered=true`, `sourceAuthority=native_registered_source`, job phase `completed_clean_master`, `source_clean_master.existsOnDisk=true`, `bytes=101868`, `readyForMint=true`, `simulatedJob=false`, `runsTranscode=true`, `stripsMetadata=true`, `writesOutputFiles=true`, `returnsPrivatePath=false`, and `returnsVideoBytes=false`.
+
+Still missing: Rust-side ffprobe deep metadata, warning dedupe, real 720p/480p/360p renditions, poster/thumbnail extraction, local staged manifest, cleanup/reveal/preview, backend upload/mint, b3 verification, paid video playback.
+
+Next session should start with deep probe + warning dedupe, then one real 720p rendition.
+
+Keep this as the next-session starting point. The most important single next patch is **Rust-side ffprobe/deep probe + warning dedupe**, because accurate dimensions/duration are needed before we safely generate 720p/480p/360p without accidental upscaling.
+
+
+### END NOTE - MAY 30 2026 - 10:45 CST
+
+
+
+### BEGIN NOTE - MAY 30 2026 - 18:40 CST
+
+
+# CrabLink Tauri Video Page Carryover Notes — Post Video-Lite Minting Breakthrough
+
+## 0. Executive checkpoint
+
+We made a major jump on the CrabLink Tauri `crab://video` page.
+
+The video page has now progressed from:
+
+```text
+local preview / descriptor-only planning
+```
+
+to:
+
+```text
+one native source pick
+→ Rust-held private file handle
+→ FFmpeg local staging
+→ multiple MP4/JPEG outputs
+→ staged:// handles
+→ video publish flow detects staged outputs
+→ prepare / hold / upload flow
+→ successful minting of each version
+```
+
+The user reports that they are able to mint each generated version. This means the first full video-lite variant path is now proven at a product level:
+
+```text
+staged MP4 output
+→ paid video prepare
+→ wallet hold
+→ staged upload through Rust/Tauri
+→ gateway/backend returns real b3/crab truth
+```
+
+This is a major milestone.
+
+Important distinction:
+
+```text
+This is video-lite minting, not final large-media transport.
+```
+
+The current path is valid for proving the workflow with small files. It is not the final large video, range upload, segmented upload, HLS, streaming, or durable media transport architecture.
+
+---
+
+## 1. Current proven state
+
+### 1.1 Native source UX
+
+The old bad UX was:
+
+```text
+choose file once for browser preview
+then choose native source again for Rust
+```
+
+We replaced that direction with a one-click native source flow:
+
+```text
+Choose video source + build plan
+```
+
+This opens the native OS picker once, Rust registers the private source path internally, and React receives only a redacted `sourceHandle`.
+
+Preserved invariants:
+
+```text
+React does not receive private filesystem paths.
+React does not receive raw video bytes.
+React does not receive native command strings.
+React does not control FFmpeg arguments.
+```
+
+Current relevant file:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+```
+
+A latest-job display cache/event was added:
+
+```text
+localStorage key:
+crablink.video.latestPrepareJob.v1
+
+event:
+crablink:video-prepare-job-updated
+```
+
+Purpose:
+
+```text
+VideoPublishFlow can see the completed Rust prepare job and its staged outputs.
+```
+
+This cache is display/UI state only. It is not backend truth.
+
+---
+
+### 1.2 Rust FFmpeg staging
+
+Rust now runs FFmpeg locally through a controlled job path.
+
+Current observed staged outputs include roughly:
+
+```text
+source_clean_master.mp4
+desktop_1080p.mp4
+tablet_720p.mp4
+mobile_480p.mp4
+low_360p.mp4
+poster_image.jpg
+thumbnail_image.jpg
+```
+
+The outputs are represented to React as:
+
+```text
+staged://video-job/<job_id>/<role>.mp4
+staged://video-job/<job_id>/<role>.jpg
+```
+
+The job response correctly marks local outputs as staged and not backend truth:
+
+```text
+contentId: null
+crabUrl: null
+readyForMint: true
+existsOnDisk: true
+```
+
+Correct meaning:
+
+```text
+readyForMint=true means a local staged file exists and can be uploaded later.
+It does not mean a backend b3 CID exists.
+It does not mean a crab URL exists.
+It does not mean a receipt exists.
+It does not mean ownership or paid unlock truth exists.
+```
+
+Preserved invariants:
+
+```text
+No fake b3.
+No fake crab URL.
+No fake receipt.
+No wallet mutation from conversion.
+No upload from conversion.
+No local cache unlock.
+```
+
+---
+
+### 1.3 Video publish flow
+
+The publish panel now detects staged outputs and shows:
+
+```text
+Paid video bundle mint flow
+READY / PREPARE / HOLD / STAGED UPLOAD
+```
+
+It correctly displays staged outputs with checkboxes.
+
+The UI now has enough data to mint selected staged outputs.
+
+Current relevant files:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+```
+
+The upload flow attempts:
+
+```text
+video outputs → /assets/video
+poster/thumbnail outputs → /assets/image
+```
+
+through Tauri commands:
+
+```text
+upload_staged_video_asset_gateway
+upload_staged_image_asset_gateway
+```
+
+This was modeled after the successful image page flow.
+
+---
+
+### 1.4 Strict JSON prepare fix
+
+A failure occurred:
+
+```text
+video prepare request must be strict JSON
+```
+
+Cause:
+
+The first video publish patch sent extra frontend-only fields to `/assets/video/prepare`:
+
+```text
+bundle_kind
+rendition_count
+```
+
+The backend prepare DTO rejects unknown fields.
+
+Fix applied:
+
+`normalizeVideoPrepareRequest()` in:
+
+```text
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+```
+
+must not include:
+
+```text
+bundle_kind
+rendition_count
+local job ids
+staged handles
+rendition group previews
+manifest previews
+frontend-only fields
+```
+
+The prepare request body must stay strict and should only include backend-supported fields such as:
+
+```text
+bytes
+payer_account
+owner_passport_subject
+content_type
+title
+description
+tags
+video_kind
+duration
+resolution
+aspect_ratio
+codec_format
+frame_rate
+language
+client_idempotency_key
+```
+
+Carry this lesson forward:
+
+```text
+Any backend route with deny_unknown_fields must receive only exact DTO fields.
+Do not send product/UI metadata to strict prepare DTOs unless the backend contract supports them.
+```
+
+---
+
+## 2. Current user-observed result
+
+The user reported:
+
+```text
+The quality kind of seems too good to be true.
+The 360p version looks about right, lesser quality.
+The 480p version looked too good to be true.
+But minting succeeded for each version.
+```
+
+This is an important clue.
+
+The staged/minted outputs may currently differ by bitrate, but not necessarily by actual pixel dimensions.
+
+Likely current bug:
+
+```text
+Height-only planned targets may not actually scale the video.
+```
+
+Why:
+
+The plan may include entries like:
+
+```json
+{
+  "role": "mobile_480p",
+  "width": null,
+  "height": 480
+}
+```
+
+But the Rust FFmpeg target builder likely only creates a scale filter if both width and height are present.
+
+Bad current behavior likely:
+
+```text
+width=null, height=480
+→ no scale filter
+→ FFmpeg outputs original dimensions with 480p bitrate settings
+→ file may look too sharp / too close to original
+```
+
+This would explain:
+
+```text
+480p looks too good
+360p looks worse because bitrate is lower
+but neither may actually be dimensionally resized
+```
+
+Next session should treat this as a top-priority correctness fix.
+
+---
+
+## 3. Critical next fixes
+
+## 3.1 Fix FFmpeg scaling for height-only targets
+
+File likely involved:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+```
+
+Current likely issue:
+
+```rust
+fn scale_filter(&self) -> Option<String> {
+    let width = self.width?;
+    let height = self.height?;
+    ...
+}
+```
+
+This returns `None` if width is null, even if height is known.
+
+Required behavior:
+
+If both width and height are known:
+
+```text
+scale=<even_width>:<even_height>:force_original_aspect_ratio=decrease
+```
+
+If only height is known:
+
+```text
+scale=-2:<height>
+```
+
+If only width is known:
+
+```text
+scale=<width>:-2
+```
+
+For video, FFmpeg should preserve aspect ratio and ensure even dimensions.
+
+Examples:
+
+```text
+desktop_1080p → scale=-2:1080
+tablet_720p   → scale=-2:720
+mobile_480p   → scale=-2:480
+low_360p      → scale=-2:360
+```
+
+This should make renditions dimensionally real, not just bitrate-limited.
+
+Acceptance criteria:
+
+```text
+Minted 480p output has actual height <= 480.
+Minted 360p output has actual height <= 360.
+No upscaling beyond source height.
+Aspect ratio preserved.
+Width is even.
+MP4 playback still works.
+```
+
+Important nuance:
+
+For small source videos below target height, the planner should skip higher targets rather than upscale. This behavior already exists conceptually, but unknown dimensions currently make the planner conservative. After deep probe is improved, skipped entries should become more accurate.
+
+---
+
+## 3.2 Add actual output dimension verification
+
+After transcode, the job currently knows:
+
+```text
+bytes
+existsOnDisk
+stagedHandle
+```
+
+But it may not know actual output dimensions.
+
+Next session should add a verification step after each FFmpeg output:
+
+```text
+ffprobe output file
+→ actual width
+→ actual height
+→ duration
+→ maybe codec
+→ maybe bitrate
+```
+
+The job output descriptor should then include actual facts:
+
+```text
+actualWidth
+actualHeight
+actualDurationSeconds
+actualContainer
+actualVideoCodec
+actualAudioCodec
+```
+
+or reuse existing fields if clean.
+
+Important UX goal:
+
+Show a “Rendition verification” panel:
+
+```text
+Role: Mobile 480p
+Planned: 480p
+Actual: 854×480
+Bytes: 381.1 KiB
+Status: verified
+Backend: pending/minted
+```
+
+This will resolve the user’s uncertainty over whether quality/dimensions are real.
+
+Do not overclaim. Use labels like:
+
+```text
+planned
+staged
+verified locally
+backend minted
+```
+
+not vague claims like:
+
+```text
+final
+owned
+published
+```
+
+unless backend truth confirms it.
+
+---
+
+## 3.3 Fix video playback byte route normalization
+
+After minting, the user screenshot showed playback fallback trouble:
+
+```text
+Video byte fetch diagnostics
+Status: error
+video playback bytes failed: load failed
+```
+
+It displayed a source URL like:
+
+```text
+http://127.0.0.1:8090/o/b3:<hash>
+```
+
+and also typed b3 route text.
+
+The playback problem appears separate from minting:
+
+```text
+minting succeeds
+but viewer byte loading is unreliable
+```
+
+Next session should inspect:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoLocalPlaybackPreview.jsx
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/shared/embed/crabVideoEmbed.jsx
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src/shared/api/objectClient.js
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+```
+
+Goal:
+
+Normalize all minted video raw-byte playback routes to the actual gateway-supported object route.
+
+Most likely correct canonical gateway object byte route:
+
+```text
+/o/b3:<64hex>
+```
+
+or whichever route the backend actually supports for raw object bytes.
+
+Avoid malformed/new/legacy variants unless confirmed:
+
+```text
+/b3:<hash>.video
+/b3/<hash>.video
+/o/<hash>.video
+```
+
+The playback code should be able to derive from either:
+
+```text
+crab://<hash>.video
+b3:<hash>
+backend content_id
+asset URL
+```
+
+into a single raw object route.
+
+Acceptance criteria:
+
+```text
+Open each minted video crab URL.
+Viewer resolves backend hydrated page.
+Viewer can fetch/play raw video bytes.
+Diagnostics show route used and success.
+No fake fallback success.
+```
+
+If a direct `<video src="http://127.0.0.1:8090/o/b3:<hash>">` fails because of content-type or range behavior, the next fallback should use the Tauri `fetch_asset_bytes_gateway` bridge to fetch bytes and create an object URL in React, but this must remain bounded for video-lite only.
+
+Long-term large video cannot rely on full byte fetch into React.
+
+---
+
+## 3.4 Make every video version appear in every other version’s manifest
+
+This is now one of the most important product completeness items.
+
+The image page already established the desired behavior:
+
+```text
+Each minted image variant’s manifest links to all other variants.
+```
+
+We need the same for video.
+
+Desired video behavior:
+
+When minting a bundle like:
+
+```text
+source_clean_master.video
+desktop_1080p.video
+tablet_720p.video
+mobile_480p.video
+low_360p.video
+poster_image.image
+thumbnail_image.image
+```
+
+Each resulting video asset page should know:
+
+```text
+I am one member of a video rendition group.
+Here are all other video renditions.
+Here are linked poster/thumbnail images.
+Here is the canonical/master version.
+Here is the current selected version.
+```
+
+Each respective manifest should include a cross-linked version map.
+
+Minimum desired manifest/rendition structure:
+
+```json
+{
+  "renditionGroup": {
+    "schema": "crablink.video-rendition-group.v1",
+    "groupId": "b3:<master-or-manifest-cid>",
+    "canonicalRole": "source_clean_master",
+    "canonicalCrabUrl": "crab://<hash>.video",
+    "sourceJobId": "video_prepare_...",
+    "relationshipTruth": "backend_returned_asset_urls_after_explicit_paid_upload",
+    "renditions": [
+      {
+        "role": "source_clean_master",
+        "label": "Clean MP4 master",
+        "assetKind": "video",
+        "mime": "video/mp4",
+        "bytes": 101868,
+        "width": null,
+        "height": null,
+        "cid": "b3:<hash>",
+        "crabUrl": "crab://<hash>.video",
+        "backendVerified": true
+      },
+      {
+        "role": "mobile_480p",
+        "label": "Mobile 480p MP4",
+        "assetKind": "video",
+        "mime": "video/mp4",
+        "bytes": 392255,
+        "width": 854,
+        "height": 480,
+        "cid": "b3:<hash>",
+        "crabUrl": "crab://<hash>.video",
+        "backendVerified": true
+      }
+    ],
+    "linkedImages": [
+      {
+        "role": "poster_image",
+        "assetKind": "image",
+        "crabUrl": "crab://<hash>.image"
+      },
+      {
+        "role": "thumbnail_image",
+        "assetKind": "image",
+        "crabUrl": "crab://<hash>.image"
+      }
+    ]
+  }
+}
+```
+
+But exact shape must match current manifest conventions.
+
+Important next-session task:
+
+Study the image manifest/rendition implementation and mirror it.
+
+Likely files to inspect:
+
+```text
+apps/crablink-tauri/src/pages/image/ImagePublishFlow.jsx
+apps/crablink-tauri/src/pages/image/ImageManifest.jsx
+apps/crablink-tauri/src/pages/image/ImageManifestFacts.jsx
+apps/crablink-tauri/src/pages/image/ImageRenditions.jsx
+apps/crablink-tauri/src/shared/manifest/renditionGroups.js
+apps/crablink-tauri/src/shared/manifest/uniformManifest.js
+apps/crablink-tauri/src/shared/manifest/linkedAssets.js
+apps/crablink-tauri/src/shared/api/assetClient.js
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+```
+
+Need to determine whether the backend currently accepts arbitrary rendition group metadata through headers and stores it into the asset manifest.
+
+Current staged upload sends headers such as:
+
+```text
+x-ron-video-rendition-role
+x-ron-video-rendition-label
+x-ron-video-rendition-group
+x-ron-image-rendition-role
+x-ron-image-rendition-label
+x-ron-image-rendition-group
+```
+
+But because outputs are uploaded one-by-one, early uploads cannot know final backend CIDs for later uploads unless we do a second manifest update step or a two-pass design.
+
+Possible designs:
+
+### Option A — Frontend display bundle only
+
+Current-ish state:
+
+```text
+Upload outputs one-by-one.
+Build a client-side result bundle after all uploads return.
+Display all URLs in the publish panel.
+Maybe local catalog stores cross-link bundle.
+```
+
+Pros:
+
+```text
+Easy.
+Works now.
+No backend changes.
+```
+
+Cons:
+
+```text
+Each backend asset manifest may not contain all sibling versions.
+Opening any minted version later may not show all versions unless local display cache survives.
+Not durable.
+Not acceptable as final version linking.
+```
+
+### Option B — Predeclare planned siblings in each upload
+
+For each upload, include a planned rendition group header with roles/staged handles, but CIDs unknown.
+
+Pros:
+
+```text
+Each asset knows the planned group structure.
+```
+
+Cons:
+
+```text
+Does not include final sibling CIDs/crab URLs.
+Still incomplete.
+```
+
+### Option C — Upload a bundle manifest after all assets mint
+
+After all outputs upload and backend returns CIDs/crab URLs:
+
+```text
+Build video bundle manifest JSON.
+Upload/publish it as a manifest object.
+Set groupId to manifest CID.
+Each video asset manifest refers to this bundle manifest.
+```
+
+Pros:
+
+```text
+Durable cross-link source.
+Avoids rewriting individual asset manifests.
+All versions can resolve the group by a shared manifest pointer.
+```
+
+Cons:
+
+```text
+Requires backend route/contract to store a video bundle manifest or generic text/object manifest.
+Viewer must know how to fetch/render it.
+Individual asset manifests still need pointer unless upload can include it.
+```
+
+### Option D — Two-phase asset manifest update
+
+Upload all outputs first. Then update/rewrite each asset manifest to include the final full group.
+
+Pros:
+
+```text
+Each version’s manifest directly lists every other version.
+Matches image behavior most directly.
+```
+
+Cons:
+
+```text
+Requires backend manifest update/rewrite route.
+May not exist.
+Could violate immutable content-addressing if not modeled carefully.
+If b3 is content-addressed truth, mutating a manifest after upload likely means creating a new manifest CID rather than mutating old content.
+```
+
+Recommended next approach:
+
+```text
+First inspect how images achieved cross-linking.
+Do not invent a new backend contract until we know current image mechanism.
+If image flow already passes the full rendition group in each upload and backend stores it, mirror that exactly.
+If image flow relies on local/manifest builder display cache, document that and improve video to parity.
+```
+
+Important principle:
+
+```text
+b3 hashes are immutable content truth.
+If a manifest changes, it becomes a new b3 object.
+Do not pretend an old b3 manifest mutated in place.
+Names/pointers may update; canonical content does not.
+```
+
+---
+
+## 4. Current likely file state from this session
+
+### 4.1 `VideoConverterPanel.jsx`
+
+Current purpose:
+
+```text
+Native source picker
+source registration
+probe/plan
+local prepare job
+output list
+developer JSON
+latest job display cache/event
+```
+
+Recent fixes added:
+
+```text
+LATEST_JOB_STORAGE_KEY
+useEffect syncing state.job to localStorage
+useEffect dispatching crablink:video-prepare-job-updated
+short display for job IDs and staged handles
+humanized phases
+```
+
+Next risk:
+
+If the publish panel does not pick up latest job, check that the effect is present and `VideoPublishFlow` uses the same key:
+
+```text
+crablink.video.latestPrepareJob.v1
+```
+
+---
+
+### 4.2 `videoAssetClient.js`
+
+Current purpose:
+
+```text
+prepare video asset
+upload browser-file video asset
+upload staged video asset
+upload staged image asset
+normalize paid proof
+extract returned CIDs/crab URLs
+```
+
+Recent fix:
+
+```text
+normalizeVideoPrepareRequest() must not send bundle_kind or rendition_count.
+```
+
+Next risk:
+
+If backend still rejects prepare strict JSON, compare the actual outgoing request in developer details to the backend DTO.
+
+The next likely unknown field could be:
+
+```text
+codec_format
+frame_rate
+video_kind
+aspect_ratio
+language
+```
+
+If those are also not supported by the backend DTO, remove them too. Do not guess. Inspect backend route DTO for `/assets/video/prepare`.
+
+---
+
+### 4.3 `VideoPublishFlow.jsx`
+
+Current purpose:
+
+```text
+Detect latest staged outputs
+select outputs to mint
+send prepare
+review/send wallet hold
+review/send bundle upload
+upload staged outputs through Tauri
+build result bundle
+fill draft URLs
+cache local catalog entries
+```
+
+Known needed patch still pending:
+
+Remove these fields from `buildPreparePayload()` if still present:
+
+```text
+bundle_kind
+rendition_count
+```
+
+Even though `videoAssetClient.js` now strips them, it is better to remove them at the source too so developer JSON matches strict DTO expectations.
+
+Also ensure:
+
+```text
+prepare request developer panel shows strict DTO only
+staged output group metadata is not included in prepare
+rendition group metadata is only used during upload or future bundle manifest step
+```
+
+---
+
+### 4.4 `assets.rs`
+
+Current purpose:
+
+```text
+upload_image_asset_gateway
+upload_video_asset_gateway
+upload_staged_video_asset_gateway
+upload_staged_image_asset_gateway
+fetch_asset_bytes_gateway
+hash_image_asset_bytes
+```
+
+Important current limits:
+
+```text
+MAX_VIDEO_UPLOAD_BYTES = 10 MiB
+MAX_IMAGE_UPLOAD_BYTES = 25 MiB
+```
+
+This is okay for current video-lite proof. It is not final large-media support.
+
+Next large-media note:
+
+```text
+Do not solve larger videos by simply raising MAX_VIDEO_UPLOAD_BYTES and reading huge files into memory.
+The future solution should be staged/range/segment/chunked upload from Rust, with bounded memory.
+```
+
+Potential issue:
+
+`upload_staged_paid_asset_gateway()` currently reads the whole staged file into memory before POST. This is acceptable only under the current 10 MiB video-lite cap. It must not become the final media path.
+
+---
+
+## 5. Next session recommended plan
+
+## Step 1 — Regenerate/read current codebundle
+
+User will likely attach a fresh codebundle.
+
+Read these first:
+
+```text
+CODEBUNDLE_TAURI_APP.md
+CODEBUNDLE_RS.md if backend route contracts are needed
+COMBINED_IDB.MD
+ALLNOTES.MD
+CODECHECK.MD
+CODECOMMENTS.MD
+```
+
+Follow current project doctrine:
+
+```text
+Tauri-first.
+Gateway compatibility first.
+React display/user intent only.
+Rust mediates native privilege.
+Backend owns b3/receipt/wallet truth.
+No fake balances.
+No fake receipts.
+No silent spend.
+No arbitrary execution.
+No external settlement.
+No QuickChain implementation.
+```
+
+---
+
+## Step 2 — Fix strict prepare source-side payload
+
+Patch:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+```
+
+Remove from `buildPreparePayload()`:
+
+```text
+bundle_kind
+rendition_count
+```
+
+Then test:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+```
+
+Then run full stack:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Manual:
+
+```text
+Open crab://video
+Use completed staged outputs
+Send Prepare Request
+Confirm no strict JSON failure
+```
+
+If still strict JSON failure:
+
+```text
+Inspect outgoing request developer JSON.
+Inspect backend DTO.
+Remove any unsupported field.
+```
+
+---
+
+## Step 3 — Fix height-only scaling
+
+Patch likely file:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+```
+
+Target behavior:
+
+```text
+height only → scale=-2:<height>
+width only  → scale=<width>:-2
+both        → bounded target with aspect ratio decrease
+neither     → no scale filter
+```
+
+Run:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run check:rust:mac-media
+npm run build
+```
+
+Manual:
+
+```text
+Convert same source video.
+Compare output file sizes and dimensions.
+Mint 480p and 360p again.
+Confirm visual quality and actual dimensions match labels.
+```
+
+---
+
+## Step 4 — Add output verification
+
+Add a small Rust ffprobe probe for staged outputs after transcode.
+
+Potential new/modified files:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_probe.rs
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+```
+
+Needed additions to output DTO:
+
+```text
+actualWidth
+actualHeight
+actualDurationSeconds
+actualVideoCodec
+actualAudioCodec
+verificationStatus
+```
+
+UI additions:
+
+```text
+VideoConverterPanel.jsx
+VideoPublishFlow.jsx
+```
+
+Display:
+
+```text
+planned target
+actual staged dimensions
+actual bytes
+verification status
+```
+
+Acceptance:
+
+```text
+User can visually see "Mobile 480p → actual 854×480" or similar.
+No more guessing based on perceived quality.
+```
+
+---
+
+## Step 5 — Fix video playback route
+
+Investigate current playback path.
+
+Relevant likely files:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoLocalPlaybackPreview.jsx
+apps/crablink-tauri/src/shared/embed/crabVideoEmbed.jsx
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src-shared/api/objectClient.js
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+```
+
+Goal:
+
+```text
+For crab://<hash>.video, reliably derive gateway raw object URL:
+http://127.0.0.1:8090/o/b3:<hash>
+```
+
+or whichever route backend confirms.
+
+Acceptance:
+
+```text
+Minted video page loads and plays video.
+Diagnostic panel says byte route success.
+No failed direct fallback for a valid minted object.
+```
+
+---
+
+## Step 6 — Mirror image manifest cross-linking
+
+This is a major product parity task.
+
+First inspect image page implementation:
+
+```text
+apps/crablink-tauri/src/pages/image/ImagePublishFlow.jsx
+apps/crablink-tauri/src/pages/image/ImageManifest.jsx
+apps/crablink-tauri/src/pages/image/ImageManifestFacts.jsx
+apps/crablink-tauri/src/pages/image/ImageRenditions.jsx
+apps/crablink-tauri/src/shared/manifest/renditionGroups.js
+apps/crablink-tauri/src/shared/manifest/uniformManifest.js
+apps/crablink-tauri/src/shared/api/assetClient.js
+```
+
+Questions to answer before coding:
+
+```text
+How do image variants cross-link today?
+Is the cross-link persisted in backend asset manifest?
+Is it only a frontend/local manifest preview?
+Does backend accept rendition group headers?
+Can an already-minted asset manifest be updated?
+Are image CIDs immutable asset bytes or manifest CIDs?
+Where does "all versions" actually live?
+```
+
+Then implement video parity.
+
+Minimum visible UI requirement:
+
+```text
+Every opened video version page should show:
+- current version
+- master version
+- desktop/tablet/mobile/low versions
+- poster image
+- thumbnail image
+- copy/open buttons for every linked crab URL
+```
+
+Minimum manifest/data requirement:
+
+```text
+Each version’s manifest or hydrated view should include all sibling versions in a structured version group.
+```
+
+Do not hardcode only local catalog. Need backend-derived or backend-linked truth for durability if possible.
+
+---
+
+## 6. Testing matrix for next session
+
+### 6.1 Build checks
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run check:rust:mac-media
+npm run build
+```
+
+### 6.2 Full stack run
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+### 6.3 Manual happy path
+
+```text
+1. Open crab://video.
+2. Choose video source + build plan.
+3. Start local MP4 prepare job.
+4. Confirm outputs stage.
+5. Confirm actual dimensions after new verification.
+6. Send Prepare Request.
+7. Review ROC Hold.
+8. Send ROC Hold.
+9. Review Bundle Upload.
+10. Upload bundle.
+11. Confirm every selected output returns real crab URL.
+12. Open each returned video URL.
+13. Confirm playback.
+14. Confirm each version lists all sibling versions.
+```
+
+### 6.4 Regression checks
+
+```text
+Cancel native picker should not freeze app.
+Manual path fallback still works or fails cleanly.
+Prepare without staged outputs fails gracefully.
+Upload without hold proof fails.
+Upload should not include private path in React JSON.
+Developer JSON should not show native command strings.
+contentId/crabUrl stay null until backend returns truth.
+```
+
+### 6.5 Scaling correctness checks
+
+Use a source with known dimensions, such as 1920×1080.
+
+Expected after scale fix:
+
+```text
+desktop_1080p actual height: 1080
+tablet_720p actual height: 720
+mobile_480p actual height: 480
+low_360p actual height: 360
+```
+
+Use a source with lower dimensions, such as 640×360.
+
+Expected:
+
+```text
+1080p skipped
+720p skipped
+480p skipped
+360p produced or master only
+no upscaling
+```
+
+---
+
+## 7. Current risks and cautions
+
+### 7.1 Do not confuse bitrate degradation with resolution scaling
+
+A lower bitrate file can look worse while still being the same pixel dimensions.
+
+We need actual dimension verification, not visual guessing.
+
+---
+
+### 7.2 Do not turn video-lite into unsafe large-video upload
+
+Current proof can read small staged files into memory.
+
+Do not simply raise caps for real media.
+
+Future large-video architecture should use:
+
+```text
+Rust-side chunked/range upload
+bounded buffers
+no full-file command result
+backend media route
+segment manifests
+possibly HLS/fragmented MP4 later
+```
+
+---
+
+### 7.3 Do not create fake bundle truth locally
+
+The publish panel may build a local bundle map after upload.
+
+That is useful UX, but it is not durable backend truth unless backend stores/fetches it.
+
+Label honestly:
+
+```text
+display bundle map
+backend returned asset URLs
+local catalog convenience
+```
+
+until real backend manifest/group route exists.
+
+---
+
+### 7.4 Do not mutate immutable b3 content
+
+If manifests are content-addressed, changing the manifest changes the b3 CID.
+
+Correct models:
+
+```text
+new manifest CID
+name/pointer update
+separate bundle manifest object
+hydration layer joins siblings
+```
+
+Incorrect model:
+
+```text
+silently mutate existing b3 object
+```
+
+---
+
+### 7.5 Keep passports and wallets separate
+
+Video publishing still follows:
+
+```text
+passport = identity/capability
+wallet = economic authority
+svc-wallet = mutation front door
+ron-ledger = truth
+```
+
+Do not store spend authority in React.
+
+---
+
+## 8. Product UX notes
+
+The page is becoming functional but needs polish.
+
+Current good signs:
+
+```text
+Publish fields appear.
+Staged outputs list appears.
+Minting each version works.
+Converter panel explains staged vs backend truth.
+```
+
+Needed UX improvements:
+
+```text
+Show actual rendition verification.
+Make version selection visually compact.
+Show "minted" status per output after upload.
+Show copy/open buttons per returned version.
+Move long IDs to copy buttons / developer details.
+Prevent huge stat-card overflow.
+Make playback diagnostics less raw and more human.
+```
+
+Suggested future status vocabulary:
+
+```text
+Planned
+Staged locally
+Verified locally
+Prepared
+Held
+Uploading
+Minted by backend
+Playable
+Linked in manifest
+```
+
+Avoid confusing vocabulary:
+
+```text
+completed
+final
+owned
+published
+```
+
+unless the exact truth layer is clear.
+
+---
+
+## 9. Suggested next code batch scope
+
+The next assistant should not try to fix everything in one giant risky patch unless the user asks.
+
+Best next batch:
+
+```text
+Batch A:
+- strict prepare source cleanup in VideoPublishFlow
+- FFmpeg height-only scaling fix
+- add minimal actual dimension verification to Rust output DTO
+- show actual dimensions in VideoConverterPanel
+```
+
+Then test.
+
+Next batch after that:
+
+```text
+Batch B:
+- playback route normalization
+- video viewer fallback cleanup
+```
+
+Then test.
+
+Next batch after that:
+
+```text
+Batch C:
+- image-style rendition manifest cross-linking for video
+- version list on video asset pages
+- poster/thumbnail linked asset display
+```
+
+This sequencing reduces risk.
+
+---
+
+## 10. One-sentence current state for next session
+
+CrabLink Tauri video page now successfully stages and mints multiple Rust-generated video/image variants, but next session must fix real dimension scaling/verification, repair minted video playback route normalization, and make every minted video version cross-link all sibling versions in its manifest/view like the completed image rendition flow.
+
+
+### END NOTE - MAY 30 2026 - 18:40 CST
+
+
+
+### BEGIN NOTE - MAY 30 2026 - 19:30 CST
+
+Got it. I updated the project memory with this new checkpoint: **all staged video qualities now mint successfully with their own backend mints**, and the next priorities are **video upload limits, bundle manifest cross-linking, and video page UI cleanup**.
+
+I anchored these carryover notes to the current Tauri/video notes and codebundle state, especially the proven staged-output path, strict prepare DTO lesson, current 10 MB frontend cap, and the existing warning that larger video support should not become unsafe full-file buffering.  
+
+# CrabLink Tauri Video Page Carryover Notes — Post Verified Multi-Quality Mint Success
+
+## 0. Executive checkpoint
+
+We made another major breakthrough on the CrabLink Tauri `crab://video` page.
+
+The user confirmed that after the Rust-side video correctness patch:
+
+```text
+all generated staged video qualities minted successfully
+each quality minted as its own backend asset
+each minted output has its own backend-returned b3/crab truth
+```
+
+This means the current video-lite path has now proven:
+
+```text
+one native source pick
+→ Rust-held private source handle
+→ FFmpeg local staging
+→ real multi-quality MP4/JPEG outputs
+→ ffprobe-style output verification path added
+→ staged:// handles exposed to React
+→ publish panel detects staged outputs
+→ explicit prepare
+→ explicit wallet hold
+→ staged upload through Tauri
+→ backend returns real CIDs/crab URLs
+→ every selected quality can mint independently
+```
+
+This is a very strong product checkpoint.
+
+Important status distinction:
+
+```text
+We have proven video-lite multi-rendition minting.
+We have not yet proven final large-video media transport.
+```
+
+The current path is good enough to keep developing product UX and manifest relationships. It is not yet the final upload/range/segment/HLS/media transport architecture for large videos.
+
+---
+
+## 1. Current proven state
+
+### 1.1 Native source UX is now good
+
+The old bad UX was:
+
+```text
+choose file once for browser preview
+then choose native source again for Rust
+```
+
+That has been replaced with:
+
+```text
+Choose video source + build plan
+```
+
+The current UX opens the native OS picker once. Rust registers the source privately and React receives only a redacted source handle.
+
+Preserved invariants:
+
+```text
+React does not receive private filesystem paths.
+React does not receive raw video bytes.
+React does not receive native command strings.
+React does not control FFmpeg arguments.
+```
+
+Relevant frontend file:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+```
+
+Relevant Rust/media files:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_sources.rs
+apps/crablink-tauri/src-tauri/src/media/video_probe.rs
+apps/crablink-tauri/src-tauri/src/media/video_renditions.rs
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+```
+
+The latest-job bridge remains important:
+
+```text
+localStorage key:
+crablink.video.latestPrepareJob.v1
+
+event:
+crablink:video-prepare-job-updated
+```
+
+Purpose:
+
+```text
+VideoConverterPanel publishes the completed Rust job.
+VideoPublishFlow reads the latest job and offers selectable staged outputs.
+```
+
+Important truth boundary:
+
+```text
+This localStorage/event bridge is display/UI state only.
+It is not backend truth.
+It is not receipt truth.
+It is not wallet truth.
+It is not ownership truth.
+```
+
+---
+
+### 1.2 Rust FFmpeg staging is now product-proven
+
+Rust now runs local FFmpeg through controlled, allowlisted job code.
+
+Current intended staged outputs include:
+
+```text
+source_clean_master.mp4
+desktop_1080p.mp4
+tablet_720p.mp4
+mobile_480p.mp4
+low_360p.mp4
+poster_image.jpg
+thumbnail_image.jpg
+```
+
+The outputs are represented to React as redacted staged handles:
+
+```text
+staged://video-job/<job_id>/<role>.mp4
+staged://video-job/<job_id>/<role>.jpg
+```
+
+The output descriptor correctly keeps backend truth empty until upload:
+
+```text
+contentId: null
+crabUrl: null
+readyForMint: true
+existsOnDisk: true
+```
+
+Correct meaning:
+
+```text
+readyForMint=true means a local staged file exists and can be uploaded.
+It does not mean a b3 CID exists.
+It does not mean a crab URL exists.
+It does not mean a receipt exists.
+It does not mean ownership exists.
+It does not mean paid unlock exists.
+```
+
+Preserved invariants:
+
+```text
+No fake b3.
+No fake crab URL.
+No fake receipt.
+No wallet mutation from conversion.
+No upload from conversion.
+No local cache unlock.
+No private source path returned to React.
+No raw video bytes returned to React.
+No native FFmpeg command string returned to React.
+```
+
+---
+
+### 1.3 First Rust correctness patch succeeded
+
+The first batch replaced:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+```
+
+Main purpose of that patch:
+
+```text
+fix height-only scaling
+add output verification facts
+make descriptors use actual probed dimensions/codecs/duration when available
+preserve staged-output truth boundaries
+```
+
+Important fixes added:
+
+```text
+height-only target support:
+  scale=-2:<height-like expression>
+
+width-only target support:
+  scale=<width-like expression>:-2
+
+box target support:
+  scale with force_original_aspect_ratio=decrease
+
+even dimensions:
+  -2 / trunc(.../2)*2 behavior to keep H.264-friendly even output dimensions
+
+ffprobe verification:
+  actual_width
+  actual_height
+  actual_duration_seconds
+  actual_video_codec
+  actual_audio_codec
+  dimensions_within_target
+  verification status / note
+```
+
+Why this mattered:
+
+```text
+Before the patch, 480p and 360p outputs may have looked too good because height-only planned targets may not have actually applied a scale filter.
+After the patch, dimensions should be honest and verified.
+```
+
+The user then confirmed the important practical result:
+
+```text
+all qualities minted successfully
+each one minted with its respective quality
+```
+
+This means the immediate scaling/verification patch did not break minting and likely fixed the original “quality too good to be true” concern.
+
+---
+
+### 1.4 Video publish flow is working
+
+Relevant files:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+```
+
+Current flow:
+
+```text
+VideoPublishFlow detects staged outputs
+creator selects outputs to mint
+prepare video asset
+review/send wallet hold
+upload selected staged outputs
+video outputs go to /assets/video
+poster/thumbnail outputs go to /assets/image
+backend returns real CID/crab URL per upload
+publish panel displays results
+local catalog/display draft can be updated
+```
+
+Tauri commands used:
+
+```text
+upload_staged_video_asset_gateway
+upload_staged_image_asset_gateway
+```
+
+Current backend truth rule:
+
+```text
+Backend upload response is the only source of minted b3/crab truth.
+Frontend and Rust staging do not invent CIDs or crab URLs.
+```
+
+---
+
+## 2. Current known next priorities
+
+The next session should focus on three major areas, in this order:
+
+```text
+1. Raise/rework video upload limits safely.
+2. Make every video in a bundle list/cross-link the other bundle videos in manifests.
+3. Clean up the video page UI so it looks like the image page, not a dev page.
+```
+
+Recommended order matters.
+
+We should not start with heavy UI cleanup before we understand whether the upload limit and manifest data model will change visible state. The video page can be cleaned up in parallel later, but the data path should be made less temporary first.
+
+---
+
+# 3. Priority 1 — Raise/rework the current video upload cap
+
+## 3.1 Current observed problem
+
+The user reports that video upload is currently capped at:
+
+```text
+10 MB
+```
+
+Known frontend constant in current codebundle:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+
+const MAX_SIMPLE_VIDEO_BYTES = 10 * 1024 * 1024;
+```
+
+Known Rust/backend-side note from prior carryover:
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+
+MAX_VIDEO_UPLOAD_BYTES = 10 MiB
+MAX_IMAGE_UPLOAD_BYTES = 25 MiB
+```
+
+Important: there may also be backend service caps in RustyOnions:
+
+```text
+svc-gateway body cap
+omnigate body cap
+/assets/video route cap
+request timeout
+gateway timeout
+Tauri command timeout / body read behavior
+```
+
+Do not assume the Tauri frontend constant is the only cap.
+
+---
+
+## 3.2 Critical architectural caution
+
+Do not solve larger videos by blindly changing:
+
+```text
+10 MiB → 500 MiB
+```
+
+if the current command reads the whole staged file into memory before forwarding.
+
+The user wants larger video support, but CrabLink/RustyOnions rules require bounded media behavior:
+
+```text
+No giant media files returned through Tauri command results.
+No raw video bytes in React state.
+No private paths sent to React.
+No unbounded memory buffering.
+No fake “streaming” claim if we are still doing one full upload body.
+```
+
+Safe mental model:
+
+```text
+Temporary video-lite cap increase:
+  okay if moderate and clearly bounded
+
+Final large-media support:
+  staged/range/segment/chunked upload from Rust
+  bounded memory
+  backend route support
+  byte-range playback later
+```
+
+---
+
+## 3.3 Recommended next-session approach for limits
+
+The next session should inspect the current implementation first:
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+RustyOnions svc-gateway /assets/video route caps
+RustyOnions omnigate /assets/video handling
+```
+
+Questions to answer from code:
+
+```text
+Does upload_staged_video_asset_gateway read the entire staged file with std::fs::read?
+Does it stream from file into reqwest Body?
+Does it calculate local b3 before upload?
+Does it enforce MAX_VIDEO_UPLOAD_BYTES before reading?
+Does backend route accept Content-Length over 10 MiB?
+Does svc-gateway have body cap middleware that rejects larger bodies?
+Does omnigate have a separate route/body cap?
+Does /assets/video prepare include bytes and reject above a configured threshold?
+Does wallet estimate/hold price scale with bytes?
+```
+
+If current Rust command full-buffers the file, then the immediate patch should be a controlled intermediate step:
+
+```text
+Raise cap modestly for video-lite, e.g. 50 MiB or 100 MiB, not unlimited.
+Make the limit a named constant and use it consistently.
+Update UI copy to say “Video-lite upload cap”.
+Ensure error message tells user the current cap and future large-media path.
+```
+
+If current Rust command can stream safely, then a larger dev cap is acceptable:
+
+```text
+Raise staged video cap higher, e.g. 250 MiB, but still bounded.
+Keep browser/direct file upload lower if needed.
+Prefer staged upload path for larger outputs.
+```
+
+Best long-term design:
+
+```text
+staged file path stays Rust-private
+Rust opens file
+Rust streams file in bounded chunks to gateway/backend
+backend accepts streaming body or multipart/chunk route
+gateway enforces explicit cap
+wallet prepare/hold uses bytes
+backend returns receipt/CID truth
+frontend receives only result JSON
+```
+
+---
+
+## 3.4 Likely files for the upload cap patch
+
+Frontend:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+```
+
+Tauri Rust:
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+apps/crablink-tauri/src-tauri/src/media/limits.rs
+```
+
+Backend RustyOnions, likely:
+
+```text
+crates/omnigate/src/routes/v1/assets.rs
+crates/svc-gateway/src/...
+crates/omnigate/tests/...
+crates/svc-gateway/tests/...
+```
+
+Exact backend file names must be verified from the current RustyOnions codebundle before patching.
+
+---
+
+## 3.5 Acceptance criteria for limit work
+
+The next patch should be considered good only if:
+
+```text
+Tauri Rust check passes.
+Frontend build passes.
+The UI shows the new cap accurately.
+Attempting a file above cap fails clearly before wallet hold.
+Attempting a staged output under cap proceeds.
+No raw bytes are exposed to React.
+No private path is exposed to React.
+No fake CID or fake receipt is generated.
+```
+
+Manual smoke:
+
+```text
+1. Use a source that produces at least one staged MP4 above 10 MiB but below the new cap.
+2. Confirm prepare succeeds.
+3. Confirm hold succeeds.
+4. Confirm staged upload succeeds.
+5. Confirm backend returns real b3/crab URL.
+6. Open minted crab:// video link.
+7. Confirm smaller existing videos still mint.
+8. Try a file above the new cap and confirm a clear cap error before spend.
+```
+
+---
+
+# 4. Priority 2 — Make bundle manifests cross-link all video versions
+
+## 4.1 User goal
+
+The user wants:
+
+```text
+every video version in a bundle should list the other video versions in its manifest
+```
+
+This should mirror what was done for images.
+
+Example desired experience:
+
+```text
+Open crab://<desktop_1080p_hash>.video
+→ manifest/page shows:
+  source_clean_master
+  desktop_1080p
+  tablet_720p
+  mobile_480p
+  low_360p
+  poster_image
+  thumbnail_image
+
+Open crab://<mobile_480p_hash>.video
+→ manifest/page still shows:
+  source_clean_master
+  desktop_1080p
+  tablet_720p
+  mobile_480p
+  low_360p
+  poster_image
+  thumbnail_image
+```
+
+The key is not just displaying the bundle in the publish panel. The user wants the relationship durable enough that each minted version can find the rest later.
+
+---
+
+## 4.2 Current known issue
+
+Current staged upload appears to upload outputs one-by-one.
+
+This creates a sequencing problem:
+
+```text
+first upload does not yet know final backend CIDs/crab URLs for later uploads
+second upload may know first upload, but not all later uploads
+last upload can know earlier uploads, but earlier uploaded manifests cannot include later URLs unless updated or pointed to a shared bundle manifest
+```
+
+This means a naive one-pass upload cannot make every version’s immutable manifest contain all siblings unless one of the following is true:
+
+```text
+the backend accepts a precomputed bundle manifest pointer
+the backend lets us update/rewrite manifests after all uploads finish
+the backend stores group metadata separately and hydrate-time lookup joins it
+the frontend only displays local bundle data, which is not durable
+```
+
+Important content-addressing principle:
+
+```text
+b3 hashes are immutable content truth.
+If manifest bytes change, that creates a new b3 object.
+Do not pretend an old b3 manifest mutated in place.
+Names/pointers can update; canonical content cannot.
+```
+
+---
+
+## 4.3 Immediate next step: study image implementation
+
+Do not invent a new video manifest contract until the next session inspects exactly how image bundles currently work.
+
+Files to inspect:
+
+```text
+apps/crablink-tauri/src/pages/image/ImagePublishFlow.jsx
+apps/crablink-tauri/src/pages/image/ImageManifest.jsx
+apps/crablink-tauri/src/pages/asset/ImageAssetManifestFacts.jsx
+apps/crablink-tauri/src/pages/image/ImageRenditions.jsx
+apps/crablink-tauri/src/shared/manifest/renditionGroups.js
+apps/crablink-tauri/src/shared/manifest/uniformManifest.js
+apps/crablink-tauri/src/shared/manifest/linkedAssets.js
+apps/crablink-tauri/src/shared/api/assetClient.js
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+apps/crablink-tauri/src/shared/embed/crabVideoEmbed.jsx
+```
+
+Specific questions:
+
+```text
+How does image store rendition group metadata?
+Is it sent in headers?
+Is it sent in the upload body metadata?
+Is it stored by backend into each asset manifest?
+Is it only frontend/local-catalog display data?
+Does the image asset page hydrate the sibling list from backend manifest facts?
+Does the image asset page hydrate the sibling list from local catalog?
+Does a fresh app instance still show siblings after opening one image URL?
+```
+
+The last question matters most:
+
+```text
+If the image cross-linking survives app restart / fresh open, it is durable backend-backed.
+If it only appears because the local publish panel cached it, it is display-only.
+```
+
+---
+
+## 4.4 Current possible designs
+
+### Option A — Frontend display bundle only
+
+Current-ish path:
+
+```text
+upload outputs one by one
+build a client-side result bundle after all uploads return
+display all URLs in the publish panel
+maybe write local catalog entries
+```
+
+Pros:
+
+```text
+easy
+works now
+no backend changes
+good for immediate UI polish
+```
+
+Cons:
+
+```text
+not durable
+fresh app instance may not know sibling versions
+each backend asset manifest may not contain all siblings
+not acceptable as final answer to user's goal
+```
+
+Use this only as a temporary UX improvement, not final manifest truth.
+
+---
+
+### Option B — Predeclare planned siblings in each upload
+
+Path:
+
+```text
+each upload includes planned roles/group metadata
+backend stores planned group structure
+CIDs/crab URLs unknown for future siblings
+```
+
+Pros:
+
+```text
+each asset can know it belongs to a planned group
+no second pass required
+```
+
+Cons:
+
+```text
+does not include final sibling CIDs/crab URLs
+still incomplete
+not enough for “open any version and see all other links”
+```
+
+Useful only as supporting metadata, not complete cross-linking.
+
+---
+
+### Option C — Bundle manifest object after all mints
+
+Path:
+
+```text
+upload all video/image outputs
+collect all returned CIDs/crab URLs
+build a video bundle manifest JSON
+publish that bundle manifest as its own object/asset
+all versions point to the bundle manifest if possible
+viewer can fetch bundle manifest to show siblings
+```
+
+Pros:
+
+```text
+durable group source
+content-addressed
+does not require mutating already minted asset manifests
+cleanly matches b3 immutability
+can include videos, poster, thumbnail, captions later
+```
+
+Cons:
+
+```text
+requires route/contract for generic/video bundle manifest object
+individual assets still need a way to know the bundle manifest pointer
+if pointer was not known at first upload, assets need update or index relationship
+```
+
+This is probably the cleanest long-term model if backend supports it.
+
+---
+
+### Option D — Two-phase manifest update/rewrite
+
+Path:
+
+```text
+upload all outputs
+collect all CIDs/crab URLs
+rewrite or republish each asset manifest with full sibling list
+```
+
+Pros:
+
+```text
+each version directly lists every other version
+matches user goal most directly
+```
+
+Cons:
+
+```text
+may require new backend route
+cannot mutate old b3 content in place
+must model as new manifest CID or updated pointer
+could become confusing if asset CID and manifest CID differ
+```
+
+This can work only if backend architecture already supports asset manifest revisions or mutable index pointers.
+
+---
+
+### Option E — Backend rendition group index
+
+Path:
+
+```text
+all uploaded assets share a group id
+backend stores relationships in svc-index
+asset hydration asks index for siblings by group id
+asset manifest may contain group id, while sibling list is hydrated from index
+```
+
+Pros:
+
+```text
+good fit for reference graphs
+does not mutate immutable content
+each asset can hydrate siblings
+works for future video/music/images/film/podcast bundles
+```
+
+Cons:
+
+```text
+requires backend/index contract
+more work than local UI patch
+must define ownership/policy for who can add assets to a group
+```
+
+This may be the most RustyOnions-native long-term model, but it is likely beyond the next UI patch.
+
+---
+
+## 4.5 Recommended manifest strategy for next session
+
+Recommended next-session plan:
+
+```text
+Step 1: Inspect image implementation and document how image cross-linking really works.
+Step 2: Bring video to image parity using the same mechanism.
+Step 3: If image mechanism is only local/display cache, improve video display cache but mark it display-only.
+Step 4: Design the durable backend-backed video bundle manifest/index flow as the next backend contract.
+```
+
+Do not skip Step 1.
+
+The safest immediate implementation is:
+
+```text
+create a normalized video result bundle after all uploads return
+include every minted output with role/label/kind/cid/crabUrl/width/height/codec/bytes
+write local catalog display entries for every output
+update draft/video manifest preview with a clear rendition group block
+make video page/opened asset display the known local bundle if available
+```
+
+But label it correctly:
+
+```text
+local display bundle
+not backend truth
+not durable manifest truth
+```
+
+The final implementation should become durable after backend support is confirmed or added.
+
+---
+
+## 4.6 Desired video bundle manifest shape
+
+Do not treat this as final contract. It is a sketch for the next session to compare against current image conventions.
+
+Possible durable shape:
+
+```json
+{
+  "schema": "crablink.video.bundle.v1",
+  "kind": "video_bundle",
+  "groupId": "video-rendition-group:<stable-id-or-bundle-cid>",
+  "primaryRole": "source_clean_master",
+  "createdAt": "<iso timestamp>",
+  "source": {
+    "title": "<title>",
+    "creator": "<passport subject>",
+    "wallet": "<owner wallet display/account if allowed>"
+  },
+  "videos": [
+    {
+      "role": "source_clean_master",
+      "label": "Clean master",
+      "assetKind": "video",
+      "contentId": "b3:<hash>",
+      "crabUrl": "crab://<hash>.video",
+      "mime": "video/mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationSeconds": 123.45,
+      "codec": "h264",
+      "audioCodec": "aac",
+      "bytes": 12345678
+    },
+    {
+      "role": "mobile_480p",
+      "label": "Mobile 480p",
+      "assetKind": "video",
+      "contentId": "b3:<hash>",
+      "crabUrl": "crab://<hash>.video",
+      "mime": "video/mp4",
+      "width": 854,
+      "height": 480,
+      "durationSeconds": 123.45,
+      "codec": "h264",
+      "audioCodec": "aac",
+      "bytes": 3456789
+    }
+  ],
+  "linkedImages": [
+    {
+      "role": "poster_image",
+      "label": "Poster image",
+      "assetKind": "image",
+      "contentId": "b3:<hash>",
+      "crabUrl": "crab://<hash>.image",
+      "mime": "image/jpeg"
+    },
+    {
+      "role": "thumbnail_image",
+      "label": "Thumbnail image",
+      "assetKind": "image",
+      "contentId": "b3:<hash>",
+      "crabUrl": "crab://<hash>.image",
+      "mime": "image/jpeg"
+    }
+  ],
+  "truthBoundary": {
+    "backendCids": true,
+    "frontendDisplayCache": false,
+    "receiptTruth": "wallet/backend receipt only",
+    "paidUnlockTruth": "content-view/wallet/backend only"
+  }
+}
+```
+
+Again: exact shape must match the current manifest conventions, especially `renditionGroups.js`, `linkedAssets.js`, and `uniformManifest.js`.
+
+---
+
+## 4.7 Acceptance criteria for bundle cross-linking
+
+Minimum acceptable next milestone:
+
+```text
+After minting a video bundle, the publish panel displays a clean “Video versions” section.
+Each minted version shows all sibling minted versions.
+Each result includes role, label, quality, CID, crab URL, bytes, and copy buttons.
+The draft/manifest preview includes the bundle relationship.
+Local catalog entries are written for every version.
+Opening a minted video from the same app session can show sibling versions from the local display bundle.
+All display-cache-only data is clearly not called backend truth.
+```
+
+Durable acceptance goal:
+
+```text
+Fresh app instance opens any minted video URL.
+Hydrated asset page shows all sibling versions.
+The sibling list comes from backend manifest/index truth or a content-addressed bundle manifest.
+No local-only cache is required.
+Every sibling link is backend-returned crab URL/CID.
+No immutable b3 content is pretended to mutate.
+```
+
+---
+
+# 5. Priority 3 — Clean up video page UI to match image page polish
+
+## 5.1 User goal
+
+The video page currently still feels like a developer page.
+
+The user wants it to look and feel more like the image page:
+
+```text
+clean
+professional
+creator-friendly
+less dev clutter
+better visual hierarchy
+still detail-rich underneath
+```
+
+This matches prior image-page work: keep the data, but make it neat.
+
+---
+
+## 5.2 Current video page rough structure
+
+Relevant files:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPage.jsx
+apps/crablink-tauri/src/pages/video/VideoDraft.jsx
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+apps/crablink-tauri/src/pages/video/VideoLocalPlaybackPreview.jsx
+apps/crablink-tauri/src/pages/video/video.css
+```
+
+Current functional blocks likely include:
+
+```text
+route truth panel
+draft form
+local preview
+converter panel
+rendition plan
+publish flow
+developer JSON/details
+manifest preview
+copy buttons
+technical status chips
+```
+
+Problem:
+
+```text
+Too much implementation detail is visible at the top level.
+Developer diagnostics compete with creator workflow.
+Minting mechanics are visible before the user understands the simple flow.
+```
+
+---
+
+## 5.3 Desired video page layout
+
+Mirror the image page’s cleaner hierarchy.
+
+Recommended top-level layout:
+
+```text
+Top hero:
+  title
+  short purpose
+  key status badges
+  one clear CTA: Choose video source
+
+Main upper area:
+  left: polished video preview / poster preview / playback preview
+  right: publish card with prepare/hold/upload status
+
+Middle:
+  selected source facts
+  verified output versions
+  quality cards
+
+Lower:
+  manifest / linked assets / advanced fields
+  developer diagnostics collapsed by default
+```
+
+Possible visual order:
+
+```text
+1. Video preview / source picker
+2. Pay/mint action card
+3. Verified versions / rendition group
+4. Poster + thumbnail
+5. Manifest / metadata fields
+6. Advanced / developer JSON collapsed
+```
+
+For consistency with image page:
+
+```text
+preview and pay stuff should be high on page
+version/rendition cards underneath
+manifest/detail-rich info lower
+mundane technical/debug info lowest and collapsed
+```
+
+---
+
+## 5.4 UI principles for video page cleanup
+
+Keep:
+
+```text
+source facts
+verified output facts
+version list
+bundle result list
+manifest preview
+developer JSON
+copy buttons
+truth boundaries
+```
+
+But reorganize:
+
+```text
+creator workflow first
+developer diagnostics last
+advanced controls collapsed
+technical JSON hidden by default
+plain-language state labels
+clean cards instead of huge raw panels
+```
+
+Avoid:
+
+```text
+giant JSON visible by default
+too many warning badges at top
+duplicated facts across multiple blocks
+scary dev labels for normal creator flow
+button overload
+raw staged handles as primary visible content
+```
+
+Preferred labels:
+
+```text
+Choose source
+Prepare versions
+Review ROC hold
+Mint selected versions
+Open video
+Copy crab URL
+Copy CID
+Show developer details
+```
+
+Avoid making normal users read:
+
+```text
+staged://video-job/...
+strict DTO
+idempotency key
+receipt hash
+wallet txid
+gateway correlation id
+```
+
+Those belong in developer details.
+
+---
+
+## 5.5 Suggested component responsibilities after cleanup
+
+### `VideoPage.jsx`
+
+Should own:
+
+```text
+page shell
+principles
+top-level layout
+route truth panel placement
+```
+
+Should not own:
+
+```text
+upload details
+job polling details
+FFmpeg facts rendering details
+manifest cross-link logic
+```
+
+### `VideoDraft.jsx`
+
+Should own:
+
+```text
+creator-facing draft metadata
+title
+description
+tags
+rights/access/price form integration
+manifest preview integration
+```
+
+Should avoid:
+
+```text
+huge embedded technical conversion flow
+```
+
+### `VideoConverterPanel.jsx`
+
+Should own:
+
+```text
+source selection
+local prepare job
+output readiness
+verified staged versions
+poster/thumbnail generation display
+```
+
+Should render as:
+
+```text
+compact source card
+verified output cards
+developer details collapsed
+```
+
+### `VideoPublishFlow.jsx`
+
+Should own:
+
+```text
+prepare/hold/upload sequence
+output selection
+result bundle
+copy/open links
+local catalog entries
+```
+
+Should render as:
+
+```text
+clean mint card
+stepper-style progress
+selected outputs summary
+successful output result cards
+developer request/response collapsed
+```
+
+### `VideoRenditions.jsx`
+
+Should own:
+
+```text
+quality/version list display
+roles
+labels
+dimensions
+bytes
+codec facts
+relationship/bundle display
+```
+
+Should become the reusable display for:
+
+```text
+planned renditions
+staged renditions
+minted renditions
+hydrated manifest renditions
+```
+
+### `VideoLocalPlaybackPreview.jsx`
+
+Should own:
+
+```text
+safe local preview only
+no b3 truth
+no backend unlock claim
+```
+
+Potentially it can be visually promoted to the top-left preview position.
+
+### `video.css`
+
+Should carry most UI polish.
+
+Need to mirror the image page’s visual language:
+
+```text
+cards
+section spacing
+two-column upper layout
+responsive collapse
+quality chips
+muted metadata
+developer drawers
+result cards
+poster/thumbnail grid
+```
+
+---
+
+## 5.6 UI acceptance criteria
+
+The video page cleanup is good when:
+
+```text
+A normal creator can understand the flow without reading JSON.
+The first visible action is obvious.
+The page looks like a product page, not an API tester.
+The advanced data is still available but collapsed.
+The user can see source preview and mint controls near the top.
+The generated versions are clearly listed as cards.
+The minted results are easy to open/copy.
+The page visually matches the polish level of the image page.
+No functionality is removed.
+No truth boundary is weakened.
+```
+
+Manual UX smoke:
+
+```text
+1. Open crab://video.
+2. The page should look clean before selecting a file.
+3. Choose source.
+4. Preview should be prominent.
+5. Prepare versions.
+6. Verified output cards should show real dimensions/qualities clearly.
+7. Mint selected versions.
+8. Results should appear as clean cards.
+9. Developer JSON should be collapsed but accessible.
+10. Nothing should imply local preview is backend truth.
+```
+
+---
+
+# 6. Known invariants to preserve
+
+## 6.1 Tauri-first doctrine
+
+Continue treating CrabLink Tauri as the primary client.
+
+```text
+Tauri = primary native Rust-backed RON client
+Chrome = proof/companion/gateway smoke surface
+```
+
+Do not redesign major video work around Chrome first.
+
+---
+
+## 6.2 React / Rust authority split
+
+React may:
+
+```text
+render UI
+collect user intent
+show source facts
+request native commands
+request backend client calls
+show backend-returned CIDs/crab URLs
+show receipts returned by backend/wallet flow
+```
+
+React must not:
+
+```text
+receive private source paths
+receive raw media bytes
+receive private keys
+invent CIDs
+invent receipts
+invent balances
+unlock paid content from cache
+mutate ledger truth
+bypass wallet confirmation
+construct raw native shell commands
+```
+
+Tauri Rust may:
+
+```text
+hold native source paths privately
+run allowlisted FFmpeg/ffprobe commands
+stage local outputs
+stream/upload staged files through bounded commands
+redact outputs
+return staged handles and facts
+```
+
+Tauri Rust must not:
+
+```text
+become wallet truth
+become ledger truth
+invent backend CIDs
+invent receipts
+unlock paid content locally
+return huge video bytes in command results
+expose private paths
+run arbitrary commands
+```
+
+Backend remains truth for:
+
+```text
+b3 CID
+crab URL
+receipt
+wallet hold/capture/release
+ledger mutation
+paid unlock
+ownership
+storage/index truth
+```
+
+---
+
+## 6.3 ROC / wallet / paid-flow invariants
+
+Paid flow stays:
+
+```text
+prepare/quote
+→ explicit user confirmation
+→ wallet hold
+→ backend upload/mint
+→ backend receipt/truth
+→ render/unlock/display
+```
+
+Never allow:
+
+```text
+silent ROC spend
+fake receipt
+fake balance
+fake hold
+frontend-only unlock of paid content
+Tauri direct ledger mutation
+gateway/omnigate direct ledger mutation
+```
+
+---
+
+## 6.4 b3 / crab invariants
+
+Canonical internal content ID:
+
+```text
+b3:<64 lowercase hex>
+```
+
+Public asset URL:
+
+```text
+crab://<64 lowercase hex>.video
+crab://<64 lowercase hex>.image
+```
+
+Reminder:
+
+```text
+b3 is content truth.
+crab:// is navigation.
+Names/pointers can resolve.
+Cache does not create truth.
+```
+
+For bundle manifests:
+
+```text
+Do not mutate b3 content in place.
+If manifest content changes, it is a new b3 object.
+If an index pointer changes, call it a pointer/index update, not mutation of the old manifest.
+```
+
+---
+
+# 7. Recommended next-session patch order
+
+## Batch 1 — Upload limit investigation and controlled cap raise
+
+Goal:
+
+```text
+remove the immediate 10 MB blocker without unsafe unbounded media behavior
+```
+
+Files likely involved:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+apps/crablink-tauri/src-tauri/src/media/limits.rs
+```
+
+Possible backend files after inspection:
+
+```text
+crates/omnigate/src/routes/v1/assets.rs
+crates/svc-gateway/...
+```
+
+Patch goals:
+
+```text
+centralize video upload cap
+make UI display actual cap
+align frontend and Rust cap
+fail before wallet hold if over cap
+keep staged upload private
+do not expose bytes/path to React
+```
+
+If full-buffering exists:
+
+```text
+raise only moderately and document as video-lite cap
+```
+
+If streaming exists or can be implemented cleanly:
+
+```text
+raise more confidently but still bounded
+```
+
+---
+
+## Batch 2 — Video bundle result model
+
+Goal:
+
+```text
+after all selected staged outputs mint, build a normalized result bundle object
+```
+
+Likely files:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src/shared/catalog/localCatalog.js
+```
+
+Patch goals:
+
+```text
+collect every successful output
+normalize roles/kinds/cids/crabUrls/facts
+write local catalog display entries
+show clean result cards
+prepare structure for manifest cross-linking
+```
+
+---
+
+## Batch 3 — Inspect/mirror image manifest cross-linking
+
+Goal:
+
+```text
+make video match image rendition/link behavior
+```
+
+Files to inspect first:
+
+```text
+apps/crablink-tauri/src/pages/image/ImagePublishFlow.jsx
+apps/crablink-tauri/src/pages/image/ImageManifest.jsx
+apps/crablink-tauri/src/pages/asset/ImageAssetManifestFacts.jsx
+apps/crablink-tauri/src/pages/image/ImageRenditions.jsx
+apps/crablink-tauri/src/shared/manifest/renditionGroups.js
+apps/crablink-tauri/src/shared/manifest/linkedAssets.js
+apps/crablink-tauri/src/shared/manifest/uniformManifest.js
+```
+
+Then patch video files:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+apps/crablink-tauri/src/pages/video/videoDraftModel.js
+apps/crablink-tauri/src/shared/embed/crabVideoEmbed.jsx
+```
+
+Acceptance:
+
+```text
+video manifests/drafts/result display show all sibling versions
+poster/thumbnail are linked assets
+roles and URLs are not duplicated messily
+developer JSON shows normalized bundle
+```
+
+---
+
+## Batch 4 — Durable backend bundle manifest or index strategy
+
+Only after image behavior is understood.
+
+Potential backend routes/contracts:
+
+```text
+generic object manifest upload
+video bundle manifest upload
+rendition group index write
+asset manifest revision pointer
+```
+
+Need to avoid:
+
+```text
+pretending immutable b3 manifests mutate
+```
+
+Best likely direction:
+
+```text
+content-addressed bundle manifest
+or svc-index relationship graph keyed by group id
+```
+
+This may require RustyOnions backend changes.
+
+---
+
+## Batch 5 — UI cleanup to image-page quality
+
+Goal:
+
+```text
+make crab://video feel like a polished creator page
+```
+
+Likely files:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPage.jsx
+apps/crablink-tauri/src/pages/video/VideoDraft.jsx
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+apps/crablink-tauri/src/pages/video/VideoLocalPlaybackPreview.jsx
+apps/crablink-tauri/src/pages/video/video.css
+```
+
+Patch goals:
+
+```text
+preview and mint flow at top
+versions in attractive cards
+manifest/details below
+developer JSON collapsed
+result bundle clean
+no dev-page look
+same polish as image page
+```
+
+---
+
+# 8. Testing / green gates
+
+Run from the user’s current default path:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+For Tauri app checks:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run check:rust:mac-media
+npm run build
+```
+
+If frontend-only patch:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+```
+
+If RustyOnions backend changes:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+cargo fmt
+cargo clippy --all-targets -- -D warnings
+cargo test
+```
+
+Use narrower package checks if full workspace is too heavy, but do not skip relevant route tests.
+
+Manual video smoke checklist:
+
+```text
+1. Start full dev stack.
+2. Open CrabLink Tauri.
+3. Confirm wallet/dev account has ROC.
+4. Navigate to crab://video.
+5. Choose native video source.
+6. Prepare versions.
+7. Confirm verified dimensions for 1080p/720p/480p/360p.
+8. Select multiple video outputs and poster/thumbnail.
+9. Prepare video asset.
+10. Confirm strict DTO does not include frontend-only fields.
+11. Review wallet hold.
+12. Upload/mint.
+13. Confirm every selected version returns CID/crab URL.
+14. Open every returned crab:// video URL.
+15. Confirm playback or capture route error.
+16. Confirm result bundle lists all versions.
+17. Confirm page UI is clean and developer details are collapsed.
+18. Try video above old 10 MB cap but below new cap.
+19. Try video above new cap and verify clean pre-spend failure.
+```
+
+Regression checks:
+
+```text
+image page still mints images and renditions
+music/podcast pages still play after paid unlock
+stream page still works for stream-lite
+wallet hold path still requires explicit confirmation
+no silent spend introduced
+no fake CID/receipt introduced
+```
+
+---
+
+# 9. Important warnings for next AI instance
+
+Do not:
+
+```text
+turn CrabLink Tauri into backend truth
+invent balances
+invent receipts
+invent b3 CIDs
+return private paths to React
+return raw video bytes through command results
+make localhost mandatory for normal users
+introduce QuickChain/external settlement
+introduce ROX/Solana/staking/liquidity
+claim DRM/anti-rip protection
+make cache unlock paid content
+mutate immutable b3 manifests in place
+```
+
+Do:
+
+```text
+keep Tauri primary
+keep gateway compatibility first
+preserve explicit paid flow
+mirror image page patterns where possible
+use Rust for media-native work
+keep video media bounded and honest
+collapse developer diagnostics by default
+make normal creator workflow clean
+document display-only vs backend truth
+```
+
+---
+
+# 10. One-paragraph starting prompt for next session
+
+We are continuing CrabLink Tauri `crab://video`. The latest success: after the Rust `video_transcode.rs` / `video_jobs.rs` correctness patch, all generated staged qualities minted successfully with their own backend mints. Video-lite multi-rendition minting is now proven. Next priorities are: raise/rework the current 10 MB video upload cap safely, make every video in a bundle list/cross-link the other videos in the bundle like images, and clean up the video page UI so it looks like the polished image page instead of a dev page. Preserve all invariants: Tauri is primary; React is display/user intent only; Rust holds native paths privately; backend returns b3/crab truth; paid actions require explicit confirmation; no fake balances, no fake receipts, no silent spend, no private paths or raw video bytes in React, and no unbounded large-media buffering. Start by inspecting `VideoPublishFlow.jsx`, `videoAssetClient.js`, `assets.rs`, the image rendition/manifest files, and current backend upload caps before patching.
+
+---
+
+# 11. Recommended first next patch
+
+The best first patch next session is:
+
+```text
+Upload cap cleanup and investigation patch
+```
+
+Target:
+
+```text
+centralize the video-lite upload cap
+raise it safely
+align UI + Tauri Rust constants
+ensure over-cap failure happens before wallet hold
+add clear user-facing copy
+do not create unsafe full-file buffering
+```
+
+Suggested patch files after inspection:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+apps/crablink-tauri/src-tauri/src/media/limits.rs
+```
+
+Only after this is green should the next patch tackle:
+
+```text
+video bundle result normalization
+image-style manifest/rendition cross-linking
+video page UI polish
+```
+
+
+### END NOTE - MAY 30 2026 - 19:30 CST

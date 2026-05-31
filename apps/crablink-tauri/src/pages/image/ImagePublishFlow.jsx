@@ -1,27 +1,25 @@
 /**
- * RO:WHAT — Explicit React prepare → wallet hold → paid image upload flow for crab://image.
- * RO:WHY — Moves proven paid image publishing toward Tauri React parity without touching backend truth boundaries.
- * RO:INTERACTS — assetClient, walletClient, ImagePage, app.refreshWallet, svc-gateway /assets/image/prepare, /wallet/hold, /assets/image.
- * RO:INVARIANTS — no silent ROC spend; hold requires explicit review/send; upload requires backend hold proof; no direct storage/index/ledger calls.
- * RO:METRICS — gateway correlation IDs returned by GatewayClient are displayed in diagnostics.
+ * RO:WHAT — Compact prepare → confirm ROC → paid image bundle mint flow for crab://image.
+ * RO:WHY — Mints the original image and generated renditions through existing gateway-backed image upload routes.
+ * RO:INTERACTS — assetClient, walletClient, ImagePage, imageRenditionGenerator, svc-gateway /assets/image/prepare, /wallet/hold, /assets/image.
+ * RO:INVARIANTS — no silent ROC spend; backend quote shown before confirm; each minted image must return backend crab URL; no direct storage/index/ledger calls.
+ * RO:METRICS — gateway correlation IDs are available in collapsed developer details.
  * RO:CONFIG — uses app settings for gateway URL, passport subject, wallet account, and bearer token.
- * RO:SECURITY — sends raw image bytes only to configured svc-gateway; no private keys/seed phrases/local ledger truth.
- * RO:TEST — manual crab://image prepare/hold/upload smoke from Tauri React shell.
+ * RO:SECURITY — sends privacy-cleaned image bytes only to configured svc-gateway; no private keys/seed phrases/local ledger truth.
+ * RO:TEST — manual crab://image source + generated versions quote/hold/mint smoke from Tauri React shell.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
 import CopyButton from '../../shared/components/CopyButton.jsx';
-import Field from '../../shared/components/Field.jsx';
 import JsonPreview from '../../shared/components/JsonPreview.jsx';
-import StatChip from '../../shared/components/StatChip.jsx';
-import TextInput from '../../shared/components/TextInput.jsx';
 import {
   createAssetClient,
   extractImageAssetCid,
   extractImageAssetUrl,
+  hashImageAssetBytes,
   normalizePaidProof,
 } from '../../shared/api/assetClient.js';
 import {
@@ -30,11 +28,17 @@ import {
   expectedNonceFromWalletError,
   normalizeWalletHoldResponse,
   stableIdempotencyKey,
-  toWalletHoldApiBody,
 } from '../../shared/api/walletClient.js';
+import { generatedRenditionTotalBytes } from './imageRenditionGenerator.js';
+import {
+  normalizeImageType,
+  sanitizeImageForPublish,
+  summarizeImagePrivacy,
+} from './imageMetadataSanitizer.js';
 
 const DEFAULT_ESCROW_ACCOUNT = 'escrow_paid_write';
-const MAX_SIMPLE_IMAGE_BYTES = 1024 * 1024;
+const MAX_SINGLE_IMAGE_BYTES = 25 * 1024 * 1024;
+const NONCE_HINT_PREFIX = 'crablink.wallet.nextNonce.';
 
 const IDLE_RESULT = Object.freeze({
   status: 'idle',
@@ -42,8 +46,6 @@ const IDLE_RESULT = Object.freeze({
   data: null,
   error: null,
   request: null,
-  apiRequest: null,
-  nonceRecovery: null,
 });
 
 export default function ImagePublishFlow({
@@ -51,6 +53,9 @@ export default function ImagePublishFlow({
   draftState,
   selectedFile,
   fileFacts,
+  localRenditions,
+  renditionState,
+  onEnsureRenditions,
 }) {
   const settings = app?.settings || {};
   const gateway = app?.clients?.gateway || null;
@@ -63,11 +68,20 @@ export default function ImagePublishFlow({
   const [prepareState, setPrepareState] = useState(IDLE_RESULT);
   const [holdState, setHoldState] = useState(IDLE_RESULT);
   const [uploadState, setUploadState] = useState(IDLE_RESULT);
-  const [escrowAccount, setEscrowAccount] = useState(DEFAULT_ESCROW_ACCOUNT);
-  const [holdNonce, setHoldNonce] = useState(() => loadNextNonceHint(settings.walletAccount));
   const [holdReviewOpen, setHoldReviewOpen] = useState(false);
-  const [uploadReviewOpen, setUploadReviewOpen] = useState(false);
-  const autoOpenTimer = useRef(0);
+  const [progress, setProgress] = useState(null);
+  const [publishPlan, setPublishPlan] = useState(null);
+
+  const draft = draftState?.draft || {};
+  const entries = Array.isArray(publishPlan?.renditionEntries)
+    ? publishPlan.renditionEntries
+    : Array.isArray(localRenditions?.entries)
+      ? localRenditions.entries
+      : [];
+  const originalBytes = Number(publishPlan?.original?.bytes || selectedFile?.size || 0);
+  const renditionBytes = Number(publishPlan?.renditionBytes || generatedRenditionTotalBytes(localRenditions));
+  const totalBytes = originalBytes + renditionBytes;
+  const bundleCount = selectedFile ? 1 + entries.length : 0;
 
   const workflowKey = useMemo(
     () =>
@@ -75,13 +89,40 @@ export default function ImagePublishFlow({
         selectedFile?.name || '',
         selectedFile?.size || '',
         selectedFile?.type || '',
-        draftState?.draft?.title || '',
-        draftState?.draft?.description || '',
-        normalizeTags(draftState?.draft?.tags || '').join(','),
-        settings.passportSubject || '',
+        selectedFile?.lastModified || '',
+        draft.title || '',
+        draft.description || '',
+        draft.tags || '',
+        draft.creatorDisplay || '',
+        draft.sourceMode || '',
+        draft.rightsMode || '',
+        draft.altText || '',
+        draft.provenanceNote || '',
+        draft.imageRole || '',
+        draft.useCaseCsv || '',
+        draft.renditionTargetCsv || '',
         settings.walletAccount || '',
+        settings.passportSubject || '',
       ].join('|'),
-    [selectedFile, draftState?.draft, settings.passportSubject, settings.walletAccount],
+    [
+      selectedFile?.name,
+      selectedFile?.size,
+      selectedFile?.type,
+      selectedFile?.lastModified,
+      draft.title,
+      draft.description,
+      draft.tags,
+      draft.creatorDisplay,
+      draft.sourceMode,
+      draft.rightsMode,
+      draft.altText,
+      draft.provenanceNote,
+      draft.imageRole,
+      draft.useCaseCsv,
+      draft.renditionTargetCsv,
+      settings.walletAccount,
+      settings.passportSubject,
+    ],
   );
 
   useEffect(() => {
@@ -89,162 +130,123 @@ export default function ImagePublishFlow({
     setHoldState(IDLE_RESULT);
     setUploadState(IDLE_RESULT);
     setHoldReviewOpen(false);
-    setUploadReviewOpen(false);
+    setProgress(null);
+    setPublishPlan(null);
   }, [workflowKey]);
 
-  useEffect(() => {
-    setHoldNonce(loadNextNonceHint(settings.walletAccount));
-  }, [settings.walletAccount]);
-
-  useEffect(() => {
-    return () => {
-      if (autoOpenTimer.current) {
-        window.clearTimeout(autoOpenTimer.current);
-        autoOpenTimer.current = 0;
-      }
-    };
-  }, []);
-
-  const preflight = getPreflight({
-    selectedFile,
-    settings,
-    gateway,
-  });
-
-  const preparePayload = useMemo(
-    () =>
-      selectedFile
-        ? buildPreparePayload({
-            draft: draftState?.draft || {},
-            selectedFile,
-            settings,
-          })
-        : null,
-    [draftState?.draft, selectedFile, settings],
+  const preflight = useMemo(
+    () => getPreflight({ selectedFile, settings, gateway }),
+    [selectedFile, settings, gateway],
   );
 
-  const amountMinor = extractPrepareAmountMinor(prepareState.data);
+  const prepareData = firstObject(prepareState.data, prepareState.response?.data, prepareState.response) || {};
+  const quotedAmount = extractPrepareAmount(prepareData);
   const holdRequest = useMemo(
     () =>
       buildHoldRequest({
-        amountMinor,
-        escrowAccount,
-        holdNonce,
-        prepareData: prepareState.data,
-        preparePayload,
-        settings,
+        amount: quotedAmount,
+        prepareData,
         selectedFile,
+        settings,
       }),
-    [amountMinor, escrowAccount, holdNonce, prepareState.data, preparePayload, settings, selectedFile],
+    [quotedAmount, prepareData, selectedFile, settings],
   );
 
-  const holdApiRequest = useMemo(() => {
-    try {
-      return holdRequest ? toWalletHoldApiBody(holdRequest) : null;
-    } catch (_error) {
-      return null;
-    }
-  }, [holdRequest]);
-
   const paidProof = useMemo(() => {
-    if (holdState.status !== 'ok') {
-      return null;
-    }
+    if (holdState.status !== 'ok') return null;
 
     try {
-      const normalizedHold = normalizeWalletHoldResponse(
+      const apiRequest = holdState.request || {};
+      const walletHold = normalizeWalletHoldResponse(
         firstObject(
           holdState.response?.walletHold,
+          holdState.response?.data,
           holdState.data?.walletHold,
           holdState.data,
-          holdState.response?.data,
           holdState.response,
         ),
-        holdState.apiRequest || holdState.request || {},
+        apiRequest,
       );
 
       return normalizePaidProof({
-        ...normalizedHold,
-        from: normalizedHold.from || holdState.apiRequest?.from || holdState.request?.from,
-        to: normalizedHold.to || holdState.apiRequest?.to || holdState.request?.to,
-        amount_minor: normalizedHold.amount_minor || holdState.apiRequest?.amount_minor || holdState.request?.amount_minor,
-        asset: normalizedHold.asset || holdState.apiRequest?.asset || holdState.request?.asset || 'roc',
-        idem: normalizedHold.idem || holdState.apiRequest?.idempotency_key || holdState.request?.idempotency_key,
+        ...walletHold,
+        from: walletHold.from || apiRequest.from,
+        to: walletHold.to || apiRequest.to,
+        amount_minor: walletHold.amount_minor || apiRequest.amount_minor,
+        asset: walletHold.asset || apiRequest.asset || 'roc',
+        idempotency_key: walletHold.idem || apiRequest.idempotency_key,
       });
     } catch (_error) {
       return null;
     }
   }, [holdState]);
 
-  const uploadPayload = firstObject(uploadState.data, uploadState.response?.data, uploadState.response);
-  const uploadCrabUrl = extractImageAssetUrl(uploadPayload);
-  const uploadAssetCid = extractImageAssetCid(uploadPayload);
-
-  const canPrepare = preflight.ok && Boolean(preparePayload);
-  const canHold = prepareState.status === 'ok' && Boolean(holdRequest && holdApiRequest);
+  const canPrepare = preflight.ok && Boolean(selectedFile);
+  const canHold = prepareState.status === 'ok' && Boolean(holdRequest);
   const canUpload = holdState.status === 'ok' && Boolean(paidProof) && Boolean(selectedFile);
 
   async function sendPrepare() {
-    if (!canPrepare) {
-      return;
-    }
+    if (!canPrepare) return;
 
-    setPrepareState({
-      status: 'sending',
-      response: null,
-      data: null,
-      error: null,
-      request: preparePayload,
-      apiRequest: preparePayload,
-      nonceRecovery: null,
-    });
+    setPrepareState({ status: 'sending', response: null, data: null, error: null, request: null });
     setHoldState(IDLE_RESULT);
     setUploadState(IDLE_RESULT);
-    setHoldReviewOpen(false);
-    setUploadReviewOpen(false);
+    setProgress(null);
 
     try {
-      const response = await callAssetPrepare(assetClient, preparePayload, {
-        idempotencyKey: preparePayload.client_idempotency_key,
+      setProgress({ index: 0, total: bundleCount || 1, label: 'Cleaning image metadata…' });
+      const plan = await buildImagePublishPlan({
+        selectedFile,
+        draft,
+        fileFacts,
+        onEnsureRenditions,
+        fallbackRenditions: localRenditions,
+      });
+      setPublishPlan(plan);
+
+      const preparedEntries = plan.renditionEntries;
+      const preparedTotalBytes = plan.totalBytes;
+
+      const request = buildPreparePayload({
+        draft,
+        selectedFile: plan.original.blob,
+        settings,
+        totalBytes: preparedTotalBytes,
+        bundleCount: 1 + preparedEntries.length,
+      });
+
+      const response = await assetClient.prepareImageAsset(request, {
+        idempotencyKey: request.client_idempotency_key,
       });
 
       const data = firstObject(response?.data, response);
+      setProgress(null);
 
       setPrepareState({
         status: 'ok',
         response,
         data,
         error: null,
-        request: preparePayload,
-        apiRequest: preparePayload,
-        nonceRecovery: null,
+        request,
       });
 
-      const template = extractHoldTemplate(data);
-      const suggestedNonce = firstString(template.nonce, template.next_nonce, template.nextNonce);
-
-      if (suggestedNonce) {
-        setHoldNonce(suggestedNonce);
-      }
-
       app?.notify?.({
-        title: 'Image prepare succeeded',
-        message: `Gateway correlation: ${response?.correlationId || 'n/a'}`,
+        title: 'Image bundle quote ready',
+        message: `${1 + preparedEntries.length} image asset${preparedEntries.length ? 's' : ''} included.`,
         tone: 'success',
       });
     } catch (error) {
+      setProgress(null);
       setPrepareState({
         status: 'error',
         response: null,
         data: firstObject(error?.data, error?.response?.data),
         error,
-        request: preparePayload,
-        apiRequest: preparePayload,
-        nonceRecovery: null,
+        request: null,
       });
 
       app?.notify?.({
-        title: 'Image prepare failed',
+        title: 'Image bundle quote failed',
         message: error?.message || 'Gateway rejected the prepare request.',
         tone: 'warning',
       });
@@ -252,904 +254,1096 @@ export default function ImagePublishFlow({
   }
 
   async function confirmHold() {
-    if (!canHold) {
-      return;
-    }
+    if (!canHold) return;
 
     if (!holdReviewOpen) {
       setHoldReviewOpen(true);
-      setUploadReviewOpen(false);
-
-      app?.notify?.({
-        title: 'Review ROC hold',
-        message: 'Review the hold request, then click Send ROC Hold. No ROC has been sent yet.',
-        tone: 'info',
-      });
-
       return;
     }
 
-    setHoldState({
-      status: 'sending',
-      response: null,
-      data: null,
-      error: null,
-      request: holdRequest,
-      apiRequest: holdApiRequest,
-      nonceRecovery: null,
-    });
-    setUploadState(IDLE_RESULT);
-    setUploadReviewOpen(false);
+    setHoldState({ status: 'sending', response: null, data: null, error: null, request: holdRequest });
 
     try {
-      const holdResult = await createWalletHoldWithNonceRecovery(holdRequest);
-
+      const response = await createWalletHoldWithNonceRecovery(walletClient, holdRequest);
       setHoldState({
         status: 'ok',
-        response: holdResult.response,
-        data: firstObject(holdResult.response?.data, holdResult.response?.walletHold, holdResult.response),
+        response,
+        data: firstObject(response?.walletHold, response?.data, response),
         error: null,
-        request: holdResult.request,
-        apiRequest: holdResult.apiRequest || toWalletHoldApiBody(holdResult.request),
-        nonceRecovery: holdResult.nonceRecovery,
+        request: response?.request || holdRequest,
       });
-
       setHoldReviewOpen(false);
-      setUploadReviewOpen(false);
-
-      const finalRequest = holdResult.apiRequest || toWalletHoldApiBody(holdResult.request);
-      const nextNonce = Number(finalRequest?.nonce || 0) + 1;
-
-      if (Number.isSafeInteger(nextNonce) && nextNonce > 1) {
-        saveLastNonceHint(settings.walletAccount, finalRequest?.nonce);
-        setHoldNonce(String(nextNonce));
-      }
-
-      await app?.refreshWallet?.(settings.walletAccount);
 
       app?.notify?.({
-        title: holdResult.nonceRecovery ? 'ROC hold created after nonce retry' : 'ROC hold created',
-        message: `Wallet hold returned. Correlation: ${holdResult.response?.correlationId || 'n/a'}`,
+        title: 'ROC hold confirmed',
+        message: 'You can now mint the privacy-cleaned original and generated versions.',
         tone: 'success',
       });
     } catch (error) {
-      const suggested = expectedNonceFromProblem(error);
-
-      if (suggested) {
-        setHoldNonce(String(suggested));
-      }
-
       setHoldState({
         status: 'error',
         response: null,
         data: firstObject(error?.data, error?.response?.data),
         error,
         request: error?.request || holdRequest,
-        apiRequest: error?.apiRequest || holdApiRequest,
-        nonceRecovery: suggested
-          ? {
-              retried: false,
-              suggested_nonce: suggested,
-              reason: 'Backend returned a suggested/expected nonce, but retry did not complete.',
-            }
-          : error?.nonceRecovery || null,
       });
 
       app?.notify?.({
         title: 'ROC hold failed',
-        message: suggested
-          ? `Wallet suggested nonce ${suggested}; the nonce field was updated.`
-          : error?.message || 'Wallet hold failed.',
+        message: error?.message || 'Wallet rejected the hold.',
         tone: 'warning',
       });
     }
   }
 
-  async function createWalletHoldWithNonceRecovery(firstRequest) {
-    const firstApiRequest = toWalletHoldApiBody(firstRequest);
+  async function submitBundleUpload() {
+    if (!canUpload) return;
+
+    setUploadState({ status: 'sending', response: null, data: null, error: null, request: null });
+    setProgress({ index: 0, total: bundleCount || 1, label: 'Preparing generated versions…' });
 
     try {
-      const firstResponse = await callWalletHold(walletClient, firstApiRequest);
+      const plan = publishPlan || await buildImagePublishPlan({
+        selectedFile,
+        draft,
+        fileFacts,
+        onEnsureRenditions,
+        fallbackRenditions: localRenditions,
+      });
+      setPublishPlan(plan);
 
-      return {
-        response: firstResponse,
-        request: firstRequest,
-        apiRequest: firstResponse?.apiRequest || firstApiRequest,
-        nonceRecovery: firstResponse?.nonceRecovery || null,
-      };
-    } catch (firstError) {
-      const suggested = expectedNonceFromProblem(firstError);
+      const renditionEntries = plan.renditionEntries;
+      const total = 1 + renditionEntries.length;
 
-      if (!suggested || String(suggested) === String(firstApiRequest.nonce || '')) {
-        firstError.request = firstRequest;
-        firstError.apiRequest = firstApiRequest;
-        throw firstError;
+      setProgress({ index: 0, total, label: 'Predicting b3 rendition group…' });
+      const renditionGroup = await buildPredictedRenditionGroup({
+        selectedFile: plan.original.blob,
+        fileFacts: { ...fileFacts, width: plan.original.width, height: plan.original.height },
+        draft,
+        renditionEntries,
+        privacySummary: plan.privacy,
+      });
+      const originalPlan = findRenditionPlan(renditionGroup, 'original');
+
+      setProgress({ index: 0, total, label: 'Minting original image…' });
+
+      const originalUpload = await uploadOneImage({
+        assetClient,
+        blob: plan.original.blob,
+        paidProof,
+        idempotencyKey: stableIdempotencyKey(
+          'image-bundle-original',
+          paidProof.txid,
+          plan.original.bytes,
+          plan.original.contentType,
+          draft.title,
+        ),
+        metadata: {
+          title: cleanPublicTitle(draft.title || selectedFile.name || 'Original image'),
+          description: buildOriginalDescription({ draft, privacySummary: plan.privacy }),
+          tags: addUniqueTags(draft.tags, [
+            'original',
+            'bundle-original',
+            'metadata-stripped',
+            sourceTag(draft.sourceMode),
+            rightsTag(draft.rightsMode),
+          ]),
+          altText: cleanPublicDescription(draft.altText, ''),
+          renditionGroup,
+          renditionRole: 'original',
+          renditionLabel: 'Original',
+          privacy: plan.privacy,
+        },
+      });
+
+      const originalCrabUrl = extractImageAssetUrl(originalUpload?.data || originalUpload);
+      const originalCid = extractImageAssetCid(originalUpload?.data || originalUpload);
+      assertCidMatchesPrediction(originalCid, originalPlan?.cid, 'original image');
+
+      const mintedRenditions = [];
+
+      for (const entry of renditionEntries) {
+        setProgress({
+          index: 1 + mintedRenditions.length,
+          total,
+          label: `Minting ${entry.label || entry.role}…`,
+        });
+
+        const renditionPlan = findRenditionPlan(renditionGroup, entry.role);
+        const renditionLabel = cleanPublicTitle(entry.label || entry.role || 'Rendition');
+
+        const upload = await uploadOneImage({
+          assetClient,
+          blob: entry.blob,
+          paidProof,
+          idempotencyKey: stableIdempotencyKey(
+            'image-bundle-rendition',
+            paidProof.txid,
+            originalCid || originalCrabUrl || selectedFile.size,
+            entry.role,
+            entry.bytes,
+          ),
+          metadata: {
+            title: cleanPublicTitle(`${draft.title || 'Image'} — ${renditionLabel}`),
+            description: buildRenditionDescription({
+              draft,
+              entry,
+              privacySummary: plan.privacy,
+            }),
+            tags: addUniqueTags(draft.tags, [
+              'rendition',
+              'metadata-stripped',
+              `role:${entry.role}`,
+              'linked-original',
+              sourceTag(draft.sourceMode),
+              rightsTag(draft.rightsMode),
+            ]),
+            altText: cleanPublicDescription(draft.altText, ''),
+            renditionGroup,
+            renditionRole: entry.role,
+            renditionLabel,
+            privacy: plan.privacy,
+          },
+        });
+
+        const renditionCrabUrl = extractImageAssetUrl(upload?.data || upload);
+        const renditionCid = extractImageAssetCid(upload?.data || upload);
+        assertCidMatchesPrediction(renditionCid, renditionPlan?.cid, entry.label || entry.role || 'rendition');
+
+        mintedRenditions.push({
+          role: entry.role,
+          label: renditionLabel,
+          width: entry.width,
+          height: entry.height,
+          bytes: entry.bytes,
+          contentType: entry.contentType,
+          response: upload,
+          crabUrl: renditionCrabUrl,
+          cid: renditionCid,
+          parentCrabUrl: originalCrabUrl || null,
+          parentCid: originalCid || null,
+          renditionGroup,
+        });
       }
 
-      const retryRequest = {
-        ...firstRequest,
-        nonce: Number(suggested),
-        idempotency_key: buildWalletHoldIdempotencyKey({
-          preparePayload,
-          from: firstApiRequest.from,
-          to: firstApiRequest.to,
-          amountMinor: firstApiRequest.amount_minor,
-          nonce: suggested,
-        }),
-      };
-      const retryApiRequest = toWalletHoldApiBody(retryRequest);
-
-      setHoldNonce(String(suggested));
-      setHoldState({
-        status: 'sending',
-        response: null,
-        data: firstObject(firstError?.data, firstError?.response?.data),
-        error: null,
-        request: retryRequest,
-        apiRequest: retryApiRequest,
-        nonceRecovery: {
-          retried: true,
-          first_nonce: firstApiRequest.nonce,
-          expected_nonce: suggested,
-          status: 'retrying',
+      const bundle = {
+        schema: 'crablink.image-bundle-result.v1',
+        backendVerified: true,
+        relationshipDurability: 'display_bundle_map_until_backend_bundle_manifest_route_exists',
+        mintedAt: new Date().toISOString(),
+        receiptHash: paidProof.receipt_hash || paidProof.receiptHash || '',
+        paidProof: redactProof(paidProof),
+        renditionGroup,
+        original: {
+          label: 'Original',
+          bytes: plan.original.bytes,
+          contentType: plan.original.contentType || 'image/png',
+          response: originalUpload,
+          crabUrl: originalCrabUrl,
+          cid: originalCid,
+          renditionGroup,
+          privacy: plan.privacy,
         },
-      });
-
-      const retryResponse = await callWalletHold(walletClient, retryApiRequest);
-
-      return {
-        response: retryResponse,
-        request: retryRequest,
-        apiRequest: retryResponse?.apiRequest || retryApiRequest,
-        nonceRecovery: {
-          retried: true,
-          first_nonce: firstApiRequest.nonce,
-          expected_nonce: suggested,
-          status: 'ok',
-          wallet_client_recovery: retryResponse?.nonceRecovery || null,
-        },
+        renditions: mintedRenditions,
       };
-    }
-  }
 
-  async function submitUpload() {
-    if (!canUpload) {
-      return;
-    }
-
-    if (!uploadReviewOpen) {
-      setUploadReviewOpen(true);
-      setHoldReviewOpen(false);
-
-      app?.notify?.({
-        title: 'Review image upload request',
-        message: 'Review the image upload request, then click Send Image Upload. No image bytes have been uploaded yet.',
-        tone: 'info',
-      });
-
-      return;
-    }
-
-    setUploadState({
-      status: 'sending',
-      response: null,
-      data: null,
-      error: null,
-      request: {
-        route: '/assets/image',
-        file: fileFacts || summarizeFile(selectedFile),
-        paidProof,
-      },
-      apiRequest: null,
-      nonceRecovery: null,
-    });
-
-    try {
-      const response = await callAssetUpload(assetClient, {
-        file: selectedFile,
-        title: draftState?.draft?.title || selectedFile?.name || '',
-        description: draftState?.draft?.description || draftState?.draft?.altText || '',
-        tags: normalizeTags(draftState?.draft?.tags || ''),
-        paidProof,
-        idempotencyKey:
-          paidProof.idem ||
-          preparePayload?.client_idempotency_key ||
-          stableIdempotencyKey('image-upload', selectedFile.name, paidProof.txid),
-      });
-
-      const data = firstObject(response?.data, response);
-      const crabUrl = extractImageAssetUrl(data);
-
-      setUploadReviewOpen(false);
-
+      setProgress({ index: total, total, label: 'Bundle mint complete.' });
       setUploadState({
         status: 'ok',
-        response,
-        data,
+        response: bundle,
+        data: bundle,
         error: null,
         request: {
-          route: '/assets/image',
-          file: fileFacts || summarizeFile(selectedFile),
-          paidProof,
+          total_assets: total,
+          total_bytes: plan.original.bytes + mintedRenditions.reduce((sum, item) => sum + Number(item.bytes || 0), 0),
         },
-        apiRequest: response?.request || null,
-        nonceRecovery: null,
       });
 
-      await app?.refreshWallet?.(settings.walletAccount);
-
+      app?.refreshWallet?.();
       app?.notify?.({
-        title: 'Image upload complete',
-        message: crabUrl ? `Opening ${crabUrl}` : 'Upload returned without a crab URL.',
-        tone: crabUrl ? 'success' : 'warning',
+        title: 'Image bundle minted',
+        message: `${total} backend image asset${total === 1 ? '' : 's'} returned.`,
+        tone: 'success',
       });
-
-      if (crabUrl && typeof app?.navigate === 'function') {
-        if (autoOpenTimer.current) {
-          window.clearTimeout(autoOpenTimer.current);
-        }
-
-        autoOpenTimer.current = window.setTimeout(() => {
-          app.navigate(crabUrl);
-        }, 900);
-      }
     } catch (error) {
       setUploadState({
         status: 'error',
         response: null,
         data: firstObject(error?.data, error?.response?.data),
         error,
-        request: {
-          route: '/assets/image',
-          file: fileFacts || summarizeFile(selectedFile),
-          paidProof,
-        },
-        apiRequest: null,
-        nonceRecovery: null,
+        request: null,
       });
 
       app?.notify?.({
-        title: 'Image upload failed',
-        message: error?.message || 'Gateway rejected the upload request.',
-        tone: 'danger',
+        title: 'Image bundle mint failed',
+        message: error?.message || 'Gateway rejected one of the image uploads.',
+        tone: 'warning',
       });
-    }
-  }
-
-  function openReturnedAsset() {
-    if (uploadCrabUrl && typeof app?.navigate === 'function') {
-      app.navigate(uploadCrabUrl);
     }
   }
 
   return (
     <Card
       eyebrow="Publish"
-      title="React image publish flow"
-      className="image-publish-card"
+      title="Quote, confirm, and mint"
+      className="image-publish-card image-publish-card-compact"
       actions={
         <div className="image-publish-badges">
-          <Badge tone={preflight.ok ? 'success' : 'warning'}>
-            {preflight.ok ? 'ready' : 'needs setup'}
+          <Badge tone={prepareState.status === 'ok' ? 'success' : 'neutral'}>Quote</Badge>
+          <Badge tone={holdState.status === 'ok' ? 'success' : 'neutral'}>ROC hold</Badge>
+          <Badge tone={uploadState.status === 'ok' ? 'success' : 'neutral'}>Mint</Badge>
+          <Badge tone={publishPlan?.privacy?.verification?.status === 'passed' ? 'success' : 'info'}>
+            Metadata clean
           </Badge>
-          <Badge tone="neutral">prepare</Badge>
-          <Badge tone="neutral">hold</Badge>
-          <Badge tone="neutral">upload</Badge>
         </div>
       }
     >
-      <p className="image-section-copy">
-        This is the React parity path for the proven image workflow. Prepare is a preflight call.
-        The ROC hold and byte upload are separate explicit clicks.
-      </p>
-
-      <section className="image-publish-grid" aria-label="Image publish prerequisites">
-        <Fact label="Gateway" value={settings.gatewayUrl || gateway?.baseUrl || 'not configured'} />
-        <Fact label="Passport" value={settings.passportSubject || 'not configured'} />
-        <Fact label="Wallet" value={settings.walletAccount || 'not configured'} />
-        <Fact label="Selected file" value={fileFacts?.name || selectedFile?.name || 'none'} />
-        <Fact label="Simple upload cap" value="1 MiB MVP" />
-        <Fact label="Current file size" value={selectedFile ? formatBytes(selectedFile.size) : 'n/a'} />
-      </section>
+      <div className="image-bundle-summary">
+        <div>
+          <span>Original</span>
+          <strong>{selectedFile ? formatBytes(originalBytes) : 'No file'}</strong>
+        </div>
+        <div>
+          <span>Generated versions</span>
+          <strong>{entries.length}</strong>
+        </div>
+        <div>
+          <span>Total upload plan</span>
+          <strong>{selectedFile ? `${bundleCount || 1} images · ${formatBytes(totalBytes || originalBytes)}` : 'n/a'}</strong>
+        </div>
+      </div>
 
       {!preflight.ok && (
-        <div className="image-publish-warning">
-          <strong>Publish flow blocked</strong>
+        <div className="image-publish-alert" role="alert">
+          <strong>Before minting</strong>
           <span>{preflight.reason}</span>
         </div>
       )}
 
-      <section className="image-publish-step">
-        <header>
-          <div>
-            <p className="cl-eyebrow">Step 1</p>
-            <h3>Prepare image upload</h3>
-          </div>
-          <Badge tone={toneForStatus(prepareState.status)}>{labelForStatus(prepareState.status)}</Badge>
-        </header>
-
-        <p>
-          Sends strict JSON metadata to <code>/assets/image/prepare</code>. It does not upload image bytes
-          and does not mutate the wallet.
-        </p>
-
-        <div className="image-publish-actions">
-          <Button variant="primary" disabled={!canPrepare || prepareState.status === 'sending'} onClick={sendPrepare}>
-            {prepareState.status === 'sending' ? 'Preparing…' : 'Send Prepare Request'}
+      <div className="image-publish-steps">
+        <section>
+          <header>
+            <strong>1. Backend quote</strong>
+            <span>Strips source metadata, generates selected versions locally, then asks the backend for a quote covering the cleaned original plus generated bytes.</span>
+          </header>
+          <Button
+            variant="primary"
+            onClick={sendPrepare}
+            disabled={!canPrepare || prepareState.status === 'sending' || renditionState?.status === 'generating'}
+          >
+            {prepareState.status === 'sending' || renditionState?.status === 'generating'
+              ? 'Preparing…'
+              : 'Get bundle quote'}
           </Button>
-          <CopyButton
-            text={JSON.stringify(preparePayload || {}, null, 2)}
-            label="Copy prepare JSON"
-            disabled={!preparePayload}
-          />
-        </div>
+        </section>
 
-        <JsonPreview
-          label="Prepare request/result"
-          data={{
-            request: preparePayload,
-            result: summarizeResult(prepareState),
-            amount_roc: amountMinor || null,
-            hold_template: extractHoldTemplate(prepareState.data),
-          }}
-        />
-      </section>
+        {prepareState.status === 'ok' && (
+          <section>
+            <header>
+              <strong>2. Confirm ROC hold</strong>
+              <span>
+                Backend quote: <b>{formatRoc(quotedAmount)} ROC</b>. Nothing is spent until you confirm this hold.
+              </span>
+            </header>
 
-      <section className="image-publish-step">
-        <header>
-          <div>
-            <p className="cl-eyebrow">Step 2</p>
-            <h3>Review and send ROC hold</h3>
-          </div>
-          <Badge tone={toneForStatus(holdState.status)}>{labelForStatus(holdState.status)}</Badge>
-        </header>
+            {holdReviewOpen && (
+              <div className="image-publish-review">
+                <strong>Review hold</strong>
+                <span>
+                  This will authorize the image bundle mint for the privacy-cleaned original and generated versions listed above.
+                </span>
+              </div>
+            )}
 
-        <p>
-          Sends an explicit wallet hold to <code>/wallet/hold</code>. The developer preview may show
-          route metadata, but the actual API body is strict and only includes wallet DTO fields.
-        </p>
-
-        <div className="image-publish-controls">
-          <Field label="Escrow account">
-            <TextInput value={escrowAccount} onChange={(event) => setEscrowAccount(event.target.value)} />
-          </Field>
-
-          <Field label="Nonce">
-            <TextInput value={holdNonce} onChange={(event) => setHoldNonce(event.target.value)} inputMode="numeric" />
-          </Field>
-        </div>
-
-        <div className="image-publish-grid">
-          <Fact label="From" value={holdApiRequest?.from || 'waiting for prepare'} />
-          <Fact label="To" value={holdApiRequest?.to || 'waiting for prepare'} />
-          <Fact label="ROC amount" value={holdApiRequest?.amount_minor ? `${formatRocUnits(holdApiRequest.amount_minor)} ROC` : 'waiting for prepare'} />
-          <Fact label="Idempotency" value={holdApiRequest?.idempotency_key || 'waiting for prepare'} monospace />
-        </div>
-
-        {holdReviewOpen && holdApiRequest && (
-          <div className="image-publish-warning" role="status" aria-live="polite">
-            <strong>Review ROC hold for image upload</strong>
-            <span>
-              Amount: {formatRocUnits(holdApiRequest.amount_minor)} ROC · From: {holdApiRequest.from} · Escrow: {holdApiRequest.to} · Nonce: {holdApiRequest.nonce}
-            </span>
-            <span>No ROC has been sent yet. Click <strong>Send ROC Hold</strong> to submit this wallet request through the gateway.</span>
-          </div>
+            <Button
+              variant={holdReviewOpen ? 'primary' : 'secondary'}
+              onClick={confirmHold}
+              disabled={!canHold || holdState.status === 'sending'}
+            >
+              {holdState.status === 'sending'
+                ? 'Confirming…'
+                : holdReviewOpen
+                  ? 'Confirm ROC & Hold'
+                  : 'Review ROC hold'}
+            </Button>
+          </section>
         )}
 
-        <div className="image-publish-actions">
-          <Button variant={holdReviewOpen ? 'primary' : 'secondary'} disabled={!canHold || holdState.status === 'sending'} onClick={confirmHold}>
-            {holdState.status === 'sending' ? 'Holding…' : holdReviewOpen ? 'Send ROC Hold' : 'Review ROC Hold'}
-          </Button>
-          {holdReviewOpen && (
-            <Button variant="secondary" disabled={holdState.status === 'sending'} onClick={() => setHoldReviewOpen(false)}>
-              Cancel Review
+        {holdState.status === 'ok' && (
+          <section>
+            <header>
+              <strong>3. Mint original + versions</strong>
+              <span>
+                The privacy-cleaned original is minted first. Each generated version is then minted with a clean CrabLink rendition map that links it back to the cleaned original.
+              </span>
+            </header>
+            <Button
+              variant="primary"
+              onClick={submitBundleUpload}
+              disabled={!canUpload || uploadState.status === 'sending'}
+            >
+              {uploadState.status === 'sending' ? 'Minting…' : 'Mint image bundle'}
             </Button>
-          )}
-          <CopyButton
-            text={JSON.stringify(holdApiRequest || {}, null, 2)}
-            label="Copy strict hold API JSON"
-            disabled={!holdApiRequest}
-          />
-        </div>
+          </section>
+        )}
+      </div>
 
+      {progress && (
+        <div className="image-bundle-progress" aria-label="Image bundle mint progress">
+          <div>
+            <strong>{progress.label}</strong>
+            <span>
+              {progress.index} / {progress.total}
+            </span>
+          </div>
+          <div className="image-bundle-progress-bar">
+            <span style={{ width: `${progress.total ? Math.min(100, (progress.index / progress.total) * 100) : 0}%` }} />
+          </div>
+        </div>
+      )}
+
+      {prepareState.status === 'error' && <ErrorBlock title="Quote failed" error={prepareState.error} />}
+      {holdState.status === 'error' && <ErrorBlock title="ROC hold failed" error={holdState.error} />}
+      {uploadState.status === 'error' && <ErrorBlock title="Mint failed" error={uploadState.error} />}
+
+      {uploadState.status === 'ok' && (
+        <ImageBundleResult bundle={uploadState.data} />
+      )}
+
+      <details className="image-publish-debug">
+        <summary>Developer details</summary>
         <JsonPreview
-          label="Hold request/result"
+          label="Image bundle publish state"
           data={{
-            uiPreviewRequest: holdRequest
+            prepareState: summarizeState(prepareState),
+            holdState: summarizeState(holdState),
+            uploadState: summarizeState(uploadState),
+            progress,
+            publishPlan: publishPlan
               ? {
-                  schema: 'crablink.wallet-hold-preview.v1',
-                  ...holdRequest,
+                  schema: publishPlan.schema,
+                  totalBytes: publishPlan.totalBytes,
+                  original: summarizeImagePrivacy(publishPlan.original),
+                  renditionCount: publishPlan.renditionEntries.length,
                 }
               : null,
-            strictWalletApiRequest: holdApiRequest,
-            result: summarizeResult(holdState),
-            nonce_recovery: holdState.nonceRecovery || null,
-            paid_proof_ready: Boolean(paidProof),
-            paid_proof: paidProof,
           }}
-          initiallyOpen={holdReviewOpen || holdState.status === 'error'}
         />
-      </section>
-
-      <section className="image-publish-step">
-        <header>
-          <div>
-            <p className="cl-eyebrow">Step 3</p>
-            <h3>Review and submit image upload</h3>
-          </div>
-          <Badge tone={toneForStatus(uploadState.status)}>{labelForStatus(uploadState.status)}</Badge>
-        </header>
-
-        <p>
-          Sends the selected image bytes as the raw request body to <code>/assets/image</code> with the
-          wallet hold proof headers required by the gateway contract.
-        </p>
-
-        {uploadReviewOpen && (
-          <div className="image-publish-warning" role="status" aria-live="polite">
-            <strong>Review image upload request</strong>
-            <span>
-              File: {selectedFile?.name || 'selected image'} · Bytes: {selectedFile?.size || 0} · Content-Type: {selectedFile?.type || 'image/png'}
-            </span>
-            <span>
-              No image bytes have been uploaded yet. Click <strong>Send Image Upload</strong> to submit the raw bytes and paid proof.
-            </span>
-          </div>
-        )}
-
-        <div className="image-publish-actions">
-          <Button variant={uploadReviewOpen ? 'primary' : 'secondary'} disabled={!canUpload || uploadState.status === 'sending'} onClick={submitUpload}>
-            {uploadState.status === 'sending' ? 'Uploading…' : uploadReviewOpen ? 'Send Image Upload' : 'Review Image Upload'}
-          </Button>
-          {uploadReviewOpen && (
-            <Button variant="secondary" disabled={uploadState.status === 'sending'} onClick={() => setUploadReviewOpen(false)}>
-              Cancel Review
-            </Button>
-          )}
-          <Button variant="secondary" disabled={!uploadCrabUrl} onClick={openReturnedAsset}>
-            Open Asset Page
-          </Button>
-          <CopyButton text={uploadCrabUrl} label="Copy crab URL" disabled={!uploadCrabUrl} />
-        </div>
-
-        {uploadState.status === 'ok' && (
-          <div className="image-upload-success">
-            <StatChip label="Upload" value="complete" tone="success" />
-            <StatChip label="Crab URL" value={uploadCrabUrl || 'not returned'} help={uploadCrabUrl} tone={uploadCrabUrl ? 'success' : 'warning'} />
-            <StatChip label="Asset CID" value={uploadAssetCid || 'not returned'} help={uploadAssetCid} />
-            <StatChip label="HTTP" value={String(uploadState.response?.status || 'n/a')} />
-          </div>
-        )}
-
-        <JsonPreview
-          label="Upload result"
-          data={{
-            request: uploadState.request,
-            pendingRequest: uploadReviewOpen
-              ? {
-                  route: '/assets/image',
-                  file: fileFacts || summarizeFile(selectedFile),
-                  paidProof,
-                }
-              : null,
-            result: summarizeResult(uploadState),
-            returned_crab_url: uploadCrabUrl || null,
-            returned_asset_cid: uploadAssetCid || null,
-          }}
-          initiallyOpen={uploadReviewOpen || uploadState.status === 'error' || uploadState.status === 'ok'}
-        />
-      </section>
+      </details>
     </Card>
   );
 }
 
-async function callAssetPrepare(assetClient, payload, options) {
-  if (typeof assetClient?.prepareImageAsset === 'function') {
-    return assetClient.prepareImageAsset(payload, options);
-  }
+function ImageBundleResult({ bundle }) {
+  const original = bundle?.original || {};
+  const renditions = Array.isArray(bundle?.renditions) ? bundle.renditions : [];
 
-  if (typeof assetClient?.prepareImage === 'function') {
-    return assetClient.prepareImage(payload, options);
-  }
+  return (
+    <div className="image-bundle-result">
+      <header>
+        <div>
+          <strong>Image bundle minted</strong>
+          <span>Every listed crab URL came from the backend upload response. Published bytes were privacy-cleaned before b3 prediction.</span>
+        </div>
+        <Badge tone="success">Backend returned</Badge>
+      </header>
 
-  throw new Error('Asset client is missing prepareImageAsset/prepareImage.');
+      <BundleAssetRow
+        label="Original"
+        role="canonical"
+        crabUrl={original.crabUrl}
+        cid={original.cid}
+        bytes={original.bytes}
+        contentType={original.contentType}
+        extra={original.privacy?.verification?.status === 'passed' ? 'metadata verified clean' : 'privacy-clean rewrite'}
+      />
+
+      {renditions.length > 0 && (
+        <div className="image-bundle-rendition-list">
+          <h3>Generated versions</h3>
+          {renditions.map((item) => (
+            <BundleAssetRow
+              key={`${item.role}:${item.cid || item.crabUrl}`}
+              label={item.label}
+              role={item.role}
+              crabUrl={item.crabUrl}
+              cid={item.cid}
+              bytes={item.bytes}
+              contentType={item.contentType}
+              extra={`${item.width || 0}×${item.height || 0}`}
+            />
+          ))}
+        </div>
+      )}
+
+      {bundle?.original?.privacy && (
+        <details className="image-publish-debug">
+          <summary>Image privacy cleanup</summary>
+          <p>
+            The source image was rewritten locally before prepare, b3 prediction, and upload. The cleaned blob was rescanned before minting.
+          </p>
+          <JsonPreview label="Image privacy cleanup" data={bundle.original.privacy} />
+        </details>
+      )}
+
+      {bundle?.renditionGroup && (
+        <details className="image-publish-debug">
+          <summary>Manifest rendition group</summary>
+          <p>
+            This is the structured sibling-link block sent with every image upload. Exact original/rendition CIDs live here instead of cluttering public descriptions.
+          </p>
+          <JsonPreview label="Rendition group manifest block" data={bundle.renditionGroup} />
+        </details>
+      )}
+
+      {bundle?.receiptHash && (
+        <div className="image-bundle-receipt">
+          <span>Receipt</span>
+          <code>{bundle.receiptHash}</code>
+          <CopyButton text={bundle.receiptHash} label="Copy receipt" />
+        </div>
+      )}
+    </div>
+  );
 }
 
-async function callAssetUpload(assetClient, payload) {
-  if (typeof assetClient?.uploadImageAsset === 'function') {
-    return assetClient.uploadImageAsset(payload);
-  }
+function BundleAssetRow({ label, role, crabUrl, cid, bytes, contentType, extra = '' }) {
+  return (
+    <article className="image-bundle-asset-row">
+      <div>
+        <span>{label}</span>
+        <strong>{crabUrl || 'No crab URL returned'}</strong>
+        <small>
+          {role}
+          {extra ? ` · ${extra}` : ''}
+          {bytes ? ` · ${formatBytes(bytes)}` : ''}
+          {contentType ? ` · ${contentType}` : ''}
+        </small>
+        {cid && <code>{cid}</code>}
+      </div>
 
-  if (typeof assetClient?.uploadImage === 'function') {
-    return assetClient.uploadImage({
-      file: payload.file,
-      contentType: payload.file?.type || 'image/png',
-      paidProof: payload.paidProof,
-      metadata: {
-        title: payload.title,
-        description: payload.description,
-        tags: payload.tags,
-      },
-      idempotencyKey: payload.idempotencyKey,
-    });
-  }
-
-  throw new Error('Asset client is missing uploadImageAsset/uploadImage.');
+      <div className="image-bundle-row-actions">
+        {crabUrl && <CopyButton text={crabUrl} label="Copy URL" />}
+        {cid && <CopyButton text={cid} label="Copy CID" />}
+      </div>
+    </article>
+  );
 }
 
-async function callWalletHold(walletClient, strictApiRequest) {
-  if (typeof walletClient?.hold === 'function') {
-    return walletClient.hold(strictApiRequest, {
-      confirmed: true,
-    });
-  }
+function ErrorBlock({ title, error }) {
+  return (
+    <div className="image-publish-alert" role="alert">
+      <strong>{title}</strong>
+      <span>{error?.message || String(error || 'Unknown error')}</span>
+    </div>
+  );
+}
 
-  if (typeof walletClient?.createWalletHold === 'function') {
-    return walletClient.createWalletHold(strictApiRequest, {
-      confirmed: true,
-      idempotencyKey: strictApiRequest.idempotency_key,
-    });
-  }
+async function buildImagePublishPlan({
+  selectedFile,
+  draft,
+  fileFacts,
+  onEnsureRenditions,
+  fallbackRenditions,
+}) {
+  const original = await sanitizeImageForPublish(selectedFile, {
+    outputType: draft?.privacyOutputType || '',
+  });
+  const renditions = typeof onEnsureRenditions === 'function'
+    ? await onEnsureRenditions(original.blob)
+    : fallbackRenditions;
+  const renditionEntries = Array.isArray(renditions?.entries) ? renditions.entries : [];
+  const renditionBytes = renditionEntries.reduce((sum, item) => sum + Number(item.bytes || 0), 0);
+  const privacy = summarizeImagePrivacy(original);
 
-  throw new Error('Wallet client is missing hold/createWalletHold.');
+  return {
+    schema: 'crablink.image-publish-plan.v1',
+    createdAt: new Date().toISOString(),
+    original: {
+      ...original,
+      width: Number(original.width || fileFacts?.width || 0),
+      height: Number(original.height || fileFacts?.height || 0),
+    },
+    privacy,
+    renditions,
+    renditionEntries,
+    renditionBytes,
+    totalBytes: Number(original.bytes || 0) + renditionBytes,
+  };
+}
+
+async function uploadOneImage({ assetClient, blob, paidProof, metadata, idempotencyKey }) {
+  return assetClient.uploadImageAsset({
+    file: blob,
+    contentType: blob?.type || metadata?.contentType || 'image/png',
+    paidProof,
+    metadata,
+    idempotencyKey,
+  });
+}
+
+async function createWalletHoldWithNonceRecovery(walletClient, request) {
+  try {
+    const response = await walletClient.createWalletHold(request, { confirmed: true });
+    return { ...response, request };
+  } catch (error) {
+    const expectedNonce = expectedNonceFromWalletError(error);
+
+    if (!expectedNonce || String(expectedNonce) === String(request.nonce || '')) {
+      error.request = request;
+      throw error;
+    }
+
+    persistNextNonceHint(request.from, expectedNonce);
+
+    const retryRequest = {
+      ...request,
+      nonce: expectedNonce,
+      idempotency_key: compactIdempotencyKey(
+        stableIdempotencyKey(
+          'image-bundle-hold-retry',
+          request.from,
+          request.to,
+          request.amount_minor,
+          expectedNonce,
+          request.idempotency_key,
+        ),
+        'wallet-hold',
+      ),
+    };
+
+    try {
+      const retryResponse = await walletClient.createWalletHold(retryRequest, { confirmed: true });
+      return { ...retryResponse, request: retryRequest };
+    } catch (retryError) {
+      retryError.request = retryRequest;
+      throw retryError;
+    }
+  }
 }
 
 function getPreflight({ selectedFile, settings, gateway }) {
   if (!gateway) {
-    return {
-      ok: false,
-      reason: 'Gateway client is not loaded yet.',
-    };
+    return { ok: false, reason: 'Gateway client is not ready.' };
+  }
+
+  if (!settings?.walletAccount) {
+    return { ok: false, reason: 'Select a wallet account before minting.' };
+  }
+
+  if (!settings?.passportSubject) {
+    return { ok: false, reason: 'Select a passport before minting.' };
   }
 
   if (!selectedFile) {
+    return { ok: false, reason: 'Choose an image first.' };
+  }
+
+  if (!String(selectedFile.type || '').startsWith('image/')) {
+    return { ok: false, reason: 'The selected file must be an image.' };
+  }
+
+  const imageType = normalizeImageType(selectedFile.type, selectedFile.name);
+  if (!['image/png', 'image/jpeg', 'image/webp', 'image/avif'].includes(imageType)) {
     return {
       ok: false,
-      reason: 'Choose an image file before preparing a paid upload.',
+      reason: 'Privacy-safe image minting currently supports PNG, JPEG, WebP, and AVIF. GIF/SVG are blocked until exact-original and animated/vector policies are added.',
     };
   }
 
-  if (Number(selectedFile.size || 0) > MAX_SIMPLE_IMAGE_BYTES) {
+  if (Number(selectedFile.size || 0) > MAX_SINGLE_IMAGE_BYTES) {
     return {
       ok: false,
-      reason: 'This MVP upload path is capped at 1 MiB. Use a smaller test image or future rendition/streaming flow.',
+      reason: `The source image is ${formatBytes(selectedFile.size)}, above the current ${formatBytes(MAX_SINGLE_IMAGE_BYTES)} image upload bridge cap.`,
     };
   }
 
-  if (!String(settings?.walletAccount || '').trim()) {
-    return {
-      ok: false,
-      reason: 'Configure a wallet account label before preparing an image upload.',
-    };
-  }
+  return { ok: true, reason: '' };
+}
 
-  if (!String(settings?.passportSubject || '').trim()) {
-    return {
-      ok: false,
-      reason: 'Configure a passport subject before preparing an image upload.',
-    };
-  }
+function buildPreparePayload({ draft, selectedFile, settings, totalBytes, bundleCount }) {
+  const title = cleanPublicTitle(draft.title || selectedFile?.name || 'Untitled image');
+  const description = buildOriginalDescription({
+    draft,
+    privacySummary: null,
+    maxLength: 500,
+  });
+  const idempotencyKey = compactIdempotencyKey(
+    stableIdempotencyKey(
+      'image-bundle-prepare',
+      settings.walletAccount,
+      settings.passportSubject,
+      totalBytes,
+      bundleCount,
+      title,
+    ),
+    'image-prepare',
+  );
 
   return {
-    ok: true,
-    reason: '',
+    bytes: Math.max(1, Number(totalBytes || selectedFile?.size || 0)),
+    file_bytes: Math.max(1, Number(totalBytes || selectedFile?.size || 0)),
+    content_type: selectedFile?.type || 'image/png',
+    title,
+    description,
+    tags: addUniqueTags(draft.tags, ['image-bundle', `bundle-count:${bundleCount || 1}`]),
+    payer_account: settings.walletAccount,
+    owner_passport_subject: settings.passportSubject,
+    client_idempotency_key: idempotencyKey,
   };
 }
 
-function buildPreparePayload({ draft, selectedFile, settings }) {
-  const contentType = selectedFile.type || draft.expectedMimeType || 'image/png';
+function buildHoldRequest({ amount, prepareData, selectedFile, settings }) {
+  const amountMinor = Number(amount || 0);
 
-  return stripUndefined({
-    bytes: selectedFile.size,
-    payer_account: settings.walletAccount || undefined,
-    owner_passport_subject: settings.passportSubject || undefined,
-    content_type: contentType,
-    title: draft.title || selectedFile.name || undefined,
-    description: draft.description || draft.altText || undefined,
-    tags: normalizeTags(draft.tags),
-    client_idempotency_key: stableIdempotencyKey(
-      'image-prepare',
-      selectedFile.name || 'image',
-      selectedFile.size,
-      contentType,
-      settings.walletAccount,
-    ),
-  });
-}
-
-function buildHoldRequest({
-  amountMinor,
-  escrowAccount,
-  holdNonce,
-  prepareData,
-  preparePayload,
-  settings,
-  selectedFile,
-}) {
-  const prepare = asObject(prepareData);
-  const template = extractHoldTemplate(prepare);
-  const from = firstString(
-    template.from,
-    template.payer,
-    template.payer_account,
-    template.payerAccount,
-    prepare.payer_account,
-    prepare.payerAccount,
-    preparePayload?.payer_account,
-    settings.walletAccount,
-  );
-  const to = firstString(
-    template.to,
-    template.escrow,
-    template.escrow_account,
-    template.escrowAccount,
-    escrowAccount,
-    DEFAULT_ESCROW_ACCOUNT,
-  );
-  const templateNonce = firstString(template.nonce, template.next_nonce, template.nextNonce);
-  const nonce = Number(firstString(holdNonce, templateNonce, '1'));
-  const safeNonce = Number.isSafeInteger(nonce) && nonce > 0 ? nonce : 1;
-  const amount = firstString(
-    amountMinor,
-    template.amount_minor,
-    template.amountMinor,
-    template.amount,
-  );
-
-  if (!from || !to || !/^[0-9]+$/.test(amount) || amount === '0') {
+  if (!amountMinor || amountMinor < 1) {
     return null;
   }
 
-  const idemHint = firstString(
-    template.idempotency_key_hint,
-    template.idempotencyKeyHint,
-    template.idempotency_key,
-    template.idempotencyKey,
-    preparePayload?.client_idempotency_key,
-    preparePayload?.idempotency_key,
-    selectedFile?.name,
+  const from = String(settings.walletAccount || '').trim();
+  const to = String(
+    prepareData?.escrow_account ||
+      prepareData?.escrowAccount ||
+      prepareData?.to ||
+      DEFAULT_ESCROW_ACCOUNT,
+  ).trim();
+
+  if (!from || !to) {
+    return null;
+  }
+
+  const nonce = loadNextNonceHint(from);
+  const idempotencyKey = compactIdempotencyKey(
+    stableIdempotencyKey(
+      'image-bundle-wallet-hold',
+      from,
+      to,
+      amountMinor,
+      selectedFile?.name || '',
+      selectedFile?.size || '',
+      nonce,
+    ),
+    'wallet-hold',
   );
 
   return {
     from,
     to,
-    asset: firstString(template.asset, 'roc').toLowerCase(),
-    amount_minor: amount,
-    nonce: safeNonce,
-    memo: `CrabLink image hold for ${selectedFile?.name || preparePayload?.title || 'image upload'}`.slice(0, 240),
-    idempotency_key: buildWalletHoldIdempotencyKey({
-      preparePayload: {
-        ...(preparePayload || {}),
-        client_idempotency_key: idemHint || preparePayload?.client_idempotency_key,
-      },
-      from,
-      to,
-      amountMinor: amount,
-      nonce: safeNonce,
-    }),
+    asset: 'roc',
+    amount_minor: amountMinor,
+    nonce,
+    memo: `CrabLink image bundle mint: ${selectedFile?.name || 'image'}`,
+    idempotency_key: idempotencyKey,
   };
 }
 
-function buildWalletHoldIdempotencyKey({ preparePayload, from, to, amountMinor, nonce }) {
-  return compactIdempotencyKey(
-    stableIdempotencyKey(
-      'wallet-hold',
-      preparePayload?.client_idempotency_key || 'image-prepare',
-      from,
-      to,
-      amountMinor,
-      nonce,
-    ),
-    'wallet-hold',
-  );
-}
+function extractPrepareAmount(data) {
+  const candidates = [
+    data?.amount_minor,
+    data?.amountMinor,
+    data?.estimate_minor,
+    data?.estimateMinor,
+    data?.estimated_minor,
+    data?.estimatedMinor,
+    data?.price_minor,
+    data?.priceMinor,
+    data?.total_minor,
+    data?.totalMinor,
+    data?.quote?.amount_minor,
+    data?.quote?.amountMinor,
+    data?.quote?.estimate_minor,
+    data?.quote?.estimateMinor,
+    data?.wallet_hold?.amount_minor,
+    data?.walletHold?.amountMinor,
+  ];
 
-function extractPrepareAmountMinor(data) {
-  const object = asObject(data);
-  const template = extractHoldTemplate(object);
-  const paidStorage = asObject(object.paid_storage || object.paidStorage);
-  const estimate = asObject(object.estimate || paidStorage.estimate || object.price);
-  const nestedPrice = asObject(object.pricing || object.cost);
+  for (const candidate of candidates) {
+    const value = Number(candidate);
 
-  return firstString(
-    template.amount_minor,
-    template.amountMinor,
-    template.minimum_hold_minor,
-    template.minimumHoldMinor,
-    estimate.amount_minor,
-    estimate.amountMinor,
-    estimate.amount_minor_units,
-    estimate.minimum_hold_minor,
-    nestedPrice.amount_minor,
-    nestedPrice.amountMinor,
-    object.amount_minor,
-    object.amountMinor,
-    object.estimate_minor,
-    object.estimateMinor,
-    object.price_minor,
-    object.priceMinor,
-  );
-}
-
-function extractHoldTemplate(data) {
-  const object = asObject(data);
-
-  return firstObject(
-    object.hold_template,
-    object.holdTemplate,
-    object.wallet_hold_template,
-    object.walletHoldTemplate,
-    object.wallet_hold,
-    object.walletHold,
-    object.hold,
-    object.paid_hold,
-    object.paidHold,
-  );
-}
-
-function expectedNonceFromProblem(errorOrData = {}) {
-  const expected = expectedNonceFromWalletError(errorOrData);
-
-  if (expected) {
-    return expected;
-  }
-
-  const data = asObject(errorOrData?.data || errorOrData?.response?.data);
-  return firstString(
-    data.expected_nonce,
-    data.expectedNonce,
-    data.next_nonce,
-    data.nextNonce,
-    data.required_nonce,
-    data.requiredNonce,
-  );
-}
-
-function summarizeResult(state) {
-  if (!state || state.status === 'idle') {
-    return {
-      status: 'idle',
-    };
-  }
-
-  return {
-    status: state.status,
-    ok: state.status === 'ok',
-    route: state.response?.route || state.error?.route || '',
-    http: state.response?.status || state.error?.status || 0,
-    correlation_id: state.response?.correlationId || state.error?.correlationId || '',
-    nonce_recovery: state.nonceRecovery || null,
-    request: state.request || null,
-    strictApiRequest: state.apiRequest || null,
-    error: state.error
-      ? {
-          name: state.error.name || 'Error',
-          message: state.error.message || String(state.error),
-          reason: state.error.reason || '',
-          status: state.error.status || 0,
-          data: firstObject(state.error.data, state.error.response?.data),
-          walletApiRequest: state.error.apiRequest || null,
-        }
-      : null,
-    data: state.data || null,
-  };
-}
-
-function Fact({ label, value, monospace = false }) {
-  return (
-    <div className="image-publish-fact">
-      <span>{label}</span>
-      <strong className={monospace ? 'is-monospace' : ''}>{value || 'n/a'}</strong>
-    </div>
-  );
-}
-
-function toneForStatus(status) {
-  if (status === 'ok') return 'success';
-  if (status === 'sending') return 'info';
-  if (status === 'error') return 'warning';
-  return 'neutral';
-}
-
-function labelForStatus(status) {
-  if (status === 'ok') return 'ready';
-  if (status === 'sending') return 'sending';
-  if (status === 'error') return 'failed';
-  return 'not sent';
-}
-
-function normalizeTags(value) {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 24);
-  }
-
-  return String(value || '')
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-    .slice(0, 24);
-}
-
-function summarizeFile(file) {
-  if (!file) {
-    return null;
-  }
-
-  return {
-    name: file.name || 'selected image',
-    size: file.size || 0,
-    type: file.type || 'image/png',
-  };
-}
-
-function stripUndefined(value) {
-  return Object.fromEntries(
-    Object.entries(value || {}).filter(([, child]) => child !== undefined && child !== null && child !== ''),
-  );
-}
-
-function firstString(...values) {
-  for (const value of values) {
-    const safe = String(value ?? '').trim();
-
-    if (safe) {
-      return safe;
-    }
-  }
-
-  return '';
-}
-
-function asObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function firstObject(...values) {
-  for (const value of values) {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
+    if (Number.isSafeInteger(value) && value > 0) {
       return value;
     }
   }
 
-  return {};
+  return 0;
 }
 
-function nonceStorageKey(account) {
-  const safeAccount = String(account || 'default')
-    .trim()
-    .replace(/[^a-zA-Z0-9:_-]+/g, '-')
-    .slice(0, 80) || 'default';
+async function buildPredictedRenditionGroup({
+  selectedFile,
+  fileFacts,
+  draft,
+  renditionEntries = [],
+  privacySummary = null,
+}) {
+  const originalHash = await hashImageAssetBytes({
+    file: selectedFile,
+    contentType: selectedFile?.type || 'image/png',
+    role: 'original',
+  });
 
-  return `crablink.react.walletHold.lastNonce.${safeAccount}`;
+  const creatorIntent = buildStructuredCreatorIntent(draft, privacySummary);
+
+  const original = {
+    role: 'original',
+    label: 'Original',
+    cid: originalHash.cid,
+    hash: originalHash.hash,
+    crab_url: originalHash.crabUrl,
+    mime: selectedFile?.type || originalHash.contentType || 'image/png',
+    bytes: Number(selectedFile?.size || originalHash.bytes || 0),
+    width: Number(fileFacts?.width || 0),
+    height: Number(fileFacts?.height || 0),
+    creator_intent: creatorIntent,
+    privacy: privacySummary,
+  };
+
+  const renditions = [original];
+
+  for (const entry of renditionEntries) {
+    const hashed = await hashImageAssetBytes({
+      blob: entry.blob,
+      contentType: entry.contentType || entry.blob?.type || 'image/png',
+      role: entry.role || 'rendition',
+    });
+
+    renditions.push({
+      role: entry.role || 'rendition',
+      label: cleanPublicTitle(entry.label || entry.role || 'Rendition'),
+      cid: hashed.cid,
+      hash: hashed.hash,
+      crab_url: hashed.crabUrl,
+      mime: entry.contentType || hashed.contentType || entry.blob?.type || 'image/png',
+      bytes: Number(entry.bytes || hashed.bytes || entry.blob?.size || 0),
+      width: Number(entry.width || 0),
+      height: Number(entry.height || 0),
+      target_width: Number(entry.targetWidth || 0),
+      target_height: Number(entry.targetHeight || 0),
+      fit: entry.fit || '',
+      use_case: entry.useCase || '',
+      source_privacy: 'generated_from_privacy_cleaned_source',
+      creator_intent: creatorIntent,
+    });
+  }
+
+  return {
+    schema: 'crablink.image-rendition-group.v1',
+    group_id: original.cid,
+    source_cid: original.cid,
+    canonical_crab_url: original.crab_url,
+    source_role: String(draft?.imageRole || 'standalone_image'),
+    generated_at: new Date().toISOString(),
+    relationship_truth: 'privacy_cleaned_client_b3_prediction_then_backend_verified_before_display',
+    creator_intent: creatorIntent,
+    privacy: privacySummary,
+    renditions,
+  };
+}
+
+function findRenditionPlan(group, role) {
+  const cleanRole = String(role || '').trim();
+
+  return (Array.isArray(group?.renditions) ? group.renditions : []).find(
+    (item) => String(item.role || '').trim() === cleanRole,
+  ) || null;
+}
+
+function assertCidMatchesPrediction(actualCid, predictedCid, label) {
+  const actual = normalizeCidForCompare(actualCid);
+  const predicted = normalizeCidForCompare(predictedCid);
+
+  if (!actual || !predicted || actual !== predicted) {
+    throw new Error(
+      `Backend CID mismatch for ${label}: predicted ${predicted || 'n/a'}, backend returned ${actual || 'n/a'}.`,
+    );
+  }
+}
+
+function normalizeCidForCompare(value) {
+  const clean = String(value || '').trim().replace(/^b3:/i, '').toLowerCase();
+  return /^[0-9a-f]{64}$/.test(clean) ? `b3:${clean}` : '';
+}
+
+function buildOriginalDescription({ draft, privacySummary, maxLength = 500 }) {
+  const descriptionText = cleanPublicDescription(
+    draft.description,
+    draft.title ? `${cleanPublicTitle(draft.title)}.` : 'No creator description provided.',
+  );
+
+  const privacyNote = privacySummary?.verification?.status === 'passed'
+    ? 'Privacy cleanup verified before minting.'
+    : 'Privacy-cleaned before minting.';
+
+  return clampDescription(`Image description: ${descriptionText} ${privacyNote}`, maxLength);
+}
+
+function buildRenditionDescription({ draft, entry, privacySummary, maxLength = 500 }) {
+  const label = cleanPublicTitle(entry?.label || entry?.role || 'Generated version');
+  const dimensions = entry?.width && entry?.height ? ` (${entry.width}×${entry.height})` : '';
+  const descriptionText = cleanPublicDescription(
+    draft.description,
+    draft.title ? `${cleanPublicTitle(draft.title)}.` : 'No creator description provided.',
+  );
+
+  const privacyNote = privacySummary?.verification?.status === 'passed'
+    ? 'Privacy cleanup verified before minting.'
+    : 'Privacy-cleaned before minting.';
+
+  return clampDescription(
+    `Image description: ${descriptionText} Rendition: ${label}${dimensions} generated from the privacy-cleaned original image. ${privacyNote}`,
+    maxLength,
+  );
+}
+
+function buildAdvancedManifestLines({ draft, privacySummary }) {
+  const lines = [];
+
+  const creatorDisplay = cleanPublicDescription(draft.creatorDisplay, '');
+  if (creatorDisplay) {
+    lines.push(`Creator display: ${creatorDisplay}`);
+  }
+
+  if (draft.sourceMode) {
+    lines.push(`Source hint: ${labelFromSnake(draft.sourceMode)}`);
+  }
+
+  if (draft.rightsMode) {
+    lines.push(`Rights hint: ${labelFromSnake(draft.rightsMode)}`);
+  }
+
+  const altText = cleanPublicDescription(draft.altText, '');
+  if (altText) {
+    lines.push(`Alt text: ${altText}`);
+  }
+
+  const provenance = cleanPublicDescription(draft.provenanceNote, '');
+  if (provenance) {
+    lines.push(`Provenance note: ${provenance}`);
+  }
+
+  if (draft.imageRole) {
+    lines.push(`Image role: ${labelFromSnake(draft.imageRole)}`);
+  }
+
+  const useCases = parseCsv(draft.useCaseCsv || draft.imageRole)
+    .map(labelFromSnake)
+    .filter(Boolean);
+
+  if (useCases.length) {
+    lines.push(`Use cases: ${useCases.join(', ')}`);
+  }
+
+  const privacyLine = privacySummary?.verification?.status === 'passed'
+    ? 'Privacy cleanup: verified before minting.'
+    : 'Privacy cleanup: privacy-cleaned before minting.';
+
+  lines.push(privacyLine);
+
+  return lines;
+}
+
+function buildStructuredCreatorIntent(draft, privacySummary) {
+  return {
+    schema: 'crablink.image-creator-intent.v1',
+    title: cleanPublicTitle(draft.title || 'Image'),
+    description_label: 'Image description',
+    description: cleanPublicDescription(draft.description, ''),
+    creator_display: cleanPublicDescription(draft.creatorDisplay, ''),
+    source_hint: draft.sourceMode || '',
+    source_label: labelFromSnake(draft.sourceMode),
+    rights_hint: draft.rightsMode || '',
+    rights_label: labelFromSnake(draft.rightsMode),
+    alt_text: cleanPublicDescription(draft.altText, ''),
+    provenance_note: cleanPublicDescription(draft.provenanceNote, ''),
+    image_role: draft.imageRole || 'standalone_image',
+    image_role_label: labelFromSnake(draft.imageRole || 'standalone_image'),
+    use_cases: parseCsv(draft.useCaseCsv || draft.imageRole),
+    use_case_labels: parseCsv(draft.useCaseCsv || draft.imageRole).map(labelFromSnake),
+    privacy_cleanup_verified: privacySummary?.verification?.status === 'passed',
+    backend_verified_identity_or_rights: false,
+    note:
+      'Creator display, source, rights, alt text, and provenance are intentional manifest fields. Hidden file metadata was privacy-cleaned before minting.',
+  };
+}
+
+function joinManifestLines(lines) {
+  return lines
+    .map((line) => cleanHeaderText(line))
+    .filter(Boolean)
+    .join(' | ');
+}
+
+function cleanPublicTitle(value, fallback = 'Image') {
+  const clean = cleanDisplayText(value, fallback)
+    .replace(/\s+[—-]\s*$/g, '')
+    .slice(0, 140)
+    .trim();
+
+  return clean || fallback;
+}
+
+function cleanPublicDescription(value, fallback = '') {
+  const clean = cleanDisplayText(value, '');
+
+  if (!clean) {
+    return cleanDisplayText(fallback, '');
+  }
+
+  return clean;
+}
+
+function cleanDisplayText(value, fallback = '') {
+  return String(value || fallback || '')
+    .replace(/\bOriginal image:\s*crab:\/\/\S+/gi, '')
+    .replace(/\bOriginal CID:\s*b3:[0-9a-f]{64}/gi, '')
+    .replace(/\bcrab:\/\/[a-z0-9._:@-]+/gi, '')
+    .replace(/\bb3:[0-9a-f]{64}/gi, '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function cleanHeaderText(value) {
+  return String(value || '')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function clampDescription(value, maxLength = 900) {
+  const clean = cleanHeaderText(value);
+
+  if (clean.length <= maxLength) {
+    return clean;
+  }
+
+  return `${clean.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+}
+
+function addUniqueTags(input, extra = []) {
+  const tags = String(input || '')
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .map((tag) => cleanTag(tag))
+    .filter(Boolean);
+
+  for (const item of extra) {
+    const clean = cleanTag(item);
+
+    if (clean && !tags.includes(clean)) {
+      tags.push(clean);
+    }
+  }
+
+  return tags.slice(0, 24);
+}
+
+function cleanTag(value) {
+  const clean = String(value || '').trim();
+
+  if (!clean) return '';
+  if (/^b3:[0-9a-f]{64}$/i.test(clean)) return '';
+  if (/^original:b3:[0-9a-f]{64}$/i.test(clean)) return '';
+  if (/^crab:\/\//i.test(clean)) return '';
+  if (clean.length > 80) return clean.slice(0, 80);
+
+  return clean;
+}
+
+function sourceTag(value) {
+  const clean = String(value || '').trim();
+  return clean ? `source:${clean}` : '';
+}
+
+function rightsTag(value) {
+  const clean = String(value || '').trim();
+  return clean ? `rights:${clean}` : '';
+}
+
+function parseCsv(value) {
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 16);
+}
+
+function labelFromSnake(value) {
+  return String(value || '')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function loadNextNonceHint(account) {
-  try {
-    const raw = globalThis.localStorage?.getItem?.(nonceStorageKey(account));
-    const last = Number(raw || 0);
+  const key = `${NONCE_HINT_PREFIX}${String(account || '').trim()}`;
 
-    if (Number.isSafeInteger(last) && last > 0) {
-      return String(last + 1);
-    }
-  } catch (_error) {
-    // Local nonce hints are optional UI convenience only, never backend truth.
+  if (!key || typeof window === 'undefined') {
+    return 1;
   }
 
-  return '1';
+  const value = Number(window.localStorage.getItem(key) || '1');
+  return Number.isSafeInteger(value) && value > 0 ? value : 1;
 }
 
-function saveLastNonceHint(account, nonce) {
-  const value = Number(nonce || 0);
+function persistNextNonceHint(account, nonce) {
+  const cleanAccount = String(account || '').trim();
+  const value = Number(nonce);
 
-  if (!Number.isSafeInteger(value) || value < 1) {
+  if (!cleanAccount || !Number.isSafeInteger(value) || value < 1 || typeof window === 'undefined') {
     return;
   }
 
-  try {
-    globalThis.localStorage?.setItem?.(nonceStorageKey(account), String(value));
-  } catch (_error) {
-    // Local nonce hints are optional UI convenience only, never backend truth.
+  window.localStorage.setItem(`${NONCE_HINT_PREFIX}${cleanAccount}`, String(value));
+}
+
+function redactProof(proof) {
+  if (!proof) {
+    return null;
   }
+
+  return {
+    op: proof.op || 'hold',
+    asset: proof.asset || 'roc',
+    amount_minor: proof.amount_minor || proof.amountMinor || '',
+    from: proof.from || '',
+    to: proof.to || '',
+    txid: proof.txid ? `${String(proof.txid).slice(0, 12)}…` : '',
+    receipt_hash: proof.receipt_hash ? `${String(proof.receipt_hash).slice(0, 12)}…` : '',
+  };
+}
+
+function summarizeState(state) {
+  return {
+    status: state?.status || 'idle',
+    data: state?.data || null,
+    error: state?.error
+      ? {
+          name: state.error.name,
+          message: state.error.message,
+          reason: state.error.reason,
+          status: state.error.status,
+          correlationId: state.error.correlationId,
+        }
+      : null,
+    request: state?.request || null,
+  };
+}
+
+function firstObject(...values) {
+  for (const value of values) {
+    if (value && typeof value === 'object') {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function formatRoc(value) {
+  const amount = Number(value || 0);
+  return Number.isFinite(amount) ? String(amount) : '0';
 }
 
 function formatBytes(value) {
@@ -1159,14 +1353,4 @@ function formatBytes(value) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-}
-
-function formatRocUnits(value) {
-  const raw = String(value ?? '').trim();
-
-  if (!/^[0-9]+$/.test(raw)) {
-    return raw || '0';
-  }
-
-  return raw.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }

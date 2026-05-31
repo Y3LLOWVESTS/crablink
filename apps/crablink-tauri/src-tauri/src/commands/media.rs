@@ -1,13 +1,36 @@
-//! RO:WHAT — Native media readiness diagnostics for CrabLink Tauri.
-//! RO:WHY — Camera/screen support must be explicit, source-labeled, and honest before stream capture work.
-//! RO:INTERACTS — StreamMediaReadiness.jsx, StreamLocalPreview.jsx, Tauri runtime/platform.
-//! RO:INVARIANTS — diagnostics only; no capture start; no local path leak; no ingest secret; no backend live claim.
-//! RO:METRICS — none yet; future native media manager should expose capture/session counters.
-//! RO:CONFIG — reports compile/runtime platform facts and macOS permission guidance.
-//! RO:SECURITY — no camera/mic permission is requested by this command; it only describes capability posture.
-//! RO:TEST — cargo check and manual crab://stream media readiness smoke.
+//! RO:WHAT — Native media readiness, video source selection, and video prepare command bridge.
+//! RO:WHY — Media workflows need native file authority while React remains display/user intent only.
+//! RO:INTERACTS — VideoConverterPanel.jsx, videoConverterClient.js, AppState.video_sources, AppState.video_jobs.
+//! RO:INVARIANTS — typed allowlisted commands only; no raw paths returned; no media bytes; no shell bridge.
+//! RO:METRICS — none yet; future media jobs should expose bounded progress/status counters.
+//! RO:CONFIG — reports platform facts and uses conservative MVP media limits.
+//! RO:SECURITY — picker/register commands redact paths; no backend truth, receipts, or wallet mutation here.
+//! RO:TEST — cargo check; manual crab://video → choose native source → build plan → start prepare job.
 
-use serde::Serialize;
+use crate::media::{
+    cancel_video_prepare_job, clear_video_source_registration, get_registered_video_source_for_job,
+    get_video_prepare_job_status, get_video_source_registration, plan_video_renditions_from_probe,
+    probe_video_from_local_facts, register_video_source_from_path, start_video_prepare_job,
+    VideoJobStatus, VideoPrepareBundleInput, VideoProbeInput, VideoProbeSummary,
+    VideoRegisterSourceInput, VideoRenditionPlanInput, VideoRenditionPlanResponse,
+    VideoSourceClearResponse, VideoSourceRegistration,
+};
+use crate::state::AppState;
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, State};
+use tauri_plugin_dialog::DialogExt;
+
+const VIDEO_PICKER_EXTENSIONS: &[&str] = &["mp4", "m4v", "mov", "webm", "ogv", "ogg", "mkv", "avi"];
+
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VideoChooseSourceInput {
+    pub content_type: Option<String>,
+    pub duration_seconds: Option<f64>,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub frame_rate: Option<String>,
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -16,6 +39,11 @@ pub struct NativeMediaStatus {
     pub platform: String,
     pub os_family: String,
     pub native_capture_wired: bool,
+    pub video_converter_scaffold_wired: bool,
+    pub video_source_registration_wired: bool,
+    pub video_native_file_picker_wired: bool,
+    pub video_prepare_jobs_wired: bool,
+    pub video_transcode_jobs_wired: bool,
     pub webview_capture_expected: String,
     pub camera_permission_model: String,
     pub microphone_permission_model: String,
@@ -37,6 +65,7 @@ pub struct NativeMediaTruthBoundary {
     pub starts_capture: bool,
     pub requests_permission: bool,
     pub opens_system_settings: bool,
+    pub opens_native_file_picker: bool,
     pub executes_shell: bool,
     pub creates_stream_session: bool,
     pub creates_backend_stream: bool,
@@ -44,6 +73,10 @@ pub struct NativeMediaTruthBoundary {
     pub sends_media_bytes: bool,
     pub mints_b3: bool,
     pub mutates_wallet: bool,
+    pub probes_video_metadata: bool,
+    pub registers_native_video_source: bool,
+    pub starts_video_prepare_job: bool,
+    pub runs_video_transcode: bool,
 }
 
 #[tauri::command]
@@ -53,11 +86,16 @@ pub fn media_status() -> NativeMediaStatus {
     let bundle_id = "com.rustyonions.crablink".to_string();
 
     NativeMediaStatus {
-        schema: "crablink.media-status.v2".to_string(),
+        schema: "crablink.media-status.v7".to_string(),
         platform: platform.clone(),
         os_family,
         native_capture_wired: false,
-        webview_capture_expected: "probe_from_react_webview".to_string(),
+        video_converter_scaffold_wired: true,
+        video_source_registration_wired: true,
+        video_native_file_picker_wired: true,
+        video_prepare_jobs_wired: true,
+        video_transcode_jobs_wired: true,
+        webview_capture_expected: "optional_react_webview_preview".to_string(),
         camera_permission_model: camera_permission_model(&platform).to_string(),
         microphone_permission_model: microphone_permission_model(&platform).to_string(),
         screen_permission_model: screen_permission_model(&platform).to_string(),
@@ -72,6 +110,7 @@ pub fn media_status() -> NativeMediaStatus {
             starts_capture: false,
             requests_permission: false,
             opens_system_settings: false,
+            opens_native_file_picker: true,
             executes_shell: false,
             creates_stream_session: false,
             creates_backend_stream: false,
@@ -79,9 +118,128 @@ pub fn media_status() -> NativeMediaStatus {
             sends_media_bytes: false,
             mints_b3: false,
             mutates_wallet: false,
+            probes_video_metadata: true,
+            registers_native_video_source: true,
+            starts_video_prepare_job: true,
+            runs_video_transcode: true,
         },
         warnings: media_warnings(&platform),
     }
+}
+
+#[tauri::command]
+pub async fn media_choose_video_source(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    input: VideoChooseSourceInput,
+) -> Result<VideoSourceRegistration, String> {
+    let picked = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog()
+            .file()
+            .set_title("Choose CrabLink video source")
+            .add_filter("Video files", VIDEO_PICKER_EXTENSIONS)
+            .blocking_pick_file()
+            .map(|file_path| file_path.to_string())
+    })
+    .await
+    .map_err(|_| "native file picker task failed".to_string())?;
+
+    let Some(path) = picked else {
+        return Err("video source selection cancelled".to_string());
+    };
+
+    if path.trim().is_empty() {
+        return Err("native file picker returned an empty path".to_string());
+    }
+
+    register_video_source_from_path(
+        &state.video_sources,
+        VideoRegisterSourceInput {
+            path,
+            content_type: input.content_type,
+            duration_seconds: input.duration_seconds,
+            width: input.width,
+            height: input.height,
+            frame_rate: input.frame_rate,
+            source: Some("native_file_picker".to_string()),
+        },
+    )
+}
+
+#[tauri::command]
+pub fn media_register_video_source(
+    state: State<'_, AppState>,
+    input: VideoRegisterSourceInput,
+) -> Result<VideoSourceRegistration, String> {
+    register_video_source_from_path(&state.video_sources, input)
+}
+
+#[tauri::command]
+pub fn media_get_video_source(
+    state: State<'_, AppState>,
+    source_handle: String,
+) -> Result<VideoSourceRegistration, String> {
+    get_video_source_registration(&state.video_sources, source_handle)
+}
+
+#[tauri::command]
+pub fn media_clear_video_source(
+    state: State<'_, AppState>,
+    source_handle: String,
+) -> Result<VideoSourceClearResponse, String> {
+    clear_video_source_registration(&state.video_sources, source_handle)
+}
+
+#[tauri::command]
+pub fn media_probe_video(input: VideoProbeInput) -> Result<VideoProbeSummary, String> {
+    Ok(probe_video_from_local_facts(input))
+}
+
+#[tauri::command]
+pub fn media_plan_video_renditions(
+    input: VideoRenditionPlanInput,
+) -> Result<VideoRenditionPlanResponse, String> {
+    Ok(plan_video_renditions_from_probe(input))
+}
+
+#[tauri::command]
+pub fn media_prepare_video_bundle(
+    state: State<'_, AppState>,
+    input: VideoPrepareBundleInput,
+) -> Result<VideoJobStatus, String> {
+    let registered_source = match input.source_handle.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+        Some(source_handle) => {
+            let registered = get_registered_video_source_for_job(&state.video_sources, source_handle)?;
+
+            if registered.public.bytes != input.plan.source.bytes {
+                return Err(
+                    "registered native source size does not match the current video plan source size"
+                        .to_string(),
+                );
+            }
+
+            Some(registered)
+        }
+        None => None,
+    };
+
+    start_video_prepare_job(&state.video_jobs, input, registered_source)
+}
+
+#[tauri::command]
+pub fn media_get_video_job_status(
+    state: State<'_, AppState>,
+    job_id: String,
+) -> Result<VideoJobStatus, String> {
+    get_video_prepare_job_status(&state.video_jobs, job_id)
+}
+
+#[tauri::command]
+pub fn media_cancel_video_job(
+    state: State<'_, AppState>,
+    job_id: String,
+) -> Result<VideoJobStatus, String> {
+    cancel_video_prepare_job(&state.video_jobs, job_id)
 }
 
 fn camera_permission_model(platform: &str) -> &'static str {
@@ -113,8 +271,8 @@ fn screen_permission_model(platform: &str) -> &'static str {
 
 fn recommended_next_step(platform: &str) -> &'static str {
     match platform {
-        "macos" => "Run npm run tauri:dev:mac-media after adding Info.plist. If permissions were denied before, reset Camera/Microphone with tccutil, then relaunch.",
-        _ => "Use WebView media probe first; keep local file rehearsal fallback; wire native capture in a dedicated media module next.",
+        "macos" => "Use crab://video → Choose video source and build MP4 plan. The Rust job stages local MP4/JPEG outputs; backend upload/mint remains an explicit future step.",
+        _ => "Use the native source picker where available, then keep video work in Rust-owned bounded job modules.",
     }
 }
 
@@ -138,23 +296,26 @@ fn macos_system_settings_paths(platform: &str) -> Vec<String> {
     vec![
         "System Settings → Privacy & Security → Camera → CrabLink".to_string(),
         "System Settings → Privacy & Security → Microphone → CrabLink".to_string(),
-        "System Settings → Privacy & Security → Screen & System Audio Recording → CrabLink".to_string(),
+        "System Settings → Privacy & Security → Screen & System Audio Recording → CrabLink"
+            .to_string(),
     ]
 }
 
 fn media_warnings(platform: &str) -> Vec<String> {
     let mut warnings = vec![
-        "This command does not request camera, microphone, or screen permission.".to_string(),
+        "This command set does not request camera, microphone, or screen permission.".to_string(),
         "React/WebView camera APIs may be unavailable depending on platform/runtime.".to_string(),
-        "Native capture is intentionally not wired in this diagnostic batch.".to_string(),
+        "Native video source picking returns only a redacted source registration DTO to React."
+            .to_string(),
+        "Video prepare jobs can now run a fixed Rust-owned FFmpeg path for staged local MP4/JPEG outputs when a native source handle is registered.".to_string(),
+        "Staged handles are not backend CIDs, crab URLs, receipts, or ownership proofs."
+            .to_string(),
     ];
 
     if platform == "macos" {
         warnings.push(
-            "The macOS dev media profile enables WebView private API behavior for proof work only; do not use it for App Store builds.".to_string(),
-        );
-        warnings.push(
-            "If CrabLink was denied permission before Info.plist existed, reset macOS privacy state and relaunch the app.".to_string(),
+            "On macOS, use the media dev profile when testing camera/microphone/screen behavior."
+                .to_string(),
         );
     }
 

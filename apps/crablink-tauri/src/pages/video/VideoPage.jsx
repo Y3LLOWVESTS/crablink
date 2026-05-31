@@ -1,19 +1,18 @@
 /**
- * RO:WHAT — Route owner for the React crab://video local creator workspace.
- * RO:WHY — CrabLink refactor; migrates video drafting onto shared creator workspace architecture before backend video flows exist.
- * RO:INTERACTS — VideoDraft.jsx, videoDraftModel.js, useCreatorDraft, CreatorWorkspaceLayout, RouteTruthPanel.
+ * RO:WHAT — Route owner for the React crab://video simple mint workspace.
+ * RO:WHY — Keeps video minting aligned with the image one-card Simple Mint reference flow.
+ * RO:INTERACTS — VideoDraft.jsx, videoDraftModel.js, useCreatorDraft, VideoPublishFlow.
  * RO:INVARIANTS — local draft only; no fake b3 CID; no fake manifest CID; no ROC mutation; no backend publication claim.
- * RO:METRICS — none; future publish/prepare routes must use gateway client metrics/correlation IDs.
+ * RO:METRICS — none; gateway publish routes expose their own correlation IDs in the publish panel.
  * RO:CONFIG — app settings are display labels only.
- * RO:SECURITY — trusted local UI only; no arbitrary crab code execution; no wallet spend authority.
- * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://video route smoke.
+ * RO:SECURITY — React owns display/user intent only; backend/wallet truth remains service-owned.
+ * RO:TEST — npm run build; manual crab://video source → prepare → hold → staged upload smoke.
  */
 
 import { useCallback } from 'react';
-import CreatorWorkspaceLayout from '../../shared/components/CreatorWorkspaceLayout.jsx';
-import RouteTruthPanel from '../../shared/components/RouteTruthPanel.jsx';
+import Badge from '../../shared/components/Badge.jsx';
 import useCreatorDraft from '../../shared/hooks/useCreatorDraft.js';
-import VideoDraft, { VideoSidePanel } from './VideoDraft.jsx';
+import VideoDraft from './VideoDraft.jsx';
 import {
   DEFAULT_VIDEO_DRAFT,
   buildVideoManifestDraft,
@@ -21,24 +20,6 @@ import {
   statsForVideoDraft,
 } from './videoDraftModel.js';
 import './video.css';
-
-const PRINCIPLES = Object.freeze([
-  {
-    title: 'Rendition graph ready',
-    copy:
-      'Every real video byte variant should become its own immutable b3-backed object later. This workspace only plans the manifest relationships.',
-  },
-  {
-    title: 'Linked assets stay separate',
-    copy:
-      'Poster art, thumbnails, captions, dubs, transcripts, and trailers should remain separately addressed assets instead of being hidden inside one video blob.',
-  },
-  {
-    title: 'Local preview is honest',
-    copy:
-      'Creators can preview a selected local video file in the WebView, but that preview is not a b3 object, not a backend stream, not a paid unlock, and not persistent truth.',
-  },
-]);
 
 export default function VideoPage({ app, route }) {
   const buildManifest = useCallback(
@@ -54,47 +35,25 @@ export default function VideoPage({ app, route }) {
   });
 
   return (
-    <CreatorWorkspaceLayout
-      eyebrow="crab://video"
-      title="Video Workspace"
-      copy="Draft video asset manifests and mint bounded video-lite uploads through the same explicit prepare → ROC hold → upload flow proven for images. Larger range/segment streaming remains future work."
-      badges={[
-        { label: 'React lane', tone: 'neutral' },
-        { label: 'Explicit paid mint', tone: 'warning' },
-        { label: 'Local preview', tone: 'neutral' },
-        { label: 'Video-lite', tone: 'neutral' },
-      ]}
-      principles={PRINCIPLES}
-      side={<VideoSidePanel draftState={draftState} />}
-      className="video-page"
-    >
-      <RouteTruthPanel
-        routeKind="video"
-        tone="info"
-        title="Video route truth boundary"
-        allowed={[
-          'local metadata drafting',
-          'rendition planning',
-          'linked asset planning',
-          'manifest JSON preview',
-          'bounded local file playback preview',
-          'explicit video prepare request',
-          'explicit ROC hold confirmation',
-          'bounded paid video byte upload',
-        ]}
-        blocked={[
-          'no silent video upload',
-          'no fake b3 CID minted locally',
-          'no fake manifest CID minted locally',
-          'no backend range/stream playback yet',
-          'no local preview path persisted into manifest',
-          'no silent ROC hold/capture/release',
-          'no direct wallet mutation from React',
-          'no DRM or anti-rip claim',
-        ]}
-      />
+    <main className="video-page video-page-simple video-page-one-card">
+      <header className="video-simple-hero">
+        <div>
+          <p className="cl-eyebrow">crab://video</p>
+          <h1>Mint a video</h1>
+          <p>
+            Choose one source video, prepare MP4 versions, confirm the ROC hold, then mint the
+            selected video bundle as backend-returned assets.
+          </p>
+        </div>
 
-      <VideoDraft app={app} draftState={draftState} />
-    </CreatorWorkspaceLayout>
+        <div className="video-simple-hero-badges">
+          <Badge tone="success">MP4 bundle mint</Badge>
+          <Badge tone="warning">Explicit ROC hold</Badge>
+          <Badge tone="info">Backend CIDs only</Badge>
+        </div>
+      </header>
+
+      <VideoDraft app={app} route={route} draftState={draftState} />
+    </main>
   );
 }

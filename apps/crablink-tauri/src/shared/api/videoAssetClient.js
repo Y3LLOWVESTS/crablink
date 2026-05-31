@@ -2,13 +2,13 @@ import { invoke } from '@tauri-apps/api/core';
 
 /**
  * RO:WHAT — Video asset API client for explicit paid crab://video minting.
- * RO:WHY — Brings the proven image prepare → hold → upload workflow to bounded video-lite assets.
- * RO:INTERACTS — GatewayClient, VideoPublishFlow, src-tauri asset upload command, svc-gateway /assets/video routes.
+ * RO:WHY — Brings the proven image prepare → hold → upload workflow to bounded video-lite assets and Rust-staged outputs.
+ * RO:INTERACTS — GatewayClient, VideoPublishFlow, src-tauri asset upload commands, svc-gateway /assets/video and /assets/image routes.
  * RO:INVARIANTS — no fake b3 CIDs; no fake receipts; no silent ROC spend; backend remains publication truth.
  * RO:METRICS — gateway/command correlation IDs are preserved for diagnostics.
  * RO:CONFIG — uses configured gateway URL, passport, wallet, timeout, and bearer token.
  * RO:SECURITY — paid proof headers are required; no private keys or local filesystem paths are sent.
- * RO:TEST — manual crab://video prepare → hold → upload → crab://<hash>.video paid view smoke.
+ * RO:TEST — manual crab://video prepare → hold → staged bundle upload → crab://<hash>.video paid view smoke.
  */
 
 const HEX_64_RE = /^[0-9a-f]{64}$/;
@@ -83,40 +83,14 @@ export class VideoAssetClient {
       'video-upload',
     );
 
-    const headers = {
-      Accept: 'application/json',
-      'Content-Type': contentTypeHeader,
-      'Idempotency-Key': idem,
-      'x-ron-paid-op': proof.op || 'hold',
-      'x-ron-paid-asset': proof.asset || 'roc',
-      'x-ron-paid-estimate-minor': proof.amount_minor,
-      'x-ron-wallet-txid': proof.txid,
-      'x-ron-wallet-receipt-hash': proof.receipt_hash,
-      'x-ron-wallet-from': proof.from,
-      'x-ron-wallet-to': proof.to,
-    };
-
-    const passportSubject = stringValue(this.gateway?.passportSubject);
-    const walletAccount = stringValue(proof.from, this.gateway?.walletAccount);
-    const title = stringValue(metadata.title);
-    const description = stringValue(metadata.description, metadata.summary);
-    const tags = Array.isArray(metadata.tags) ? metadata.tags.join(',') : stringValue(metadata.tags);
-    const duration = stringValue(metadata.duration);
-    const resolution = stringValue(metadata.resolution);
-    const aspectRatio = stringValue(metadata.aspectRatio, metadata.aspect_ratio);
-    const videoKind = stringValue(metadata.videoKind, metadata.video_kind);
-    const language = stringValue(metadata.language);
-
-    if (passportSubject) headers['x-ron-passport'] = passportSubject;
-    if (walletAccount) headers['x-ron-wallet-account'] = walletAccount;
-    if (title) headers['x-ron-asset-title'] = title;
-    if (description) headers['x-ron-asset-description'] = description;
-    if (tags) headers['x-ron-asset-tags'] = tags;
-    if (duration) headers['x-ron-video-duration'] = duration;
-    if (resolution) headers['x-ron-video-resolution'] = resolution;
-    if (aspectRatio) headers['x-ron-video-aspect-ratio'] = aspectRatio;
-    if (videoKind) headers['x-ron-video-kind'] = videoKind;
-    if (language) headers['x-ron-video-language'] = language;
+    const headers = buildPaidUploadHeaders({
+      gateway: this.gateway,
+      proof,
+      contentType: contentTypeHeader,
+      idempotencyKey: idem,
+      metadata,
+      assetKind: 'video',
+    });
 
     const response = canUseTauriInvoke()
       ? await uploadVideoWithTauriCommand({
@@ -134,22 +108,111 @@ export class VideoAssetClient {
           idempotencyKey: idem,
         });
 
-    const assetUrl = extractVideoAssetUrl(response?.data || response);
-    const assetCid = extractVideoAssetCid(response?.data || response);
+    return normalizeUploadResponse({
+      response,
+      headers,
+      proof,
+      contentType: contentTypeHeader,
+      bytes: blob.size,
+      idempotencyKey: idem,
+      assetKind: 'video',
+      transport: canUseTauriInvoke() ? 'tauri_upload_video_asset_gateway' : 'gateway_request_blob',
+    });
+  }
 
-    return {
-      ...response,
-      request: {
-        bytes: blob.size,
-        content_type: contentTypeHeader,
-        headers: redactProofHeaders(headers),
-        idempotency_key: idem,
-        transport: canUseTauriInvoke() ? 'tauri_upload_video_asset_gateway' : 'gateway_request_blob',
-      },
-      paidProof: proof,
-      videoAssetUrl: assetUrl,
-      videoAssetCid: assetCid,
-    };
+  async hashStagedAsset({ stagedHandle, assetKind = 'video', contentType, role, maxBytes } = {}) {
+    const kind = normalizeAssetKind(assetKind);
+
+    if (!stringValue(stagedHandle).startsWith('staged://video-job/')) {
+      throw makeVideoError('Staged hash requires a staged://video-job/... handle.', 'invalid_staged_handle');
+    }
+
+    if (!canUseTauriInvoke()) {
+      throw makeVideoError(
+        'Staged video outputs can only be hashed through the Tauri Rust bridge.',
+        'tauri_required_for_staged_hash',
+      );
+    }
+
+    return hashStagedWithTauriCommand({
+      stagedHandle,
+      assetKind: kind,
+      contentType: stringValue(contentType, kind === 'image' ? 'image/jpeg' : 'video/mp4'),
+      role: stringValue(role, kind),
+      maxBytes,
+    });
+  }
+
+  async uploadStagedAsset({
+    stagedHandle,
+    assetKind = 'video',
+    contentType,
+    bytes,
+    paidProof,
+    metadata = {},
+    idempotencyKey = '',
+  } = {}) {
+    this.assertGateway();
+
+    const kind = normalizeAssetKind(assetKind);
+    const proof = normalizePaidProof(paidProof);
+    const contentTypeHeader = stringValue(contentType, kind === 'image' ? 'image/jpeg' : 'video/mp4');
+    const idem = compactIdempotencyKey(
+      idempotencyKey ||
+        stableIdempotencyKey(
+          'staged-upload',
+          kind,
+          stagedHandle,
+          proof.txid,
+          proof.receipt_hash,
+          String(bytes || ''),
+          contentTypeHeader,
+          metadata?.title,
+        ),
+      'staged-upload',
+    );
+
+    if (!stringValue(stagedHandle).startsWith('staged://video-job/')) {
+      throw makeVideoError('Staged upload requires a staged://video-job/... handle.', 'invalid_staged_handle');
+    }
+
+    const headers = buildPaidUploadHeaders({
+      gateway: this.gateway,
+      proof,
+      contentType: contentTypeHeader,
+      idempotencyKey: idem,
+      metadata,
+      assetKind: kind,
+    });
+
+    if (!canUseTauriInvoke()) {
+      throw makeVideoError(
+        'Staged video outputs can only be uploaded through the Tauri Rust bridge.',
+        'tauri_required_for_staged_upload',
+      );
+    }
+
+    const response = await uploadStagedWithTauriCommand({
+      stagedHandle,
+      assetKind: kind,
+      contentType: contentTypeHeader,
+      bytes,
+      headers,
+      idempotencyKey: idem,
+    });
+
+    return normalizeUploadResponse({
+      response,
+      headers,
+      proof,
+      contentType: contentTypeHeader,
+      bytes,
+      idempotencyKey: idem,
+      assetKind: kind,
+      transport: kind === 'image'
+        ? 'tauri_upload_staged_image_asset_gateway'
+        : 'tauri_upload_staged_video_asset_gateway',
+    });
   }
 
   assertGateway() {
@@ -208,6 +271,20 @@ export function normalizeVideoPrepareRequest(payload = {}) {
     throw makeVideoError('Video prepare requires a video/* content type.', 'invalid_video_content_type');
   }
 
+  /*
+   * Keep this request body strict.
+   *
+   * The RustyOnions backend parses /assets/video/prepare with a deny-unknown-fields DTO.
+   * Do not send frontend-only fields such as:
+   * - bundle_kind
+   * - rendition_count
+   * - local job ids
+   * - staged handles
+   * - rendition group previews
+   *
+   * Bundle/rendition metadata can travel later through upload headers or a future backend
+   * video bundle manifest route, but not through this strict prepare DTO.
+   */
   return stripEmpty({
     bytes: Number(bytes),
     payer_account: payerAccount,
@@ -259,6 +336,7 @@ export function normalizePaidProof(input = {}) {
     ),
     from: stringValue(source.from, source.payer, input.from),
     to: stringValue(source.to, source.escrow, source.payee, input.to),
+    idem: stringValue(source.idem, source.idempotency_key, source.idempotencyKey, input.idem),
   };
 
   if (!proof.txid) {
@@ -285,6 +363,15 @@ export function normalizePaidProof(input = {}) {
 }
 
 export function extractVideoAssetUrl(data = {}) {
+  return extractAssetUrl(data, 'video');
+}
+
+export function extractVideoAssetCid(data = {}) {
+  return extractAssetCid(data);
+}
+
+export function extractAssetUrl(data = {}, assetKind = 'video') {
+  const kind = normalizeAssetKind(assetKind);
   const source = objectValue(data?.data) || data || {};
   const direct = stringValue(
     source.crab_url,
@@ -293,6 +380,8 @@ export function extractVideoAssetUrl(data = {}) {
     source.assetUrl,
     source.video_url,
     source.videoUrl,
+    source.image_url,
+    source.imageUrl,
     source.url,
   );
 
@@ -300,16 +389,16 @@ export function extractVideoAssetUrl(data = {}) {
     return direct;
   }
 
-  const cid = extractVideoAssetCid(source);
+  const cid = extractAssetCid(source);
 
   if (cid?.startsWith('b3:')) {
-    return `crab://${cid.slice(3)}.video`;
+    return `crab://${cid.slice(3)}.${kind}`;
   }
 
   return '';
 }
 
-export function extractVideoAssetCid(data = {}) {
+export function extractAssetCid(data = {}) {
   const source = objectValue(data?.data) || data || {};
   const direct = stringValue(
     source.cid,
@@ -317,6 +406,8 @@ export function extractVideoAssetCid(data = {}) {
     source.contentId,
     source.video_cid,
     source.videoCid,
+    source.image_cid,
+    source.imageCid,
     source.asset_cid,
     source.assetCid,
     source.b3,
@@ -329,8 +420,89 @@ export function extractVideoAssetCid(data = {}) {
     return normalized;
   }
 
-  const nested = objectValue(source.asset) || objectValue(source.video) || objectValue(source.object) || objectValue(source.manifest);
-  return nested ? extractVideoAssetCid(nested) : '';
+  const nested = objectValue(source.asset) || objectValue(source.video) || objectValue(source.image) || objectValue(source.object) || objectValue(source.manifest);
+  return nested ? extractAssetCid(nested) : '';
+}
+
+function buildPaidUploadHeaders({ gateway, proof, contentType, idempotencyKey, metadata = {}, assetKind = 'video' }) {
+  const kind = normalizeAssetKind(assetKind);
+
+  const headers = {
+    Accept: 'application/json',
+    'Content-Type': contentType,
+    'Idempotency-Key': idempotencyKey,
+    'x-ron-paid-op': proof.op || 'hold',
+    'x-ron-paid-asset': proof.asset || 'roc',
+    'x-ron-paid-estimate-minor': proof.amount_minor,
+    'x-ron-wallet-txid': proof.txid,
+    'x-ron-wallet-receipt-hash': proof.receipt_hash,
+    'x-ron-wallet-from': proof.from,
+    'x-ron-wallet-to': proof.to,
+  };
+
+  const passportSubject = stringValue(gateway?.passportSubject);
+  const walletAccount = stringValue(proof.from, gateway?.walletAccount);
+  const title = stringValue(metadata.title);
+  const description = stringValue(metadata.description, metadata.summary, metadata.altText, metadata.alt_text);
+  const tags = Array.isArray(metadata.tags) ? metadata.tags.join(',') : stringValue(metadata.tags);
+  const duration = stringValue(metadata.duration);
+  const resolution = stringValue(metadata.resolution);
+  const aspectRatio = stringValue(metadata.aspectRatio, metadata.aspect_ratio);
+  const videoKind = stringValue(metadata.videoKind, metadata.video_kind);
+  const language = stringValue(metadata.language);
+  const role = stringValue(metadata.renditionRole, metadata.rendition_role, metadata.role);
+  const label = stringValue(metadata.renditionLabel, metadata.rendition_label, metadata.label);
+  const bundleHeader = compactJsonHeader(metadata.renditionGroup || metadata.rendition_group || metadata.videoRenditionGroup);
+
+  if (passportSubject) headers['x-ron-passport'] = passportSubject;
+  if (walletAccount) headers['x-ron-wallet-account'] = walletAccount;
+  if (title) headers['x-ron-asset-title'] = title;
+  if (description) headers['x-ron-asset-description'] = description;
+  if (tags) headers['x-ron-asset-tags'] = tags;
+
+  if (kind === 'video') {
+    if (duration) headers['x-ron-video-duration'] = duration;
+    if (resolution) headers['x-ron-video-resolution'] = resolution;
+    if (aspectRatio) headers['x-ron-video-aspect-ratio'] = aspectRatio;
+    if (videoKind) headers['x-ron-video-kind'] = videoKind;
+    if (language) headers['x-ron-video-language'] = language;
+    if (role) headers['x-ron-video-rendition-role'] = role;
+    if (label) headers['x-ron-video-rendition-label'] = label;
+    if (bundleHeader) headers['x-ron-video-rendition-group'] = bundleHeader;
+  }
+
+  if (kind === 'image') {
+    if (role) headers['x-ron-image-rendition-role'] = role;
+    if (label) headers['x-ron-image-rendition-label'] = label;
+    if (bundleHeader) headers['x-ron-image-rendition-group'] = bundleHeader;
+  }
+
+  return headers;
+}
+
+function normalizeUploadResponse({ response, headers, proof, contentType, bytes, idempotencyKey, assetKind, transport }) {
+  const kind = normalizeAssetKind(assetKind);
+  const payload = response?.data || response;
+  const assetUrl = extractAssetUrl(payload, kind);
+  const assetCid = extractAssetCid(payload);
+
+  return {
+    ...response,
+    request: {
+      bytes: Number(bytes || 0),
+      content_type: contentType,
+      headers: redactProofHeaders(headers),
+      idempotency_key: idempotencyKey,
+      asset_kind: kind,
+      transport,
+    },
+    paidProof: proof,
+    assetKind: kind,
+    assetUrl,
+    assetCid,
+    videoAssetUrl: kind === 'video' ? assetUrl : '',
+    videoAssetCid: kind === 'video' ? assetCid : '',
+  };
 }
 
 function normalizeVideoBlob(value, contentType = '') {
@@ -347,6 +519,37 @@ function normalizeVideoBlob(value, contentType = '') {
   throw makeVideoError('Video upload requires a selected video file/blob.', 'missing_video_file');
 }
 
+async function hashStagedWithTauriCommand({ stagedHandle, assetKind, contentType, role, maxBytes }) {
+  const response = await invoke('hash_staged_asset_bytes', {
+    request: {
+      stagedHandle,
+      expectedAssetKind: assetKind,
+      contentTypeHint: contentType,
+      role,
+      maxBytes: Number(maxBytes || 0) || undefined,
+    },
+  });
+
+  const hash = normalizeHash(response?.hash);
+  const kind = normalizeAssetKind(response?.assetKind || response?.asset_kind || assetKind);
+
+  if (!hash) {
+    throw makeVideoError('Tauri staged hash command did not return a canonical b3 hash.', 'missing_staged_hash');
+  }
+
+  return {
+    schema: response?.schema || 'crablink.tauri.staged-asset-hash-response.v1',
+    assetKind: kind,
+    role: stringValue(response?.role, role),
+    contentType: stringValue(response?.contentType, response?.content_type, contentType),
+    bytes: Number(response?.bytes || 0),
+    hash,
+    cid: normalizeCid(response?.cid || hash),
+    crabUrl: stringValue(response?.crabUrl, response?.crab_url, `crab://${hash}.${kind}`),
+    stagedHandleRedacted: stringValue(response?.stagedHandleRedacted, response?.staged_handle_redacted),
+  };
+}
+
 async function uploadVideoWithTauriCommand({ blob, headers, idempotencyKey }) {
   const bodyBytes = Array.from(new Uint8Array(await blob.arrayBuffer()));
 
@@ -358,6 +561,29 @@ async function uploadVideoWithTauriCommand({ blob, headers, idempotencyKey }) {
     },
   });
 
+  return normalizeCommandResponse(response, '/assets/video');
+}
+
+async function uploadStagedWithTauriCommand({ stagedHandle, assetKind, contentType, bytes, headers, idempotencyKey }) {
+  const command = assetKind === 'image'
+    ? 'upload_staged_image_asset_gateway'
+    : 'upload_staged_video_asset_gateway';
+
+  const response = await invoke(command, {
+    request: {
+      headers,
+      stagedHandle,
+      idempotencyKey,
+      expectedAssetKind: assetKind,
+      contentTypeHint: contentType,
+      maxBytes: Number(bytes || 0) || undefined,
+    },
+  });
+
+  return normalizeCommandResponse(response, assetKind === 'image' ? '/assets/image' : '/assets/video');
+}
+
+function normalizeCommandResponse(response, fallbackRoute) {
   const status = Number(response?.status || 0);
   const data = response?.data ?? null;
   const correlationId = stringValue(response?.correlation_id, response?.correlationId);
@@ -368,14 +594,14 @@ async function uploadVideoWithTauriCommand({ blob, headers, idempotencyKey }) {
     error.retryable = status === 408 || status === 429 || status >= 500;
     error.data = data;
     error.correlationId = correlationId;
-    error.route = response?.route || '/assets/video';
+    error.route = response?.route || fallbackRoute;
     throw error;
   }
 
   return {
     ok: true,
     status,
-    route: response?.route || '/assets/video',
+    route: response?.route || fallbackRoute,
     correlationId,
     data,
   };
@@ -399,6 +625,13 @@ function errorMessageFromCommandResponse(response = {}) {
 
 function canUseTauriInvoke() {
   return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__);
+}
+
+function normalizeAssetKind(value) {
+  const clean = stringValue(value, 'video').toLowerCase();
+
+  if (clean === 'image') return 'image';
+  return 'video';
 }
 
 function normalizeTags(value) {
@@ -453,6 +686,10 @@ function redactProofHeaders(headers) {
   );
 }
 
+export function stableVideoIdempotencyKey(...parts) {
+  return stableIdempotencyKey(...parts);
+}
+
 function stableIdempotencyKey(...parts) {
   return parts
     .flat()
@@ -482,6 +719,24 @@ export function compactIdempotencyKey(value, prefix = 'crablink') {
   const suffix = normalized.slice(0, Math.max(0, budget));
 
   return suffix ? `${cleanPrefix}:${hash}:${suffix}` : `${cleanPrefix}:${hash}`;
+}
+
+function compactJsonHeader(value) {
+  if (!value || typeof value !== 'object') {
+    return '';
+  }
+
+  try {
+    const compact = JSON.stringify(value);
+
+    if (compact.length > 7000) {
+      return '';
+    }
+
+    return compact;
+  } catch (_error) {
+    return '';
+  }
 }
 
 function fnv1aHex(value) {

@@ -456,14 +456,21 @@ export default function AssetContentViewAccess({ app, summary, onAccessChange })
         The {copy.bodyName} stays hidden until a backend payment receipt is returned.
       </p>
 
-      <div className="asset-fact-grid asset-content-view-facts">
+      <div className="asset-fact-grid asset-content-view-facts is-compact">
         <Fact label="Amount" value={quoteSummary.displayAmount || paymentSummary.displayAmount || quoteSummary.amountMinor || 'Not quoted'} />
         <Fact label="Payer" value={quoteSummary.payerAccount || paymentSummary.payerAccount || payerAccount || 'Not configured'} monospace />
         <Fact label="Recipient" value={quoteSummary.recipientAccount || paymentSummary.recipientAccount || 'Manifest recipient not quoted'} monospace />
-        <Fact label="Quote id" value={quoteSummary.quoteId || 'Not quoted'} monospace />
-        <Fact label="Quote hash" value={quoteSummary.quoteHash || 'Not quoted'} monospace />
-        <Fact label="Manifest CID" value={quoteSummary.manifestCid || paymentSummary.manifestCid || target.manifestCid || 'Not returned'} monospace />
       </div>
+
+      <details className="asset-content-view-proof-details">
+        <summary>Payment proof details</summary>
+        <div className="asset-content-view-proof-grid">
+          <Fact label="Quote id" value={quoteSummary.quoteId || 'Not quoted'} monospace />
+          <Fact label="Quote hash" value={quoteSummary.quoteHash || 'Not quoted'} monospace />
+          <Fact label="Manifest CID" value={quoteSummary.manifestCid || paymentSummary.manifestCid || target.manifestCid || 'Not returned'} monospace />
+          <Fact label="Asset URL" value={target.assetCrabUrl || 'Not returned'} monospace />
+        </div>
+      </details>
 
       {hasPayment && (
         <div className="asset-content-view-receipt">

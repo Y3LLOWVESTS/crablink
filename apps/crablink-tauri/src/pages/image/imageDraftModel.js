@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — Local image draft model for the React-owned crab://image workspace.
- * RO:WHY — CrabLink refactor; keeps image manifest planning deterministic without touching protected paid upload flows.
+ * RO:WHY — Keeps image manifest/rendition planning deterministic without touching protected paid upload flows.
  * RO:INTERACTS — ImagePage.jsx, ImageCreate.jsx, ImagePreview.jsx, ImageRenditions.jsx, ImageManifest.jsx.
  * RO:INVARIANTS — local draft only; no fake b3 CID; no fake manifest CID; no ROC charge; no backend publication claim.
  * RO:METRICS — none.
  * RO:CONFIG — app settings can prefill display labels only.
  * RO:SECURITY — no secrets, no direct internal-service calls, no wallet authority.
- * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://image route smoke.
+ * RO:TEST — npm run build; scripts/check-tauri.sh; manual crab://image route smoke.
  */
 
 export const IMAGE_VIEW_OPTIONS = Object.freeze([
@@ -16,6 +16,9 @@ export const IMAGE_VIEW_OPTIONS = Object.freeze([
 
 export const IMAGE_ROLE_OPTIONS = Object.freeze([
   { value: 'standalone_image', label: 'Standalone image' },
+  { value: 'album_cover', label: 'Album cover' },
+  { value: 'video_thumbnail', label: 'Video thumbnail' },
+  { value: 'film_cover', label: 'Film cover' },
   { value: 'cover_image', label: 'Cover image' },
   { value: 'thumbnail', label: 'Thumbnail' },
   { value: 'poster', label: 'Poster' },
@@ -24,7 +27,21 @@ export const IMAGE_ROLE_OPTIONS = Object.freeze([
   { value: 'article_hero', label: 'Article hero' },
   { value: 'ad_creative', label: 'Ad creative' },
   { value: 'game_cover', label: 'Game cover' },
-  { value: 'film_poster', label: 'Film poster' },
+]);
+
+export const IMAGE_USE_CASE_OPTIONS = Object.freeze([
+  { value: 'standalone_image', label: 'Standalone image' },
+  { value: 'album_cover', label: 'Album cover' },
+  { value: 'video_thumbnail', label: 'Video thumbnail' },
+  { value: 'film_cover', label: 'Film cover' },
+  { value: 'cover_image', label: 'Cover image' },
+  { value: 'thumbnail', label: 'Thumbnail' },
+  { value: 'poster', label: 'Poster' },
+  { value: 'profile_avatar', label: 'Profile avatar' },
+  { value: 'banner_image', label: 'Banner image' },
+  { value: 'article_hero', label: 'Article hero' },
+  { value: 'ad_creative', label: 'Ad creative' },
+  { value: 'game_cover', label: 'Game cover' },
 ]);
 
 export const IMAGE_SOURCE_OPTIONS = Object.freeze([
@@ -40,7 +57,6 @@ export const IMAGE_RIGHTS_OPTIONS = Object.freeze([
   { value: 'creator_owned_original', label: 'Creator-owned original' },
   { value: 'licensed_with_terms', label: 'Licensed with terms' },
   { value: 'public_domain_claimed', label: 'Public domain claimed' },
-  { value: 'collaborator_split_future', label: 'Collaborator split future' },
   { value: 'rights_review_needed', label: 'Rights review needed' },
 ]);
 
@@ -52,19 +68,92 @@ export const IMAGE_ACCESS_OPTIONS = Object.freeze([
   { value: 'owner_only_draft', label: 'Owner-only draft' },
 ]);
 
-export const IMAGE_PAYOUT_OPTIONS = Object.freeze([
-  { value: 'creator_wallet_future', label: 'Creator wallet future' },
-  { value: 'creator_provider_treasury_split_future', label: 'Creator/provider/treasury split future' },
-  { value: 'site_owner_split_future', label: 'Site owner split future' },
-  { value: 'no_payout_draft', label: 'No payout draft' },
-]);
-
 export const IMAGE_MODERATION_OPTIONS = Object.freeze([
   { value: 'site_policy_or_creator_default', label: 'Site policy or creator default' },
   { value: 'safe_for_general_audience', label: 'Safe for general audience' },
   { value: 'content_warning_required', label: 'Content warning required' },
   { value: 'age_gate_future', label: 'Age gate future' },
   { value: 'review_required_future', label: 'Review required future' },
+]);
+
+export const IMAGE_RENDITION_TARGET_OPTIONS = Object.freeze([
+  {
+    role: 'desktop',
+    label: 'Desktop',
+    useCase: 'desktop_embed',
+    width: 1920,
+    height: 1280,
+    fit: 'contain',
+    contentType: 'image/webp',
+    defaultEnabled: true,
+    copy: 'Large responsive embed for desktop pages and creator sites.',
+  },
+  {
+    role: 'tablet',
+    label: 'Tablet',
+    useCase: 'tablet_embed',
+    width: 1280,
+    height: 960,
+    fit: 'contain',
+    contentType: 'image/webp',
+    defaultEnabled: true,
+    copy: 'Mid-size responsive embed for tablets and smaller desktop cards.',
+  },
+  {
+    role: 'mobile',
+    label: 'Mobile',
+    useCase: 'mobile_embed',
+    width: 768,
+    height: 1024,
+    fit: 'contain',
+    contentType: 'image/webp',
+    defaultEnabled: true,
+    copy: 'Phone-friendly image that preserves the original aspect ratio.',
+  },
+  {
+    role: 'thumbnail',
+    label: 'Thumbnail',
+    useCase: 'thumbnail',
+    width: 320,
+    height: 320,
+    fit: 'cover',
+    contentType: 'image/webp',
+    defaultEnabled: true,
+    copy: 'Square card/list preview. This crops to fill the target frame.',
+  },
+  {
+    role: 'album_cover',
+    label: 'Album cover',
+    useCase: 'album_cover',
+    width: 1400,
+    height: 1400,
+    fit: 'cover',
+    contentType: 'image/webp',
+    defaultEnabled: false,
+    copy: 'Square cover art candidate for music pages.',
+  },
+  {
+    role: 'video_thumbnail',
+    label: 'Video thumbnail',
+    useCase: 'video_thumbnail',
+    width: 1280,
+    height: 720,
+    fit: 'cover',
+    contentType: 'image/webp',
+    defaultEnabled: false,
+    copy: '16:9 thumbnail candidate for video and stream pages.',
+  },
+  {
+    role: 'film_cover',
+    label: 'Film cover',
+    useCase: 'film_cover',
+    width: 1000,
+    height: 1500,
+    fit: 'cover',
+    contentType: 'image/webp',
+    defaultEnabled: false,
+    copy: 'Poster-like 2:3 cover candidate for film pages.',
+  },
 ]);
 
 export const IMAGE_LINKED_ASSET_FIELDS = Object.freeze([
@@ -100,6 +189,12 @@ export const IMAGE_LINKED_ASSET_FIELDS = Object.freeze([
   },
 ]);
 
+export const DEFAULT_IMAGE_RENDITION_TARGET_CSV = csvForRenditionRoles(
+  IMAGE_RENDITION_TARGET_OPTIONS
+    .filter((target) => target.defaultEnabled)
+    .map((target) => target.role),
+);
+
 export const DEFAULT_IMAGE_DRAFT = Object.freeze({
   title: '',
   creatorDisplay: '',
@@ -107,11 +202,13 @@ export const DEFAULT_IMAGE_DRAFT = Object.freeze({
   description: '',
   altText: '',
   imageRole: 'standalone_image',
+  useCaseCsv: 'standalone_image',
   sourceMode: 'creator_original',
   expectedMimeType: 'image/png',
   dimensions: '',
   colorProfile: 'standard_rgb',
   renditionGroupId: '',
+  renditionTargetCsv: DEFAULT_IMAGE_RENDITION_TARGET_CSV,
   canonicalImageCrabUrl: '',
   desktopRenditionCrabUrl: '',
   mobileRenditionCrabUrl: '',
@@ -120,17 +217,19 @@ export const DEFAULT_IMAGE_DRAFT = Object.freeze({
   linkedSiteCrabUrl: '',
   rightsMode: 'creator_owned_original',
   accessMode: 'public_preview',
-  payoutMode: 'creator_wallet_future',
   moderationMode: 'site_policy_or_creator_default',
   tags: 'image, creator',
   contentWarning: '',
   provenanceNote: '',
 });
 
-export function buildImageManifestDraft(draft, { app, route, fileFacts } = {}) {
+export function buildImageManifestDraft(draft, { app, route, fileFacts, localRenditions } = {}) {
   const tags = parseTags(draft.tags);
   const linkedAssets = buildLinkedAssets(draft);
-  const renditions = buildRenditions(draft);
+  const manualRenditions = buildManualRenditions(draft);
+  const generatedRenditions = normalizeGeneratedRenditions(localRenditions);
+  const selectedTargets = selectedRenditionTargets(draft.renditionTargetCsv);
+  const useCases = parseUseCases(draft.useCaseCsv || draft.imageRole);
   const ownerHint =
     trimOrNull(draft.ownerPassport) ||
     trimOrNull(app?.settings?.passportSubject) ||
@@ -146,6 +245,7 @@ export function buildImageManifestDraft(draft, { app, route, fileFacts } = {}) {
     },
     truth_boundary: {
       local_draft: true,
+      local_rendition_previews: generatedRenditions.length > 0,
       backend_published: false,
       b3_cid_minted: false,
       manifest_cid_minted: false,
@@ -153,7 +253,7 @@ export function buildImageManifestDraft(draft, { app, route, fileFacts } = {}) {
       roc_charged: false,
       paid_upload_performed: false,
       note:
-        'This is a local React image workspace draft. Real upload, hold, receipt, b3 CID, and manifest CID must come from the gateway-backed paid flow later.',
+        'This is a local React image workspace draft. Generated rendition previews are local bytes only. Real upload, receipt, b3 CID, crab URL, and manifest truth must come from the gateway-backed paid flow later.',
     },
     identity: {
       creator_display: trimOrNull(draft.creatorDisplay),
@@ -170,6 +270,7 @@ export function buildImageManifestDraft(draft, { app, route, fileFacts } = {}) {
       description: trimOrNull(draft.description),
       alt_text: trimOrNull(draft.altText),
       image_role: draft.imageRole,
+      use_cases: useCases,
       source_mode: draft.sourceMode,
       expected_mime_type: trimOrNull(draft.expectedMimeType),
       dimensions_hint: trimOrNull(draft.dimensions),
@@ -178,10 +279,28 @@ export function buildImageManifestDraft(draft, { app, route, fileFacts } = {}) {
       content_warning: trimOrNull(draft.contentWarning),
     },
     linked_assets: linkedAssets,
+    rendition_plan: {
+      selected_targets: selectedTargets.map((target) => ({
+        role: target.role,
+        label: target.label,
+        use_case: target.useCase,
+        width: target.width,
+        height: target.height,
+        fit: target.fit,
+        content_type: target.contentType,
+      })),
+      local_generation_supported: true,
+      backend_bundle_route_ready: false,
+      backend_verified: false,
+    },
     renditions: {
       rendition_group_id: trimOrNull(draft.renditionGroupId),
-      entries: renditions,
+      manual_entries: manualRenditions,
+      local_generated_entries: generatedRenditions,
+      entries: [...manualRenditions, ...generatedRenditions],
       backend_verified: false,
+      note:
+        'Local generated entries contain preview dimensions and byte sizes only. They intentionally omit b3 CIDs and crab URLs until backend bundle minting exists.',
     },
     rights_policy: {
       mode: draft.rightsMode,
@@ -193,10 +312,10 @@ export function buildImageManifestDraft(draft, { app, route, fileFacts } = {}) {
       backend_verified: false,
     },
     economics: {
-      payout_mode: draft.payoutMode,
-      roc_price_minor: null,
-      split_basis_points: null,
+      pricing_backend_owned: true,
+      payout_backend_owned: true,
       backend_verified: false,
+      note: 'No custom price or payment split is claimed by this local draft.',
     },
     moderation: {
       mode: draft.moderationMode,
@@ -229,16 +348,28 @@ export function buildImageManifestDraft(draft, { app, route, fileFacts } = {}) {
   };
 }
 
-export function statsForImageDraft(draft, fileFacts = null) {
+export function statsForImageDraft(draft, fileFacts = null, localRenditions = null) {
   const tags = parseTags(draft.tags);
   const linkedAssets = buildLinkedAssets(draft);
-  const renditions = buildRenditions(draft);
+  const manualRenditions = buildManualRenditions(draft);
+  const generatedRenditions = normalizeGeneratedRenditions(localRenditions);
+  const selectedTargets = selectedRenditionTargets(draft.renditionTargetCsv);
+  const useCases = parseUseCases(draft.useCaseCsv || draft.imageRole);
 
   return {
     tags,
     tagCount: tags.length,
+    useCases,
+    useCaseCount: useCases.length,
     linkedAssetCount: linkedAssets.length,
-    renditionCount: renditions.length,
+    renditionCount: manualRenditions.length + generatedRenditions.length,
+    manualRenditionCount: manualRenditions.length,
+    generatedRenditionCount: generatedRenditions.length,
+    selectedRenditionTargetCount: selectedTargets.length,
+    generatedRenditionBytes: generatedRenditions.reduce(
+      (total, item) => total + Number(item.size_bytes || 0),
+      0,
+    ),
     hasLocalFile: Boolean(fileFacts?.name),
     localFileName: fileFacts?.name || '',
     localFileBytes: Number(fileFacts?.size || 0),
@@ -256,9 +387,10 @@ export function getImageCompleteness(draft, fileFacts = null) {
     trimOrNull(draft.creatorDisplay) || trimOrNull(draft.ownerPassport),
     trimOrNull(draft.tags),
     trimOrNull(draft.expectedMimeType),
-    trimOrNull(draft.dimensions),
     trimOrNull(draft.rightsMode),
     trimOrNull(draft.accessMode),
+    parseUseCases(draft.useCaseCsv || draft.imageRole).length > 0,
+    selectedRenditionTargets(draft.renditionTargetCsv).length > 0,
     Boolean(fileFacts?.name),
   ];
 
@@ -272,6 +404,31 @@ export function labelFromSnake(value) {
     .filter(Boolean)
     .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+export function parseRenditionTargetCsv(input) {
+  return String(input || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+export function csvForRenditionRoles(roles = []) {
+  return Array.from(new Set(roles.map((role) => String(role || '').trim()).filter(Boolean))).join(',');
+}
+
+export function selectedRenditionTargets(csv) {
+  const raw = csv == null ? DEFAULT_IMAGE_RENDITION_TARGET_CSV : String(csv);
+  const selected = new Set(parseRenditionTargetCsv(raw));
+  return IMAGE_RENDITION_TARGET_OPTIONS.filter((target) => selected.has(target.role));
+}
+
+export function parseUseCases(input) {
+  return String(input || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .filter((value, index, values) => values.indexOf(value) === index);
 }
 
 function buildLinkedAssets(draft) {
@@ -294,14 +451,37 @@ function buildLinkedAssets(draft) {
   return base;
 }
 
-function buildRenditions(draft) {
+function buildManualRenditions(draft) {
   return IMAGE_LINKED_ASSET_FIELDS.map((item) => ({
     role: item.role,
     label: item.label,
     crab_url: trimOrNull(draft[item.field]),
     expected_kind: item.expectedKind,
     backend_verified: false,
+    source: 'manual_planning_hint',
   })).filter((item) => Boolean(item.crab_url));
+}
+
+function normalizeGeneratedRenditions(localRenditions) {
+  const entries = Array.isArray(localRenditions?.entries) ? localRenditions.entries : [];
+
+  return entries.map((entry) => ({
+    role: trimOrNull(entry.role),
+    label: trimOrNull(entry.label),
+    use_case: trimOrNull(entry.useCase),
+    width: Number(entry.width || 0),
+    height: Number(entry.height || 0),
+    target_width: Number(entry.targetWidth || 0),
+    target_height: Number(entry.targetHeight || 0),
+    fit: trimOrNull(entry.fit),
+    content_type: trimOrNull(entry.contentType),
+    size_bytes: Number(entry.bytes || 0),
+    local_preview_only: true,
+    backend_verified: false,
+    minted: false,
+    cid: null,
+    crab_url: null,
+  }));
 }
 
 function normalizeFileFacts(fileFacts) {
@@ -313,6 +493,8 @@ function normalizeFileFacts(fileFacts) {
     name: trimOrNull(fileFacts.name),
     type: trimOrNull(fileFacts.type),
     size_bytes: Number(fileFacts.size || 0),
+    width: Number(fileFacts.width || 0) || null,
+    height: Number(fileFacts.height || 0) || null,
     last_modified: trimOrNull(fileFacts.lastModified),
     preview_only: true,
     b3_cid: null,

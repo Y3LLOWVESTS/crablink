@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — Route-owned React page for typed crab://<hash>.<kind> asset views.
- * RO:WHY — CrabLink refactor; keeps generic b3 asset reading polished while preserving gateway-only truth.
+ * RO:WHY — CrabLink refactor; keeps generic b3 asset reading polished while letting image assets use a product-first resolved layout.
  * RO:INTERACTS — AssetResolver, AssetHydratedView, assetClient, gatewayClient, localCatalog.
  * RO:INVARIANTS — b3 hash is canonical; gateway-only reads; no fake manifests; no fake receipts; no silent ROC spend.
  * RO:METRICS — backend calls carry gateway correlation IDs through GatewayClient.
  * RO:CONFIG — uses configured gateway URL and request timeout.
  * RO:SECURITY — trusted shell UI only; untrusted asset/site content must stay in sandboxed/render-safe surfaces.
- * RO:TEST — npm run build; React extension smoke for crab://<hash>.image and b3:<hash>; drawer asset catalog.
+ * RO:TEST — npm run build; manual crab://<hash>.image route smoke and non-image asset route smoke.
  */
 
 import { useEffect } from 'react';
@@ -25,6 +25,7 @@ export default function AssetPage({ route, app }) {
   const hash = cleanHash(target.hash);
   const cid = cleanCid(target.cid || (hash ? `b3:${hash}` : ''));
   const crabUrl = route?.normalizedInput || target.assetUrl || (hash ? `crab://${hash}.${assetKind}` : '');
+  const isImageAssetPage = assetKind === 'image';
 
   useEffect(() => {
     writeSeenAssetCatalogEntry({
@@ -34,6 +35,14 @@ export default function AssetPage({ route, app }) {
       crabUrl,
     });
   }, [assetKind, cid, crabUrl, hash]);
+
+  if (isImageAssetPage) {
+    return (
+      <section className="cl-page asset-page is-image-asset-page">
+        <AssetResolver route={route} app={app} />
+      </section>
+    );
+  }
 
   return (
     <section className="cl-page asset-page">
@@ -63,7 +72,7 @@ export default function AssetPage({ route, app }) {
       />
 
       <TruthBoundary
-        tone="info"
+        tone="neutral"
         title="Generic asset truth boundary"
         copy="This route can display a CID, manifest, owner, provider, receipt, rendition, or preview only when those fields come back from the gateway. It does not create assets, upload bytes, charge ROC, or mutate wallets."
       />

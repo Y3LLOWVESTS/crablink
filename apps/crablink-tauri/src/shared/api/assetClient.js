@@ -14,9 +14,33 @@ import { invoke } from '@tauri-apps/api/core';
 const HEX_64_RE = /^[0-9a-f]{64}$/;
 const ASSET_KIND_RE = /^[a-z][a-z0-9_-]{0,31}$/;
 const MAX_IDEMPOTENCY_KEY_BYTES = 64;
+const MAX_IMAGE_RENDITION_GROUP_HEADER_BYTES = 12 * 1024;
 
 export function createAssetClient(gateway) {
   return new AssetClient(gateway);
+}
+
+export async function hashImageAssetBytes({ file, blob, bytes, contentType = '', role = 'image' } = {}) {
+  if (!canUseTauriInvoke()) {
+    throw makeAssetError('Image b3 prediction requires the Tauri image hash bridge.', 'missing_tauri_hash_bridge');
+  }
+
+  const imageBlob = normalizeImageBlob(file || blob || bytes, contentType || file?.type || blob?.type || 'image/png');
+  const bodyBytes = await blobToBodyBytes(imageBlob);
+
+  const response = await invoke('hash_image_asset_bytes', {
+    request: {
+      bodyBytes,
+      contentType: contentType || imageBlob.type || 'image/png',
+      role,
+    },
+  });
+
+  if (!response?.cid || !response?.hash || !response?.crabUrl) {
+    throw makeAssetError('Tauri image hash bridge did not return a canonical b3 CID.', 'image_hash_bridge_bad_response');
+  }
+
+  return response;
 }
 
 export class AssetResolveError extends Error {
@@ -134,6 +158,10 @@ export class AssetClient {
     });
   }
 
+  async prepareImageAsset(payload = {}, _options = {}) {
+    return this.prepareImage(payload);
+  }
+
   async uploadImage({ file, bytes, contentType, paidProof, metadata = {}, idempotencyKey = '' } = {}) {
     this.assertGateway();
 
@@ -170,12 +198,18 @@ export class AssetClient {
     const title = stringValue(metadata.title);
     const description = stringValue(metadata.description, metadata.altText, metadata.alt_text);
     const tags = Array.isArray(metadata.tags) ? metadata.tags.join(',') : stringValue(metadata.tags);
+    const renditionGroupHeader = imageRenditionGroupHeaderValue(metadata.renditionGroup || metadata.rendition_group);
+    const renditionRole = stringValue(metadata.renditionRole, metadata.rendition_role);
+    const renditionLabel = stringValue(metadata.renditionLabel, metadata.rendition_label);
 
     if (passportSubject) headers['x-ron-passport'] = passportSubject;
     if (walletAccount) headers['x-ron-wallet-account'] = walletAccount;
     if (title) headers['x-ron-asset-title'] = title;
     if (description) headers['x-ron-asset-description'] = description;
     if (tags) headers['x-ron-asset-tags'] = tags;
+    if (renditionGroupHeader) headers['x-ron-image-rendition-group'] = renditionGroupHeader;
+    if (renditionRole) headers['x-ron-image-rendition-role'] = renditionRole;
+    if (renditionLabel) headers['x-ron-image-rendition-label'] = renditionLabel;
 
     const response = canUseTauriInvoke()
       ? await uploadImageWithTauriCommand({
@@ -211,6 +245,25 @@ export class AssetClient {
     };
   }
 
+  async uploadImageAsset(payload = {}) {
+    const request = objectValue(payload) || {};
+
+    return this.uploadImage({
+      file: request.file,
+      bytes: request.bytes,
+      contentType: stringValue(request.contentType, request.content_type, request.file?.type),
+      paidProof: request.paidProof,
+      metadata: objectValue(request.metadata) || {
+        title: request.title,
+        description: request.description,
+        tags: request.tags,
+        altText: request.altText,
+        alt_text: request.alt_text,
+      },
+      idempotencyKey: request.idempotencyKey || request.idempotency_key || '',
+    });
+  }
+
   assertGateway() {
     if (!this.gateway || typeof this.gateway.request !== 'function') {
       throw new AssetResolveError('Asset request requires the configured gateway client.', {
@@ -223,34 +276,36 @@ export class AssetClient {
 }
 
 export function normalizeImagePrepareRequest(payload = {}) {
+  const source = objectValue(payload) || {};
+
   const bytes = normalizePositiveInteger(
-    payload.bytes,
-    payload.size,
-    payload.size_bytes,
-    payload.file_bytes,
-    payload.fileBytes,
+    source.bytes,
+    source.size,
+    source.size_bytes,
+    source.file_bytes,
+    source.fileBytes,
   );
   const payerAccount = stringValue(
-    payload.payer_account,
-    payload.payerAccount,
-    payload.wallet_account,
-    payload.walletAccount,
-    payload.from,
+    source.payer_account,
+    source.payerAccount,
+    source.wallet_account,
+    source.walletAccount,
+    source.from,
   );
   const ownerPassport = stringValue(
-    payload.owner_passport_subject,
-    payload.ownerPassportSubject,
-    payload.passport,
-    payload.passportSubject,
+    source.owner_passport_subject,
+    source.ownerPassportSubject,
+    source.passport,
+    source.passportSubject,
   );
-  const contentType = stringValue(payload.content_type, payload.contentType, payload.mime, 'image/png');
-  const title = stringValue(payload.title, 'Untitled image draft').slice(0, 160);
-  const description = stringValue(payload.description, payload.altText, payload.alt_text).slice(0, 500);
-  const tags = normalizeTags(payload.tags);
+  const contentType = stringValue(source.content_type, source.contentType, source.mime, 'image/png');
+  const title = stringValue(source.title, 'Untitled image draft').slice(0, 160);
+  const description = stringValue(source.description, source.altText, source.alt_text).slice(0, 500);
+  const tags = normalizeTags(source.tags);
   const idempotency = compactIdempotencyKey(
-    payload.client_idempotency_key ||
-      payload.clientIdempotencyKey ||
-      payload.idempotency_key ||
+    source.client_idempotency_key ||
+      source.clientIdempotencyKey ||
+      source.idempotency_key ||
       stableIdempotencyKey('image-prepare', payerAccount, ownerPassport, bytes, contentType, title),
     'image-prepare',
   );
@@ -275,18 +330,36 @@ export function normalizeImagePrepareRequest(payload = {}) {
   });
 }
 
-export function normalizePaidProof(input = {}) {
-  const source = input?.walletHold || input?.hold || input?.receipt || input?.data || input || {};
+export function normalizePaidProof(input = {}, fallback = {}) {
+  const safeInput = objectValue(input) || {};
+  const safeFallback = objectValue(fallback) || {};
+  const source =
+    objectValue(safeInput.walletHold) ||
+    objectValue(safeInput.hold) ||
+    objectValue(safeInput.receipt) ||
+    objectValue(safeInput.data) ||
+    safeInput;
+
+  const fallbackSource =
+    objectValue(safeFallback.walletHold) ||
+    objectValue(safeFallback.hold) ||
+    objectValue(safeFallback.receipt) ||
+    objectValue(safeFallback.data) ||
+    safeFallback;
 
   const proof = {
-    op: stringValue(source.op, source.paid_op, 'hold'),
-    asset: stringValue(source.asset, 'roc').toLowerCase(),
+    op: stringValue(source.op, source.paid_op, fallbackSource.op, fallbackSource.paid_op, 'hold'),
+    asset: stringValue(source.asset, fallbackSource.asset, 'roc').toLowerCase(),
     amount_minor: normalizePositiveInteger(
       source.amount_minor,
       source.amountMinor,
       source.amount,
-      input.amount_minor,
-      input.amountMinor,
+      safeInput.amount_minor,
+      safeInput.amountMinor,
+      fallbackSource.amount_minor,
+      fallbackSource.amountMinor,
+      safeFallback.amount_minor,
+      safeFallback.amountMinor,
     ),
     txid: stringValue(
       source.txid,
@@ -294,19 +367,32 @@ export function normalizePaidProof(input = {}) {
       source.transaction_id,
       source.wallet_txid,
       source.walletTxid,
-      input.txid,
-      input.tx_id,
+      safeInput.txid,
+      safeInput.tx_id,
+      fallbackSource.txid,
+      fallbackSource.tx_id,
+      fallbackSource.transaction_id,
+      fallbackSource.wallet_txid,
+      fallbackSource.walletTxid,
+      safeFallback.txid,
+      safeFallback.tx_id,
     ),
     receipt_hash: stringValue(
       source.receipt_hash,
       source.receiptHash,
       source.wallet_receipt_hash,
       source.walletReceiptHash,
-      input.receipt_hash,
-      input.receiptHash,
+      safeInput.receipt_hash,
+      safeInput.receiptHash,
+      fallbackSource.receipt_hash,
+      fallbackSource.receiptHash,
+      fallbackSource.wallet_receipt_hash,
+      fallbackSource.walletReceiptHash,
+      safeFallback.receipt_hash,
+      safeFallback.receiptHash,
     ),
-    from: stringValue(source.from, source.payer, input.from),
-    to: stringValue(source.to, source.escrow, source.payee, input.to),
+    from: stringValue(source.from, source.payer, safeInput.from, fallbackSource.from, fallbackSource.payer, safeFallback.from),
+    to: stringValue(source.to, source.escrow, source.payee, safeInput.to, fallbackSource.to, fallbackSource.escrow, fallbackSource.payee, safeFallback.to),
   };
 
   if (!proof.txid) {
@@ -333,7 +419,7 @@ export function normalizePaidProof(input = {}) {
 }
 
 export function extractImageAssetUrl(data = {}) {
-  const source = data?.data && typeof data.data === 'object' ? data.data : data;
+  const source = normalizedDataObject(data);
   const direct = stringValue(
     source.crab_url,
     source.crabUrl,
@@ -348,6 +434,23 @@ export function extractImageAssetUrl(data = {}) {
     return direct;
   }
 
+  const nested =
+    objectValue(source.asset) ||
+    objectValue(source.image) ||
+    objectValue(source.object) ||
+    objectValue(source.storage_upload) ||
+    objectValue(source.storageUpload) ||
+    objectValue(source.manifest) ||
+    null;
+
+  if (nested) {
+    const nestedUrl = extractImageAssetUrl(nested);
+
+    if (nestedUrl) {
+      return nestedUrl;
+    }
+  }
+
   const cid = extractImageAssetCid(source);
 
   if (cid?.startsWith('b3:')) {
@@ -358,9 +461,11 @@ export function extractImageAssetUrl(data = {}) {
 }
 
 export function extractImageAssetCid(data = {}) {
-  const source = data?.data && typeof data.data === 'object' ? data.data : data;
+  const source = normalizedDataObject(data);
   const direct = stringValue(
     source.cid,
+    source.asset_cid,
+    source.assetCid,
     source.content_id,
     source.contentId,
     source.image_cid,
@@ -430,7 +535,7 @@ export function normalizeAssetResolveProblem(error) {
 }
 
 function normalizeAssetResolveResponse(response, target, attempts) {
-  const data = response?.data || response || {};
+  const data = normalizedDataObject(response?.data || response);
   const cid = extractImageAssetCid(data) || target.cid;
   const crabUrl = extractImageAssetUrl(data) || target.assetUrl;
 
@@ -534,7 +639,7 @@ function normalizeKind(value) {
 }
 
 function normalizeImageBlob(value, contentType = '') {
-  if (value instanceof Blob) {
+  if (typeof Blob !== 'undefined' && value instanceof Blob) {
     return value;
   }
 
@@ -661,11 +766,13 @@ function redactProofHeaders(headers) {
 }
 
 function stableIdempotencyKey(...parts) {
-  return parts
-    .flat()
-    .map((part) => String(part ?? '').trim())
-    .filter(Boolean)
-    .join(':') || `crablink:${Date.now()}:${Math.random().toString(16).slice(2)}`;
+  return (
+    parts
+      .flat()
+      .map((part) => String(part ?? '').trim())
+      .filter(Boolean)
+      .join(':') || `crablink:${Date.now()}:${Math.random().toString(16).slice(2)}`
+  );
 }
 
 function compactIdempotencyKey(value, prefix = 'crablink') {
@@ -703,8 +810,34 @@ function fnv1aHex(value) {
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
+function imageRenditionGroupHeaderValue(value) {
+  if (!value) {
+    return '';
+  }
+
+  const raw = typeof value === 'string' ? value : JSON.stringify(value);
+  const compact = raw.replace(/\s+/g, ' ').trim();
+
+  if (!compact) {
+    return '';
+  }
+
+  if (compact.length > MAX_IMAGE_RENDITION_GROUP_HEADER_BYTES) {
+    throw makeAssetError(
+      `Image rendition group manifest header is too large (${compact.length} bytes).`,
+      'image_rendition_group_header_too_large',
+    );
+  }
+
+  return compact;
+}
+
+async function blobToBodyBytes(blob) {
+  return Array.from(new Uint8Array(await blob.arrayBuffer()));
+}
+
 async function uploadImageWithTauriCommand({ blob, headers, idempotencyKey }) {
-  const bodyBytes = Array.from(new Uint8Array(await blob.arrayBuffer()));
+  const bodyBytes = await blobToBodyBytes(blob);
 
   const response = await invoke('upload_image_asset_gateway', {
     request: {
@@ -772,6 +905,18 @@ function normalizePositiveInteger(...values) {
   }
 
   return '';
+}
+
+function normalizedDataObject(value) {
+  if (value?.data && typeof value.data === 'object' && !Array.isArray(value.data)) {
+    return value.data;
+  }
+
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value;
+  }
+
+  return {};
 }
 
 function objectValue(value) {

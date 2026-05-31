@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — CrabLink route parsing and lazy page selection helpers.
  * RO:WHY — App Integration; Concerns: DX/SEC/RES; centralizes route ownership and avoids DOM route collisions.
- * RO:INTERACTS — routeRegistry.js, appState.js, Shell address bar, protected asset/site/image/profile routes.
- * RO:INVARIANTS — parse only; backend validation remains canonical; typed b3 assets route to the asset hydrator; no fake route/backend truth.
+ * RO:INTERACTS — routeRegistry.js, appState.js, Shell address bar, protected asset/site/image/profile/chat routes.
+ * RO:INVARIANTS — parse only; backend validation remains canonical; chat b3 descriptors route to ChatPage; no fake route/backend truth.
  * RO:METRICS — none.
  * RO:CONFIG — built-in route registry.
  * RO:SECURITY — does not grant capabilities or spend authority; only selects UI owner.
- * RO:TEST — manual smoke for crab://site, image, profile, music, post, comment, video, stream, podcast, ad, algo, code, game, and crab://<hash>.<kind>.
+ * RO:TEST — npm run build; manual smoke for crab://chat, crab://<hash>.chat, and existing crab://<hash>.<asset-kind>.
  */
 
 import { hasRouteKind, ROUTES } from './routeRegistry.js';
@@ -73,14 +73,16 @@ export function parseRouteInput(input) {
   }
 
   if (!rawInput.startsWith(CRAB_PREFIX)) {
+    const body = rawInput.replace(/^\/+/, '').trim();
+
     return makeRoute({
-      kind: hasRouteKind(rawInput) ? rawInput : 'notFound',
+      kind: 'site',
       rawInput,
-      normalizedInput: hasRouteKind(rawInput) ? `crab://${rawInput}` : rawInput,
-      title: hasRouteKind(rawInput) ? titleForKind(rawInput) : 'Not Found',
-      error: hasRouteKind(rawInput)
-        ? null
-        : 'Route must be a crab:// URL, b3 CID, raw 64-hex hash, or built-in route.',
+      normalizedInput: `crab://${body}`,
+      title: 'Site',
+      params: {
+        siteName: body,
+      },
     });
   }
 
@@ -136,6 +138,25 @@ export function parseRouteInput(input) {
   if (typedAssetMatch) {
     const hash = typedAssetMatch[1].toLowerCase();
     const assetKind = typedAssetMatch[2].toLowerCase();
+    const assetUrl = `crab://${hash}.${assetKind}`;
+
+    if (assetKind === 'chat') {
+      return makeRoute({
+        kind: 'chat',
+        rawInput,
+        normalizedInput: assetUrl,
+        title: 'Chat Room',
+        params: {
+          hash,
+          assetKind,
+          cid: `b3:${hash}`,
+          roomUrl: assetUrl,
+          assetUrl,
+          typedRouteOwner: 'chat',
+        },
+      });
+    }
+
     const typedRouteOwner = {
       kind: hasRouteKind(assetKind) ? assetKind : 'asset',
     }.kind;
@@ -143,13 +164,13 @@ export function parseRouteInput(input) {
     return makeRoute({
       kind: 'asset',
       rawInput,
-      normalizedInput: `crab://${hash}.${assetKind}`,
+      normalizedInput: assetUrl,
       title: `${titleForKind(assetKind)} Asset`,
       params: {
         hash,
         assetKind,
         cid: `b3:${hash}`,
-        assetUrl: `crab://${hash}.${assetKind}`,
+        assetUrl,
         typedRouteOwner,
       },
     });

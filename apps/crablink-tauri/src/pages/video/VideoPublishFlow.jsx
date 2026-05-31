@@ -1,12 +1,12 @@
 /**
- * RO:WHAT — Explicit React prepare → wallet hold → paid video upload flow for crab://video.
- * RO:WHY — Brings bounded video-lite minting to Tauri using the same boring paid flow as images.
- * RO:INTERACTS — videoAssetClient, walletClient, VideoDraft, svc-gateway /assets/video/prepare, /wallet/hold, /assets/video.
- * RO:INVARIANTS — no silent ROC spend; hold requires explicit review/send; upload requires backend hold proof; no fake CIDs.
+ * RO:WHAT — Explicit prepare → wallet hold → staged video bundle upload flow for crab://video.
+ * RO:WHY — Moves video minting toward the proven image-bundle pattern while keeping Rust-staged media private.
+ * RO:INTERACTS — videoAssetClient, walletClient, VideoConverterPanel, svc-gateway /assets/video and /assets/image.
+ * RO:INVARIANTS — no silent ROC spend; no fake b3 CIDs; staged files are local only until backend returns truth.
  * RO:METRICS — gateway and command correlation IDs are displayed in diagnostics.
  * RO:CONFIG — uses app settings for gateway URL, passport subject, wallet account, and bearer token.
- * RO:SECURITY — sends bounded video bytes only to configured svc-gateway; no local file path is sent or persisted.
- * RO:TEST — manual crab://video prepare/hold/upload smoke from Tauri React shell.
+ * RO:SECURITY — uploads staged handles through Rust; React never receives filesystem paths or media bytes.
+ * RO:TEST — manual crab://video prepare job → publish bundle → open returned crab:// video asset.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -21,9 +21,10 @@ import TextInput from '../../shared/components/TextInput.jsx';
 import { writeLocalCatalogEntry } from '../../shared/catalog/localCatalog.js';
 import {
   createVideoAssetClient,
-  extractVideoAssetCid,
-  extractVideoAssetUrl,
+  extractAssetCid,
+  extractAssetUrl,
   normalizePaidProof,
+  stableVideoIdempotencyKey,
 } from '../../shared/api/videoAssetClient.js';
 import {
   compactIdempotencyKey,
@@ -36,6 +37,8 @@ import {
 
 const DEFAULT_ESCROW_ACCOUNT = 'escrow_paid_write';
 const MAX_SIMPLE_VIDEO_BYTES = 10 * 1024 * 1024;
+const MAX_STAGED_VIDEO_BYTES = 512 * 1024 * 1024;
+const LATEST_JOB_STORAGE_KEY = 'crablink.video.latestPrepareJob.v1';
 
 const IDLE_RESULT = Object.freeze({
   status: 'idle',
@@ -59,6 +62,8 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
   const [prepareState, setPrepareState] = useState(IDLE_RESULT);
   const [holdState, setHoldState] = useState(IDLE_RESULT);
   const [uploadState, setUploadState] = useState(IDLE_RESULT);
+  const [latestPrepareJob, setLatestPrepareJob] = useState(() => readLatestPrepareJob());
+  const [selectedRoles, setSelectedRoles] = useState({});
   const [escrowAccount, setEscrowAccount] = useState(DEFAULT_ESCROW_ACCOUNT);
   const [holdNonce, setHoldNonce] = useState(() => loadNextNonceHint(settings.walletAccount));
   const [holdReviewOpen, setHoldReviewOpen] = useState(false);
@@ -66,20 +71,75 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
   const autoOpenTimer = useRef(0);
 
   const draft = draftState?.draft || {};
+  const updateDraft = draftState?.updateDraft;
+
+  useEffect(() => {
+    function refreshFromEvent(event) {
+      const job = event?.detail?.job || readLatestPrepareJob();
+
+      if (job?.jobId) {
+        setLatestPrepareJob(job);
+      }
+    }
+
+    window.addEventListener('crablink:video-prepare-job-updated', refreshFromEvent);
+    const timer = window.setInterval(() => {
+      const job = readLatestPrepareJob();
+      if (job?.jobId) {
+        setLatestPrepareJob((current) => (current?.jobId === job.jobId && current?.updatedAtUnixMs === job.updatedAtUnixMs ? current : job));
+      }
+    }, 1200);
+
+    return () => {
+      window.removeEventListener('crablink:video-prepare-job-updated', refreshFromEvent);
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const stagedOutputs = useMemo(() => normalizeStagedOutputs(latestPrepareJob), [latestPrepareJob]);
+  const publishTargets = useMemo(
+    () => stagedOutputs.filter((output) => selectedRoles[output.role] !== false),
+    [stagedOutputs, selectedRoles],
+  );
+  const selectedBytes = publishTargets.reduce((sum, output) => sum + Number(output.bytes || 0), 0);
+  const usingStagedBundle = publishTargets.length > 0;
+  const fallbackSelectedFile = !usingStagedBundle ? selectedFile : null;
+
+  useEffect(() => {
+    if (!stagedOutputs.length) {
+      return;
+    }
+
+    setSelectedRoles((current) => {
+      const next = { ...current };
+      let changed = false;
+
+      for (const output of stagedOutputs) {
+        if (next[output.role] === undefined) {
+          next[output.role] = true;
+          changed = true;
+        }
+      }
+
+      return changed ? next : current;
+    });
+  }, [stagedOutputs]);
 
   const workflowKey = useMemo(
     () =>
       [
-        selectedFile?.name || '',
-        selectedFile?.size || '',
-        selectedFile?.type || '',
+        latestPrepareJob?.jobId || '',
+        publishTargets.map((item) => `${item.role}:${item.bytes}`).join(','),
+        fallbackSelectedFile?.name || '',
+        fallbackSelectedFile?.size || '',
+        fallbackSelectedFile?.type || '',
         draft.title || '',
         draft.description || '',
         normalizeTags(draft.tags || '').join(','),
         settings.passportSubject || '',
         settings.walletAccount || '',
       ].join('|'),
-    [selectedFile, draft, settings.passportSubject, settings.walletAccount],
+    [latestPrepareJob, publishTargets, fallbackSelectedFile, draft, settings.passportSubject, settings.walletAccount],
   );
 
   useEffect(() => {
@@ -103,18 +163,25 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
     };
   }, []);
 
-  const preflight = getPreflight({ selectedFile, settings, gateway });
+  const preflight = getPreflight({
+    gateway,
+    settings,
+    publishTargets,
+    selectedFile: fallbackSelectedFile,
+    usingStagedBundle,
+  });
 
   const preparePayload = useMemo(
     () =>
-      selectedFile
-        ? buildPreparePayload({
-            draft,
-            selectedFile,
-            settings,
-          })
-        : null,
-    [draft, selectedFile, settings],
+      buildPreparePayload({
+        draft,
+        settings,
+        publishTargets,
+        selectedFile: fallbackSelectedFile,
+        fileFacts,
+        latestPrepareJob,
+      }),
+    [draft, settings, publishTargets, fallbackSelectedFile, fileFacts, latestPrepareJob],
   );
 
   const amountMinor = extractPrepareAmountMinor(prepareState.data);
@@ -127,9 +194,8 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
         prepareData: prepareState.data,
         preparePayload,
         settings,
-        selectedFile,
       }),
-    [amountMinor, escrowAccount, holdNonce, prepareState.data, preparePayload, settings, selectedFile],
+    [amountMinor, escrowAccount, holdNonce, prepareState.data, preparePayload, settings],
   );
 
   const holdApiRequest = useMemo(() => {
@@ -170,13 +236,14 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
     }
   }, [holdState]);
 
-  const uploadPayload = firstObject(uploadState.data, uploadState.response?.data, uploadState.response);
-  const uploadCrabUrl = extractVideoAssetUrl(uploadPayload);
-  const uploadAssetCid = extractVideoAssetCid(uploadPayload);
+  const uploadBundle = uploadState.data;
+  const primaryVideo = firstVideoResult(uploadBundle);
+  const uploadCrabUrl = primaryVideo?.crabUrl || '';
+  const uploadAssetCid = primaryVideo?.cid || '';
 
   const canPrepare = preflight.ok && Boolean(preparePayload);
   const canHold = prepareState.status === 'ok' && Boolean(holdRequest && holdApiRequest);
-  const canUpload = holdState.status === 'ok' && Boolean(paidProof) && Boolean(selectedFile);
+  const canUpload = holdState.status === 'ok' && Boolean(paidProof) && (publishTargets.length > 0 || Boolean(fallbackSelectedFile));
 
   async function sendPrepare() {
     if (!canPrepare) {
@@ -221,7 +288,7 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
       }
 
       app?.notify?.({
-        title: 'Video prepare succeeded',
+        title: 'Video bundle prepare succeeded',
         message: `Gateway correlation: ${response?.correlationId || 'n/a'}`,
         tone: 'success',
       });
@@ -346,7 +413,6 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
         prepareData: prepareState.data,
         preparePayload,
         settings,
-        selectedFile,
       });
       const retryApiRequest = toWalletHoldApiBody(retryRequest);
 
@@ -388,94 +454,151 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
       setUploadReviewOpen(true);
       setHoldReviewOpen(false);
       app?.notify?.({
-        title: 'Review video upload request',
-        message: 'Review the video upload request, then click Send Video Upload. No video bytes have been uploaded yet.',
+        title: 'Review video bundle upload',
+        message: 'Review the staged outputs, then click Send Bundle Upload. No staged files have been uploaded yet.',
         tone: 'info',
       });
       return;
     }
 
-    const pendingRequest = {
-      route: '/assets/video',
-      file: fileFacts || summarizeFile(selectedFile),
-      paidProof,
+    let uploadPlan = usingStagedBundle
+      ? buildStagedUploadPlan({ publishTargets, draft, latestPrepareJob })
+      : buildFallbackUploadPlan({ selectedFile: fallbackSelectedFile, draft, fileFacts });
+
+    const initialRequest = {
+      schema: 'crablink.video-upload-plan.v1',
+      mode: usingStagedBundle ? 'rust_staged_bundle' : 'single_browser_file',
+      route: usingStagedBundle ? 'mixed:/assets/video+/assets/image' : '/assets/video',
+      totalBytes: uploadPlan.reduce((sum, target) => sum + Number(target.bytes || 0), 0),
+      targets: uploadPlan.map(redactUploadTarget),
+      paidProof: redactProof(paidProof),
+      stage: usingStagedBundle ? 'hashing_staged_outputs' : 'upload_ready',
     };
+
+    let pendingRequest = initialRequest;
 
     setUploadState({
       status: 'sending',
       response: null,
       data: null,
       error: null,
-      request: pendingRequest,
+      request: initialRequest,
       apiRequest: null,
       nonceRecovery: null,
     });
 
     try {
-      const response = await videoClient.uploadVideoAsset({
-        file: selectedFile,
-        contentType: selectedFile?.type || 'video/mp4',
-        metadata: {
-          title: draft.title || selectedFile?.name || '',
-          description: draft.description || '',
-          tags: normalizeTags(draft.tags || ''),
-          duration: draft.duration,
-          resolution: draft.resolution,
-          aspectRatio: draft.aspectRatio,
-          videoKind: draft.videoKind,
-          language: draft.language,
-        },
-        paidProof,
-        idempotencyKey:
-          paidProof.idem ||
-          preparePayload?.client_idempotency_key ||
-          stableIdempotencyKey('video-upload', selectedFile.name, paidProof.txid),
-      });
+      if (usingStagedBundle) {
+        uploadPlan = await attachPredictedStagedHashes({
+          videoClient,
+          draft,
+          latestPrepareJob,
+          uploadPlan,
+        });
+      }
 
-      const data = firstObject(response?.data, response);
-      const crabUrl = extractVideoAssetUrl(data);
-      const assetCid = extractVideoAssetCid(data);
+      pendingRequest = {
+        ...initialRequest,
+        stage: 'uploading',
+        targets: uploadPlan.map(redactUploadTarget),
+        predictedRenditionGroup: uploadPlan[0]?.metadata?.renditionGroup || null,
+      };
+
+      setUploadState((current) => ({
+        ...current,
+        request: pendingRequest,
+      }));
+
+      const results = [];
+
+      for (const target of uploadPlan) {
+        const response = target.mode === 'staged'
+          ? await videoClient.uploadStagedAsset({
+              stagedHandle: target.stagedHandle,
+              assetKind: target.assetKind,
+              contentType: target.contentType,
+              bytes: target.bytes,
+              paidProof,
+              metadata: target.metadata,
+              idempotencyKey: target.idempotencyKey,
+            })
+          : await videoClient.uploadVideoAsset({
+              file: target.file,
+              contentType: target.contentType,
+              metadata: target.metadata,
+              paidProof,
+              idempotencyKey: target.idempotencyKey,
+            });
+
+        const payload = firstObject(response?.data, response);
+        const cid = extractAssetCid(payload);
+        const crabUrl = extractAssetUrl(payload, target.assetKind);
+
+        assertPredictedCidMatchesBackend({
+          role: target.role,
+          label: target.label,
+          predictedCid: target.predictedCid,
+          predictedCrabUrl: target.predictedCrabUrl,
+          backendCid: cid,
+          backendCrabUrl: crabUrl,
+        });
+
+        results.push({
+          ...target,
+          response,
+          cid,
+          crabUrl,
+          backendVerified: Boolean(cid || crabUrl),
+          predictionMatched: predictionMatchesBackend({
+            predictedCid: target.predictedCid,
+            predictedCrabUrl: target.predictedCrabUrl,
+            backendCid: cid,
+            backendCrabUrl: crabUrl,
+          }),
+        });
+      }
+
+      const bundle = buildVideoBundleResult({
+        draft,
+        latestPrepareJob,
+        paidProof,
+        uploadPlan,
+        results,
+      });
 
       setUploadReviewOpen(false);
       setUploadState({
         status: 'ok',
-        response,
-        data,
+        response: bundle,
+        data: bundle,
         error: null,
         request: pendingRequest,
-        apiRequest: response?.request || null,
+        apiRequest: {
+          targets: results.map((result) => result.response?.request || null),
+        },
         nonceRecovery: null,
       });
 
-      if (crabUrl) {
-        writeLocalCatalogEntry({
-          schema: 'crablink.local-catalog-entry.v1',
-          type: 'asset',
-          kind: 'video',
-          crabUrl,
-          title: draft.title || selectedFile?.name || 'Video asset',
-          detail: `${formatBytes(selectedFile?.size || 0)} · backend-confirmed video asset`,
-          cid: assetCid,
-          status: 'backend-confirmed display cache',
-          source: 'video_upload_success',
-          createdAt: new Date().toISOString(),
-        });
-      }
+      applyReturnedCrabUrlsToDraft(updateDraft, results);
+      cacheReturnedVideoAssets({ app, draft, results });
 
       await app?.refreshWallet?.(settings.walletAccount);
+
+      const firstVideo = firstVideoResult(bundle);
+
       app?.notify?.({
-        title: 'Video upload complete',
-        message: crabUrl ? `Opening ${crabUrl}` : 'Upload returned without a crab URL.',
-        tone: crabUrl ? 'success' : 'warning',
+        title: 'Video bundle upload complete',
+        message: firstVideo?.crabUrl ? `Opening ${firstVideo.crabUrl}` : 'Bundle uploaded, but no video crab URL was returned.',
+        tone: firstVideo?.crabUrl ? 'success' : 'warning',
       });
 
-      if (crabUrl && typeof app?.navigate === 'function') {
+      if (firstVideo?.crabUrl && typeof app?.navigate === 'function') {
         if (autoOpenTimer.current) {
           window.clearTimeout(autoOpenTimer.current);
         }
 
         autoOpenTimer.current = window.setTimeout(() => {
-          app.navigate(crabUrl);
+          app.navigate(firstVideo.crabUrl);
         }, 900);
       }
     } catch (error) {
@@ -490,8 +613,8 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
       });
 
       app?.notify?.({
-        title: 'Video upload failed',
-        message: error?.message || 'Gateway rejected the video upload request.',
+        title: 'Video bundle upload failed',
+        message: error?.message || 'Gateway rejected one of the staged uploads.',
         tone: 'danger',
       });
     }
@@ -523,7 +646,7 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
   return (
     <Card
       eyebrow="Publish"
-      title="Paid video mint flow"
+      title="Paid video bundle mint flow"
       className="video-publish-card"
       actions={
         <div className="video-publish-badges">
@@ -532,22 +655,25 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
           </Badge>
           <Badge tone="neutral">prepare</Badge>
           <Badge tone="neutral">hold</Badge>
-          <Badge tone="neutral">upload</Badge>
+          <Badge tone="neutral">staged upload</Badge>
         </div>
       }
     >
       <p className="video-section-copy">
-        This is the video-lite version of the proven image workflow. Prepare is read-only pricing/policy preflight.
-        The ROC hold and video byte upload are separate explicit clicks.
+        This is now the video-bundle version of the image workflow. Rust-staged MP4/JPEG outputs are hashed first,
+        then streamed through Rust only after prepare and explicit ROC hold. Backend CIDs and crab URLs are accepted only from gateway responses.
       </p>
 
       <section className="video-publish-grid" aria-label="Video publish prerequisites">
         <Fact label="Gateway" value={settings.gatewayUrl || gateway?.baseUrl || 'not configured'} />
         <Fact label="Passport" value={settings.passportSubject || 'not configured'} />
         <Fact label="Wallet" value={settings.walletAccount || 'not configured'} />
-        <Fact label="Selected file" value={fileFacts?.name || selectedFile?.name || 'none'} />
-        <Fact label="Video-lite cap" value={formatBytes(MAX_SIMPLE_VIDEO_BYTES)} />
-        <Fact label="Current file size" value={selectedFile ? formatBytes(selectedFile.size) : 'n/a'} />
+        <Fact label="Mode" value={usingStagedBundle ? 'Rust staged bundle' : 'single preview file'} />
+        <Fact label="Selected outputs" value={usingStagedBundle ? `${publishTargets.length} staged` : (fallbackSelectedFile?.name || 'none')} />
+        <Fact label="Total bytes" value={formatBytes(usingStagedBundle ? selectedBytes : fallbackSelectedFile?.size || 0)} />
+        <Fact label="Browser fallback cap" value={formatBytes(MAX_SIMPLE_VIDEO_BYTES)} />
+        <Fact label="Rust staged stream cap" value={formatBytes(MAX_STAGED_VIDEO_BYTES)} />
+        <Fact label="Latest job" value={latestPrepareJob?.jobId ? shortId(latestPrepareJob.jobId) : 'none'} monospace />
       </section>
 
       {!preflight.ok && (
@@ -557,18 +683,56 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
         </div>
       )}
 
+      {stagedOutputs.length > 0 && (
+        <section className="video-staged-output-picker" aria-label="Staged output selection">
+          <div className="video-form-section-head">
+            <div>
+              <p className="cl-eyebrow">Staged outputs</p>
+              <h3>Select bundle outputs to mint</h3>
+            </div>
+            <Badge tone="success" uppercase={false}>
+              {stagedOutputs.length} ready
+            </Badge>
+          </div>
+
+          <div className="video-staged-output-grid">
+            {stagedOutputs.map((output) => (
+              <label className="video-staged-output-row" key={output.role}>
+                <input
+                  type="checkbox"
+                  checked={selectedRoles[output.role] !== false}
+                  onChange={(event) =>
+                    setSelectedRoles((current) => ({
+                      ...current,
+                      [output.role]: event.target.checked,
+                    }))
+                  }
+                />
+                <span>
+                  <strong>{output.label || output.role}</strong>
+                  <small>
+                    {output.assetKind} · {formatBytes(output.bytes)} · {output.contentType}
+                  </small>
+                </span>
+                <code>{output.role}</code>
+              </label>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="video-publish-step">
         <header>
           <div>
             <p className="cl-eyebrow">Step 1</p>
-            <h3>Prepare video upload</h3>
+            <h3>Prepare video bundle upload</h3>
           </div>
           <Badge tone={toneForStatus(prepareState.status)}>{labelForStatus(prepareState.status)}</Badge>
         </header>
 
         <p>
-          Sends strict JSON metadata to <code>/assets/video/prepare</code>. It does not upload video bytes
-          and does not mutate the wallet.
+          Sends strict JSON metadata to <code>/assets/video/prepare</code>. It estimates the selected bundle bytes.
+          It does not upload media bytes and does not mutate the wallet.
         </p>
 
         <div className="video-publish-actions">
@@ -603,8 +767,8 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
         </header>
 
         <p>
-          Sends an explicit wallet hold to <code>/wallet/hold</code>. The UI preview is not the authority;
-          the gateway wallet response supplies the paid proof used for upload.
+          Sends an explicit wallet hold to <code>/wallet/hold</code>. The returned wallet proof is then attached
+          to every selected staged output upload.
         </p>
 
         <div className="video-publish-controls">
@@ -626,7 +790,7 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
 
         {holdReviewOpen && holdApiRequest && (
           <div className="video-publish-warning" role="status" aria-live="polite">
-            <strong>Review ROC hold for video upload</strong>
+            <strong>Review ROC hold for video bundle upload</strong>
             <span>
               Amount: {formatRocUnits(holdApiRequest.amount_minor)} ROC · From: {holdApiRequest.from} · Escrow: {holdApiRequest.to} · Nonce: {holdApiRequest.nonce}
             </span>
@@ -663,7 +827,7 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
             result: summarizeResult(holdState),
             nonce_recovery: holdState.nonceRecovery || null,
             paid_proof_ready: Boolean(paidProof),
-            paid_proof: paidProof,
+            paid_proof: paidProof ? redactProof(paidProof) : null,
           }}
           initiallyOpen={holdReviewOpen || holdState.status === 'error'}
         />
@@ -673,31 +837,32 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
         <header>
           <div>
             <p className="cl-eyebrow">Step 3</p>
-            <h3>Review and submit video upload</h3>
+            <h3>Review and submit staged bundle</h3>
           </div>
           <Badge tone={toneForStatus(uploadState.status)}>{labelForStatus(uploadState.status)}</Badge>
         </header>
 
         <p>
-          Sends the selected video bytes as the raw request body to <code>/assets/video</code> with the
-          wallet hold proof headers required by the gateway contract.
+          Hashes selected <code>staged://</code> outputs through Rust, attaches the same predicted sibling rendition map to each upload,
+          then streams video outputs to <code>/assets/video</code> and poster/thumbnail image outputs to <code>/assets/image</code>.
         </p>
 
         {uploadReviewOpen && (
           <div className="video-publish-warning" role="status" aria-live="polite">
-            <strong>Review video upload request</strong>
+            <strong>Review staged bundle upload</strong>
             <span>
-              File: {selectedFile?.name || 'selected video'} · Bytes: {selectedFile?.size || 0} · Content-Type: {selectedFile?.type || 'video/mp4'}
+              Outputs: {usingStagedBundle ? publishTargets.length : 1} · Total bytes:{' '}
+              {formatBytes(usingStagedBundle ? selectedBytes : fallbackSelectedFile?.size || 0)}
             </span>
             <span>
-              No video bytes have been uploaded yet. Click <strong>Send Video Upload</strong> to submit the raw bytes and paid proof.
+              No staged files have been uploaded yet. Click <strong>Send Bundle Upload</strong> to submit each selected output with the paid proof.
             </span>
           </div>
         )}
 
         <div className="video-publish-actions">
           <Button variant={uploadReviewOpen ? 'primary' : 'secondary'} disabled={!canUpload || uploadState.status === 'sending'} onClick={submitUpload}>
-            {uploadState.status === 'sending' ? 'Uploading…' : uploadReviewOpen ? 'Send Video Upload' : 'Review Video Upload'}
+            {uploadState.status === 'sending' ? 'Uploading…' : uploadReviewOpen ? 'Send Bundle Upload' : 'Review Bundle Upload'}
           </Button>
           {uploadReviewOpen && (
             <Button variant="secondary" disabled={uploadState.status === 'sending'} onClick={() => setUploadReviewOpen(false)}>
@@ -705,17 +870,19 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
             </Button>
           )}
           <Button variant="secondary" disabled={!uploadCrabUrl} onClick={openReturnedAsset}>
-            Open Asset Page
+            Open Primary Video
           </Button>
-          <CopyButton text={uploadCrabUrl} label="Copy crab URL" disabled={!uploadCrabUrl} />
+          <CopyButton text={uploadCrabUrl} label="Copy primary crab URL" disabled={!uploadCrabUrl} />
         </div>
 
         {uploadState.status === 'ok' && (
-          <div className="video-upload-success">
-            <StatChip label="Upload" value="complete" tone="success" />
-            <StatChip label="Crab URL" value={uploadCrabUrl || 'not returned'} help={uploadCrabUrl} tone={uploadCrabUrl ? 'success' : 'warning'} />
-            <StatChip label="Asset CID" value={uploadAssetCid || 'not returned'} help={uploadAssetCid} />
-            <StatChip label="HTTP" value={String(uploadState.response?.status || 'n/a')} />
+          <VideoBundleResult bundle={uploadState.data} primaryUrl={uploadCrabUrl} primaryCid={uploadAssetCid} />
+        )}
+
+        {uploadState.status === 'error' && (
+          <div className="video-publish-warning">
+            <strong>Upload failed</strong>
+            <span>{uploadState.error?.message || 'Gateway rejected one of the staged uploads.'}</span>
           </div>
         )}
 
@@ -725,14 +892,14 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
             request: uploadState.request,
             pendingRequest: uploadReviewOpen
               ? {
-                  route: '/assets/video',
-                  file: fileFacts || summarizeFile(selectedFile),
-                  paidProof,
+                  mode: usingStagedBundle ? 'rust_staged_bundle' : 'single_browser_file',
+                  targets: usingStagedBundle ? publishTargets.map(redactUploadTarget) : [summarizeFile(fallbackSelectedFile)],
+                  paidProof: paidProof ? redactProof(paidProof) : null,
                 }
               : null,
             result: summarizeResult(uploadState),
-            returned_crab_url: uploadCrabUrl || null,
-            returned_asset_cid: uploadAssetCid || null,
+            returned_primary_crab_url: uploadCrabUrl || null,
+            returned_primary_asset_cid: uploadAssetCid || null,
           }}
           initiallyOpen={uploadReviewOpen || uploadState.status === 'error' || uploadState.status === 'ok'}
         />
@@ -741,7 +908,51 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
   );
 }
 
-function getPreflight({ selectedFile, settings, gateway }) {
+function VideoBundleResult({ bundle, primaryUrl, primaryCid }) {
+  const results = Array.isArray(bundle?.results) ? bundle.results : [];
+
+  return (
+    <div className="video-upload-success">
+      <StatChip label="Bundle" value="complete" tone="success" />
+      <StatChip label="Primary URL" value={primaryUrl || 'not returned'} help={primaryUrl} tone={primaryUrl ? 'success' : 'warning'} />
+      <StatChip label="Primary CID" value={primaryCid || 'not returned'} help={primaryCid} />
+
+      <div className="video-bundle-result-list">
+        {results.map((item) => (
+          <article key={`${item.role}-${item.crabUrl || item.cid}`} className="video-bundle-result-card">
+            <header>
+              <strong>{item.label || item.role}</strong>
+              <Badge tone={item.backendVerified ? 'success' : 'warning'} uppercase={false}>
+                {item.backendVerified ? 'backend returned truth' : 'missing CID/url'}
+              </Badge>
+            </header>
+            <p>
+              {item.assetKind} · {formatBytes(item.bytes)} · {item.contentType}
+              {item.predictionMatched ? ' · predicted b3 matched' : ''}
+            </p>
+            <code>{item.crabUrl || item.cid || 'no backend URL returned'}</code>
+            {item.predictedCrabUrl && item.predictedCrabUrl !== item.crabUrl && (
+              <small>Predicted: {item.predictedCrabUrl}</small>
+            )}
+          </article>
+        ))}
+      </div>
+
+      {bundle?.renditionGroup && (
+        <details className="video-publish-debug">
+          <summary>Sibling rendition group sent with uploads</summary>
+          <p>
+            This is the compact sibling-link block attached to each staged output upload after Rust hashes the staged bytes.
+            Backend CIDs remain the final truth and are checked against the local b3 prediction when returned.
+          </p>
+          <JsonPreview label="Video sibling rendition group" data={bundle.renditionGroup} />
+        </details>
+      )}
+    </div>
+  );
+}
+
+function getPreflight({ gateway, settings, publishTargets, selectedFile, usingStagedBundle }) {
   if (!gateway) {
     return {
       ok: false,
@@ -749,25 +960,43 @@ function getPreflight({ selectedFile, settings, gateway }) {
     };
   }
 
-  if (!selectedFile) {
-    return {
-      ok: false,
-      reason: 'Choose a video file before preparing a paid upload.',
-    };
-  }
+  if (usingStagedBundle) {
+    if (!publishTargets.length) {
+      return {
+        ok: false,
+        reason: 'Select at least one staged output from the completed prepare job.',
+      };
+    }
 
-  if (!String(selectedFile.type || '').toLowerCase().startsWith('video/')) {
-    return {
-      ok: false,
-      reason: 'Choose a valid video/* file for this video-lite mint path.',
-    };
-  }
+    const tooLarge = publishTargets.find((item) => item.assetKind === 'video' && Number(item.bytes || 0) > MAX_STAGED_VIDEO_BYTES);
 
-  if (Number(selectedFile.size || 0) > MAX_SIMPLE_VIDEO_BYTES) {
-    return {
-      ok: false,
-      reason: `This video-lite upload path is capped at ${formatBytes(MAX_SIMPLE_VIDEO_BYTES)}. Larger media needs the future bounded range/segment path.`,
-    };
+    if (tooLarge) {
+      return {
+        ok: false,
+        reason: `${tooLarge.label || tooLarge.role} exceeds the current ${formatBytes(MAX_STAGED_VIDEO_BYTES)} Rust staged streaming cap. Larger media still needs the future range/segment path.`,
+      };
+    }
+  } else {
+    if (!selectedFile) {
+      return {
+        ok: false,
+        reason: 'Run a Rust prepare job first, or choose a video preview file for the old single-file path.',
+      };
+    }
+
+    if (!String(selectedFile.type || '').toLowerCase().startsWith('video/')) {
+      return {
+        ok: false,
+        reason: 'Choose a valid video/* file for this video-lite mint path.',
+      };
+    }
+
+    if (Number(selectedFile.size || 0) > MAX_SIMPLE_VIDEO_BYTES) {
+      return {
+        ok: false,
+        reason: `This video-lite upload path is capped at ${formatBytes(MAX_SIMPLE_VIDEO_BYTES)}. Larger media needs the future bounded range/segment path.`,
+      };
+    }
   }
 
   if (!String(settings?.walletAccount || '').trim()) {
@@ -790,35 +1019,44 @@ function getPreflight({ selectedFile, settings, gateway }) {
   };
 }
 
-function buildPreparePayload({ draft, selectedFile, settings }) {
-  const contentType = selectedFile.type || 'video/mp4';
+function buildPreparePayload({ draft, settings, publishTargets, selectedFile, fileFacts, latestPrepareJob }) {
+  const usingStaged = publishTargets.length > 0;
+  const totalBytes = usingStaged
+    ? publishTargets.reduce((sum, output) => sum + Number(output.bytes || 0), 0)
+    : Number(selectedFile?.size || 0);
+  const contentType = usingStaged ? 'video/mp4' : (selectedFile?.type || 'video/mp4');
+  const title = draft.title || selectedFile?.name || latestPrepareJob?.source?.fileName || 'Video bundle';
+
+  if (!totalBytes) {
+    return null;
+  }
 
   return stripUndefined({
-    bytes: selectedFile.size,
+    bytes: totalBytes,
     payer_account: settings.walletAccount || undefined,
     owner_passport_subject: settings.passportSubject || undefined,
     content_type: contentType,
-    title: draft.title || selectedFile.name || undefined,
+    title,
     description: draft.description || undefined,
     tags: normalizeTags(draft.tags),
     video_kind: draft.videoKind || undefined,
-    duration: draft.duration || undefined,
-    resolution: draft.resolution || undefined,
+    duration: draft.duration || latestPrepareJob?.source?.durationSeconds || undefined,
+    resolution: draft.resolution || fileFacts?.resolution || undefined,
     aspect_ratio: draft.aspectRatio || undefined,
-    codec_format: draft.codecFormat || undefined,
+    codec_format: draft.codecFormat || 'mp4_h264_aac',
     frame_rate: draft.frameRate || undefined,
     language: draft.language || 'en',
     client_idempotency_key: stableIdempotencyKey(
       'video-prepare',
-      selectedFile.name || 'video',
-      selectedFile.size,
+      usingStaged ? latestPrepareJob?.jobId : selectedFile?.name || 'video',
+      totalBytes,
       contentType,
       settings.walletAccount,
     ),
   });
 }
 
-function buildHoldRequest({ amountMinor, escrowAccount, holdNonce, prepareData, preparePayload, settings, selectedFile }) {
+function buildHoldRequest({ amountMinor, escrowAccount, holdNonce, prepareData, preparePayload, settings }) {
   const prepare = asObject(prepareData);
   const template = extractHoldTemplate(prepare);
   const from = firstString(
@@ -855,7 +1093,6 @@ function buildHoldRequest({ amountMinor, escrowAccount, holdNonce, prepareData, 
     template.idempotencyKey,
     preparePayload?.client_idempotency_key,
     preparePayload?.idempotency_key,
-    selectedFile?.name,
   );
 
   return {
@@ -864,7 +1101,7 @@ function buildHoldRequest({ amountMinor, escrowAccount, holdNonce, prepareData, 
     asset: firstString(template.asset, 'roc').toLowerCase(),
     amount_minor: amount,
     nonce: safeNonce,
-    memo: `CrabLink video hold for ${selectedFile?.name || preparePayload?.title || 'video upload'}`.slice(0, 240),
+    memo: `CrabLink video bundle hold for ${preparePayload?.title || 'video upload'}`.slice(0, 240),
     idempotency_key: buildWalletHoldIdempotencyKey({
       preparePayload: {
         ...(preparePayload || {}),
@@ -890,6 +1127,408 @@ function buildWalletHoldIdempotencyKey({ preparePayload, from, to, amountMinor, 
     ),
     'wallet-hold',
   );
+}
+
+async function attachPredictedStagedHashes({ videoClient, draft, latestPrepareJob, uploadPlan }) {
+  const hashedTargets = [];
+
+  for (const target of uploadPlan) {
+    if (target.mode !== 'staged') {
+      hashedTargets.push(target);
+      continue;
+    }
+
+    const hash = await videoClient.hashStagedAsset({
+      stagedHandle: target.stagedHandle,
+      assetKind: target.assetKind,
+      contentType: target.contentType,
+      role: target.role,
+      maxBytes: target.bytes,
+    });
+
+    hashedTargets.push({
+      ...target,
+      bytes: Number(hash.bytes || target.bytes || 0),
+      predictedHash: hash.hash || '',
+      predictedCid: hash.cid || '',
+      predictedCrabUrl: hash.crabUrl || '',
+      predictedContentType: hash.contentType || target.contentType,
+    });
+  }
+
+  const renditionGroup = buildPredictedStagedRenditionGroup({
+    draft,
+    latestPrepareJob,
+    targets: hashedTargets,
+  });
+
+  return hashedTargets.map((target) => ({
+    ...target,
+    metadata: {
+      ...(target.metadata || {}),
+      renditionGroup,
+      predictedCid: target.predictedCid || undefined,
+      predictedCrabUrl: target.predictedCrabUrl || undefined,
+    },
+  }));
+}
+
+function buildPredictedStagedRenditionGroup({ draft, latestPrepareJob, targets }) {
+  const primary = firstObject(
+    targets.find((item) => item.role === 'source_clean_master'),
+    targets.find((item) => item.assetKind === 'video'),
+    targets[0],
+  );
+
+  return {
+    schema: 'crablink.video-rendition-group.v1',
+    group_id: primary.predictedCid || primary.predictedCrabUrl || latestPrepareJob?.jobId || '',
+    source_cid: primary.predictedCid || '',
+    canonical_crab_url: primary.predictedCrabUrl || '',
+    title: draft.title || latestPrepareJob?.source?.fileName || 'Video bundle',
+    generated_at: new Date().toISOString(),
+    relationship_truth: 'rust_staged_b3_prediction_before_backend_verified_upload',
+    source_job_id: latestPrepareJob?.jobId || '',
+    renditions: targets.map((item) => ({
+      role: item.role,
+      label: item.label,
+      asset_kind: item.assetKind,
+      mime: item.predictedContentType || item.contentType,
+      bytes: Number(item.bytes || 0),
+      width: item.metadata?.width || item.width || null,
+      height: item.metadata?.height || item.height || null,
+      cid: item.predictedCid || null,
+      crab_url: item.predictedCrabUrl || null,
+      hash: item.predictedHash || null,
+      prediction_source: 'tauri_hash_staged_file',
+    })),
+  };
+}
+
+function assertPredictedCidMatchesBackend({ role, label, predictedCid, predictedCrabUrl, backendCid, backendCrabUrl }) {
+  const predicted = normalizeCidForCompare(predictedCid || cidFromCrabUrl(predictedCrabUrl));
+  const actual = normalizeCidForCompare(backendCid || cidFromCrabUrl(backendCrabUrl));
+
+  if (!predicted || !actual) {
+    return;
+  }
+
+  if (predicted !== actual) {
+    throw new Error(
+      `Backend CID mismatch for ${label || role || 'video rendition'}: predicted ${predicted}, backend returned ${actual}.`,
+    );
+  }
+}
+
+function predictionMatchesBackend({ predictedCid, predictedCrabUrl, backendCid, backendCrabUrl }) {
+  const predicted = normalizeCidForCompare(predictedCid || cidFromCrabUrl(predictedCrabUrl));
+  const actual = normalizeCidForCompare(backendCid || cidFromCrabUrl(backendCrabUrl));
+  return Boolean(predicted && actual && predicted === actual);
+}
+
+function buildStagedUploadPlan({ publishTargets, draft, latestPrepareJob }) {
+  const plannedGroup = buildPlannedRenditionGroup({ draft, latestPrepareJob, publishTargets });
+
+  return publishTargets.map((output) => {
+    const assetKind = output.assetKind === 'image' ? 'image' : 'video';
+
+    return {
+      mode: 'staged',
+      role: output.role,
+      label: output.label || output.role,
+      assetKind,
+      stagedHandle: output.stagedHandle,
+      bytes: Number(output.bytes || 0),
+      width: output.width || null,
+      height: output.height || null,
+      durationSeconds: output.durationSeconds || null,
+      contentType: output.contentType || (assetKind === 'image' ? 'image/jpeg' : 'video/mp4'),
+      metadata: {
+        title: `${draft.title || 'Video'} — ${output.label || output.role}`,
+        description: buildOutputDescription({ draft, output }),
+        tags: addUniqueTags(draft.tags, [
+          assetKind,
+          'video-bundle',
+          `role:${output.role}`,
+          'rust-staged',
+          'metadata-stripped',
+        ]),
+        duration: output.durationSeconds || draft.duration,
+        resolution: output.width && output.height ? `${output.width}x${output.height}` : draft.resolution,
+        aspectRatio: draft.aspectRatio,
+        videoKind: draft.videoKind,
+        language: draft.language,
+        renditionGroup: plannedGroup,
+        renditionRole: output.role,
+        renditionLabel: output.label || output.role,
+      },
+      idempotencyKey: stableVideoIdempotencyKey(
+        'staged-video-bundle',
+        latestPrepareJob?.jobId,
+        output.role,
+        output.bytes,
+        output.stagedHandle,
+      ),
+    };
+  });
+}
+
+function buildFallbackUploadPlan({ selectedFile, draft, fileFacts }) {
+  if (!selectedFile) {
+    return [];
+  }
+
+  return [
+    {
+      mode: 'browser_file',
+      role: 'source_clean_master',
+      label: 'Selected video',
+      assetKind: 'video',
+      file: selectedFile,
+      bytes: selectedFile.size || 0,
+      contentType: selectedFile.type || 'video/mp4',
+      metadata: {
+        title: draft.title || selectedFile.name || 'Video asset',
+        description: draft.description || '',
+        tags: normalizeTags(draft.tags || ''),
+        duration: draft.duration,
+        resolution: draft.resolution || fileFacts?.resolution,
+        aspectRatio: draft.aspectRatio,
+        videoKind: draft.videoKind,
+        language: draft.language,
+        renditionRole: 'source_clean_master',
+        renditionLabel: 'Selected video',
+      },
+      idempotencyKey: stableVideoIdempotencyKey('video-upload', selectedFile.name, selectedFile.size, selectedFile.type),
+    },
+  ];
+}
+
+function buildVideoBundleResult({ draft, latestPrepareJob, paidProof, uploadPlan, results }) {
+  const normalizedResults = results.map((result) => ({
+    role: result.role,
+    label: result.label,
+    assetKind: result.assetKind,
+    bytes: Number(result.bytes || 0),
+    contentType: result.contentType,
+    stagedHandle: result.stagedHandle || '',
+    predictedCid: result.predictedCid || '',
+    predictedCrabUrl: result.predictedCrabUrl || '',
+    predictedHash: result.predictedHash || '',
+    predictionMatched: Boolean(result.predictionMatched || false),
+    cid: result.cid || '',
+    crabUrl: result.crabUrl || '',
+    backendVerified: Boolean(result.cid || result.crabUrl),
+    request: result.response?.request || null,
+    response: result.response,
+  }));
+
+  const videoResults = normalizedResults.filter((item) => item.assetKind === 'video');
+  const imageResults = normalizedResults.filter((item) => item.assetKind === 'image');
+  const primary = firstObject(
+    normalizedResults.find((item) => item.role === 'source_clean_master'),
+    videoResults[0],
+    normalizedResults[0],
+  );
+
+  return {
+    schema: 'crablink.video-bundle-result.v1',
+    backendVerified: normalizedResults.some((item) => item.backendVerified),
+    relationshipDurability: 'display_bundle_map_until_backend_video_bundle_manifest_route_exists',
+    mintedAt: new Date().toISOString(),
+    receiptHash: paidProof.receipt_hash || paidProof.receiptHash || '',
+    paidProof: redactProof(paidProof),
+    sourceJobId: latestPrepareJob?.jobId || '',
+    title: draft.title || latestPrepareJob?.source?.fileName || 'Video bundle',
+    primary,
+    results: normalizedResults,
+    videoRenditions: videoResults,
+    imageAssets: imageResults,
+    renditionGroup: buildReturnedRenditionGroup({
+      draft,
+      latestPrepareJob,
+      results: normalizedResults,
+      uploadPlan,
+    }),
+  };
+}
+
+function buildPlannedRenditionGroup({ draft, latestPrepareJob, publishTargets }) {
+  return {
+    schema: 'crablink.video-rendition-group.plan.v1',
+    source_job_id: latestPrepareJob?.jobId || '',
+    title: draft.title || latestPrepareJob?.source?.fileName || 'Video bundle',
+    generated_at: new Date().toISOString(),
+    relationship_truth: 'planned_before_backend_upload_backend_truth_pending',
+    renditions: publishTargets.map((output) => ({
+      role: output.role,
+      label: output.label || output.role,
+      asset_kind: output.assetKind,
+      mime: output.contentType,
+      bytes: Number(output.bytes || 0),
+      width: output.width || null,
+      height: output.height || null,
+      staged_handle_redacted: output.stagedHandle || '',
+      cid: null,
+      crab_url: null,
+    })),
+  };
+}
+
+function buildReturnedRenditionGroup({ draft, latestPrepareJob, results }) {
+  const primary = firstObject(
+    results.find((item) => item.role === 'source_clean_master'),
+    results.find((item) => item.assetKind === 'video'),
+    results[0],
+  );
+
+  return {
+    schema: 'crablink.video-rendition-group.v1',
+    group_id: primary.cid || primary.crabUrl || latestPrepareJob?.jobId || '',
+    source_cid: primary.cid || '',
+    canonical_crab_url: primary.crabUrl || '',
+    title: draft.title || latestPrepareJob?.source?.fileName || 'Video bundle',
+    generated_at: new Date().toISOString(),
+    relationship_truth: 'backend_returned_asset_urls_after_explicit_paid_upload',
+    source_job_id: latestPrepareJob?.jobId || '',
+    renditions: results.map((item) => ({
+      role: item.role,
+      label: item.label,
+      asset_kind: item.assetKind,
+      mime: item.contentType,
+      bytes: Number(item.bytes || 0),
+      predicted_cid: item.predictedCid || null,
+      predicted_crab_url: item.predictedCrabUrl || null,
+      cid: item.cid || null,
+      crab_url: item.crabUrl || null,
+      backend_verified: Boolean(item.cid || item.crabUrl),
+      prediction_matched: Boolean(item.predictionMatched),
+    })),
+  };
+}
+
+function normalizeStagedOutputs(job) {
+  if (!job || job.status !== 'completed' || !Array.isArray(job.outputs)) {
+    return [];
+  }
+
+  return job.outputs
+    .filter((output) => output?.readyForMint && output?.existsOnDisk && output?.stagedHandle)
+    .map((output) => {
+      const assetKind = String(output.assetKind || output.asset_kind || 'video').toLowerCase() === 'image' ? 'image' : 'video';
+
+      return {
+        role: String(output.role || '').trim() || 'output',
+        label: String(output.label || output.role || 'Output').trim(),
+        assetKind,
+        contentType: String(output.targetMime || output.target_mime || (assetKind === 'image' ? 'image/jpeg' : 'video/mp4')),
+        stagedHandle: String(output.stagedHandle || output.staged_handle || ''),
+        bytes: Number(output.bytes || 0),
+        width: output.width || null,
+        height: output.height || null,
+        durationSeconds: output.durationSeconds || output.duration_seconds || null,
+      };
+    })
+    .filter((output) => output.stagedHandle.startsWith('staged://video-job/') && output.bytes > 0);
+}
+
+function applyReturnedCrabUrlsToDraft(updateDraft, results) {
+  if (typeof updateDraft !== 'function') {
+    return;
+  }
+
+  const fieldMap = {
+    source_clean_master: 'sourceMasterVideoCrabUrl',
+    desktop_1080p: 'desktopRenditionCrabUrl',
+    tablet_720p: 'desktopRenditionCrabUrl',
+    mobile_480p: 'mobileRenditionCrabUrl',
+    low_360p: 'lowBandwidthRenditionCrabUrl',
+    poster_image: 'posterImageCrabUrl',
+    thumbnail_image: 'thumbnailImageCrabUrl',
+  };
+
+  for (const item of results) {
+    const field = fieldMap[item.role];
+
+    if (field && item.crabUrl) {
+      updateDraft(field, item.crabUrl);
+    }
+  }
+}
+
+function cacheReturnedVideoAssets({ app, draft, results }) {
+  for (const item of results) {
+    if (!item.crabUrl) {
+      continue;
+    }
+
+    writeLocalCatalogEntry({
+      schema: 'crablink.local-catalog-entry.v1',
+      type: 'asset',
+      kind: item.assetKind,
+      crabUrl: item.crabUrl,
+      title: `${draft.title || 'Video'} — ${item.label || item.role}`,
+      detail: `${formatBytes(item.bytes)} · backend-confirmed ${item.assetKind} asset`,
+      cid: item.cid,
+      status: 'backend-confirmed display cache',
+      source: 'video_bundle_upload_success',
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  const firstVideo = results.find((item) => item.assetKind === 'video' && item.crabUrl);
+
+  if (firstVideo?.crabUrl && typeof app?.rememberRecentCrabUrl === 'function') {
+    app.rememberRecentCrabUrl(firstVideo.crabUrl);
+  }
+}
+
+function firstVideoResult(bundle) {
+  const results = Array.isArray(bundle?.results) ? bundle.results : [];
+  return results.find((item) => item.assetKind === 'video' && item.crabUrl)
+    || results.find((item) => item.assetKind === 'video')
+    || results[0]
+    || null;
+}
+
+function readLatestPrepareJob() {
+  try {
+    const raw = globalThis.localStorage?.getItem?.(LATEST_JOB_STORAGE_KEY);
+    const parsed = JSON.parse(raw || 'null');
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function buildOutputDescription({ draft, output }) {
+  const parts = [
+    draft.description || '',
+    '',
+    `CrabLink video bundle output: ${output.label || output.role}.`,
+    `Role: ${output.role}.`,
+    `Prepared by Rust-owned local FFmpeg staging; backend URL returned only after explicit paid upload.`,
+  ];
+
+  return parts.filter(Boolean).join('\n').slice(0, 900);
+}
+
+function redactUploadTarget(target) {
+  if (!target) {
+    return null;
+  }
+
+  return {
+    mode: target.mode || 'staged',
+    role: target.role,
+    label: target.label,
+    assetKind: target.assetKind,
+    bytes: target.bytes,
+    contentType: target.contentType,
+    predictedCid: target.predictedCid || '',
+    predictedCrabUrl: target.predictedCrabUrl || '',
+    stagedHandle: target.stagedHandle ? `${target.stagedHandle.slice(0, 48)}…` : '',
+  };
 }
 
 function extractPrepareAmountMinor(data) {
@@ -1008,6 +1647,20 @@ function normalizeTags(value) {
     .slice(0, 24);
 }
 
+function addUniqueTags(value, extra = []) {
+  const seen = new Set();
+  return [...normalizeTags(value), ...extra]
+    .map((tag) => String(tag || '').trim())
+    .filter(Boolean)
+    .filter((tag) => {
+      const key = tag.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 24);
+}
+
 function summarizeFile(file) {
   if (!file) {
     return null;
@@ -1088,6 +1741,41 @@ function saveLastNonceHint(account, nonce) {
   } catch (_error) {
     // Local nonce hints are optional UI convenience only, never backend truth.
   }
+}
+
+function redactProof(proof) {
+  const clean = asObject(proof);
+
+  return {
+    op: clean.op || 'hold',
+    asset: clean.asset || 'roc',
+    amount_minor: clean.amount_minor || clean.amountMinor || '',
+    from: clean.from || '',
+    to: clean.to || '',
+    txid: shortId(clean.txid || ''),
+    receipt_hash: shortId(clean.receipt_hash || clean.receiptHash || ''),
+  };
+}
+
+function cidFromCrabUrl(value) {
+  const raw = String(value || '').trim();
+  const match = raw.match(/^crab:\/\/([0-9a-f]{64})\.(image|video)$/i);
+  return match ? `b3:${match[1].toLowerCase()}` : '';
+}
+
+function normalizeCidForCompare(value) {
+  const raw = String(value || '').trim().replace(/^b3:/i, '').toLowerCase();
+  return /^[0-9a-f]{64}$/.test(raw) ? `b3:${raw}` : '';
+}
+
+function shortId(value) {
+  const raw = String(value || '');
+
+  if (raw.length <= 18) {
+    return raw;
+  }
+
+  return `${raw.slice(0, 10)}…${raw.slice(-6)}`;
 }
 
 function formatBytes(value) {

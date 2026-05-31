@@ -9,9 +9,16 @@
 
 export const ZOOM_STORAGE_KEY = 'crablink.ui.zoomScale.v1';
 export const DEFAULT_ZOOM_SCALE = 1;
-export const MIN_ZOOM_SCALE = 0.75;
+
+/**
+ * Keep zoom-in unchanged enough for normal use, but allow much deeper zoom-out.
+ *
+ * Old minimum was 0.75, which only allowed a small zoom-out. 0.4 gives about
+ * 2.4x more zoom-out range while staying readable and avoiding layout collapse.
+ */
+export const MIN_ZOOM_SCALE = 0.4;
 export const MAX_ZOOM_SCALE = 1.5;
-export const ZOOM_STEP = 0.1;
+export const ZOOM_STEP = 0.05;
 
 export function readStoredZoomScale() {
   try {
@@ -53,6 +60,7 @@ export function applyZoomScale(value, documentLike = globalThis.document) {
 
     if (root?.style?.setProperty) {
       root.style.setProperty('--cl-app-zoom-scale', String(scale));
+      root.style.setProperty('--cl-app-zoom-inverse', String(Math.round((1 / scale) * 1000) / 1000));
       root.style.setProperty('font-size', `${Math.round(scale * 100)}%`);
       root.dataset.crablinkZoom = formatZoomPercent(scale);
     }
