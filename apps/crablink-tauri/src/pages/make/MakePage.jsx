@@ -92,6 +92,7 @@ export default function MakePage({ app }) {
   const [showDeveloperPlan, setShowDeveloperPlan] = useState(false);
   const [clockTick, setClockTick] = useState(0);
   const [countdown, setCountdown] = useState(0);
+  const [prompterRunning, setPrompterRunning] = useState(false);
 
   const selectedMode = useMemo(() => findMakeMode(draft.selectedMode), [draft.selectedMode]);
   const outputPreset = useMemo(() => findOutputPreset(draft.outputPreset), [draft.outputPreset]);
@@ -99,6 +100,7 @@ export default function MakePage({ app }) {
   const inputReady = inputState.status === 'ready';
   const isRecording = recorderState.status === 'recording';
   const isCountingDown = countdown > 0;
+  const hasPrompterScript = Boolean(draft.scriptText.trim());
   const canUseMedia = typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices);
   const canRecord =
     inputReady &&
@@ -151,6 +153,15 @@ export default function MakePage({ app }) {
       }),
     );
   }, []);
+
+  const togglePrompterRun = useCallback(() => {
+    if (!draft.teleprompterEnabled || !draft.scriptText.trim()) {
+      setPrompterRunning(false);
+      return;
+    }
+
+    setPrompterRunning((value) => !value);
+  }, [draft.scriptText, draft.teleprompterEnabled]);
 
   const applyPreset = useCallback((presetValue) => {
     if (inputReady || isRecording || isCountingDown) {
@@ -582,6 +593,12 @@ export default function MakePage({ app }) {
   }, [cancelCountdown, inputReady, isCountingDown]);
 
   useEffect(() => {
+    if (!draft.teleprompterEnabled || !hasPrompterScript) {
+      setPrompterRunning(false);
+    }
+  }, [draft.teleprompterEnabled, hasPrompterScript]);
+
+  useEffect(() => {
     if (clips.length === 0) {
       return undefined;
     }
@@ -726,6 +743,14 @@ export default function MakePage({ app }) {
                 <span>Recording starts now</span>
               </div>
             )}
+
+            <MakePrompterOverlay draft={draft} running={prompterRunning} />
+            <MakePrompterControls
+              draft={draft}
+              hasPrompterScript={hasPrompterScript}
+              onToggleRun={togglePrompterRun}
+              running={prompterRunning}
+            />
           </div>
 
           <MakePresetDeck
@@ -769,9 +794,12 @@ export default function MakePage({ app }) {
 
         <MakeProjectCard
           draft={draft}
+          hasPrompterScript={hasPrompterScript}
           onReset={resetDraft}
+          onTogglePrompterRun={togglePrompterRun}
           onUpdate={updateDraft}
           outputPreset={outputPreset}
+          prompterRunning={prompterRunning}
         />
 
         <MakeHandoffCard
@@ -784,6 +812,45 @@ export default function MakePage({ app }) {
         />
       </section>
     </CreatorWorkspaceLayout>
+  );
+}
+
+function MakePrompterOverlay({ draft, running }) {
+  const script = draft.scriptText.trim();
+
+  if (!draft.teleprompterEnabled || !script) {
+    return null;
+  }
+
+  const durationSeconds = Math.max(18, 110 - Number(draft.teleprompterSpeed || 38));
+  const anchorClass = draft.teleprompterAnchor === 'top' ? 'make-prompter-top' : 'make-prompter-bottom';
+
+  return (
+    <div
+      className={`make-prompter-overlay ${anchorClass} ${running ? 'is-running' : ''}`}
+      style={{ '--make-prompter-duration': `${durationSeconds}s` }}
+      aria-hidden={!draft.teleprompterEnabled}
+    >
+      <div className="make-prompter-window">
+        <pre key={`${running ? 'run' : 'pause'}-${script.length}-${draft.teleprompterSpeed}`}>{script}</pre>
+      </div>
+      <span>Teleprompter preview only · not recorded</span>
+    </div>
+  );
+}
+
+function MakePrompterControls({ draft, hasPrompterScript, onToggleRun, running }) {
+  if (!draft.teleprompterEnabled || !hasPrompterScript) {
+    return null;
+  }
+
+  return (
+    <div className="make-prompter-controls">
+      <span>Prompt visible to creator only</span>
+      <button type="button" onClick={onToggleRun}>
+        {running ? 'Pause' : 'Run'}
+      </button>
+    </div>
   );
 }
 
@@ -1040,7 +1107,7 @@ function MakeTimelineCard({
   );
 }
 
-function MakeProjectCard({ draft, onReset, onUpdate, outputPreset }) {
+function MakeProjectCard({ draft, hasPrompterScript, onReset, onTogglePrompterRun, onUpdate, outputPreset, prompterRunning }) {
   return (
     <Card
       eyebrow="Project"
@@ -1071,7 +1138,7 @@ function MakeProjectCard({ draft, onReset, onUpdate, outputPreset }) {
       <details className="make-disclosure">
         <summary>
           <span>Advanced project details</span>
-          <small>description, tags, scene, canvas, audio, PiP, notes</small>
+          <small>description, tags, scene, canvas, audio, prompter, PiP, notes</small>
         </summary>
 
         <div className="make-disclosure-body">
@@ -1083,6 +1150,14 @@ function MakeProjectCard({ draft, onReset, onUpdate, outputPreset }) {
               onChange={(event) => onUpdate({ description: event.target.value })}
             />
           </Field>
+
+          <MakePrompterEditor
+            draft={draft}
+            hasPrompterScript={hasPrompterScript}
+            onToggleRun={onTogglePrompterRun}
+            onUpdate={onUpdate}
+            running={prompterRunning}
+          />
 
           <div className="make-form-grid">
             <Field label="Tags" help="Comma-separated local draft tags.">
@@ -1192,6 +1267,72 @@ function MakeProjectCard({ draft, onReset, onUpdate, outputPreset }) {
         </div>
       </details>
     </Card>
+  );
+}
+
+function MakePrompterEditor({ draft, hasPrompterScript, onToggleRun, onUpdate, running }) {
+  return (
+    <section className="make-prompter-editor" aria-label="Teleprompter">
+      <div className="make-prompter-editor-head">
+        <div>
+          <p className="cl-eyebrow">Teleprompter</p>
+          <h3>Preview-only script runner</h3>
+          <span>
+            This overlay sits above the preview for the creator. It is not drawn into the recorded canvas.
+          </span>
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onToggleRun}
+          disabled={!draft.teleprompterEnabled || !hasPrompterScript}
+        >
+          {running ? 'Pause prompt' : 'Run prompt'}
+        </Button>
+      </div>
+
+      <div className="make-toggle-grid make-prompter-toggle-row">
+        <CheckToggle
+          checked={draft.teleprompterEnabled}
+          label="Show prompt"
+          onChange={(teleprompterEnabled) => onUpdate({ teleprompterEnabled })}
+        />
+
+        <Field label="Position">
+          <select
+            className="cl-input"
+            value={draft.teleprompterAnchor}
+            onChange={(event) => onUpdate({ teleprompterAnchor: event.target.value })}
+          >
+            <option value="bottom">Bottom</option>
+            <option value="top">Top</option>
+          </select>
+        </Field>
+
+        <Field label="Scroll speed" help={`${draft.teleprompterSpeed}/90`}>
+          <input
+            className="cl-input"
+            type="range"
+            min="10"
+            max="90"
+            value={draft.teleprompterSpeed}
+            onChange={(event) => onUpdate({ teleprompterSpeed: event.target.value })}
+          />
+        </Field>
+      </div>
+
+      <Field
+        label="Script"
+        help="Local draft text only. Keep secrets out of scripts you plan to copy or share."
+      >
+        <TextArea
+          rows={7}
+          value={draft.scriptText}
+          placeholder="Paste a script, bullet points, or talking beats here..."
+          onChange={(event) => onUpdate({ scriptText: event.target.value })}
+        />
+      </Field>
+    </section>
   );
 }
 

@@ -267,6 +267,105 @@
   animation: make-rec-pulse 1.15s infinite;
 }
 
+.make-prompter-overlay {
+  position: absolute;
+  z-index: 2;
+  right: clamp(1rem, 8vw, 6rem);
+  left: clamp(1rem, 8vw, 6rem);
+  display: grid;
+  gap: 0.42rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.50)),
+    rgba(20, 184, 166, 0.10);
+  color: #fff;
+  pointer-events: none;
+  box-shadow: 0 22px 64px rgba(0, 0, 0, 0.26);
+  backdrop-filter: blur(10px);
+}
+
+.make-prompter-top {
+  top: 4.75rem;
+}
+
+.make-prompter-bottom {
+  bottom: 5.4rem;
+}
+
+.make-prompter-window {
+  overflow: hidden;
+  max-height: clamp(5rem, 20vw, 12rem);
+  mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 82%, transparent);
+}
+
+.make-prompter-overlay pre {
+  margin: 0;
+  color: #fff;
+  font-family: inherit;
+  font-size: clamp(1.05rem, 2vw, 2.15rem);
+  font-weight: 900;
+  line-height: 1.35;
+  text-align: center;
+  white-space: pre-wrap;
+  transform: translateY(0);
+}
+
+.make-prompter-overlay.is-running pre {
+  animation: make-prompter-scroll var(--make-prompter-duration, 72s) linear infinite;
+}
+
+.make-prompter-overlay span {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.make-prompter-controls {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 3;
+  display: inline-flex;
+  gap: 0.55rem;
+  align-items: center;
+  max-width: min(30rem, calc(100% - 2rem));
+  padding: 0.48rem 0.55rem 0.48rem 0.72rem;
+  border: 1px solid rgba(20, 184, 166, 0.36);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.68);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+}
+
+.make-prompter-controls button {
+  padding: 0.34rem 0.62rem;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: #050505;
+  cursor: pointer;
+  font: inherit;
+}
+
+@keyframes make-prompter-scroll {
+  from {
+    transform: translateY(22%);
+  }
+
+  to {
+    transform: translateY(-76%);
+  }
+}
+
 .make-countdown-overlay {
   position: absolute;
   inset: 0;
@@ -686,6 +785,49 @@
   font-weight: 800;
 }
 
+.make-prompter-editor {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.95rem;
+  border: 1px solid rgba(20, 184, 166, 0.28);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(20, 184, 166, 0.12), transparent 38%),
+    var(--make-panel);
+}
+
+.make-prompter-editor-head {
+  display: flex;
+  gap: 1rem;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.make-prompter-editor-head h3,
+.make-prompter-editor-head p {
+  margin: 0;
+}
+
+.make-prompter-editor-head h3 {
+  color: var(--cl-text);
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.make-prompter-editor-head span {
+  display: block;
+  max-width: 48rem;
+  margin-top: 0.25rem;
+  color: var(--cl-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.make-prompter-toggle-row {
+  grid-template-columns: minmax(11rem, 0.8fr) minmax(11rem, 0.75fr) minmax(13rem, 1fr);
+  align-items: end;
+}
+
 .make-project-prime,
 .make-form-grid {
   display: grid;
@@ -976,6 +1118,10 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .make-prompter-toggle-row {
+    grid-template-columns: 1fr;
+  }
+
   .make-mode-deck {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1025,6 +1171,31 @@
 
   .make-preview-topbar {
     max-width: calc(100% - 2rem);
+  }
+
+  .make-prompter-overlay {
+    right: 0.75rem;
+    left: 0.75rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .make-prompter-top {
+    top: 5.9rem;
+  }
+
+  .make-prompter-bottom {
+    bottom: 5.8rem;
+  }
+
+  .make-prompter-controls {
+    right: 0.75rem;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    justify-content: space-between;
+  }
+
+  .make-prompter-editor-head {
+    flex-direction: column;
   }
 
   .make-recording-badge {

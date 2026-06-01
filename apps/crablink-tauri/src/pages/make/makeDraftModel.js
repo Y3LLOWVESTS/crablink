@@ -203,6 +203,10 @@ export const DEFAULT_MAKE_DRAFT = Object.freeze({
   description: '',
   tagsText: '',
   creatorNotes: '',
+  scriptText: '',
+  teleprompterEnabled: false,
+  teleprompterSpeed: 38,
+  teleprompterAnchor: 'bottom',
   accessPriceRoc: '0',
   scenePreset: 'studio_demo',
   selectedMode: 'camera',
@@ -220,6 +224,7 @@ export const DEFAULT_MAKE_DRAFT = Object.freeze({
 const MAX_TITLE_CHARS = 90;
 const MAX_DESCRIPTION_CHARS = 2000;
 const MAX_NOTES_CHARS = 2000;
+const MAX_SCRIPT_CHARS = 5000;
 const MAX_TAGS = 12;
 const MAX_TAG_CHARS = 32;
 
@@ -289,6 +294,12 @@ export function normalizeMakeDraft(input = {}) {
     description: clampText(input.description, MAX_DESCRIPTION_CHARS),
     tagsText: normalizeTags(input.tagsText || input.tags || '').join(', '),
     creatorNotes: clampText(input.creatorNotes, MAX_NOTES_CHARS),
+    scriptText: clampText(input.scriptText, MAX_SCRIPT_CHARS),
+    teleprompterEnabled: input.teleprompterEnabled === true,
+    teleprompterSpeed: clampInteger(input.teleprompterSpeed, 10, 90, DEFAULT_MAKE_DRAFT.teleprompterSpeed),
+    teleprompterAnchor: ['top', 'bottom'].includes(input.teleprompterAnchor)
+      ? input.teleprompterAnchor
+      : DEFAULT_MAKE_DRAFT.teleprompterAnchor,
     accessPriceRoc: normalizeRocText(input.accessPriceRoc),
     scenePreset,
     selectedMode,
@@ -392,6 +403,15 @@ export function deriveMakeReadiness({ draft, clips = [], inputStatus = 'idle', r
         tone: 'neutral',
         help: `${safeDraft.targetFps}fps preview recorder`,
       },
+      {
+        key: 'prompter',
+        label: 'Prompt',
+        value: safeDraft.teleprompterEnabled ? (safeDraft.scriptText.trim() ? 'ready' : 'empty') : 'off',
+        tone: safeDraft.teleprompterEnabled ? (safeDraft.scriptText.trim() ? 'success' : 'warning') : 'neutral',
+        help: safeDraft.teleprompterEnabled
+          ? 'Preview-only overlay; not recorded into the canvas.'
+          : 'Optional local teleprompter.',
+      },
     ],
   };
 }
@@ -419,6 +439,7 @@ export function buildMakeSessionPlan({ draft, clips = [], inputStatus = 'idle', 
       description: safeDraft.description,
       tags,
       creatorNotes: safeDraft.creatorNotes,
+      scriptCharacters: safeDraft.scriptText.length,
       accessPriceRoc: safeDraft.accessPriceRoc,
     },
     studio: {
@@ -433,6 +454,13 @@ export function buildMakeSessionPlan({ draft, clips = [], inputStatus = 'idle', 
       height: preset.height,
       targetFps: safeDraft.targetFps,
       includeMic: safeDraft.includeMic,
+      teleprompter: {
+        enabled: safeDraft.teleprompterEnabled,
+        anchor: safeDraft.teleprompterAnchor,
+        speed: safeDraft.teleprompterSpeed,
+        scriptCharacters: safeDraft.scriptText.length,
+        recordedIntoCanvas: false,
+      },
       pipCorner: safeDraft.pipCorner,
       pipSizePercent: safeDraft.pipSize,
     },

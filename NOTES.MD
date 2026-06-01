@@ -31357,3 +31357,1148 @@ The next instance should continue from this checkpoint and focus on Make Studio 
 
 
 ### END NOTE - MAY 31 2026 - 21:35 CST
+
+
+
+
+### BEGIN NOTE - JUNE 1 2026 - 10:10 CST
+
+Absolutely. Here are the carryover notes for the next instance. These are written so we can restart cleanly next session and continue building `crab://make` as the centerpiece, batteries-included creator studio.
+
+# CrabLink Tauri Carryover Notes — Make Studio Centerpiece / Person Cutout Background Replacement
+
+## 0. Current session checkpoint
+
+We are continuing CrabLink Tauri work, using the newest uploaded codebundle:
+
+```text
+CODEBUNDLE_TAURI_APP.md
+Generated: 2026-06-01T14:56:50Z
+Root: /Users/mymac/Desktop/crablink
+Git: 3b1fa66 (dirty)
+```
+
+The latest codebundle confirms the Tauri app has the Make route files in place:
+
+```text
+apps/crablink-tauri/src/pages/make/make.css
+apps/crablink-tauri/src/pages/make/makeDraftModel.js
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+```
+
+It also confirms the stream feature files we need to port from:
+
+```text
+apps/crablink-tauri/src/pages/stream/streamCompositor.js
+apps/crablink-tauri/src/pages/stream/streamPersonSegmentation.js
+apps/crablink-tauri/src/pages/stream/StreamLocalPreview.jsx
+apps/crablink-tauri/src/pages/stream/StreamLookPanel.jsx
+apps/crablink-tauri/src/pages/stream/streamStudioModel.js
+```
+
+The newest codebundle is the active reference. 
+
+The user’s current strategic direction is now very clear:
+
+```text
+Build crab://make first.
+Make Studio should become CrabLink’s centerpiece.
+CrabLink should feel batteries-included for creators.
+```
+
+The user also added an important product principle to memory:
+
+```text
+Data sovereignty is key for content creators.
+Sites are reference graphs.
+Content creators own their own content.
+```
+
+This must shape future design. Make Studio should help creators create, control, export, and eventually publish their own media without surrendering ownership or pretending local draft state is backend truth.
+
+---
+
+## 1. Language correction: this is not “green screen” anymore
+
+The user explicitly corrected the terminology:
+
+```text
+Do not call the next feature “green screen” as the primary language.
+```
+
+Correct language going forward:
+
+```text
+person cutout
+background removal
+background replacement
+software cutout
+subject cutout
+camera cutout
+cutout effect
+```
+
+Wrong or outdated language:
+
+```text
+green screen
+chroma key as the main UX term
+```
+
+Technical note: The stream page still has some legacy “green screen” fields and code paths because it historically started from chroma-key style work. We can preserve those internally temporarily if needed for compatibility, but Make’s product UI should call the feature **Person Cutout** or **Background Replacement**.
+
+Very important cleanup: the latest codebundle still shows brand-risk wording in `streamPersonSegmentation.js` comments: “TikTok/Zoom-style background replacement.” That should be cleaned up in a future patch to something like “popular creator-app background replacement” or “software background replacement,” because the user previously asked to remove that brand wording from the repo. 
+
+---
+
+## 2. Highest-level product thesis
+
+CrabLink should not just be a viewer for `crab://` links.
+
+CrabLink should become:
+
+```text
+A batteries-included creator client.
+```
+
+`crab://make` is the center of that experience.
+
+Make Studio should eventually let a creator:
+
+```text
+record camera clips
+record screen clips
+record screen + PiP camera clips
+use person cutout/background replacement
+use image backgrounds
+use video backgrounds
+use audio/podcast-style controls
+use a teleprompter
+record segmented clips
+review a timeline
+retake clips
+reorder clips
+trim clips
+export local master media
+handoff to crab://video for conversion/renditions/minting
+publish through backend-derived truth
+```
+
+The mental model stays:
+
+```text
+Make = local creative studio
+Video = conversion/rendition/mint/publish flow
+Stream = live/stream-lite flow
+Podcast = audio/podcast publishing flow
+Backend = b3, manifests, receipts, paid access, ledger/wallet truth
+```
+
+Make should be powerful locally, but it must remain honest about what it is.
+
+---
+
+## 3. Hard boundaries that must not drift
+
+Make Studio is allowed to be a rich local media creation workspace. It is not allowed to become backend authority.
+
+Preserve these invariants:
+
+```text
+Make creates local clips and session plans only.
+Make does not create b3 CIDs.
+Make does not create crab:// asset truth.
+Make does not mint video assets.
+Make does not create or fake manifests.
+Make does not create or fake receipts.
+Make does not create wallet truth.
+Make does not mutate ledger truth.
+Make does not unlock paid content from local cache.
+Make does not store private keys.
+Make does not store raw capabilities, backend tokens, or spend authority.
+Make does not execute creator-supplied code.
+Make does not claim DRM or anti-rip protection.
+Make does not make fake ownership claims from a local recording.
+```
+
+The current Make page header already states the correct boundary: local clips only, no fake CIDs, no fake receipts, no wallet mutation, no paid unlock from cache. 
+
+The correct publish path remains:
+
+```text
+Make local recording/composition
+→ local clip/master export
+→ crab://video
+→ Rust/FFmpeg prepare/transcode/staging
+→ explicit backend paid prepare/confirm/upload/mint
+→ backend-derived receipt
+→ backend-derived manifest
+→ backend-derived crab://<b3>.video
+```
+
+This is especially important because the product principle is data sovereignty. The creator should own their source media and exported files, while the backend provides durable b3 truth only after explicit publish/mint flow.
+
+---
+
+## 4. What exists now in Make Studio
+
+The current Make route exists and loads. Earlier notes confirm:
+
+```text
+crab://make exists
+route loads
+local draft/session plan model exists
+local recording/timeline model exists
+the UI direction was validated by the user
+the page is moving toward a polished command-center/preview/timeline layout
+```
+
+The prior notes define the “definition of good” for Make as:
+
+```text
+beautiful
+obvious
+creator-first
+less dev-panel
+less form-heavy
+more visual
+fast to understand
+safe and honest
+```
+
+The desired first experience is:
+
+```text
+1. User lands on crab://make.
+2. They see a polished studio, not a settings page.
+3. They pick a template or mode.
+4. They start preview.
+5. They record a segment.
+6. They see it appear in a timeline.
+7. They can retake or continue.
+8. They can finish and hand off to video.
+```
+
+This remains the guiding UX north star. 
+
+Current Make features now include:
+
+```text
+scene preset cards
+recording countdown
+record-next / retake / download flow
+unsaved local clip warning
+finish/export panel
+local teleprompter
+preview-only teleprompter overlay
+teleprompter position and scroll speed controls
+video-page handoff copy
+```
+
+The newest codebundle shows the teleprompter editor, including the explicit truth boundary: the overlay is above the preview for the creator and is not drawn into the recorded canvas. 
+
+The newest codebundle also shows Make’s current timeline, project panel, and handoff wiring, including `MakeTimelineCard`, `MakeProjectCard`, and `MakeHandoffCard`, plus preview-only teleprompter controls. 
+
+---
+
+## 5. What exists now in Stream that should be ported to Make
+
+The stream page has already proven the most important local creator-studio effect:
+
+```text
+person cutout / background removal / background replacement
+```
+
+The stream notes state that the app moved past chroma-only green screen and can detect the person, keep the subject, remove the real background, and draw a selected background behind the creator. They also note that subject positioning, zoom, mirror, brightness, contrast, saturation, and saved local scenes are working. 
+
+The stream implementation includes:
+
+```text
+streamPersonSegmentation.js
+streamCompositor.js
+StreamLookPanel.jsx
+StreamLocalPreview.jsx
+streamStudioModel.js
+```
+
+The codebundle shows `streamPersonSegmentation.js` using MediaPipe Tasks Vision with `FilesetResolver` and `ImageSegmenter`, a selfie segmentation landscape model, local status state, mask state, and `requestPersonSegmentationMask(...)`. 
+
+The codebundle also shows `streamCompositor.js` drawing a stable local canvas output, interacting with `streamPersonSegmentation`, and explicitly staying local-only without b3, wallet, receipt, entitlement, or backend live-status truth. 
+
+That stream code is exactly the foundation for Make’s next major feature.
+
+---
+
+## 6. Immediate next goal
+
+Next session should focus on this:
+
+```text
+Port the stream person cutout/background replacement system into crab://make.
+```
+
+This should not be a backend task. It should be a local compositor task.
+
+The first Make cutout/background version should support:
+
+```text
+camera mode with person cutout
+camera mode with solid background
+camera mode with image background
+camera mode with video background
+screen + PiP mode where webcam PiP can use person cutout
+screen + PiP mode where PiP can have transparent/cutout subject over screen
+optional background replacement behind the PiP subject
+```
+
+The user specifically wants:
+
+```text
+Use either images or video for the background using the cutout effect.
+```
+
+So the design should not stop at static image backgrounds. We should plan for both:
+
+```text
+backgroundKind: 'none' | 'solid' | 'image' | 'video'
+backgroundImageUrl / backgroundImageObjectUrl
+backgroundVideoUrl / backgroundVideoObjectUrl
+```
+
+Because this is local-only at first, local object URLs are acceptable, but they must be revoked when replaced/unmounted.
+
+---
+
+## 7. Recommended implementation plan for next session
+
+### Batch 1 — clean language and create Make media foundation
+
+Likely files touched:
+
+```text
+apps/crablink-tauri/src/pages/make/makeDraftModel.js
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/make.css
+```
+
+Likely files created:
+
+```text
+apps/crablink-tauri/src/pages/make/makePersonSegmentation.js
+apps/crablink-tauri/src/pages/make/makeCompositor.js
+```
+
+Possible later files, but not necessarily first batch:
+
+```text
+apps/crablink-tauri/src/pages/make/MakeBackgroundPanel.jsx
+apps/crablink-tauri/src/pages/make/MakeCutoutPanel.jsx
+apps/crablink-tauri/src/pages/make/MakePreviewStage.jsx
+```
+
+Important: Do not prematurely extract shared files unless patching becomes painful. Earlier notes explicitly recommended keeping Make route-owned until the feature proves itself, then possibly extracting shared media logic later. 
+
+First cleanup tasks:
+
+```text
+- Replace “green screen” product copy in Make with “person cutout” / “background replacement”.
+- Clean remaining brand-risk “TikTok” wording in streamPersonSegmentation.js comments.
+- Keep internal legacy greenScreen fields only if necessary for stream compatibility.
+```
+
+### Batch 2 — port segmentation helper
+
+The safest first move is probably to copy/adapt:
+
+```text
+apps/crablink-tauri/src/pages/stream/streamPersonSegmentation.js
+```
+
+into:
+
+```text
+apps/crablink-tauri/src/pages/make/makePersonSegmentation.js
+```
+
+Do not import stream’s helper directly if doing so couples Make to Stream’s route semantics or naming. The better first step is route-owned duplication with cleaned naming, then extract shared media later.
+
+New Make helper header should say something like:
+
+```text
+RO:WHAT — Local person cutout/background-removal helper for Make Studio.
+RO:WHY — Enables software subject isolation for creator recording without requiring physical green screens.
+RO:INTERACTS — makeCompositor.js, MakePage.jsx, @mediapipe/tasks-vision.
+RO:INVARIANTS — local visual mask only; no b3, wallet, receipt, entitlement, ownership, or backend truth.
+```
+
+Do not mention TikTok. Do not call this “green screen” in the header.
+
+Preserve useful segmentation behavior:
+
+```text
+MediaPipe ImageSegmenter
+selfie segmenter landscape model
+status reporting
+mask caching
+min interval throttling
+in-flight guard
+clear mask on source stop
+waiting_for_video state
+error state
+```
+
+Known risk:
+
+```text
+The current stream code uses CDN/model URLs for MVP.
+Production should eventually bundle model/wasm locally.
+```
+
+This is acceptable for current dev/proof, but the UI should not claim fully offline cutout until the model is bundled.
+
+### Batch 3 — create Make compositor
+
+Create:
+
+```text
+apps/crablink-tauri/src/pages/make/makeCompositor.js
+```
+
+Start from the relevant parts of:
+
+```text
+apps/crablink-tauri/src/pages/stream/streamCompositor.js
+```
+
+But rename semantics for Make:
+
+```text
+drawMakeFrame(...)
+describeMakeCompositorMode(...)
+clearMakeCompositorState(...)
+```
+
+Make compositor responsibilities:
+
+```text
+set canvas size from Make output preset
+draw active background
+draw camera source
+apply person cutout mask when enabled
+draw screen source when in screen/screen_pip mode
+draw PiP overlay
+draw audio-only slate
+draw local badges if needed
+return readiness status for recording
+```
+
+Make compositor must not:
+
+```text
+publish to backend
+call wallet
+call gateway directly
+create CIDs
+create receipts
+store secrets
+claim stream/live status
+```
+
+### Batch 4 — add Make draft fields
+
+Update:
+
+```text
+apps/crablink-tauri/src/pages/make/makeDraftModel.js
+```
+
+Add local-only fields such as:
+
+```javascript
+backgroundRemovalMode: 'off' | 'person_cutout'
+backgroundKind: 'scene' | 'solid' | 'image' | 'video'
+backgroundSolidColor: '#111111'
+backgroundImageName: ''
+backgroundVideoName: ''
+subjectMirror: true
+subjectOffsetX: 0
+subjectOffsetY: 0
+subjectScale: 100
+subjectBrightness: 100
+subjectContrast: 100
+subjectSaturation: 100
+cutoutFeather: 6
+cutoutStatus: 'idle'
+```
+
+For local object URLs, do **not** persist the actual object URL or file path in localStorage. Keep names/metadata only in the draft model, and keep the actual selected file/video object URL in component state.
+
+The draft/session plan may include:
+
+```text
+background kind
+background file display name
+cutout enabled yes/no
+subject framing values
+```
+
+But it should clearly remain local project metadata, not publish truth.
+
+### Batch 5 — wire MakePage preview drawing
+
+Current Make likely has a canvas render loop already. Replace or adapt that render loop so it calls `drawMakeFrame(...)`.
+
+Inputs to the compositor:
+
+```text
+canvasRef.current
+cameraVideoRef.current
+screenVideoRef.current
+backgroundImageElementRef.current
+backgroundVideoElementRef.current
+draft
+inputState
+```
+
+Important behavior:
+
+```text
+If preview is not ready, draw idle slate.
+If camera is ready and cutout is off, draw normal camera.
+If camera is ready and cutout is on, request segmentation mask and draw cutout.
+If backgroundKind is image, draw selected image behind subject.
+If backgroundKind is video, draw selected video behind subject and keep it looping/muted.
+If screen_pip is active, draw screen full canvas and camera/PiP on top.
+If screen_pip + person cutout is active, draw cutout subject in PiP region.
+```
+
+### Batch 6 — add UI controls
+
+Add a panel inside Make’s project/settings area, ideally not too form-heavy.
+
+Suggested UI labels:
+
+```text
+Background replacement
+Person cutout
+Background source
+Solid color
+Image background
+Video background
+Choose image
+Choose video
+Subject framing
+Mirror
+Move X
+Move Y
+Zoom
+Brightness
+Contrast
+Saturation
+Reset look
+```
+
+Avoid saying “green screen” except maybe in a migration note or advanced developer label if absolutely necessary.
+
+The UI should feel creator-first:
+
+```text
+Person Cutout: Off / On
+Background: Scene / Solid / Image / Video
+Framing: Mirror / Zoom / Position
+Look: Brightness / Contrast / Saturation
+```
+
+Do not overload the main hero area. Keep the page polished.
+
+### Batch 7 — image/video background handling
+
+For local image background:
+
+```text
+input type=file accept="image/*"
+create object URL
+load into Image element
+draw to canvas cover-fit
+revoke old object URL when replaced/unmounted
+store only display name in draft/session plan
+```
+
+For local video background:
+
+```text
+input type=file accept="video/*"
+create object URL
+attach to hidden video element
+muted
+loop
+playsInline
+autoplay after user action where possible
+draw current frame to canvas cover-fit
+revoke old object URL when replaced/unmounted
+store only display name in draft/session plan
+```
+
+Potential Tauri/WebView issue:
+
+```text
+Autoplay may fail unless muted and triggered after a user action.
+```
+
+Fallback:
+
+```text
+Show “Video background loaded; press Start preview to animate.”
+```
+
+Do not fake video support if the WebView blocks playback.
+
+---
+
+## 8. Important technical risks
+
+### 8.1 Performance
+
+Person segmentation can be expensive. Stream currently uses a minimum segmentation interval around 95ms. 
+
+Make should preserve throttling:
+
+```text
+do not run segmentation every animation frame
+reuse the last mask
+show a status badge if model is loading or unavailable
+degrade gracefully to normal camera
+```
+
+Make should not claim broken cutout as working. If the model fails, show:
+
+```text
+Person cutout unavailable. Recording can continue without background replacement.
+```
+
+### 8.2 Video background object URLs
+
+Need to revoke URLs:
+
+```text
+URL.revokeObjectURL(oldUrl)
+```
+
+When:
+
+```text
+new background selected
+draft reset
+component unmount
+clear background
+```
+
+### 8.3 Canvas recording
+
+The recorded clip should be from the composited canvas stream, not raw camera, once cutout is enabled.
+
+Expected:
+
+```text
+canvas.captureStream(targetFps)
+```
+
+Then combine audio tracks as current Make does.
+
+Need verify that if background video is drawing to canvas, it appears in the recorded clip.
+
+### 8.4 PiP + cutout
+
+First version can support cutout in camera-only mode first. Then PiP cutout.
+
+Recommended sequence:
+
+```text
+1. Camera + cutout + static scene/solid background.
+2. Camera + cutout + image background.
+3. Camera + cutout + video background.
+4. Screen + PiP normal camera.
+5. Screen + PiP cutout camera.
+```
+
+Avoid trying to land all edge cases in one patch if it becomes too large.
+
+### 8.5 Do not accidentally couple to Stream’s backend flow
+
+Stream includes publish/session panels and stream-lite backend logic. Do not bring those into Make.
+
+Only port:
+
+```text
+local compositor
+person segmentation helper
+look/framing controls
+background selection concepts
+```
+
+Do not port:
+
+```text
+StreamPublishFlow
+StreamSessionPanel
+streamSessionClient
+stream-lite backend latest-frame loop
+publishedStream state
+live descriptor flow
+viewer paid segment logic
+```
+
+The stream code itself separates clean Studio UX from publish/session controls, and even collapses advanced controls to keep the Studio clean while preserving explicit ROC hold/publishing controls. 
+
+---
+
+## 9. Make’s current handoff state
+
+Make’s current finish panel still tells the user to download/export locally, then open Video to convert, stage versions, confirm ROC access, and mint through backend truth. The codebundle shows this truth boundary explicitly in `MakeHandoffCard`. 
+
+Current limitation:
+
+```text
+Make does not yet directly pass a staged file handle into crab://video.
+```
+
+Near-term acceptable path:
+
+```text
+download selected clip
+open crab://video
+manually choose exported clip
+run existing video conversion/mint flow
+```
+
+Future desired path:
+
+```text
+Make local clips
+→ export/stage master file
+→ direct handoff to VideoConverterPanel-compatible staged source
+→ video renditions
+→ explicit ROC confirmation
+→ backend mint
+```
+
+Do not solve direct handoff until Make’s local composer is stable.
+
+---
+
+## 10. Data sovereignty implications for Make
+
+This is now a key product principle and should influence copy and features.
+
+Make should communicate:
+
+```text
+Your drafts are local.
+Your source clips are yours.
+Your exported media is yours.
+Publishing creates backend b3 truth only when you explicitly choose to publish.
+Sites reference your assets; they do not swallow your ownership.
+```
+
+Future UX ideas that fit this principle:
+
+```text
+local project export
+local source bundle
+download all clips
+download session plan
+export master video
+show exactly what is local vs published
+show “not minted yet” status
+show “backend-derived” only after publish
+asset manifest cross-links after mint
+```
+
+Avoid:
+
+```text
+claiming CrabLink owns the clip
+treating local drafts as site-owned data
+auto-uploading without explicit action
+silently monetizing without clear confirmation
+```
+
+---
+
+## 11. Recommended file plan for next session
+
+### Minimum first patch files
+
+```text
+apps/crablink-tauri/src/pages/make/makeDraftModel.js
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/make.css
+apps/crablink-tauri/src/pages/make/makePersonSegmentation.js
+apps/crablink-tauri/src/pages/make/makeCompositor.js
+```
+
+### Possible second patch files
+
+```text
+apps/crablink-tauri/src/pages/make/MakeCutoutPanel.jsx
+apps/crablink-tauri/src/pages/make/MakeBackgroundPanel.jsx
+apps/crablink-tauri/src/pages/make/MakePreviewStage.jsx
+```
+
+### Avoid touching unless necessary
+
+```text
+apps/crablink-tauri/src/pages/video/*
+apps/crablink-tauri/src-tauri/*
+RustyOnions backend crates
+wallet/ledger/accounting/rewarder code
+gateway/omnigate routes
+```
+
+No backend changes should be required for this next Make cutout/background batch.
+
+---
+
+## 12. Suggested next-session patch order
+
+### Patch 1: route-owned helper files
+
+Create:
+
+```text
+makePersonSegmentation.js
+makeCompositor.js
+```
+
+Basic Make compositor supports:
+
+```text
+camera
+audio-only slate
+scene/solid background
+person cutout status
+normal draw if cutout disabled
+```
+
+Test:
+
+```text
+npm run build
+scripts/run-tauri-dev-full-stack.sh
+open crab://make
+camera preview works
+cutout off works
+cutout on shows model loading then subject cutout
+recorded clip includes composited canvas
+```
+
+### Patch 2: image backgrounds
+
+Add:
+
+```text
+choose image background
+image object URL state
+image cover-fit draw
+clear image
+revoke URL cleanup
+draft stores image display name only
+```
+
+Test:
+
+```text
+choose image background
+enable person cutout
+record clip
+download clip
+verify image appears behind subject
+reset/replace image
+verify no stale background after reset
+```
+
+### Patch 3: video backgrounds
+
+Add:
+
+```text
+choose video background
+hidden video element
+loop/muted/playsInline
+draw video frame behind subject
+play/pause tied to preview state
+revoke URL cleanup
+```
+
+Test:
+
+```text
+choose video background
+start preview
+video animates behind subject
+record clip
+download clip
+verify video background appears in clip
+stop preview
+tracks/object URLs cleaned up
+```
+
+### Patch 4: PiP cutout
+
+Add:
+
+```text
+screen_pip mode draws screen full canvas
+camera PiP supports normal mode
+camera PiP supports cutout mode
+PiP background can be transparent over screen or replaced by local background
+```
+
+Test:
+
+```text
+screen + PiP preview
+PiP size slider
+PiP corner select
+enable cutout
+record clip
+download clip
+verify screen and PiP are in recorded clip
+```
+
+---
+
+## 13. Testing checklist for next session
+
+Run:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+scripts/run-tauri-dev-full-stack.sh
+```
+
+If debugging only frontend:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run tauri:dev:mac-media
+```
+
+Manual tests:
+
+```text
+Open crab://make.
+Verify page loads.
+Verify scene presets still work.
+Verify teleprompter still works.
+Verify preview start/stop still works.
+Verify camera mode works without cutout.
+Verify camera mode works with person cutout.
+Verify cutout fails gracefully if model unavailable.
+Verify image background appears behind subject.
+Verify video background appears behind subject.
+Verify local clip recording captures composited output.
+Verify record countdown still works.
+Verify Keep + record next still works.
+Verify Retake revokes/removes latest clip.
+Verify Download selected clip still works.
+Verify Finish panel still opens crab://video.
+Verify no fake CID/receipt/manifest is shown.
+Verify no wallet action happens from Make.
+Verify local object URLs are revoked on clear/unmount.
+```
+
+Regression tests:
+
+```text
+Start preview.
+Stop preview.
+Start preview again.
+Switch mode while stopped.
+Try changing preset while preview running: should block or warn as current behavior does.
+Record a clip.
+Navigate away with unsaved clip: warning should appear.
+Return to Make: local draft metadata persists, but raw clip blobs should not be falsely restored.
+```
+
+Important stale-state test, based on prior video-page bug:
+
+```text
+Open crab://make fresh.
+Do not select a background.
+Do not start preview.
+Verify old background object URL is not reused from prior session.
+Open crab://video fresh.
+Do not select a file.
+Confirm stale previous staged jobs do not enable minting.
+```
+
+This matters because Make will eventually stage media and must not repeat stale local-state bugs.
+
+---
+
+## 14. UX requirements for next Make work
+
+The page should stay polished.
+
+Do not turn Make into a raw settings wall. The cutout/background controls should feel like a creator tool:
+
+```text
+simple toggles
+visual cards
+clear preview feedback
+short labels
+collapsed advanced controls
+local-only honesty
+```
+
+Suggested layout:
+
+```text
+Main preview area:
+  camera/screen/canvas
+  recording badge
+  countdown overlay
+  teleprompter overlay
+  small cutout status badge
+
+Under/near preview:
+  scene presets
+  mode cards
+  timeline
+
+Project/details panel:
+  title/description/tags
+  teleprompter
+  background replacement
+  audio
+  PiP
+  creator notes
+```
+
+The first visible page should still feel like:
+
+```text
+a studio
+not a developer panel
+```
+
+---
+
+## 15. Copy rules
+
+Use:
+
+```text
+Make Studio
+creator command center
+record clips
+segments
+timeline
+scene presets
+video handoff
+local clip
+local draft
+person cutout
+background replacement
+software cutout
+image background
+video background
+subject framing
+popular style
+short-form clip
+screen tutorial
+podcast clip
+music visualizer
+course lesson
+```
+
+Avoid:
+
+```text
+TikTok
+Tik Tok
+TikTok-style
+green screen as primary UX term
+OBS clone
+DRM claims
+ownership claims from local recording
+receipt generated
+minted locally
+published locally
+```
+
+Preferred truth-boundary copy:
+
+```text
+Make records local clips. Video publishing, paid confirmation, receipts, manifests, and crab:// asset truth come from the backend video flow.
+```
+
+---
+
+## 16. Architecture note for future shared media extraction
+
+Eventually, Make, Stream, Podcast, and possibly Video should share a local media foundation.
+
+Possible future shared structure:
+
+```text
+apps/crablink-tauri/src/shared/media/localCapture.js
+apps/crablink-tauri/src/shared/media/localRecorder.js
+apps/crablink-tauri/src/shared/media/canvasCompositor.js
+apps/crablink-tauri/src/shared/media/personSegmentation.js
+apps/crablink-tauri/src/shared/media/backgroundSources.js
+apps/crablink-tauri/src/shared/media/audioChain.js
+apps/crablink-tauri/src/shared/media/clipTimeline.js
+```
+
+But do not do this too early. First prove Make’s route-owned cutout/background flow, then extract once the Make and Stream abstractions are clearly aligned.
+
+---
+
+## 17. What not to do next session
+
+Do not jump to:
+
+```text
+QuickChain
+ROX
+Solana
+external settlement
+public bridge
+staking/liquidity
+new backend services
+wallet/ledger changes
+large-media backend redesign
+full WebRTC/HLS
+full video editor timeline
+drag-and-drop library
+sandboxed executable facets
+```
+
+Do not start with backend work. The next best work is local Make Studio product capability.
+
+---
+
+## 18. Final next-session goal statement
+
+The next instance should start from this goal:
+
+```text
+Make Studio is CrabLink’s flagship batteries-included creator page.
+Next, port Stream’s proven person cutout/background replacement into Make.
+Support local image and local video backgrounds.
+Keep it local, bounded, honest, creator-owned, and backend-truth-safe.
+```
+
+The first successful milestone should be:
+
+```text
+In crab://make, a creator can start camera preview, enable Person Cutout, choose an image or video background, record a local segment from the composited canvas, download it, and hand it off to crab://video for backend-derived publishing.
+```
+
+That will be a major product step: CrabLink starts feeling like a real creator studio, not just a set of asset pages.
+
+
+### END NOTE - JUNE 1 2026 - 10:10 CST
