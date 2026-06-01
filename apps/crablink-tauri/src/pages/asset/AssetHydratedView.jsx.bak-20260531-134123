@@ -23,7 +23,6 @@ import AssetPaidAudioPlayer from './AssetPaidAudioPlayer.jsx';
 import StreamPaidSegmentViewer from './StreamPaidSegmentViewer.jsx';
 import ImageAssetManifestFacts from './ImageAssetManifestFacts.jsx';
 import VideoAssetManifestFacts from './VideoAssetManifestFacts.jsx';
-import { readVideoBundleRenditionGroupForAsset } from '../../shared/manifest/renditionGroups.js';
 
 const TEXT_ASSET_KINDS = new Set(['post', 'comment', 'article']);
 const MEDIA_PREVIEW_KINDS = new Set(['image', 'video', 'music', 'podcast']);
@@ -125,7 +124,7 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
     error: null,
   });
 
-  const summary = useMemo(() => withLocalVideoBundleFallback(summarizeAsset(result, route)), [result, route]);
+  const summary = useMemo(() => summarizeAsset(result, route), [result, route]);
   const copy = copyForKind(summary.kind);
   const displayTitle = displayTitleForSummary(summary, textContent);
   const requiresPaidContentView = PAID_CONTENT_VIEW_KINDS.has(summary.kind);
@@ -1984,47 +1983,6 @@ function summarizeAsset(result, route) {
   };
 }
 
-
-
-function withLocalVideoBundleFallback(summary) {
-  if (!summary?.isVideoRoute && !summary?.isImageRoute) {
-    return summary;
-  }
-
-  const cachedGroup = readVideoBundleRenditionGroupForAsset({
-    cid: summary.cid,
-    crabUrl: summary.crabUrl,
-    hash: summary.hash,
-  });
-
-  if (!cachedGroup) {
-    return summary;
-  }
-
-  const normalizedCachedGroup = normalizeVideoRenditionGroup(cachedGroup, summary.cid)
-    || normalizeImageRenditionGroup(cachedGroup, summary.cid);
-
-  if (!normalizedCachedGroup?.renditions?.length) {
-    return summary;
-  }
-
-  const currentCount = summary.renditionGroup?.renditions?.length || 0;
-  if (currentCount >= normalizedCachedGroup.renditions.length) {
-    return summary;
-  }
-
-  const normalizedRendition = summary.isVideoRoute
-    ? normalizeVideoRenditionSelf(summary.rendition, normalizedCachedGroup, summary.cid)
-    : normalizeImageRenditionSelf(summary.rendition, normalizedCachedGroup, summary.cid);
-
-  return {
-    ...summary,
-    renditionGroup: normalizedCachedGroup,
-    rendition: normalizedRendition || summary.rendition,
-    renditionCount: normalizedCachedGroup.renditions.length,
-    localDisplayBundle: true,
-  };
-}
 
 function normalizeImageRenditionGroup(value, selfCid = '') {
   const raw = objectValue(value);

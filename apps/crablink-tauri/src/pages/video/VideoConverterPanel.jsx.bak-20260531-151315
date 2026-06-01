@@ -9,7 +9,7 @@
  * RO:TEST — npm run build; manual crab://video → choose source + build plan → start local prepare job.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
@@ -42,11 +42,6 @@ export default function VideoConverterPanel({ selectedFileFacts, playbackMeta, d
   const client = useMemo(() => createVideoConverterClient(), []);
   const [state, setState] = useState(IDLE_STATE);
   const [nativePathDraft, setNativePathDraft] = useState('');
-  const converterSessionStartedAtMs = useRef(Date.now());
-  const converterSessionId = useMemo(
-    () => `video-prepare-session-${converterSessionStartedAtMs.current}-${Math.random().toString(36).slice(2, 10)}`,
-    [],
-  );
 
   const previewSourceFacts = useMemo(
     () => buildSourceFacts({ selectedFileFacts, playbackMeta, draft }),
@@ -112,10 +107,6 @@ export default function VideoConverterPanel({ selectedFileFacts, playbackMeta, d
 
     const safeJob = {
       ...state.job,
-      crabLinkVideoSessionId: converterSessionId,
-      crabLinkVideoSessionStartedAtUnixMs: converterSessionStartedAtMs.current,
-      crabLinkVideoPreparedAtUnixMs: Date.now(),
-      crabLinkVideoSourceFingerprint: sourceFingerprintForFacts(effectiveSourceFacts),
       truthBoundary: {
         ...(state.job.truthBoundary || {}),
         returnsPrivatePath: false,
@@ -656,24 +647,6 @@ function buildFactsFromRegisteredSource(source, fallback = {}) {
     source: source?.nativeFileAuthority ? 'native_registered_source' : 'registered_source',
   });
 }
-
-function sourceFingerprintForFacts(facts = {}) {
-  const clean = {
-    fileName: stringValue(facts.fileName, facts.name),
-    contentType: stringValue(facts.contentType, facts.type),
-    bytes: positiveInteger(facts.bytes, facts.size),
-    durationSeconds: positiveNumber(facts.durationSeconds, facts.duration_seconds),
-    width: positiveInteger(facts.width),
-    height: positiveInteger(facts.height),
-    source: stringValue(facts.source),
-  };
-
-  return Object.entries(clean)
-    .filter(([, value]) => value !== undefined && value !== null && value !== '')
-    .map(([key, value]) => `${key}:${value}`)
-    .join('|');
-}
-
 
 function statusLabel(status, hasRegisteredSource) {
   switch (status) {

@@ -60,14 +60,10 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
     [app?.clients?.wallet, gateway],
   );
 
-  const workflowSessionStartedAtMs = useRef(Date.now());
-
   const [prepareState, setPrepareState] = useState(IDLE_RESULT);
   const [holdState, setHoldState] = useState(IDLE_RESULT);
   const [uploadState, setUploadState] = useState(IDLE_RESULT);
-  const [latestPrepareJob, setLatestPrepareJob] = useState(() => readLatestPrepareJob({
-    minPreparedAtUnixMs: workflowSessionStartedAtMs.current,
-  }));
+  const [latestPrepareJob, setLatestPrepareJob] = useState(() => readLatestPrepareJob());
   const [selectedRoles, setSelectedRoles] = useState({});
   const [escrowAccount, setEscrowAccount] = useState(DEFAULT_ESCROW_ACCOUNT);
   const [holdNonce, setHoldNonce] = useState(() => loadNextNonceHint(settings.walletAccount));
@@ -80,44 +76,19 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
 
   useEffect(() => {
     function refreshFromEvent(event) {
-      const job = firstCurrentSessionPrepareJob(
-        event?.detail?.job,
-        readLatestPrepareJob({ minPreparedAtUnixMs: workflowSessionStartedAtMs.current }),
-        workflowSessionStartedAtMs.current,
-      );
+      const job = event?.detail?.job || readLatestPrepareJob();
 
-      setLatestPrepareJob((current) => {
-        if (!job?.jobId) {
-          return current?.jobId ? null : current;
-        }
-
-        const currentStamp = current?.crabLinkVideoPreparedAtUnixMs || '';
-        const nextStamp = job?.crabLinkVideoPreparedAtUnixMs || '';
-        if (current?.jobId === job.jobId && current?.status === job.status && currentStamp === nextStamp) {
-          return current;
-        }
-
-        return job;
-      });
+      if (job?.jobId) {
+        setLatestPrepareJob(job);
+      }
     }
 
     window.addEventListener('crablink:video-prepare-job-updated', refreshFromEvent);
     const timer = window.setInterval(() => {
-      const job = readLatestPrepareJob({ minPreparedAtUnixMs: workflowSessionStartedAtMs.current });
-
-      setLatestPrepareJob((current) => {
-        if (!job?.jobId) {
-          return current?.jobId ? null : current;
-        }
-
-        const currentStamp = current?.crabLinkVideoPreparedAtUnixMs || '';
-        const nextStamp = job?.crabLinkVideoPreparedAtUnixMs || '';
-        if (current?.jobId === job.jobId && current?.status === job.status && currentStamp === nextStamp) {
-          return current;
-        }
-
-        return job;
-      });
+      const job = readLatestPrepareJob();
+      if (job?.jobId) {
+        setLatestPrepareJob((current) => (current?.jobId === job.jobId && current?.updatedAtUnixMs === job.updatedAtUnixMs ? current : job));
+      }
     }, 1200);
 
     return () => {
@@ -1781,48 +1752,14 @@ function firstVideoResult(bundle) {
     || null;
 }
 
-function readLatestPrepareJob({ minPreparedAtUnixMs = 0 } = {}) {
+function readLatestPrepareJob() {
   try {
     const raw = globalThis.localStorage?.getItem?.(LATEST_JOB_STORAGE_KEY);
     const parsed = JSON.parse(raw || 'null');
-    return normalizeCurrentSessionPrepareJob(parsed, minPreparedAtUnixMs);
+    return parsed && typeof parsed === 'object' ? parsed : null;
   } catch (_error) {
     return null;
   }
-}
-
-function firstCurrentSessionPrepareJob(...values) {
-  const minPreparedAtUnixMs = Number(values.pop() || 0);
-
-  for (const value of values) {
-    const job = normalizeCurrentSessionPrepareJob(value, minPreparedAtUnixMs);
-    if (job) {
-      return job;
-    }
-  }
-
-  return null;
-}
-
-function normalizeCurrentSessionPrepareJob(value, minPreparedAtUnixMs = 0) {
-  const job = asObject(value);
-
-  if (!job.jobId) {
-    return null;
-  }
-
-  const preparedAt = Number(job.crabLinkVideoPreparedAtUnixMs || 0);
-
-  if (!Number.isFinite(preparedAt) || preparedAt <= 0) {
-    return null;
-  }
-
-  const min = Number(minPreparedAtUnixMs || 0);
-  if (min > 0 && preparedAt + 3000 < min) {
-    return null;
-  }
-
-  return job;
 }
 
 function buildOutputDescription({ draft, output }) {

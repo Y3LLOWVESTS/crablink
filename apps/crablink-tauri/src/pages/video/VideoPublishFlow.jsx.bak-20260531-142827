@@ -60,14 +60,10 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
     [app?.clients?.wallet, gateway],
   );
 
-  const workflowSessionStartedAtMs = useRef(Date.now());
-
   const [prepareState, setPrepareState] = useState(IDLE_RESULT);
   const [holdState, setHoldState] = useState(IDLE_RESULT);
   const [uploadState, setUploadState] = useState(IDLE_RESULT);
-  const [latestPrepareJob, setLatestPrepareJob] = useState(() => readLatestPrepareJob({
-    minPreparedAtUnixMs: workflowSessionStartedAtMs.current,
-  }));
+  const [latestPrepareJob, setLatestPrepareJob] = useState(() => readLatestPrepareJob());
   const [selectedRoles, setSelectedRoles] = useState({});
   const [escrowAccount, setEscrowAccount] = useState(DEFAULT_ESCROW_ACCOUNT);
   const [holdNonce, setHoldNonce] = useState(() => loadNextNonceHint(settings.walletAccount));
@@ -80,44 +76,19 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
 
   useEffect(() => {
     function refreshFromEvent(event) {
-      const job = firstCurrentSessionPrepareJob(
-        event?.detail?.job,
-        readLatestPrepareJob({ minPreparedAtUnixMs: workflowSessionStartedAtMs.current }),
-        workflowSessionStartedAtMs.current,
-      );
+      const job = event?.detail?.job || readLatestPrepareJob();
 
-      setLatestPrepareJob((current) => {
-        if (!job?.jobId) {
-          return current?.jobId ? null : current;
-        }
-
-        const currentStamp = current?.crabLinkVideoPreparedAtUnixMs || '';
-        const nextStamp = job?.crabLinkVideoPreparedAtUnixMs || '';
-        if (current?.jobId === job.jobId && current?.status === job.status && currentStamp === nextStamp) {
-          return current;
-        }
-
-        return job;
-      });
+      if (job?.jobId) {
+        setLatestPrepareJob(job);
+      }
     }
 
     window.addEventListener('crablink:video-prepare-job-updated', refreshFromEvent);
     const timer = window.setInterval(() => {
-      const job = readLatestPrepareJob({ minPreparedAtUnixMs: workflowSessionStartedAtMs.current });
-
-      setLatestPrepareJob((current) => {
-        if (!job?.jobId) {
-          return current?.jobId ? null : current;
-        }
-
-        const currentStamp = current?.crabLinkVideoPreparedAtUnixMs || '';
-        const nextStamp = job?.crabLinkVideoPreparedAtUnixMs || '';
-        if (current?.jobId === job.jobId && current?.status === job.status && currentStamp === nextStamp) {
-          return current;
-        }
-
-        return job;
-      });
+      const job = readLatestPrepareJob();
+      if (job?.jobId) {
+        setLatestPrepareJob((current) => (current?.jobId === job.jobId && current?.updatedAtUnixMs === job.updatedAtUnixMs ? current : job));
+      }
     }, 1200);
 
     return () => {
@@ -685,15 +656,15 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
     <Card
       eyebrow="Publish"
       title="Quote, confirm, and mint"
-      className="video-publish-card video-publish-card-simple video-publish-card-image-flow"
+      className="video-publish-card video-publish-card-simple"
       actions={
         <div className="video-publish-badges">
           <Badge tone={preflight.ok ? 'success' : 'warning'}>
             {preflight.ok ? 'ready' : 'needs setup'}
           </Badge>
-          <Badge tone={prepareState.status === 'ok' ? 'success' : 'neutral'}>Quote</Badge>
-          <Badge tone={holdState.status === 'ok' ? 'success' : 'neutral'}>ROC hold</Badge>
-          <Badge tone={uploadState.status === 'ok' ? 'success' : 'neutral'}>Mint</Badge>
+          <Badge tone="neutral">quote</Badge>
+          <Badge tone="neutral">ROC hold</Badge>
+          <Badge tone="neutral">mint</Badge>
         </div>
       }
     >
@@ -756,70 +727,46 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
         </div>
       )}
 
-      <div className="video-publish-image-steps" aria-label="Video mint actions">
-        <section>
-          <header>
-            <strong>1. Backend quote</strong>
-            <span>
-              Uses the selected Rust-staged MP4/JPEG outputs and asks the backend for a quote.
-              No wallet mutation happens in this step.
-            </span>
-          </header>
-          <Button
-            variant="primary"
-            disabled={!canPrepare || prepareState.status === 'sending'}
-            onClick={sendPrepare}
-          >
+      <section className="video-publish-fast-actions" aria-label="Video mint actions">
+        <article className="video-publish-fast-step">
+          <div>
+            <span className="video-fast-step-number">1</span>
+            <p>
+              <strong>Get quote</strong>
+              <small>{labelForStatus(prepareState.status)}</small>
+            </p>
+          </div>
+          <Button variant="primary" disabled={!canPrepare || prepareState.status === 'sending'} onClick={sendPrepare}>
             {prepareState.status === 'sending' ? 'Preparing…' : 'Get bundle quote'}
           </Button>
-        </section>
+        </article>
 
-        {prepareState.status === 'ok' && (
-          <section>
-            <header>
-              <strong>2. Confirm ROC hold</strong>
-              <span>
-                Backend quote: <b>{amountMinor ? `${formatRocUnits(amountMinor)} ROC` : 'not returned'}</b>.
-                Nothing is spent until you confirm this hold.
-              </span>
-            </header>
-            <Button
-              variant={holdReviewOpen ? 'primary' : 'secondary'}
-              disabled={!canHold || holdState.status === 'sending'}
-              onClick={confirmHold}
-            >
-              {holdState.status === 'sending'
-                ? 'Holding…'
-                : holdReviewOpen
-                  ? 'Send ROC Hold'
-                  : 'Review ROC hold'}
-            </Button>
-          </section>
-        )}
+        <article className="video-publish-fast-step">
+          <div>
+            <span className="video-fast-step-number">2</span>
+            <p>
+              <strong>Confirm ROC</strong>
+              <small>{holdApiRequest?.amount_minor ? `${formatRocUnits(holdApiRequest.amount_minor)} ROC` : labelForStatus(holdState.status)}</small>
+            </p>
+          </div>
+          <Button variant={holdReviewOpen ? 'primary' : 'secondary'} disabled={!canHold || holdState.status === 'sending'} onClick={confirmHold}>
+            {holdState.status === 'sending' ? 'Holding…' : holdReviewOpen ? 'Send ROC Hold' : 'Review ROC hold'}
+          </Button>
+        </article>
 
-        {holdState.status === 'ok' && (
-          <section>
-            <header>
-              <strong>3. Mint selected video bundle</strong>
-              <span>
-                Each selected staged output is uploaded through the gateway with the backend wallet proof.
-                Backend-returned CIDs and crab URLs are the only asset truth.
-              </span>
-            </header>
-            <Button
-              variant={uploadReviewOpen ? 'primary' : 'secondary'}
-              disabled={!canUpload || uploadState.status === 'sending'}
-              onClick={submitUpload}
-            >
-              {uploadState.status === 'sending'
-                ? 'Minting…'
-                : uploadReviewOpen
-                  ? 'Send Bundle Upload'
-                  : 'Review bundle upload'}
-            </Button>
-          </section>
-        )}
-      </div>
+        <article className="video-publish-fast-step">
+          <div>
+            <span className="video-fast-step-number">3</span>
+            <p>
+              <strong>Mint bundle</strong>
+              <small>{uploadState.status === 'ok' ? 'complete' : labelForStatus(uploadState.status)}</small>
+            </p>
+          </div>
+          <Button variant={uploadReviewOpen ? 'primary' : 'secondary'} disabled={!canUpload || uploadState.status === 'sending'} onClick={submitUpload}>
+            {uploadState.status === 'sending' ? 'Uploading…' : uploadReviewOpen ? 'Send bundle upload' : 'Review bundle'}
+          </Button>
+        </article>
+      </section>
 
       {(holdReviewOpen || uploadReviewOpen || uploadCrabUrl) && (
         <div className="video-publish-secondary-actions">
@@ -1781,48 +1728,14 @@ function firstVideoResult(bundle) {
     || null;
 }
 
-function readLatestPrepareJob({ minPreparedAtUnixMs = 0 } = {}) {
+function readLatestPrepareJob() {
   try {
     const raw = globalThis.localStorage?.getItem?.(LATEST_JOB_STORAGE_KEY);
     const parsed = JSON.parse(raw || 'null');
-    return normalizeCurrentSessionPrepareJob(parsed, minPreparedAtUnixMs);
+    return parsed && typeof parsed === 'object' ? parsed : null;
   } catch (_error) {
     return null;
   }
-}
-
-function firstCurrentSessionPrepareJob(...values) {
-  const minPreparedAtUnixMs = Number(values.pop() || 0);
-
-  for (const value of values) {
-    const job = normalizeCurrentSessionPrepareJob(value, minPreparedAtUnixMs);
-    if (job) {
-      return job;
-    }
-  }
-
-  return null;
-}
-
-function normalizeCurrentSessionPrepareJob(value, minPreparedAtUnixMs = 0) {
-  const job = asObject(value);
-
-  if (!job.jobId) {
-    return null;
-  }
-
-  const preparedAt = Number(job.crabLinkVideoPreparedAtUnixMs || 0);
-
-  if (!Number.isFinite(preparedAt) || preparedAt <= 0) {
-    return null;
-  }
-
-  const min = Number(minPreparedAtUnixMs || 0);
-  if (min > 0 && preparedAt + 3000 < min) {
-    return null;
-  }
-
-  return job;
 }
 
 function buildOutputDescription({ draft, output }) {

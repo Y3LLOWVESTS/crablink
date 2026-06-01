@@ -27244,3 +27244,4116 @@ video page UI polish
 
 
 ### END NOTE - MAY 30 2026 - 19:30 CST
+
+
+
+### BEGIN NOTE - MAY 31 2026 - 13:10 CST
+
+The next session should focus on **durable video bundle manifest parity with images**. The current codebundle shows we already added video-specific manifest/display pieces like `VideoAssetManifestFacts.jsx`, `VideoRenditionGroupCard`, and `normalizeVideoRenditionGroup`, but your screenshot proves the hydrated `.video` asset page still says **Bundle: Not returned** and does not list the sibling versions yet.   The carryover notes also correctly identify the core problem: every video version should know the clean master, desktop/tablet/mobile/low versions, poster, and thumbnail, but a naive one-by-one upload cannot make early immutable manifests know later backend-returned URLs unless we use the same mechanism images use or add a durable bundle/index contract. 
+
+# CrabLink Tauri Carryover Notes — Video Page / Video Manifest Parity
+
+## Current session stopping point
+
+We made strong progress on the `crab://video` route. The video mint page now looks much closer to the image page, and the post-mint result panel is a real improvement.
+
+The latest successful video mint now shows a clean backend-returned bundle result after minting:
+
+* 5 video outputs
+* 2 image outputs
+* clean master video
+* desktop 1080p video
+* tablet 720p video
+* mobile 480p video
+* low 360p video
+* poster image
+* thumbnail image
+
+The mint result panel now displays each returned output with:
+
+* role / type
+* crab URL
+* b3 CID
+* asset facts
+* Open button
+* Copy URL button
+* Copy CID button
+
+This is much closer to the image mint result experience.
+
+However, the key missing piece remains:
+
+**Opening a minted video version does not yet show the full sibling rendition group on the video asset/manifest page.**
+
+In the latest screenshot, opening the clean master `.video` asset page shows:
+
+* `Video manifest`
+* `Untitled video`
+* `Clean master`
+* creator/passport field
+* current role
+* access info
+* canonical URL / content object ID / hash
+* paid content view panel
+
+But the page still says:
+
+* `Bundle: Not returned`
+
+And it does **not** show the full sibling list:
+
+* clean master
+* desktop 1080p
+* tablet 720p
+* mobile 480p
+* low 360p
+* poster image
+* thumbnail image
+
+This is the next major task.
+
+---
+
+## User goal for next session
+
+The user wants video to behave like image bundles.
+
+For images, after minting multiple generated versions, each image manifest page can show the other generated versions. The image page has the desired model:
+
+* original/canonical asset
+* generated sibling renditions
+* every rendition has its own b3 CID
+* every rendition has its own crab URL
+* resolved pages show all versions
+* current version is highlighted
+* technical details are preserved but visually demoted
+
+Video must match that behavior.
+
+Desired video behavior:
+
+Open:
+
+```text
+crab://<clean_master_hash>.video
+```
+
+The manifest page should show:
+
+```text
+Clean master
+Desktop 1080p
+Tablet 720p
+Mobile 480p
+Low 360p
+Poster image
+Thumbnail image
+```
+
+Open:
+
+```text
+crab://<mobile_480p_hash>.video
+```
+
+The manifest page should still show the same group, with `Mobile 480p` highlighted as the current version.
+
+Open:
+
+```text
+crab://<poster_hash>.image
+```
+
+If the poster is part of a video bundle, the image asset page should preferably show that it belongs to a video bundle and list the associated videos too, or at minimum show a clear linked-assets/bundle relationship.
+
+---
+
+## Most important distinction
+
+The post-mint result panel is now good, but it is not enough.
+
+There are two different surfaces:
+
+1. **Mint result panel**
+
+   * This is the page immediately after upload.
+   * It already has local knowledge of all returned results.
+   * It can show all versions because the upload flow has the full completed bundle in memory.
+
+2. **Hydrated asset/manifest page**
+
+   * This is what you see when visiting `crab://<hash>.video`.
+   * This page must retrieve enough data from gateway/backend/index/manifest/local catalog to reconstruct the sibling group.
+   * This is currently incomplete.
+
+The remaining problem is not just UI polish. It is a data propagation / hydration problem.
+
+---
+
+## Current working pieces
+
+### Video page shell
+
+Current route:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPage.jsx
+```
+
+Current purpose:
+
+* owns `crab://video`
+* uses the image-style simple mint workspace
+* renders `VideoDraft`
+* keeps React display-only
+* no fake b3 CID
+* no fake manifest CID
+* no direct wallet mutation
+* no backend publication claim before gateway response
+
+This file is mostly okay now.
+
+---
+
+### Video draft page
+
+Current route:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoDraft.jsx
+```
+
+Current purpose:
+
+* video preview/select card
+* title + description
+* collapsed advanced fields
+* collapsed prepare MP4 versions section
+* publish flow below
+
+This is much closer to image page layout now.
+
+Still possible polish later:
+
+* reduce vertical size of the empty preview if it still feels too tall
+* make “Choose video” positioning match image page exactly
+* make advanced drawers visually identical to image page
+* keep title/description spacing aligned with image page
+
+But do not let this block manifest work.
+
+---
+
+### Video converter / Rust prepare flow
+
+Relevant files:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+apps/crablink-tauri/src/shared/api/videoConverterClient.js
+apps/crablink-tauri/src-tauri/src/media/video_sources.rs
+apps/crablink-tauri/src-tauri/src/media/video_probe.rs
+apps/crablink-tauri/src-tauri/src/media/video_renditions.rs
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+```
+
+Current status:
+
+* user can choose one native source
+* Rust registers private path internally
+* React receives only a redacted source handle / facts
+* Rust prepares staged outputs
+* staged outputs include videos and JPEG images
+* staged outputs can be minted successfully
+* no local preview path is persisted as backend truth
+* no React-side private path authority
+* no fake receipt
+* no fake CID
+
+Known remaining converter issue from previous notes:
+
+* verify actual dimensions of outputs
+* there may be a height-only scaling bug or insufficient proof that 480p/360p are dimensionally resized correctly
+* add output dimension verification after FFmpeg output
+* do not rely only on bitrate/size drop as proof
+
+This is important but lower priority than manifest cross-linking unless output quality/resizing blocks user trust.
+
+---
+
+### Video publish flow
+
+Relevant file:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+```
+
+Current status:
+
+* prepare request works
+* explicit ROC hold works
+* staged upload works
+* 7 outputs minted successfully
+* post-mint result panel now shows all outputs
+* auto-open after mint was removed, so the user can inspect returned results
+* Open/Copy buttons work in result list
+* primary URL and primary CID are displayed
+
+Current successful bundle roles:
+
+```text
+source_clean_master
+desktop_1080p
+tablet_720p
+mobile_480p
+low_360p
+poster_image
+thumbnail_image
+```
+
+Current mint result screenshot looked good:
+
+```text
+Video bundle minted
+5 Videos
+2 Images
+Primary CID
+Receipt
+Clean Master
+Desktop 1080p
+Tablet 720p
+Mobile 480p
+Low 360p
+Poster Image
+Thumbnail Image
+```
+
+This is a major improvement.
+
+Remaining issue:
+
+The publish flow can display the completed bundle locally, but the hydrated asset page does not yet receive or reconstruct that bundle relationship.
+
+---
+
+## Current suspected root cause
+
+The upload flow mints outputs one by one.
+
+That creates a sequencing problem.
+
+When the first asset is uploaded, it may not yet know the final backend-returned CIDs/crab URLs for later outputs.
+
+Example:
+
+1. Upload clean master.
+
+   * Backend returns clean master CID/URL.
+   * But desktop/tablet/mobile/poster/thumbnail backend URLs may not yet exist.
+
+2. Upload desktop 1080p.
+
+   * Could know clean master.
+   * Still may not know all later outputs.
+
+3. Upload final thumbnail.
+
+   * Now the flow knows all prior outputs.
+   * But earlier immutable asset manifests cannot be silently mutated.
+
+Because b3 content is immutable, we must not pretend an existing b3 manifest changed in place.
+
+So there are only a few valid strategies:
+
+### Strategy A — Match image implementation exactly
+
+This is the safest immediate approach.
+
+Next session should inspect the image pipeline carefully and copy its mechanism.
+
+Questions to answer:
+
+```text
+How does image bundle cross-linking actually work?
+Does image send sibling data in headers?
+Does image send sibling data in upload metadata?
+Does backend store the sibling map in every image asset manifest?
+Does the asset page read the sibling map from backend response?
+Does it fall back to local catalog?
+Does it still work after app restart?
+```
+
+Files to inspect first:
+
+```text
+apps/crablink-tauri/src/pages/image/ImagePublishFlow.jsx
+apps/crablink-tauri/src/pages/image/ImageManifest.jsx
+apps/crablink-tauri/src/pages/asset/ImageAssetManifestFacts.jsx
+apps/crablink-tauri/src/pages/image/ImageRenditions.jsx
+apps/crablink-tauri/src/shared/manifest/renditionGroups.js
+apps/crablink-tauri/src/shared/manifest/uniformManifest.js
+apps/crablink-tauri/src/shared/manifest/linkedAssets.js
+apps/crablink-tauri/src/shared/api/assetClient.js
+```
+
+Then compare with:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/pages/asset/VideoAssetManifestFacts.jsx
+```
+
+Do not invent a new contract before confirming the image mechanism.
+
+---
+
+### Strategy B — Local display bundle cache as temporary bridge
+
+If image cross-linking turns out to be local/display-cache based, we can implement the same for video.
+
+This would mean:
+
+* after video mint completes, build a normalized completed bundle object from backend-returned results
+* write display-only local catalog entries for every output
+* key the bundle by every output CID
+* when opening any output in the same app session, hydrate sibling display from local catalog
+* label it clearly as display cache, not durable backend truth
+
+Important wording:
+
+```text
+Local display bundle
+Not backend manifest truth
+Not durable ownership truth
+Not paid unlock truth
+Not receipt truth
+```
+
+This is acceptable as a short-term UI bridge, but not final.
+
+---
+
+### Strategy C — Backend/index-backed rendition group
+
+This is probably the cleanest long-term RustyOnions-native model.
+
+Each asset gets:
+
+```text
+group_id
+role
+canonical/source CID
+```
+
+Then backend/index/omnigate can hydrate:
+
+```text
+all assets in this group
+```
+
+This avoids mutating immutable b3 content.
+
+Possible backend/index idea:
+
+```text
+svc-index stores relation:
+group_id -> asset CIDs/URLs/roles
+asset_cid -> group_id
+```
+
+Then asset hydration returns the group.
+
+Pros:
+
+* works after app restart
+* no local display cache required
+* respects b3 immutability
+* future-ready for image/video/music/podcast bundles
+* clean fit for reference-graph sites
+
+Cons:
+
+* requires backend/index contract
+* more work than UI patch
+* must define who can add assets to a group
+* must ensure paid/ownership policy is correct
+
+This is likely needed eventually.
+
+---
+
+### Strategy D — Bundle manifest object
+
+Another durable approach:
+
+1. Upload all outputs.
+2. Collect backend-returned CIDs/crab URLs.
+3. Build one video bundle manifest object.
+4. Publish that object as its own content-addressed JSON.
+5. Each asset page uses a bundle manifest pointer or index lookup to show siblings.
+
+Pros:
+
+* content-addressed
+* no mutation of old b3 content
+* can include poster, thumbnail, captions, subtitles, transcripts later
+* durable and inspectable
+
+Cons:
+
+* individual assets still need a way to find the bundle manifest
+* if pointer was not known at first upload, need index relationship or manifest revision pointer
+* requires backend route/contract for generic bundle manifest object
+
+Good long-term direction, but first inspect image implementation.
+
+---
+
+## Key current code pieces to inspect/fix
+
+### `AssetHydratedView.jsx`
+
+Relevant file:
+
+```text
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+```
+
+Current work already added:
+
+* import `VideoAssetManifestFacts`
+* render `VideoAssetManifestFacts` for video route
+* added `VideoRenditionGroupCard`
+* added `normalizeVideoRenditionGroup`
+* added `normalizeVideoRenditionItem`
+* added `normalizeVideoRenditionSelf`
+* attempted to treat image rendition card as video bundle when image page sees video renditions
+
+Problem shown by screenshot:
+
+* video asset page does not receive a usable `summary.renditionGroup`
+* `VideoAssetManifestFacts` says bundle not returned
+* `VideoRenditionGroupCard` probably does not render because `summary.renditionGroup?.renditions?.length` is zero
+
+Next debugging steps:
+
+1. Open a minted `.video` page.
+2. Use existing developer JSON/details if available.
+3. Inspect hydrated gateway response shape.
+4. Find where the video group metadata exists, if anywhere.
+5. Confirm whether backend response includes:
+
+   * `rendition_group`
+   * `renditionGroup`
+   * `metadata.rendition_group`
+   * `metadata.video_rendition_group`
+   * `manifest.rendition_group`
+   * `manifest.video_rendition_group`
+   * headers converted to body fields
+   * local catalog entry
+6. Fix normalizer paths accordingly.
+
+Likely issue:
+
+The frontend normalizer is ready to read a video rendition group, but the gateway/hydrated response is not returning one for the individual `.video` asset.
+
+---
+
+### `VideoAssetManifestFacts.jsx`
+
+Relevant file:
+
+```text
+apps/crablink-tauri/src/pages/asset/VideoAssetManifestFacts.jsx
+```
+
+Current status:
+
+* exists
+* renders a video manifest card
+* knows about `summary.renditionGroup`
+* displays `Bundle: Not returned` when no group exists
+
+Needed improvements:
+
+* once the sibling group is hydrated, show:
+
+  * current role
+  * bundle count
+  * canonical primary
+  * poster/thumbnail relationship
+* improve layout to match image manifest page more closely
+* avoid smashed text / missing spaces in fields
+* make title/description cleaner
+
+Current screenshot shows text formatting issues:
+
+```text
+Creatorpassport main:dev
+RenditionClean master
+BundleNot returned
+Accesspaid content_view
+```
+
+There should be spacing or pill/fact-card formatting:
+
+```text
+Creator: passport:main:dev
+Rendition: Clean master
+Bundle: 7 linked outputs
+Access: paid content_view
+```
+
+Fix CSS/layout for video manifest identity strip if needed.
+
+---
+
+### `VideoRenditionGroupCard`
+
+Relevant location:
+
+```text
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+```
+
+Current status:
+
+* likely exists
+* should show a table similar to image rendition group card
+* currently not appearing because no group is hydrated
+
+Once group data exists, verify:
+
+* it renders for `.video`
+* current version is highlighted
+* primary/source version is highlighted
+* poster/thumbnail are visually distinguished as linked image assets
+* Open button navigates correctly
+* Copy URL and Copy CID buttons work
+* raw JSON is collapsed
+
+Suggested labels:
+
+```text
+Clean master
+Desktop 1080p
+Tablet 720p
+Mobile 480p
+Low 360p
+Poster image
+Thumbnail image
+```
+
+Suggested fact labels:
+
+```text
+Group ID
+Source CID
+Canonical primary
+Current role
+```
+
+---
+
+### `VideoPublishFlow.jsx`
+
+Relevant file:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+```
+
+Current status:
+
+* post-mint display is good
+* shows `7 minted`
+* shows `5 Videos`, `2 Images`
+* lists all rows
+* raw video rendition group JSON exists
+* likely builds a completed bundle object from returned results
+
+Needed next:
+
+* ensure the completed rendition group uses backend-returned CIDs/URLs, not predicted-only values
+* ensure the group’s relationship truth changes from prediction to backend-returned truth after upload
+* ensure every result includes:
+
+  * role
+  * label
+  * assetKind
+  * cid
+  * crabUrl
+  * mime/contentType
+  * bytes
+  * width/height if known
+  * backendVerified or predictionMatched
+* ensure if writing local catalog, it writes entries for every output, not only primary video
+* ensure local catalog links each CID to the completed bundle if using temporary display cache
+
+Important invariant:
+
+Do not call predicted CIDs backend truth unless the backend confirms the same CID.
+
+Better language after upload:
+
+```text
+relationship_truth: backend_returned_asset_urls_after_explicit_paid_upload
+```
+
+rather than:
+
+```text
+rust_staged_b3_prediction_before_backend_verified_upload
+```
+
+Only use predicted values for pre-upload preview.
+
+---
+
+### `videoAssetClient.js`
+
+Relevant file:
+
+```text
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+```
+
+Likely needs inspection next session.
+
+Questions:
+
+* Does it attach rendition group metadata to video upload headers?
+* Does it attach the same group to every video output?
+* Does it include poster/thumbnail links?
+* Does it send predicted group or completed group?
+* Does it send role/label headers?
+* Does backend accept/retain these headers?
+* Are image outputs using image headers while video outputs use video headers?
+* Are poster/thumbnail images being uploaded with a video group or only image-specific metadata?
+
+Headers to inspect:
+
+```text
+x-ron-video-rendition-role
+x-ron-video-rendition-label
+x-ron-video-rendition-group
+x-ron-image-rendition-role
+x-ron-image-rendition-label
+x-ron-image-rendition-group
+```
+
+Need to determine if backend persists these into hydration.
+
+---
+
+### Backend / gateway side to inspect if needed
+
+If frontend is correctly sending metadata but asset hydration does not return it, inspect backend.
+
+Likely RustyOnions files to inspect:
+
+```text
+svc-gateway asset upload routes
+omnigate hydration routes
+asset DTOs in ron-proto
+svc-index relationship/pointer storage
+svc-storage object metadata path
+```
+
+Potential issue:
+
+The upload route may accept headers for upload-time diagnostics but not persist them into asset manifest/hydrated response.
+
+If so, frontend cannot solve durable cross-linking alone.
+
+Next session should not fake durability. If backend does not persist group data, either:
+
+1. add backend persistence/index support, or
+2. implement local display cache and label it display-only.
+
+---
+
+## Screenshots from latest session
+
+### Screenshot 1 — Video mint result page
+
+Status:
+
+* much improved
+* clean “Video bundle minted” card appears
+* shows 7 minted outputs
+* rows are readable
+* role labels are good
+* Open / Copy URL / Copy CID actions exist
+* this part is close to acceptable
+
+Remaining polish:
+
+* primary CID and receipt fact cards are too wide / text overflows visually
+* may need truncation or smaller typography
+* table layout is mostly okay but can be refined later
+* not urgent compared to manifest page
+
+### Screenshot 2 — Opened `.video` asset page
+
+Status:
+
+* resolves as `.video`
+* shows paid content view panel
+* video manifest card appears
+* clean master role appears
+* canonical URL and content object ID are shown
+
+Problems:
+
+* sibling group not shown
+* `Bundle: Not returned`
+* fields appear cramped / no visible separators between label and value
+* no rendition table
+* no poster/thumbnail links
+* no full version list
+* this is the main next-session target
+
+---
+
+## Next-session priority order
+
+### Priority 1 — Determine why video asset page does not have rendition group data
+
+Start with inspection, not blind patching.
+
+Steps:
+
+1. Open latest `CODEBUNDLE_TAURI_APP.md`.
+2. Inspect `AssetHydratedView.jsx`.
+3. Inspect `VideoAssetManifestFacts.jsx`.
+4. Inspect `VideoPublishFlow.jsx`.
+5. Inspect `videoAssetClient.js`.
+6. Inspect image equivalents:
+
+   * `ImagePublishFlow.jsx`
+   * `ImageAssetManifestFacts.jsx`
+   * `ImageRenditions.jsx`
+   * `renditionGroups.js`
+   * `uniformManifest.js`
+   * `linkedAssets.js`
+7. Compare how image group data is stored and hydrated.
+8. Identify whether video lacks:
+
+   * upload metadata
+   * backend persistence
+   * frontend parsing
+   * local catalog mapping
+   * asset hydration display
+
+Deliverable:
+
+A precise diagnosis:
+
+```text
+Video group missing because ______.
+Image group works because ______.
+Best parity fix is ______.
+```
+
+---
+
+### Priority 2 — Bring video asset manifest to image parity
+
+Once the data source is known, implement.
+
+Minimum target:
+
+For any opened `.video` version, show:
+
+```text
+Video versions
+Clean master
+Desktop 1080p
+Tablet 720p
+Mobile 480p
+Low 360p
+Poster image
+Thumbnail image
+```
+
+Each row must include:
+
+```text
+role/label
+crab URL
+b3 CID
+mime/type
+bytes
+resolution if known
+Open
+Copy URL
+Copy CID
+```
+
+Highlight:
+
+* current opened version
+* clean master / primary source
+* linked images as image assets
+
+Do not fake backend truth.
+
+If using local cache, label as local display bundle.
+
+---
+
+### Priority 3 — If necessary, write local display bundle cache
+
+If backend/hydration does not return durable group metadata yet, implement display cache.
+
+Suggested structure:
+
+```text
+localCatalog.videoBundlesByCid[cid] = completedBundle
+```
+
+or equivalent existing local catalog mechanism.
+
+Each minted output CID should map to the same completed bundle.
+
+On asset hydration:
+
+1. Try backend/hydrated rendition group first.
+2. If missing, try local display bundle by CID.
+3. If found, render it as:
+
+   * “Local display bundle”
+   * “Backend CIDs returned”
+   * “Sibling relationship from local display cache”
+4. Do not call it durable backend manifest truth.
+
+Acceptance for temporary bridge:
+
+```text
+After minting a video bundle, click Open on any returned video.
+The opened video page shows all 7 outputs from local display cache.
+Restart may lose it unless persisted; label accurately.
+```
+
+Durable acceptance later:
+
+```text
+Fresh app instance opens any minted video URL and still shows siblings from backend/index/manifest truth.
+```
+
+---
+
+### Priority 4 — Improve video manifest page layout
+
+After sibling data appears, polish the manifest card.
+
+Fix spacing issues:
+
+Bad current look:
+
+```text
+Creatorpassport main:dev
+RenditionClean master
+BundleNot returned
+Accesspaid content_view
+```
+
+Desired:
+
+```text
+Creator
+passport:main:dev
+
+Rendition
+Clean master
+
+Bundle
+7 linked outputs
+
+Access
+paid content_view
+```
+
+Use image manifest page as reference.
+
+Also improve video manifest description:
+
+Current:
+
+```text
+CrabLink video bundle output: Clean MP4 master. Role: source_clean_master...
+```
+
+Better:
+
+```text
+Clean MP4 master from a CrabLink video bundle. Prepared locally by Rust/FFmpeg, then minted after explicit ROC confirmation.
+```
+
+Keep technical truth but make it readable.
+
+---
+
+### Priority 5 — Video mint flow polish to match image flow
+
+The user still likes the image flow better.
+
+Current video mint page is improved, but final polish should make it closer to image:
+
+Image flow:
+
+```text
+Preview
+Title / description
+Advanced fields collapsed
+Quote / ROC hold / mint
+Developer details collapsed
+Advanced options collapsed
+```
+
+Video should be:
+
+```text
+Preview
+Title / description
+Advanced fields collapsed
+Prepare MP4 versions collapsed
+Quote / ROC hold / mint
+Video versions result after mint
+Advanced mint details collapsed
+Advanced video options collapsed
+```
+
+Do not show developer-like status rows unless drawer is opened.
+
+The publish flow should use friendly copy:
+
+```text
+1. Get bundle quote
+2. Review ROC hold
+3. Mint video bundle
+```
+
+Not too much route/API language in default view.
+
+---
+
+## Testing plan for next session
+
+Run from project root:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Then in another terminal if needed:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+npm run check:rust:mac-media
+```
+
+Manual test:
+
+1. Open `crab://video`.
+2. Choose a source video.
+3. Build MP4 plan.
+4. Mint all selected outputs.
+5. Confirm result panel shows 7 outputs.
+6. Copy all returned URLs.
+7. Open clean master `.video`.
+8. Confirm manifest page shows all versions.
+9. Open desktop 1080p `.video`.
+10. Confirm manifest page shows all versions and highlights desktop.
+11. Open mobile 480p `.video`.
+12. Confirm manifest page shows all versions and highlights mobile.
+13. Open low 360p `.video`.
+14. Confirm manifest page shows all versions and highlights low.
+15. Open poster `.image`.
+16. Confirm it either shows video bundle relationship or at least linked asset context.
+17. Open thumbnail `.image`.
+18. Confirm same.
+19. Restart app if testing durable behavior.
+20. Open a saved video URL again.
+21. Confirm whether sibling list persists.
+22. If it does not persist, label current behavior as local display cache and plan backend/index fix.
+
+Important expected result:
+
+```text
+Every sibling link must be backend-returned crab URL/CID.
+No fake CID.
+No fake manifest CID.
+No fake receipt.
+No local cache unlock.
+No silent spend.
+No mutation of immutable b3 content.
+```
+
+---
+
+## Likely implementation path next session
+
+Recommended first patch should probably be diagnostic/normalization, not a huge rewrite.
+
+Suggested next-session patch sequence:
+
+### Patch 1 — Inspect and expose hydrated video raw response
+
+Add or use existing developer JSON on asset page to inspect:
+
+```text
+summary.raw
+summary.renditionGroup
+summary.rendition
+hydrated response fields
+metadata fields
+manifest fields
+local catalog lookup result
+```
+
+Goal:
+
+Find whether group data is absent or only misparsed.
+
+### Patch 2 — Fix parser paths
+
+If group exists but parser misses it, update:
+
+```text
+normalizeVideoRenditionGroup
+normalizeVideoRenditionItem
+summarizeAsset
+VideoAssetManifestFacts
+VideoRenditionGroupCard
+```
+
+Add aliases for all observed backend field names.
+
+### Patch 3 — Add local bundle fallback if backend group is absent
+
+If backend does not return group, add local display fallback.
+
+Likely touch:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/shared/catalog/localCatalog.js
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+```
+
+Requirements:
+
+* write completed bundle after mint
+* map every CID to same bundle
+* asset page checks local bundle by current CID
+* render as display-only local relationship
+* never call it backend truth
+
+### Patch 4 — Backend/index durable fix if needed
+
+If image uses backend/index and video does not, mirror image backend behavior for video.
+
+This may require RustyOnions changes and should be handled carefully.
+
+Potential backend path:
+
+```text
+upload route accepts rendition group metadata
+gateway stores group relationship into index/metadata
+omnigate/hydration returns rendition group for every asset in group
+```
+
+Do this only after confirming the image path.
+
+---
+
+## Important architecture invariants to preserve
+
+* CrabLink Tauri is the client, not backend truth.
+* React owns display and user intent only.
+* Tauri Rust owns native privilege and local media prep.
+* Wallet mutation only through backend wallet path.
+* No direct ledger mutation from UI.
+* No fake ROC balance.
+* No fake receipt.
+* No silent spend.
+* No fake b3 CID.
+* No fake manifest CID.
+* No cache-only paid unlock.
+* No private source file path in React state or logs.
+* No full large-video byte transport through React commands for future large media.
+* Current video-lite can remain bounded, but large video needs range/segment/staged path.
+* b3 hashes are immutable content truth.
+* If manifest bytes change, it creates a new b3 object.
+* Do not pretend existing immutable manifests mutate in place.
+* Sibling maps are relationship metadata, not replacement for canonical asset truth.
+
+---
+
+## Current status estimate for video page
+
+Video minting mechanics:
+
+```text
+~70% complete
+```
+
+Post-mint result display:
+
+```text
+~80% complete
+```
+
+Video asset/manifest page:
+
+```text
+~40–50% complete
+```
+
+Durable video bundle cross-linking:
+
+```text
+~25–35% complete
+```
+
+Overall video page/product readiness:
+
+```text
+~60–65% complete
+```
+
+The core mint pipeline works. The next biggest unlock is making the opened video asset pages show the full bundle just like image pages.
+
+---
+
+## Success definition for next session
+
+The next session is successful if we can say:
+
+```text
+I minted a video bundle.
+The mint result page showed all outputs.
+I opened clean master and saw all versions.
+I opened desktop and saw all versions.
+I opened mobile and saw all versions.
+I opened low 360p and saw all versions.
+The current version was highlighted.
+All sibling URLs/CIDs came from backend response or clearly labeled local display cache.
+No fake manifest truth was claimed.
+```
+
+Stretch goal:
+
+```text
+After restarting CrabLink, opening any minted video URL still shows all siblings from durable backend/index/manifest truth.
+```
+
+That stretch goal may require backend work if the current gateway does not persist video rendition group metadata.
+
+The most important next-session starting point is: **inspect how the image page actually persists and hydrates rendition groups, then mirror that mechanism for video instead of inventing a separate contract.**
+
+
+### END NOTE - MAY 31 2026 - 13:10 CST
+
+
+### BEGIN NOTE - MAY 31 2026 - 15:40 CST
+
+Below is a comprehensive carryover note set for the next instance.
+
+# Carryover Notes — New `make` Page / CrabLink Creator Studio
+
+## 0. Session checkpoint
+
+We are pivoting from polishing individual media pages into a broader creator tool concept: a new **`crab://make`** page.
+
+The idea is to create a **local video creation studio** that reuses the best existing work from:
+
+* `crab://stream`: camera preview, person cutout / green-screen-style background replacement, framing, saved scene/look controls.
+* `crab://podcast`: mic/file recording, voice/audio controls, meters, preamp/gain/gate/leveler-style studio controls.
+* `crab://video`: Rust/FFmpeg staging, MP4 version generation, poster/thumbnail generation, paid mint flow, video rendition group manifests.
+
+The goal is **not** to turn stream/podcast/video pages into one bloated page. The new page should be a separate creator workspace:
+
+```text
+crab://make
+```
+
+Its job is to help a creator **record, assemble, preview, export, and then mint** a finished video asset.
+
+The final minted output should still use normal video asset truth:
+
+```text
+crab://<b3hash>.video
+```
+
+The `make` page is a **tool/workspace route**, not a new asset kind by default.
+
+The attached codebundle confirms the app already has dedicated Stream, Podcast, and Video page areas, including the relevant files under `apps/crablink-tauri/src/pages/stream`, `apps/crablink-tauri/src/pages/podcast`, and `apps/crablink-tauri/src/pages/video`. 
+
+---
+
+## 1. Important current context before starting
+
+### 1.1 Stream page has reusable creator-studio technology
+
+The stream page already moved beyond a backend test panel and now has a local creator studio feel. Existing stream work includes:
+
+```text
+StreamLocalPreview.jsx
+streamCompositor.js
+StreamLookPanel.jsx
+streamPersonSegmentation.js
+streamStudioModel.js
+StreamGoLivePanel.jsx
+StreamPage.jsx
+stream.css
+```
+
+The working product result is that the creator can start a camera preview, remove the real background, place themselves over a selected background, frame themselves, adjust the camera look, save the scene, and use a cleaner Go Live flow. 
+
+For `make`, this is the core visual engine to reuse or adapt.
+
+Do **not** casually rewrite the stream files. Use them as reference, and only extract/shared-copy logic when it helps.
+
+### 1.2 Stream features still parked should now inform Make
+
+The old notes explicitly parked several stream features, including:
+
+```text
+screen + webcam thumbnail compositor
+recording/replay pipeline
+audio mixing
+camera device picker polish
+background publishing as b3 assets
+```
+
+Those parked items map directly to the proposed `make` page. The key difference is that `make` is not live streaming. It is local creation and export.
+
+This matters because `make` can be simpler and safer than production livestreaming:
+
+```text
+capture locally
+compose locally
+record clips locally
+export/stage locally
+then mint via existing video asset path
+```
+
+No need to solve full production livestreaming to build `make`.
+
+### 1.3 Podcast page has reusable audio-studio technology
+
+The podcast notes describe a studio layout with a large console, waveform/meter area, record/stop/play controls, local playback preview, and a right rail with launch checklist and mixer/voice chain summary. 
+
+The podcast audio controls already track important processing values:
+
+```text
+preamp dB
+input gain
+noise gate enabled
+noise gate threshold
+gate reduction
+voice leveler enabled
+monitor enabled
+```
+
+The notes also say next work should verify that those controls are not just cosmetic and that the mixer should expose clear meter/status readouts such as input, processed level, gate open/closed, peak, clipping, and recorder codec. 
+
+For `make`, reuse this concept as a **Video Audio Chain**:
+
+```text
+mic input
+screen audio if available
+preamp
+gain
+gate
+leveler/compressor
+monitor volume
+input/output meters
+mute toggles
+```
+
+### 1.4 Video page has the export/mint path to reuse
+
+The current video route is intentionally a simple video mint workspace. Its route owner says the flow is:
+
+```text
+choose one source video
+prepare MP4 versions
+confirm ROC hold
+mint selected video bundle as backend-returned assets
+```
+
+The video page also keeps key invariants: local draft only, no fake b3 CID, no fake manifest CID, no ROC mutation from React, and backend CIDs only. 
+
+`make` should not invent a second video mint path. It should eventually feed an exported local video into the existing video staging/mint machinery.
+
+---
+
+## 2. New page concept
+
+### Proposed route
+
+```text
+crab://make
+```
+
+### Proposed product name
+
+Use one of these internally:
+
+```text
+Make
+CrabLink Make
+Make Studio
+Creator Studio
+Video Maker
+```
+
+Visible page copy can be simple:
+
+```text
+Make videos
+Record clips, compose scenes, capture your screen, mix audio, export MP4, and mint as crab:// video assets.
+```
+
+### Core product promise
+
+```text
+A local TikTok/OBS/CapCut-lite style creator studio inside CrabLink Tauri.
+```
+
+But be careful with claims. Do not say it is production OBS, production TikTok, DRM, anti-rip, full live broadcast, or full editor. First version should be honest:
+
+```text
+local creator studio
+camera/screen capture proof
+clip-based recording
+basic compositor
+basic audio chain
+bounded export
+video mint integration
+```
+
+---
+
+## 3. What Make should do
+
+### 3.1 TikTok-style segmented recording
+
+The user specifically wants this behavior:
+
+```text
+hit record
+stop
+hit record again for next part
+stop
+repeat
+then export all clips as one video
+```
+
+This should become the central recording model.
+
+Core UX:
+
+```text
+Record button
+Pause/stop segment button
+Retake last clip
+Clear all clips
+Clip strip / timeline
+Clip count
+Total duration
+Selected clip preview
+Export stitched video
+```
+
+First pass can avoid deep editing. Do not build a full timeline editor yet.
+
+Initial clip operations:
+
+```text
+append clip
+delete clip
+retake last clip
+reorder clips later
+trim clips later
+split clips later
+add captions later
+```
+
+### 3.2 Camera studio mode
+
+Reuse stream concepts:
+
+```text
+camera preview
+person cutout
+background replacement
+mirror toggle
+subject X/Y position
+subject zoom
+brightness
+contrast
+saturation
+scene presets
+```
+
+The `make` page should not mutate stream session truth. These are local display/composition controls.
+
+### 3.3 Screen recording mode
+
+Add a source mode:
+
+```text
+camera
+screen
+camera + screen PiP
+file/import
+```
+
+For screen recording:
+
+```text
+choose screen/window/tab if WebView supports getDisplayMedia
+show clear screen-recording active indicator
+allow system audio only if available/allowed
+never start screen capture automatically
+always require explicit user click
+```
+
+The first pass should test whether Tauri WebView on the user’s Intel Mac supports:
+
+```javascript
+navigator.mediaDevices.getDisplayMedia
+```
+
+If it works, use browser-side capture for the first proof. If it does not work reliably in Tauri, park native screen capture for a Rust-side/Tauri command phase.
+
+### 3.4 Screen recording with optional PiP webcam
+
+User wants screen recording with optional PiP video of themselves.
+
+PiP controls:
+
+```text
+enable webcam PiP
+disable webcam PiP
+PiP position: top-left, top-right, bottom-left, bottom-right, custom
+PiP size: small, medium, large
+PiP shape: rectangle / rounded / circle later
+mirror webcam
+use person cutout in PiP optionally
+background replacement in PiP optionally
+```
+
+First pass should prioritize:
+
+```text
+screen source + webcam overlay rectangle
+move/resize PiP
+record combined canvas
+```
+
+### 3.5 Audio controls
+
+Reuse podcast studio ideas:
+
+```text
+mic source
+screen audio if available
+mic mute
+screen audio mute
+preamp
+gain
+noise gate
+gate reduction
+voice leveler
+monitor volume
+input meter
+processed meter
+clipping warning
+```
+
+Important: audio settings are local creator controls. They do not create wallet/backend truth.
+
+### 3.6 Export path
+
+The clean long-term flow should be:
+
+```text
+Make local clips
+→ render/compose clips locally
+→ export a clean master MP4
+→ send exported master into existing video staging/conversion pipeline
+→ generate device versions + poster + thumbnail
+→ prepare quote
+→ explicit ROC hold
+→ mint video bundle
+→ backend returns crab://<hash>.video links
+```
+
+The first version does not need a perfect editor. It needs a reliable path from local recording to an MP4 file or staged handle.
+
+---
+
+## 4. Proposed architecture
+
+## 4.1 Keep Make as a client-side creator workspace
+
+Make should not be a backend service at first.
+
+Do **not** add new RustyOnions services or ledger paths.
+
+Do **not** create fake asset truth.
+
+Do **not** create fake receipts.
+
+Do **not** directly mutate wallet or ledger.
+
+Make should be:
+
+```text
+React UI + browser media APIs + local preview state
+Tauri/Rust helper only where native media/staging/export requires it
+existing video mint flow for final upload
+```
+
+## 4.2 Proposed file structure
+
+Create a new page folder:
+
+```text
+apps/crablink-tauri/src/pages/make/
+```
+
+Proposed files:
+
+```text
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/MakeStudio.jsx
+apps/crablink-tauri/src/pages/make/MakeRecorder.jsx
+apps/crablink-tauri/src/pages/make/MakeScreenCapture.jsx
+apps/crablink-tauri/src/pages/make/MakeCameraStage.jsx
+apps/crablink-tauri/src/pages/make/MakeTimeline.jsx
+apps/crablink-tauri/src/pages/make/MakeAudioMixer.jsx
+apps/crablink-tauri/src/pages/make/MakeSceneControls.jsx
+apps/crablink-tauri/src/pages/make/MakeExportFlow.jsx
+apps/crablink-tauri/src/pages/make/makeDraftModel.js
+apps/crablink-tauri/src/pages/make/makeStudioModel.js
+apps/crablink-tauri/src/pages/make/makeCompositor.js
+apps/crablink-tauri/src/pages/make/make.css
+```
+
+Start local. Do not prematurely move everything into shared packages.
+
+After the first proof works, consider extracting shared compositor/audio code:
+
+```text
+apps/crablink-tauri/src/shared/media/compositor.js
+apps/crablink-tauri/src/shared/media/personSegmentation.js
+apps/crablink-tauri/src/shared/media/audioChain.js
+```
+
+But only extract after confirming Make works.
+
+## 4.3 Route registration
+
+Next instance should inspect:
+
+```text
+apps/crablink-tauri/src/app/routeRegistry.js
+apps/crablink-tauri/src/app/router.js
+apps/crablink-tauri/src/app/shell/BrowserNav.jsx
+apps/crablink-tauri/src/pages/home/HomeQuickActions.jsx
+```
+
+Then add a visible route:
+
+```text
+crab://make
+```
+
+Possibly add sidebar/nav label:
+
+```text
+Make
+```
+
+Do not remove existing stream/podcast/video routes.
+
+---
+
+## 5. Proposed Make data model
+
+### 5.1 `MakeProject`
+
+Local-only draft:
+
+```javascript
+{
+  schema: 'crablink.make-project.v1',
+  title: '',
+  description: '',
+  mode: 'video',
+  createdAt: '',
+  updatedAt: '',
+  clips: [],
+  scene: {},
+  audioChain: {},
+  exportPlan: {},
+  rights: {},
+}
+```
+
+### 5.2 `MakeClip`
+
+Each record/stop creates one clip:
+
+```javascript
+{
+  id: 'clip_<nonce>',
+  sourceMode: 'camera' | 'screen' | 'screen_pip' | 'import',
+  blobUrl: '',
+  durationMs: 0,
+  width: 1280,
+  height: 720,
+  fps: 30,
+  mimeType: 'video/webm' | 'video/mp4',
+  createdAt: '',
+  localOnly: true,
+}
+```
+
+Important: do not persist raw blobs in `localStorage`.
+
+Use in-memory blobs for first pass. Later, use Tauri app data directory or staged temp files explicitly.
+
+### 5.3 `MakeScene`
+
+Reuse stream scene idea:
+
+```javascript
+{
+  backgroundMode: 'none' | 'solid' | 'image' | 'blur' | 'person_cutout',
+  backgroundColor: '#111111',
+  backgroundImageUrl: '',
+  subjectX: 0,
+  subjectY: 0,
+  subjectScale: 1,
+  mirror: true,
+  brightness: 1,
+  contrast: 1,
+  saturation: 1,
+}
+```
+
+### 5.4 `MakeAudioChain`
+
+Reuse podcast audio chain:
+
+```javascript
+{
+  micEnabled: true,
+  screenAudioEnabled: false,
+  preampDb: 0,
+  inputGain: 1,
+  noiseGateEnabled: false,
+  noiseGateThresholdDb: -45,
+  gateReductionDb: -24,
+  voiceLevelerEnabled: false,
+  monitorEnabled: false,
+  monitorVolume: 0.75,
+}
+```
+
+### 5.5 `MakeExportPlan`
+
+```javascript
+{
+  target: 'mp4_master',
+  width: 1280,
+  height: 720,
+  fps: 30,
+  includePoster: true,
+  includeThumbnail: true,
+  deviceRenditions: true,
+}
+```
+
+---
+
+## 6. UI design target
+
+### 6.1 Layout
+
+Use a creator-studio layout:
+
+```text
+Make Page
+├─ Hero / mode tabs
+│  ├─ Camera
+│  ├─ Screen
+│  ├─ Screen + PiP
+│  └─ Import
+│
+├─ Main studio grid
+│  ├─ Left: large preview stage
+│  │  ├─ canvas/video preview
+│  │  ├─ recording status
+│  │  ├─ elapsed time
+│  │  └─ active source labels
+│  │
+│  └─ Right: control rail
+│     ├─ Source controls
+│     ├─ Scene / green-screen controls
+│     ├─ Audio chain controls
+│     ├─ PiP controls
+│     └─ Export readiness
+│
+├─ Timeline / clip strip
+│  ├─ clip cards
+│  ├─ retake last
+│  ├─ clear all
+│  └─ total duration
+│
+└─ Export + Mint panel
+   ├─ export MP4
+   ├─ prepare video versions
+   ├─ quote
+   ├─ ROC hold
+   └─ mint video bundle
+```
+
+### 6.2 Visual direction
+
+Make should feel more like the polished stream/podcast studio pages than the older dev panels.
+
+Use:
+
+```text
+large preview canvas
+rounded studio cards
+clear active source badges
+big record button
+clip timeline strip
+right-side mixer/effects panels
+collapsed developer details
+```
+
+Avoid:
+
+```text
+raw JSON visible by default
+too many tiny controls above the fold
+dev-page look
+horizontal cramped mint rows
+fake “live” language unless actually streaming
+```
+
+### 6.3 Recording UX
+
+States:
+
+```text
+No source selected
+Source ready
+Recording
+Paused / segment saved
+Export ready
+Exporting
+Export complete
+Ready to mint
+```
+
+Buttons:
+
+```text
+Start camera
+Choose screen
+Enable PiP
+Record
+Stop segment
+Retake last clip
+Clear clips
+Preview stitched result
+Export MP4
+Mint as video
+```
+
+---
+
+## 7. Security and privacy invariants
+
+This page is media-heavy, so privacy rules need to be explicit.
+
+### 7.1 Capture must be explicit
+
+Never auto-start:
+
+```text
+camera
+microphone
+screen capture
+system audio
+```
+
+All capture must begin from a visible user action.
+
+### 7.2 Screen recording warning
+
+When screen recording starts, show a visible warning:
+
+```text
+Screen recording active. Avoid capturing passwords, wallets, private messages, or seed phrases.
+```
+
+### 7.3 No secrets in draft state
+
+Do not store:
+
+```text
+raw screen frames
+raw file paths
+private keys
+tokens
+wallet credentials
+receipt authority
+uncapped spend authority
+```
+
+### 7.4 Local media is not backend truth
+
+Make clips are local-only until uploaded through the video asset flow.
+
+Make must never claim:
+
+```text
+owned
+minted
+paid
+published
+receipt-backed
+backend-stored
+```
+
+until backend returns real asset truth.
+
+### 7.5 No fake paid unlock
+
+Make is creation-side only. It should not alter paid viewing.
+
+The final minted video still uses existing paid content-view logic.
+
+### 7.6 No arbitrary execution
+
+Do not add plugin/script/eval behavior. Make is a controlled local compositor, not a code execution environment.
+
+---
+
+## 8. Relationship to existing pages
+
+### 8.1 Stream page
+
+Stream remains for:
+
+```text
+live descriptor
+stream-lite proof
+local stream preview
+go-live UX
+paid live/session concept
+```
+
+Make reuses visual/compositor ideas but is for:
+
+```text
+recorded video production
+clip assembly
+screen recording
+exporting MP4
+minting video
+```
+
+Do not merge them.
+
+### 8.2 Podcast page
+
+Podcast remains for:
+
+```text
+audio episode creation
+audio upload/recording
+podcast rights
+podcast paid minting
+```
+
+Make reuses audio controls but is for video. It may later create video podcasts, but first pass should stay focused on video creation.
+
+### 8.3 Video page
+
+Video remains for:
+
+```text
+upload/convert/mint existing video files
+MP4 version generation
+poster/thumbnail generation
+paid video bundle mint
+manifest/rendition display
+```
+
+Make should eventually hand an exported file/staged handle into this same path.
+
+---
+
+## 9. Implementation phases for next session
+
+## Phase 0 — Verify current state before starting Make
+
+Before coding Make, next instance should briefly verify:
+
+```text
+npm run build
+npm run check:rust:mac-media
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Also verify the recent video-page safety fix:
+
+```text
+Open crab://video fresh
+Do not select a file
+Confirm quote/hold/mint are blocked
+Confirm stale previous staged jobs do not enable minting
+```
+
+This matters because Make will also create staged media and must not repeat the stale-localStorage bug.
+
+## Phase 1 — Add route shell
+
+Create:
+
+```text
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/make.css
+apps/crablink-tauri/src/pages/make/makeDraftModel.js
+```
+
+Register route:
+
+```text
+crab://make
+```
+
+Initial route should show:
+
+```text
+hero
+mode tabs
+empty studio stage
+right rail
+timeline placeholder
+export placeholder
+```
+
+No capture yet.
+
+## Phase 2 — Reuse stream camera preview / person cutout
+
+Add:
+
+```text
+MakeCameraStage.jsx
+MakeSceneControls.jsx
+makeCompositor.js
+```
+
+Start with camera mode:
+
+```text
+start camera
+stop camera
+preview camera
+mirror
+position
+zoom
+brightness/contrast/saturation
+background replacement/person cutout if reusable safely
+```
+
+Do not mutate stream state.
+
+## Phase 3 — Add segmented recording
+
+Add:
+
+```text
+MakeRecorder.jsx
+MakeTimeline.jsx
+```
+
+Use browser MediaRecorder for first proof:
+
+```text
+record current canvas stream
+stop segment
+append clip
+show clip strip
+retake last clip
+clear all
+preview selected clip
+```
+
+First pass can record WebM if that is what WebView supports. Export to MP4 can come after.
+
+## Phase 4 — Add screen recording
+
+Add:
+
+```text
+MakeScreenCapture.jsx
+```
+
+Test `getDisplayMedia`.
+
+Modes:
+
+```text
+screen only
+screen + mic
+screen + PiP webcam
+```
+
+Add visible safety warning.
+
+If Tauri WebView does not support screen capture reliably, create a graceful blocked state:
+
+```text
+Screen capture is not available in this WebView yet. Native capture bridge required.
+```
+
+Do not fake it.
+
+## Phase 5 — Add PiP compositor
+
+Use canvas composition:
+
+```text
+draw screen source full frame
+draw webcam source as overlay
+optional person cutout on webcam
+draw rounded rectangle / border later
+```
+
+Controls:
+
+```text
+PiP on/off
+position
+size
+mirror
+```
+
+## Phase 6 — Add audio chain
+
+Reuse podcast ideas:
+
+```text
+mic input
+screen audio if present
+preamp/gain/gate/leveler controls
+meters
+mute toggles
+monitor toggle
+```
+
+First pass can show meter and simple gain/mute. Gate/leveler can be wired after the base audio graph is stable.
+
+## Phase 7 — Export/stage output
+
+Options:
+
+1. Browser-side canvas MediaRecorder creates a single local recording blob.
+2. Rust/FFmpeg stitches segments into MP4.
+3. Existing video conversion pipeline generates clean master + renditions.
+
+Best path:
+
+```text
+record clips locally
+stage clips or exported master through Rust media module
+use FFmpeg to concatenate/transcode into MP4
+feed exported MP4 to existing video version pipeline
+```
+
+Do not full-buffer huge video files through command results.
+
+Respect the current large-media doctrine:
+
+```text
+bounded staging
+staged handles
+range/segment/future large media path
+no unsafe full-file command buffering
+```
+
+## Phase 8 — Mint integration
+
+Once Make exports a fresh MP4 master:
+
+```text
+MakeExportFlow
+→ VideoConverterPanel-compatible staged source
+→ VideoPublishFlow-compatible fresh job
+→ quote
+→ explicit ROC hold
+→ mint bundle
+```
+
+Important: use the same fresh-session/stale-job safety pattern from the video page.
+
+Do not allow old Make exports from localStorage to silently mint.
+
+---
+
+## 10. Rust/Tauri implications
+
+First version can be mostly React/browser media.
+
+Rust/Tauri may be needed for:
+
+```text
+FFmpeg export/concat/transcode
+safe temp staging
+large media path
+native screen capture fallback
+file save/export dialog
+media probing
+poster/thumbnail extraction
+```
+
+Existing Rust media files in the codebundle are relevant:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+apps/crablink-tauri/src-tauri/src/media/video_probe.rs
+apps/crablink-tauri/src-tauri/src/media/video_renditions.rs
+apps/crablink-tauri/src-tauri/src/media/video_sources.rs
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+```
+
+Do not add broad raw commands.
+
+Safe command families should be small and specific, for example:
+
+```text
+make_export_status
+make_stage_clip
+make_export_project
+make_clear_export
+```
+
+Avoid forbidden patterns:
+
+```text
+run
+execute
+eval
+shell
+raw_*
+```
+
+---
+
+## 11. Naming and product boundaries
+
+Use:
+
+```text
+Make project
+Make clip
+Make scene
+Make export
+Make studio
+```
+
+Avoid implying backend truth:
+
+```text
+Make asset
+Make ownership
+Make receipt
+Make minted project
+```
+
+until the video upload backend returns actual truth.
+
+Final assets should remain:
+
+```text
+.video
+.image poster
+.image thumbnail
+```
+
+A future `.make` project asset could exist later, but not now. That would need a separate manifest design for editable project graphs.
+
+---
+
+## 12. Manual test plan for Make
+
+### Route smoke
+
+```text
+crab://make opens
+no camera starts automatically
+no mic starts automatically
+no screen capture starts automatically
+no old clips auto-load unless explicitly saved/loaded
+developer JSON hidden by default
+```
+
+### Camera smoke
+
+```text
+start camera
+preview appears
+mirror works
+framing works
+look controls work
+stop camera releases stream
+```
+
+### Green-screen/person cutout smoke
+
+```text
+enable cutout
+background replacement appears
+subject not inverted
+subject can move/scale
+disable returns to normal camera
+```
+
+### Recording smoke
+
+```text
+record segment 1
+stop
+record segment 2
+stop
+timeline shows 2 clips
+retake last removes/replaces segment 2
+clear all removes clips
+```
+
+### Screen smoke
+
+```text
+choose screen/window
+visible warning appears
+screen preview appears
+stop capture releases stream
+```
+
+### PiP smoke
+
+```text
+screen mode works
+enable webcam PiP
+webcam overlay appears
+position changes work
+size changes work
+disable PiP removes overlay
+```
+
+### Audio smoke
+
+```text
+mic meter moves
+mute stops mic meter/output
+gain visibly changes meter
+gate/leveler either works or is clearly disabled/future
+monitor toggle does not create feedback disaster
+```
+
+### Export smoke
+
+```text
+export blocked with no clips
+export starts with clips
+export status visible
+export output playable
+export output not stored as fake backend asset
+```
+
+### Mint smoke
+
+```text
+exported video can enter video prepare pipeline
+quote works
+ROC hold is explicit
+mint only works after fresh export/current-session proof
+backend returns real crab:// video links
+manifest sibling list works
+```
+
+---
+
+## 13. Biggest technical risks
+
+### 13.1 Tauri WebView screen capture support
+
+`getDisplayMedia` may not behave consistently in Tauri WebView on macOS. First task is to test it.
+
+Fallback plan:
+
+```text
+ship camera-only Make first
+park native screen capture bridge
+do not fake screen recording
+```
+
+### 13.2 MediaRecorder codec support
+
+The WebView may record:
+
+```text
+video/webm
+video/mp4
+different codecs depending on platform
+```
+
+Need runtime codec detection:
+
+```javascript
+MediaRecorder.isTypeSupported(...)
+```
+
+Do not hard-code MP4 capture from browser unless proven.
+
+### 13.3 Clip stitching
+
+Concatenating browser-recorded blobs is not always safe by just joining bytes.
+
+Better long-term:
+
+```text
+record segments
+stage each segment
+FFmpeg concat/transcode in Rust
+produce clean MP4 master
+```
+
+### 13.4 Audio/video sync
+
+Mixing:
+
+```text
+screen video
+webcam video
+mic audio
+screen audio
+effects chain
+```
+
+can drift. Keep first pass simple.
+
+### 13.5 Performance on Intel MacBook Pro
+
+Default to bounded settings:
+
+```text
+720p
+30 fps
+short clips
+reasonable canvas size
+no 4K default
+no heavy segmentation by default during screen capture unless user enables it
+```
+
+### 13.6 Privacy
+
+Screen recording can capture secrets. UI needs visible warnings and explicit stop controls.
+
+---
+
+## 14. Exact files next instance should inspect first
+
+```text
+apps/crablink-tauri/src/app/routeRegistry.js
+apps/crablink-tauri/src/app/router.js
+apps/crablink-tauri/src/pages/stream/StreamPage.jsx
+apps/crablink-tauri/src/pages/stream/StreamLocalPreview.jsx
+apps/crablink-tauri/src/pages/stream/streamCompositor.js
+apps/crablink-tauri/src/pages/stream/streamPersonSegmentation.js
+apps/crablink-tauri/src/pages/stream/StreamLookPanel.jsx
+apps/crablink-tauri/src/pages/stream/streamStudioModel.js
+apps/crablink-tauri/src/pages/stream/stream.css
+apps/crablink-tauri/src/pages/podcast/PodcastPage.jsx
+apps/crablink-tauri/src/pages/podcast/PodcastStudio.jsx
+apps/crablink-tauri/src/pages/podcast/podcast.css
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoDraft.jsx
+apps/crablink-tauri/src/pages/video/video.css
+apps/crablink-tauri/src/shared/api/videoConverterClient.js
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+apps/crablink-tauri/src-tauri/src/media/video_renditions.rs
+```
+
+---
+
+## 15. Suggested next-session first patch
+
+The first patch should **not** attempt everything.
+
+Best first batch:
+
+```text
+1. Add crab://make route.
+2. Add MakePage.jsx and make.css.
+3. Create polished empty creator-studio shell.
+4. Add mode tabs: Camera, Screen, Screen + PiP, Import.
+5. Add empty stage, right rail, and timeline placeholder.
+6. Add route card to nav/home if appropriate.
+7. No camera/screen capture yet.
+```
+
+Second batch:
+
+```text
+Camera preview + stream look controls reuse.
+```
+
+Third batch:
+
+```text
+Segmented recording and timeline.
+```
+
+Fourth batch:
+
+```text
+Screen capture + PiP.
+```
+
+Fifth batch:
+
+```text
+Export to video staging.
+```
+
+Sixth batch:
+
+```text
+Mint integration using existing video flow.
+```
+
+---
+
+## 16. Non-negotiable invariants for Make
+
+```text
+No fake ROC.
+No fake receipts.
+No fake balances.
+No silent spend.
+No fake CIDs.
+No fake manifests.
+No auto camera/mic/screen start.
+No localStorage raw media.
+No old/stale staged job minting.
+No cache-based paid unlock.
+No direct ledger mutation.
+No direct wallet mutation from React.
+No backend truth invented by Make.
+No raw file paths in manifests.
+No arbitrary code execution.
+No DRM/anti-rip claims.
+No production livestreaming claims.
+```
+
+---
+
+## 17. Summary for the next instance
+
+Build `crab://make` as a new local creator studio page.
+
+Reuse stream’s compositor/person-cutout/background/framing/look ideas, podcast’s audio mixer/recording controls, and video’s Rust/FFmpeg export + paid mint pipeline. Start with a clean route shell, then camera mode, then segmented recording, then screen + PiP, then export, then mint.
+
+The first milestone is not “full CapCut.” The first milestone is:
+
+```text
+open crab://make
+start camera
+compose preview
+record multiple clips
+see clips in timeline
+export a bounded local video proof
+```
+
+Then wire that exported video into the existing video bundle mint path.
+
+
+### END NOTE - MAY 31 2026 - 15:40 CST
+
+
+### BEGIN NOTE - MAY 31 2026 - 21:35 CST
+
+Here are the carryover notes for the next instance.
+
+# CrabLink Tauri Carryover Notes — Make Studio / `crab://make`
+
+## 0. Session checkpoint
+
+We continued work on the CrabLink Tauri app after the video-page work and pivoted into building a new flagship creator page:
+
+```text
+crab://make
+```
+
+The user’s intent is clear:
+
+```text
+Make Studio should become the centerpiece creator experience in CrabLink.
+```
+
+It should combine the best local creator tools from:
+
+```text
+stream page:
+  camera/screen preview
+  green-screen/background concepts
+  composited canvas
+  creator studio flow
+
+podcast page:
+  audio controls
+  microphone settings
+  local audio studio feel
+
+video page:
+  final video publish/mint path
+  Rust/FFmpeg conversion and staged rendition flow
+  backend paid prepare/confirm/upload/mint flow
+```
+
+The Make page is not meant to replace video/stream/podcast. It is meant to become the creative command center where users create local media, then hand off finished media into the specialized publishing pages.
+
+Current desired mental model:
+
+```text
+Make = create/edit/record local media
+Video = convert/transcode/stage/mint/publish video assets
+Stream = live stream / stream-lite / future backend streaming
+Podcast = podcast/audio publishing/studio
+```
+
+## 1. User preference reminders
+
+The user explicitly prefers:
+
+```text
+- No downloadable patch files.
+- Provide full paste-ready files directly in chat.
+- Exact paths.
+- Full replacement files when practical.
+- Keep Tauri as primary.
+- Keep Chrome green only as proof/companion.
+- Avoid fake backend truth.
+- Avoid fake balances.
+- Avoid fake receipts.
+- Avoid silent spend.
+- Avoid external settlement / QuickChain creep.
+- Avoid raw localhost assumptions for normal users, but local dev uses full stack script.
+```
+
+Current normal run path remembered from prior work:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+For Tauri media/dev profile, the project also has:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run tauri:dev:mac-media
+```
+
+But the newer full-stack path is the default unless debugging requires split terminals.
+
+## 2. Important boundary/invariant recap
+
+Make Studio is currently a local creator workspace. It must not become a backend authority.
+
+Must preserve:
+
+```text
+- Make creates local clips and session-plan metadata only.
+- Make does not create b3 CIDs.
+- Make does not create crab:// asset truth.
+- Make does not mint video assets.
+- Make does not create or fake manifests.
+- Make does not create or fake receipts.
+- Make does not create wallet truth.
+- Make does not mutate ledger truth.
+- Make does not unlock paid content from local cache.
+- Make does not store private keys, raw capabilities, tokens, or spend authority.
+- Make does not execute creator-supplied code.
+```
+
+Correct flow remains:
+
+```text
+Make local recording/composition
+→ user downloads/exports local clip
+→ crab://video
+→ Rust/FFmpeg prepare/transcode/staging
+→ explicit backend paid prepare/confirm/upload/mint
+→ backend-derived receipt
+→ backend-derived manifest
+→ backend-derived crab://<b3>.video
+```
+
+Make can store local draft metadata in localStorage/sessionStorage, but it must remain convenience state only.
+
+## 3. What was accomplished this session
+
+### 3.1 Added Make route
+
+We added Make as a first-class route:
+
+```text
+apps/crablink-tauri/src/app/routeRegistry.js
+```
+
+The route registry now lazy-loads:
+
+```javascript
+make: lazy(() => import('../pages/make/MakePage.jsx'))
+```
+
+The route was added to creator route lists so `crab://make` resolves as a built-in creator page.
+
+Labeling was added:
+
+```text
+make → Make Studio
+```
+
+### 3.2 Created Make folder
+
+New folder:
+
+```text
+apps/crablink-tauri/src/pages/make/
+```
+
+New files:
+
+```text
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/make.css
+apps/crablink-tauri/src/pages/make/makeDraftModel.js
+```
+
+### 3.3 Built local draft/session model
+
+Created:
+
+```text
+apps/crablink-tauri/src/pages/make/makeDraftModel.js
+```
+
+Major responsibilities:
+
+```text
+- Local draft defaults.
+- Local draft normalization.
+- Local draft persistence key.
+- Local session-plan persistence key.
+- Make mode definitions.
+- Scene preset definitions.
+- Output preset definitions.
+- Tag normalization.
+- ROC display-hint normalization.
+- Session-plan generation.
+- Readiness derivation.
+- MediaRecorder MIME type selection.
+- Format helpers for bytes and duration.
+```
+
+Important constants:
+
+```javascript
+MAKE_DRAFT_STORAGE_KEY = 'crablink.make.draft.v1'
+MAKE_SESSION_PLAN_STORAGE_KEY = 'crablink.make.latestSessionPlan.v1'
+```
+
+Current Make modes:
+
+```text
+camera
+screen
+screen_pip
+camera_background
+audio_only
+```
+
+Current scenes:
+
+```text
+midnight
+ocean
+ember
+paper
+```
+
+Current output presets:
+
+```text
+social_720p       1280×720
+desktop_1080p     1920×1080
+vertical_720x1280 720×1280
+```
+
+Current draft fields include:
+
+```text
+title
+description
+tagsText
+creatorNotes
+accessPriceRoc
+selectedMode
+selectedScene
+outputPreset
+targetFps
+includeMic
+echoCancellation
+noiseSuppression
+autoGainControl
+pipCorner
+pipSize
+```
+
+The session plan is intentionally explicit that it is not backend truth:
+
+```text
+not CID
+not receipt
+not wallet balance
+not paid entitlement
+not ownership proof
+not published video manifest
+```
+
+### 3.4 Built first Make UI
+
+Initial Make UI included:
+
+```text
+- large preview canvas
+- source mode segmented control
+- start preview / stop preview
+- record clip / stop clip
+- local clip cards
+- draft form
+- local session plan
+- right-side readiness/status rail
+- truth boundary panel
+- video handoff panel
+```
+
+This proved:
+
+```text
+crab://make loads
+canvas preview renders
+audio-card visual mode works
+draft fields persist locally
+right rail shows readiness
+session plan can be copied
+video handoff button exists
+```
+
+### 3.5 User noticed brand-risk wording and asked for repo script
+
+The first Make copy included:
+
+```text
+TikTok-style
+```
+
+The user did not want lawsuit/brand issues and asked for a script to replace this wording.
+
+We created a script:
+
+```text
+scripts/replace-tiktok-copy.sh
+```
+
+Purpose:
+
+```text
+replace TikTok / tiktok / TikTok-style / tik tok / Tik Tok-style with "popular style"
+```
+
+The user ran it and reported it worked.
+
+Important next-instance note:
+
+```text
+Do not reintroduce "TikTok", "tik tok", or similar brand wording in code, docs, copy, comments, or UI.
+```
+
+Preferred wording:
+
+```text
+popular style
+short-form style
+social clip style
+segmented clip flow
+creator-style recording
+```
+
+Avoid:
+
+```text
+TikTok-style
+tik tok style
+TikTok-like
+```
+
+### 3.6 Built second Make polish batch
+
+After screenshots, we improved the Make page substantially.
+
+Main UI improvements:
+
+```text
+- Added command center at the top.
+- Made preview the hero element.
+- Replaced pill mode selector with richer mode cards.
+- Added stronger flagship studio styling.
+- Collapsed advanced project fields behind a disclosure.
+- Added a timeline/review section directly under preview.
+- Added selected clip review panel.
+- Added retake last / clear timeline actions.
+- Added compact right rail.
+- Added better readiness summary.
+- Added sticky side rail.
+- Reduced form-heavy first impression.
+- Preserved local-only truth boundary.
+```
+
+The user responded:
+
+```text
+this is very very cool
+```
+
+This is a strong signal that the Make direction is correct.
+
+## 4. Current Make page UX state
+
+The page now feels much closer to a flagship studio.
+
+Current high-level layout:
+
+```text
+CreatorWorkspaceLayout
+  Hero/header:
+    crab://make
+    Make Studio
+    local studio / record clips / video handoff badges
+    principles cards
+
+  Main content:
+    MakeCommandDeck
+    Preview card
+    Mode card deck
+    Timeline card
+    Project card
+    Handoff card
+
+  Side rail:
+    Ready check
+    Device inventory
+    Recorder details
+    Truth boundary
+    Optional JSON session plan
+```
+
+### 4.1 Command center
+
+The `MakeCommandDeck` currently shows:
+
+```text
+- creator command center label
+- project title
+- current mode/status copy
+- mode stat
+- canvas stat
+- clips stat
+- total duration stat
+- start preview / stop preview
+- record clip / stop clip
+- video handoff
+- now recording active clip label
+```
+
+This is good and should remain central.
+
+### 4.2 Preview
+
+The preview uses a canvas and draws:
+
+```text
+- scene backgrounds
+- camera full-frame mode
+- screen full-frame mode
+- screen + PiP camera
+- camera + scene background
+- audio-only visualizer card
+- idle overlay
+- footer HUD
+- preview topbar
+- recording badge
+```
+
+The canvas is recorded using:
+
+```javascript
+canvas.captureStream(fps)
+```
+
+Recorder path:
+
+```text
+canvas stream
++ optional microphone track
+→ MediaRecorder
+→ local Blob
+→ object URL
+→ local clip list
+```
+
+### 4.3 Timeline
+
+Timeline currently supports:
+
+```text
+- empty state
+- total segments
+- total duration
+- total local storage size
+- horizontal clip strip
+- selected clip preview
+- download clip
+- remove clip
+- retake last clip
+- clear timeline
+```
+
+Not yet implemented:
+
+```text
+- reorder clips
+- trim clips
+- join clips
+- export all clips as one final video
+- native Rust concat/transcode
+- waveform
+- frame thumbnails
+```
+
+### 4.4 Project form
+
+The page currently keeps only title and access price visible by default.
+
+Advanced project details are collapsed:
+
+```text
+description
+tags
+canvas preset
+scene
+FPS
+microphone toggles
+PiP corner
+PiP size
+creator notes
+```
+
+This was a good improvement because the screenshots showed the earlier page had too much visible form density.
+
+### 4.5 Handoff
+
+Handoff card currently explains:
+
+```text
+1. Download/export the clip you want to publish.
+2. Open crab://video.
+3. Run Rust/FFmpeg prepare and rendition staging.
+4. Confirm the paid backend wallet flow.
+5. Display backend-derived receipts and manifests.
+```
+
+This is correct for now because Make does not yet have a safe integrated “export to video pipeline” command.
+
+## 5. Current known issues / likely bugs to verify
+
+### 5.1 MediaRecorder / WebView support
+
+Need verify on the user’s Intel Mac / Tauri WebView:
+
+```text
+- camera mode starts preview
+- screen mode opens picker
+- screen + PiP opens both correctly
+- audio-card mode can record with mic
+- stop recording creates a playable local clip
+- downloaded clip plays in QuickTime/VLC/browser
+```
+
+Potential issue:
+
+```text
+WebKit/Tauri may record WebM, which may not be ideal for Apple playback.
+```
+
+Current MIME selection tries:
+
+```text
+video/webm;codecs=vp9,opus
+video/webm;codecs=vp8,opus
+video/webm;codecs=h264,opus
+video/webm
+video/mp4;codecs=avc1.42E01E,mp4a.40.2
+video/mp4
+```
+
+But actual support depends on WebView.
+
+### 5.2 `captureStream` support
+
+Need verify:
+
+```text
+canvas.captureStream()
+```
+
+exists in this Tauri WebView. The second patch added a guard, but runtime confirmation is still needed.
+
+### 5.3 Mode switching while preview is active
+
+Current behavior disables mode cards when input is ready. This avoids state confusion, but UX may feel rigid.
+
+Future better behavior:
+
+```text
+Changing mode while preview active should prompt:
+"Restart preview to switch modes?"
+```
+
+Then safely stop tracks and restart with new mode.
+
+### 5.4 Device count may show zero before permission
+
+Device enumeration often returns empty labels/counts before permissions are granted. This is expected browser behavior.
+
+Need decide UX:
+
+```text
+- Show "grant permission to detect devices"
+- Refresh after preview starts
+- Explain zero count is not fatal
+```
+
+### 5.5 Local object URL persistence
+
+Clips are object URLs and disappear when app closes/reloads. This is correct but could surprise users.
+
+Need improve UX:
+
+```text
+- stronger "Download before closing" warning
+- beforeunload/navigation warning if clips exist
+- local clip save/export path later through Tauri Rust
+```
+
+### 5.6 No final composition/export yet
+
+Current Make records individual clips. It does not concatenate multiple segments into one final file.
+
+This is fine for the first proof but will become a priority.
+
+Need future path:
+
+```text
+short term:
+  download each clip manually
+
+next:
+  export selected clip
+
+then:
+  join clips locally with Rust/FFmpeg command
+
+eventual:
+  full Make → Video staged file handoff
+```
+
+### 5.7 No drag/reorder yet
+
+Timeline is display/select only. Need future reorder.
+
+Possible near-term simple UX:
+
+```text
+move left / move right buttons
+```
+
+Avoid introducing heavy drag library unless needed.
+
+### 5.8 No clip trimming yet
+
+No trim in/out. Important for professional UX.
+
+Possible staged plan:
+
+```text
+Batch 1: clip metadata and selected clip preview
+Batch 2: simple trim fields in seconds
+Batch 3: visual trim handles
+Batch 4: Rust/FFmpeg trim during export
+```
+
+### 5.9 No green screen/person segmentation in Make yet
+
+Make does not yet import or reuse stream green-screen code.
+
+Current stream page has:
+
+```text
+streamCompositor.js
+streamPersonSegmentation.js
+StreamLookPanel.jsx
+StreamLocalPreview.jsx
+StreamPodcastMode.jsx
+```
+
+Need extract reusable compositor/effects logic later so Make/Stream/Podcast share a single local media foundation.
+
+### 5.10 No screen + PiP position resize UI beyond basic controls
+
+Current controls:
+
+```text
+pipCorner
+pipSize range
+```
+
+Future better UX:
+
+```text
+- drag PiP inside preview
+- resize handles
+- safe snap corners
+- scene-specific default PiP positions
+```
+
+### 5.11 No keyboard shortcuts
+
+Potential future shortcuts:
+
+```text
+Space: record/stop
+P: start/stop preview
+R: retake last
+V: video handoff
+1-5: switch mode when preview inactive
+```
+
+Need avoid conflicts with typing in fields.
+
+### 5.12 Header/sidebar scroll feel
+
+Screenshots showed page uses a lot of vertical height. Second polish batch reduced it, but next instance should verify:
+
+```text
+- preview is visible without excessive scrolling
+- side rail does not trap scroll awkwardly
+- command center and preview feel visually balanced
+- on 40% zoom it still looks coherent
+- on 100% zoom it is usable
+```
+
+## 6. Exact files touched in Make work
+
+Primary files:
+
+```text
+apps/crablink-tauri/src/app/routeRegistry.js
+apps/crablink-tauri/src/pages/make/makeDraftModel.js
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/make.css
+```
+
+Support script added:
+
+```text
+scripts/replace-tiktok-copy.sh
+```
+
+No Rust files were changed for Make.
+
+No Cargo dependencies were changed.
+
+No Tauri capabilities were changed.
+
+No backend routes were changed.
+
+## 7. Current route/source structure to preserve
+
+The latest codebundle shows Make is now part of the Tauri app source tree:
+
+```text
+apps/crablink-tauri/src/pages/make/make.css
+apps/crablink-tauri/src/pages/make/makeDraftModel.js
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+```
+
+Route registry includes Make in the same route family as other creator pages.
+
+Do not move Make into stream/video/podcast. Keep it route-owned.
+
+Better future structure may eventually be:
+
+```text
+apps/crablink-tauri/src/pages/make/
+  MakePage.jsx
+  make.css
+  makeDraftModel.js
+  makeCanvasRenderer.js
+  makeRecorder.js
+  makeTimelineModel.js
+  MakeCommandDeck.jsx
+  MakeModeDeck.jsx
+  MakePreviewStage.jsx
+  MakeTimeline.jsx
+  MakeProjectPanel.jsx
+  MakeScenePresetPanel.jsx
+
+apps/crablink-tauri/src/shared/media/
+  localCapture.js
+  localRecorder.js
+  canvasCompositor.js
+  clipTimeline.js
+```
+
+But do not prematurely over-split unless the file gets painful to patch.
+
+## 8. Recommended next batch: Make polish batch 3
+
+The next best batch should probably focus on actual creator UX rather than backend work.
+
+Suggested scope:
+
+```text
+- Add scene preset cards.
+- Add recording countdown.
+- Add post-record "keep / retake / record next" flow.
+- Add stronger unsaved clips warning.
+- Add better empty states and creator copy.
+- Add a top-level "Finish" experience that clarifies handoff.
+```
+
+### 8.1 Scene preset cards
+
+Add visual cards for:
+
+```text
+Studio Demo
+Screen Tutorial
+Podcast Clip
+Music Visualizer
+Course Lesson
+Vertical Short
+```
+
+Each scene preset should set multiple draft fields:
+
+```text
+selectedMode
+selectedScene
+outputPreset
+targetFps
+pipCorner
+pipSize
+includeMic
+```
+
+Example presets:
+
+```text
+Studio Demo:
+  mode: camera
+  scene: midnight
+  canvas: social_720p
+  mic: true
+
+Screen Tutorial:
+  mode: screen_pip
+  scene: ocean
+  canvas: desktop_1080p
+  mic: true
+  pipCorner: bottom-right
+  pipSize: 24
+
+Podcast Clip:
+  mode: audio_only
+  scene: ember
+  canvas: social_720p
+  mic: true
+
+Course Lesson:
+  mode: screen_pip
+  scene: paper
+  canvas: desktop_1080p
+  mic: true
+  pipCorner: top-right
+  pipSize: 22
+
+Vertical Short:
+  mode: camera
+  scene: midnight
+  canvas: vertical_720x1280
+  mic: true
+```
+
+This will make Make feel more like a product and less like raw settings.
+
+### 8.2 Recording countdown
+
+Before recording starts:
+
+```text
+3
+2
+1
+Recording
+```
+
+Implementation idea:
+
+```text
+const [countdown, setCountdown] = useState(0)
+```
+
+Add a wrapper:
+
+```text
+beginRecordingCountdown()
+```
+
+Then call existing `startRecording()` after countdown.
+
+Important:
+
+```text
+- Cancel countdown if user changes preview/stops input.
+- Do not start if preview no longer ready.
+- Show countdown overlay in preview.
+```
+
+### 8.3 Keep / retake / next clip flow
+
+After a clip records, show a focused panel:
+
+```text
+Clip saved
+[Play]
+[Keep + record next]
+[Retake]
+[Download]
+[Finish]
+```
+
+Current behavior automatically saves every clip. That is okay, but the UX can be more professional by making the latest clip feel like a decision.
+
+Implementation options:
+
+```text
+simple:
+  add "Latest clip" panel above timeline
+
+or:
+  selected clip defaults to newest and shows prominent action buttons
+```
+
+Avoid deleting automatically unless user explicitly hits retake.
+
+### 8.4 Unsaved clip warning
+
+Add local warning if user has clips and tries to navigate away or close.
+
+Browser/Tauri path:
+
+```javascript
+window.addEventListener('beforeunload', ...)
+```
+
+App navigation path may need local warning in buttons first:
+
+```text
+"You have local clips. Download them before leaving."
+```
+
+Do not block internal navigation too aggressively yet.
+
+### 8.5 Finish/export panel
+
+Current "video handoff" is good but could feel more like a final step.
+
+Add a stronger panel:
+
+```text
+Finish
+- Download selected clip
+- Copy session plan
+- Open video page
+```
+
+Potential copy:
+
+```text
+Make does not publish by itself yet. For now, download your clip and open Video to convert, stage versions, confirm ROC access, and mint.
+```
+
+Later this can become a real command:
+
+```text
+Send selected local clip to video staging
+```
+
+But do not fake that yet.
+
+## 9. Recommended next batch: Make architecture batch 4
+
+After UX polish, split reusable logic.
+
+Current `MakePage.jsx` is large because it contains:
+
+```text
+React state
+input management
+recording management
+canvas drawing
+timeline UI
+project UI
+side panel UI
+handoff UI
+canvas helper functions
+media helper functions
+```
+
+This was okay for rapid build, but it should be modularized soon.
+
+Recommended extraction:
+
+```text
+apps/crablink-tauri/src/pages/make/makeCanvasRenderer.js
+  drawPreviewFrame
+  drawSceneBackground
+  drawAudioCard
+  drawIdleOverlay
+  drawFooterHud
+  drawGlassLabel
+  drawCoverVideo
+  drawContainVideo
+  roundRect
+  pipRect
+  isVideoReady
+
+apps/crablink-tauri/src/pages/make/makeRecorder.js
+  selectRecorderMimeType? maybe move from model later
+  buildClipName
+  downloadClip
+  revokeClipUrls
+  stopRecorderStream
+  audioTracksFrom
+
+apps/crablink-tauri/src/pages/make/makeCapture.js
+  attachStream
+  stopAllStreams
+  buildCameraConstraints
+  buildMicConstraints
+```
+
+Then optional component extraction:
+
+```text
+MakeCommandDeck.jsx
+MakeModeDeck.jsx
+MakeTimelineCard.jsx
+MakeProjectCard.jsx
+MakeHandoffCard.jsx
+MakeSidePanel.jsx
+```
+
+Do this only after one more UX batch, because the layout is still evolving.
+
+## 10. Future larger feature roadmap for Make
+
+### 10.1 Clip joining/export
+
+Goal:
+
+```text
+multiple recorded segments → one final export file
+```
+
+Possible safe path:
+
+```text
+Phase 1:
+  user downloads clips individually
+
+Phase 2:
+  user selects one clip and opens video page
+
+Phase 3:
+  Tauri Rust command concatenates same-codec clips using FFmpeg concat demuxer
+
+Phase 4:
+  Make exports a staged local file into video prepare flow
+
+Phase 5:
+  video page receives file/staged path without reselecting manually
+```
+
+Important safety:
+
+```text
+- Do not pass full large media bytes through command results.
+- Use paths/handles/staging IDs.
+- Respect media bounds.
+- No unsafe full-file command buffering.
+```
+
+### 10.2 Clip trim
+
+Short-term UI:
+
+```text
+trimStartSeconds
+trimEndSeconds
+```
+
+Longer-term UI:
+
+```text
+visual handles on clip strip
+```
+
+Rust export path:
+
+```text
+ffmpeg -ss trimStart -to trimEnd -i input ...
+```
+
+Need avoid destructive edits. Keep source clips intact.
+
+### 10.3 Clip reorder
+
+Short-term:
+
+```text
+Move left
+Move right
+```
+
+Long-term:
+
+```text
+drag reorder
+```
+
+Do not add a heavy dependency until needed.
+
+### 10.4 Green screen / background removal
+
+Reuse from stream:
+
+```text
+streamPersonSegmentation.js
+streamCompositor.js
+StreamLookPanel.jsx
+```
+
+Need probably extract shared:
+
+```text
+shared/media/personSegmentation.js
+shared/media/compositor.js
+```
+
+Make modes could eventually include:
+
+```text
+camera_green_screen
+screen_green_pip
+```
+
+Important:
+
+```text
+No claims of perfect segmentation.
+No arbitrary creator-supplied shader/code execution.
+```
+
+### 10.5 Screen recording with PiP
+
+Basic proof exists conceptually through `screen_pip`, but needs real runtime verification.
+
+Need improve:
+
+```text
+- handle screen picker cancellation
+- handle camera denial separately from screen denial
+- allow PiP off/on while screen preview remains live
+- allow dragging/resizing PiP
+```
+
+### 10.6 Audio controls
+
+Current Make has:
+
+```text
+includeMic
+echoCancellation
+noiseSuppression
+autoGainControl
+```
+
+Future from podcast page:
+
+```text
+gain slider
+monitor toggle
+noise gate
+simple EQ preset
+compressor preset
+voice/music mode
+```
+
+Need be careful:
+
+```text
+Browser Web Audio can be used locally.
+No backend truth involved.
+No private audio saved unless user records.
+```
+
+### 10.7 Visualizer modes
+
+Audio card currently draws a fake/simple animated visualizer based on sine waves, not real audio analysis.
+
+Future:
+
+```text
+real AnalyserNode waveform
+music visualizer themes
+podcast title card
+album-cover style scene
+```
+
+Need label honestly if not real audio reactive.
+
+### 10.8 Project templates
+
+Make should eventually open with beautiful templates:
+
+```text
+Record a course lesson
+Record a screen tutorial
+Record a creator update
+Record a podcast clip
+Record a music visualizer
+Record a product demo
+Record a webcam clip
+```
+
+Templates should configure modes/settings, not create backend truth.
+
+### 10.9 Integrated video pipeline handoff
+
+Desired future UX:
+
+```text
+Finish
+→ choose clip or joined export
+→ stage local file through Tauri Rust
+→ open video page with staged file reference
+→ video page runs existing prepare/transcode/mint flow
+```
+
+This must be designed carefully because of the existing bug remembered from video page:
+
+```text
+Previous selected file from last instance could be reused when no file was selected.
+```
+
+Make/video handoff must never silently reuse stale file state.
+
+Need invariant:
+
+```text
+A file/staged media handoff must be explicit, source-labeled, session-scoped, clearable, and visible in UI.
+```
+
+### 10.10 Media library / local project save
+
+Longer-term Make should support local projects:
+
+```text
+project title
+draft metadata
+clip list
+scene settings
+trim/reorder metadata
+local staged media references
+```
+
+But local storage cannot hold large blobs safely. Need Tauri Rust local project storage later.
+
+Possible path:
+
+```text
+Make project manifest in app data
+clips in app-managed local media folder
+bounded quota
+clear project data command
+no paid unlock truth
+```
+
+## 11. Important video-page carryover still relevant
+
+From prior sessions:
+
+```text
+- video-lite mint/upload path currently has a 10 MB cap that blocks larger videos.
+- user wants this reworked later using proper bounded large-media range/segment/staged upload path.
+- video conversion/staging now can generate multiple FFmpeg outputs and mint them.
+- need to fix likely height-only scaling bug.
+- need actual output dimension verification.
+- need video playback byte route normalization/load fallback.
+- need every minted video version’s manifest to list/cross-link all other versions like image rendition group flow.
+- video page UI still needs polish to look like image page and not dev page.
+```
+
+Make depends on the video pipeline becoming polished and reliable.
+
+Do not try to solve all of video inside Make.
+
+## 12. Testing checklist for next instance
+
+Run:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+npm run build
+```
+
+Then:
+
+```bash
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Manual route:
+
+```text
+crab://make
+```
+
+Manual Make tests:
+
+```text
+1. Page loads.
+2. No "TikTok" or "tik tok" copy remains.
+3. Preview canvas appears.
+4. Audio Card mode shows idle preview.
+5. Camera mode asks for camera and renders preview.
+6. Screen mode asks for screen and renders preview.
+7. Screen + PiP asks for screen and camera, renders both.
+8. Start preview can be stopped.
+9. Record clip works.
+10. Stop clip creates local clip.
+11. Local clip previews.
+12. Download clip works.
+13. Retake last removes newest clip.
+14. Clear removes all clips.
+15. Title persists across reload.
+16. Advanced panel opens/closes.
+17. Copy session plan works.
+18. Open video page navigates to crab://video.
+19. Closing/reloading with local clips does not imply published truth.
+20. No wallet/receipt/CID claims are shown by Make.
+```
+
+If available, test with:
+
+```text
+- no camera permission
+- no mic permission
+- screen picker cancel
+- camera present / no mic
+- mic present / no camera
+- screen sharing ended externally
+```
+
+## 13. UX observations from screenshots
+
+The screenshots after first Make batch showed:
+
+```text
+- The page looked cool but very tall.
+- The right readiness panel consumed a lot of vertical space.
+- Draft details were too prominent and form-heavy.
+- The preview looked good and should remain the hero.
+- There was a visible "TikTok-style" copy issue, later resolved by script.
+- Mode controls were usable but looked less flagship before the second patch.
+```
+
+The second patch addressed these by:
+
+```text
+- command center
+- card-based modes
+- collapsed advanced details
+- timeline emphasis
+- compact right rail
+- stronger flagship styling
+```
+
+Need verify with fresh screenshots at normal zoom.
+
+## 14. Copy/style rules for Make
+
+Use product language like:
+
+```text
+Make Studio
+creator command center
+record clips
+segments
+timeline
+scene presets
+video handoff
+local clip
+local draft
+popular style
+short-form clip
+screen tutorial
+podcast clip
+music visualizer
+course lesson
+```
+
+Avoid:
+
+```text
+TikTok
+Tik Tok
+TikTok-style
+OBS clone
+DRM claims
+ownership claims from local recording
+receipt generated
+minted locally
+published locally
+```
+
+Preferred truth-boundary copy:
+
+```text
+Make records local clips. Video publishing, paid confirmation, receipts, manifests, and crab:// asset truth come from the backend video flow.
+```
+
+## 15. Architecture doctrine for Make
+
+Make is allowed to:
+
+```text
+- use browser camera/screen/mic APIs
+- draw composited canvas previews
+- record local clips with MediaRecorder
+- store draft metadata locally
+- store session-plan metadata locally
+- provide manual download/export
+- navigate to video page
+- show local-only status
+```
+
+Make is not allowed to:
+
+```text
+- call wallet mutation APIs directly
+- call ledger APIs
+- invent balance
+- invent receipt
+- invent CID
+- invent crab URL
+- unlock paid content from cache
+- treat local clip as published asset
+- execute arbitrary media/player code
+- pass large media bytes through Tauri command results
+```
+
+## 16. Suggested exact next implementation order
+
+### Next session batch 1: scene presets + countdown
+
+Files likely touched:
+
+```text
+apps/crablink-tauri/src/pages/make/makeDraftModel.js
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/make.css
+```
+
+Add:
+
+```text
+MAKE_SCENE_PRESETS
+applyMakePreset()
+countdown state
+countdown overlay
+beginRecordingCountdown()
+cancelCountdown()
+```
+
+### Next session batch 2: keep/retake/next clip flow
+
+Files likely touched:
+
+```text
+MakePage.jsx
+make.css
+```
+
+Add:
+
+```text
+latest clip decision card
+Keep + record next
+Retake
+Download
+Finish
+```
+
+### Next session batch 3: unsaved clip warning + improved handoff
+
+Files likely touched:
+
+```text
+MakePage.jsx
+make.css
+```
+
+Add:
+
+```text
+beforeunload warning
+stronger local blob warning
+finish/export panel polish
+```
+
+### Next session batch 4: modularize Make internals
+
+Files likely created:
+
+```text
+apps/crablink-tauri/src/pages/make/makeCanvasRenderer.js
+apps/crablink-tauri/src/pages/make/makeRecorder.js
+apps/crablink-tauri/src/pages/make/makeCapture.js
+```
+
+Maybe component files:
+
+```text
+MakeCommandDeck.jsx
+MakeModeDeck.jsx
+MakeTimelineCard.jsx
+MakeProjectCard.jsx
+MakeHandoffCard.jsx
+MakeSidePanel.jsx
+```
+
+Do not overdo the split before UX stabilizes.
+
+## 17. Current “definition of good” for Make
+
+Make should feel:
+
+```text
+beautiful
+obvious
+creator-first
+less dev-panel
+less form-heavy
+more visual
+fast to understand
+safe and honest
+```
+
+The first experience should be:
+
+```text
+1. User lands on crab://make.
+2. They see a polished studio, not a settings page.
+3. They pick a template or mode.
+4. They start preview.
+5. They record a segment.
+6. They see it appear in a timeline.
+7. They can retake or continue.
+8. They can finish and hand off to video.
+```
+
+Make should become the page a creator wants to open first.
+
+## 18. Final checkpoint statement
+
+At the end of this session:
+
+```text
+crab://make exists.
+The route loads.
+The UI direction is validated by the user.
+Local draft/session plan model exists.
+Local recording/timeline model exists.
+The page has a polished command-center/preview/timeline layout.
+Brand-risk "TikTok" wording has been replaced with "popular style" via script.
+The page still correctly avoids backend truth, wallet truth, receipt truth, and paid unlock claims.
+```
+
+The next instance should continue from this checkpoint and focus on Make Studio polish first, then modularization, then eventual safe local export/handoff into the video pipeline.
+
+
+### END NOTE - MAY 31 2026 - 21:35 CST

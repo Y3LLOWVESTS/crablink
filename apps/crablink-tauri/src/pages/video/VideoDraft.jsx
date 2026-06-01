@@ -346,7 +346,7 @@ export default function VideoDraft({ app, draftState }) {
         </div>
       </Card>
 
-      <details className="video-advanced-drawer video-advanced-drawer-quiet" open>
+      <details className="video-advanced-drawer video-advanced-drawer-quiet">
         <summary>
           <span>
             <strong>Prepare MP4 versions</strong>
