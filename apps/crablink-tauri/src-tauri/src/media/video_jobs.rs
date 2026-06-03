@@ -392,7 +392,17 @@ fn run_real_prepare_job(
             start_progress,
         )?;
 
-        run_ffmpeg_target(store, job_id, &ffmpeg, target)?;
+        if let Err(message) = run_ffmpeg_target(store, job_id, &ffmpeg, target) {
+            return finish_partial_or_fail(
+                store,
+                job_id,
+                &format!(
+                    "FFmpeg failed while writing {}. Existing successful staged outputs remain usable for explicit mint/upload. Error: {}",
+                    target.role,
+                    message
+                ),
+            );
+        }
 
         let bytes = std::fs::metadata(&target.output_path)
             .ok()
@@ -400,7 +410,14 @@ fn run_real_prepare_job(
             .map(|metadata| metadata.len());
 
         if bytes.unwrap_or(0) == 0 {
-            return Err("empty_transcode_output".to_string());
+            return finish_partial_or_fail(
+                store,
+                job_id,
+                &format!(
+                    "FFmpeg wrote an empty output for {}. Existing successful staged outputs remain usable for explicit mint/upload.",
+                    target.role
+                ),
+            );
         }
 
         let output_probe = probe_staged_output(&ffprobe, target);
@@ -502,6 +519,56 @@ fn push_output(
     record.progress_percent = progress_percent.min(99);
     record.updated_at_unix_ms = now;
     Ok(())
+}
+
+fn finish_partial_or_fail(
+    store: &VideoJobStore,
+    job_id: &str,
+    warning: &str,
+) -> Result<(), String> {
+    let now = now_unix_ms()?;
+    let mut guard = store
+        .lock()
+        .map_err(|_| "video job store lock poisoned".to_string())?;
+
+    let record = guard
+        .get_mut(job_id)
+        .ok_or_else(|| "video job not found".to_string())?;
+
+    if record.status == "cancelled" {
+        return Err("cancelled_by_user".to_string());
+    }
+
+    if record.outputs.iter().any(|output| {
+        output.ready_for_mint && output.exists_on_disk && output.bytes.unwrap_or(0) > 0
+    }) {
+        record.status = "completed".to_string();
+        record.phase = "completed_with_partial_outputs".to_string();
+        record.progress_percent = 100;
+        record.completed_at_unix_ms = Some(now);
+        record.updated_at_unix_ms = now;
+        record.warnings.push(warning.to_string());
+        record.warnings.push(
+            "Prepare completed with partial staged outputs. Mint/upload only the listed ready local outputs; no backend CID, crab URL, receipt, or wallet mutation has been created by prepare."
+                .to_string(),
+        );
+        record.error = None;
+        return Ok(());
+    }
+
+    record.status = "failed".to_string();
+    record.phase = "failed_before_any_ready_output".to_string();
+    record.progress_percent = record.progress_percent.min(99);
+    record.updated_at_unix_ms = now;
+    record.error = Some(VideoJobError {
+        code: "transcode_failed".to_string(),
+        message: "The Rust-owned local video prepare job failed before any usable staged outputs were written."
+            .to_string(),
+        retryable: true,
+    });
+    record.warnings.push(warning.to_string());
+
+    Err("transcode_failed".to_string())
 }
 
 fn mark_completed(store: &VideoJobStore, job_id: &str) -> Result<(), String> {

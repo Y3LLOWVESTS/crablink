@@ -14,6 +14,7 @@ pub const MVP_MAX_LOCAL_VIDEO_BYTES: u64 = 250 * 1024 * 1024;
 pub const MVP_WARN_LOCAL_VIDEO_BYTES: u64 = 100 * 1024 * 1024;
 
 pub const MAX_RENDITION_ENTRIES: usize = 8;
+#[allow(dead_code)]
 pub const TRANSCODE_JOB_TIMEOUT_SECS: u64 = 20 * 60;
 
 pub const TARGET_CONTAINER: &str = "mp4";

@@ -20,6 +20,12 @@ import TextArea from '../../shared/components/TextArea.jsx';
 import TextInput from '../../shared/components/TextInput.jsx';
 import VideoConverterPanel from './VideoConverterPanel.jsx';
 import VideoPublishFlow from './VideoPublishFlow.jsx';
+import { createVideoConverterClient } from '../../shared/api/videoConverterClient.js';
+import {
+  clearLatestMakeExportHandoff,
+  makeExportHandoffToSourceFacts,
+  readLatestMakeExportHandoff,
+} from '../../shared/api/makeExportClient.js';
 import {
   VIDEO_ACCESS_OPTIONS,
   VIDEO_CATEGORY_OPTIONS,
@@ -33,7 +39,7 @@ import {
 
 const MAX_LOCAL_PREVIEW_BYTES = 750 * 1024 * 1024;
 
-export default function VideoDraft({ app, draftState }) {
+export default function VideoDraft({ app, route, draftState, initialSourceHandle = '' }) {
   const {
     draft,
     updateDraft,
@@ -42,11 +48,18 @@ export default function VideoDraft({ app, draftState }) {
   } = draftState;
 
   const inputRef = useRef(null);
+  const converterClient = useMemo(() => createVideoConverterClient(), []);
+  const initialMakeHandoff = useMemo(() => readInitialMakeExportHandoff(route, initialSourceHandle), [route, initialSourceHandle]);
   const [selectedVideoFile, setSelectedVideoFile] = useState(null);
-  const [selectedVideoFacts, setSelectedVideoFacts] = useState(null);
+  const [selectedVideoFacts, setSelectedVideoFacts] = useState(() => {
+    return initialMakeHandoff?.sourceHandle ? makeExportHandoffToSourceFacts(initialMakeHandoff) : null;
+  });
   const [selectedPlaybackMeta, setSelectedPlaybackMeta] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
+  const [sourcePreviewUrl, setSourcePreviewUrl] = useState('');
   const [previewProblem, setPreviewProblem] = useState('');
+  const [makeExportHandoff, setMakeExportHandoff] = useState(() => initialMakeHandoff);
+  const [latestPrepareJob, setLatestPrepareJob] = useState(null);
 
   useEffect(() => {
     if (!selectedVideoFile) {
@@ -55,12 +68,67 @@ export default function VideoDraft({ app, draftState }) {
     }
 
     const nextPreviewUrl = URL.createObjectURL(selectedVideoFile);
+    setSourcePreviewUrl('');
     setPreviewUrl(nextPreviewUrl);
 
     return () => {
       URL.revokeObjectURL(nextPreviewUrl);
     };
   }, [selectedVideoFile]);
+
+
+  useEffect(() => {
+    const sourceHandle = String(initialSourceHandle || '').trim();
+    if (!sourceHandle || makeExportHandoff?.sourceHandle) {
+      return;
+    }
+
+    const handoff = makeRouteSourceHandoff(sourceHandle);
+    const facts = makeExportHandoffToSourceFacts(handoff);
+    setMakeExportHandoff(handoff);
+    setSelectedVideoFile(null);
+    setSelectedVideoFacts(facts);
+    setSelectedPlaybackMeta(null);
+    setSourcePreviewUrl('');
+    setPreviewProblem('');
+  }, [initialSourceHandle, makeExportHandoff?.sourceHandle]);
+
+  useEffect(() => {
+    const current = initialMakeHandoff || readLatestMakeExportHandoff();
+    if (current?.sourceHandle) {
+      setMakeExportHandoff(current);
+      const facts = makeExportHandoffToSourceFacts(current);
+      if (facts?.fileName || facts?.safeDisplayName) {
+        setSelectedVideoFile(null);
+        setSelectedVideoFacts(facts);
+        setSelectedPlaybackMeta(null);
+        setSourcePreviewUrl('');
+        setPreviewProblem('');
+      }
+    }
+
+    function handleMakeExportReady(event) {
+      const handoff = event?.detail?.handoff || readLatestMakeExportHandoff();
+
+      if (!handoff?.sourceHandle) {
+        return;
+      }
+
+      const facts = makeExportHandoffToSourceFacts(handoff);
+      setMakeExportHandoff(handoff);
+      setSelectedVideoFile(null);
+      setSelectedVideoFacts(facts);
+      setSelectedPlaybackMeta(null);
+      setSourcePreviewUrl('');
+      setPreviewProblem('');
+    }
+
+    window.addEventListener('crablink:make-export-handoff-ready', handleMakeExportReady);
+
+    return () => {
+      window.removeEventListener('crablink:make-export-handoff-ready', handleMakeExportReady);
+    };
+  }, [initialMakeHandoff]);
 
   const publishFileFacts = useMemo(() => {
     if (!selectedVideoFacts && !selectedPlaybackMeta) {
@@ -78,6 +146,66 @@ export default function VideoDraft({ app, draftState }) {
     };
   }, [selectedPlaybackMeta, selectedVideoFacts]);
 
+  const hasMakeExportSource = Boolean(makeExportHandoff?.sourceHandle && selectedVideoFacts?.source === 'make_export_handoff');
+  const activePreviewUrl = previewUrl || sourcePreviewUrl;
+
+  useEffect(() => {
+    const sourceHandle = String(makeExportHandoff?.sourceHandle || selectedVideoFacts?.sourceHandle || '').trim();
+
+    if (!hasMakeExportSource || !sourceHandle || selectedVideoFile) {
+      if (!selectedVideoFile) {
+        setSourcePreviewUrl('');
+      }
+      return undefined;
+    }
+
+    if (!converterClient.available) {
+      setPreviewProblem('Local Make preview requires the CrabLink Tauri runtime. The source handle is still available for Rust-side prepare.');
+      setSourcePreviewUrl('');
+      return undefined;
+    }
+
+    let cancelled = false;
+    setPreviewProblem('Loading local Make MP4 preview…');
+
+    void (async () => {
+      try {
+        const preview = await converterClient.getVideoSourcePreview(sourceHandle);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!preview?.previewUrl) {
+          throw new Error('Rust preview command did not return a local playback URL.');
+        }
+
+        setSourcePreviewUrl(preview.previewUrl);
+        setPreviewProblem('');
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setSourcePreviewUrl('');
+        setPreviewProblem(`${errorMessage(error)} The source handle can still be prepared below if it remains valid.`);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [converterClient, hasMakeExportSource, makeExportHandoff?.sourceHandle, selectedVideoFacts?.sourceHandle, selectedVideoFile]);
+
+  function handlePrepareJobUpdate(job) {
+    if (job?.jobId) {
+      setLatestPrepareJob(job);
+      return;
+    }
+
+    setLatestPrepareJob(null);
+  }
+
   function updateField(key) {
     return (event) => updateDraft(key, event.target.value);
   }
@@ -86,6 +214,10 @@ export default function VideoDraft({ app, draftState }) {
     const file = event.target.files?.[0] || null;
     setPreviewProblem('');
     setSelectedPlaybackMeta(null);
+    setSourcePreviewUrl('');
+    setMakeExportHandoff(null);
+    setLatestPrepareJob(null);
+    clearLatestMakeExportHandoff();
 
     if (!file) {
       clearSelectedFile();
@@ -124,6 +256,10 @@ export default function VideoDraft({ app, draftState }) {
     setSelectedVideoFacts(null);
     setSelectedPlaybackMeta(null);
     setPreviewProblem('');
+    setSourcePreviewUrl('');
+    setMakeExportHandoff(null);
+    setLatestPrepareJob(null);
+    clearLatestMakeExportHandoff();
 
     if (inputRef.current) {
       inputRef.current.value = '';
@@ -172,30 +308,34 @@ export default function VideoDraft({ app, draftState }) {
         actions={
           <div className="video-simple-card-actions">
             <Badge tone={selectedVideoFacts ? 'success' : 'neutral'}>
-              {selectedVideoFacts ? 'Source selected' : 'No source'}
+              {hasMakeExportSource ? 'Make MP4 loaded' : selectedVideoFacts ? 'Source selected' : 'No source'}
             </Badge>
             <Badge tone="warning">Local until mint</Badge>
           </div>
         }
       >
         <section
-          className={previewUrl ? 'video-drop-preview has-video' : 'video-drop-preview'}
+          className={activePreviewUrl ? 'video-drop-preview has-video' : 'video-drop-preview'}
           aria-label="Select video preview"
         >
-          {previewUrl ? (
-            <video src={previewUrl} controls preload="metadata" playsInline onLoadedMetadata={handleLoadedMetadata}>
+          {activePreviewUrl ? (
+            <video src={activePreviewUrl} controls preload="metadata" playsInline onLoadedMetadata={handleLoadedMetadata}>
               Your browser/WebView cannot play this local video file.
             </video>
           ) : (
             <div className="video-drop-empty">
-              <strong>No video selected</strong>
-              <span>Choose a video to preview it before preparing MP4 versions.</span>
+              <strong>{hasMakeExportSource ? 'Make export source ready' : 'No video selected'}</strong>
+              <span>
+                {hasMakeExportSource
+                  ? 'The exported MP4 is registered as a Rust-owned local source handle. Open Prepare MP4 versions below to stage/mint it.'
+                  : 'Choose a video to preview it before preparing MP4 versions.'}
+              </span>
             </div>
           )}
 
           <div className="video-drop-overlay">
             <label className="video-hover-select">
-              {previewUrl ? 'Change video' : 'Choose video'}
+              {activePreviewUrl ? 'Change video' : hasMakeExportSource ? 'Choose different video' : 'Choose video'}
               <input
                 ref={inputRef}
                 type="file"
@@ -218,9 +358,22 @@ export default function VideoDraft({ app, draftState }) {
           </div>
         ) : null}
 
+        {hasMakeExportSource ? (
+          <div className="video-make-handoff-banner" role="status">
+            <div>
+              <strong>Export from Make is ready for minting.</strong>
+              <span>
+                Local source handle {shortHandle(makeExportHandoff.sourceHandle)} is loaded for Rust-side MP4 prepare.
+                This is not a backend CID or receipt yet.
+              </span>
+            </div>
+            <Badge tone="success">local MP4 source</Badge>
+          </div>
+        ) : null}
+
         <div className="video-file-line">
           <span>{publishFileFacts?.name || 'No local file selected'}</span>
-          <strong>{publishFileFacts?.size ? formatBytes(publishFileFacts.size) : 'Choose video'}</strong>
+          <strong>{publishFileFacts?.size ? formatBytes(publishFileFacts.size) : hasMakeExportSource ? 'Rust handle' : 'Choose video'}</strong>
         </div>
 
         <section className="video-under-preview-form" aria-label="Video mint details">
@@ -346,7 +499,7 @@ export default function VideoDraft({ app, draftState }) {
         </div>
       </Card>
 
-      <details className="video-advanced-drawer video-advanced-drawer-quiet">
+      <details className="video-advanced-drawer video-advanced-drawer-quiet" open>
         <summary>
           <span>
             <strong>Prepare MP4 versions</strong>
@@ -359,6 +512,9 @@ export default function VideoDraft({ app, draftState }) {
             selectedFileFacts={publishFileFacts}
             playbackMeta={selectedPlaybackMeta}
             draft={draft}
+            initialMakeExportHandoff={makeExportHandoff}
+            initialSourceHandle={initialSourceHandle || makeExportHandoff?.sourceHandle || selectedVideoFacts?.sourceHandle || ''}
+            onPrepareJobUpdate={handlePrepareJobUpdate}
           />
         </div>
       </details>
@@ -368,6 +524,7 @@ export default function VideoDraft({ app, draftState }) {
         draftState={draftState}
         selectedFile={selectedVideoFile}
         fileFacts={publishFileFacts}
+        latestPrepareJobOverride={latestPrepareJob}
       />
 
       <details className="video-advanced-drawer video-advanced-drawer-quiet">
@@ -456,6 +613,20 @@ export function VideoSidePanel() {
   return null;
 }
 
+function shortHandle(value) {
+  const raw = String(value || '').trim();
+
+  if (!raw) {
+    return '—';
+  }
+
+  if (raw.length <= 24) {
+    return raw;
+  }
+
+  return `${raw.slice(0, 14)}…${raw.slice(-7)}`;
+}
+
 function placeholderForKind(kind) {
   if (kind === 'site') {
     return 'crab://example-site';
@@ -512,4 +683,96 @@ function gcd(a, b) {
   }
 
   return x || 1;
+}
+
+function readInitialMakeExportHandoff(route, initialSourceHandle = '') {
+  const routeSourceHandle = sourceHandleFromRoute(route) || String(initialSourceHandle || '').trim();
+  const stored = readLatestMakeExportHandoff();
+
+  if (!routeSourceHandle) {
+    return stored;
+  }
+
+  if (stored?.sourceHandle === routeSourceHandle) {
+    return stored;
+  }
+
+  return {
+    schema: 'crablink.local.make-export-handoff.v1',
+    status: 'ready',
+    sourceHandle: routeSourceHandle,
+    source: {
+      sourceHandle: routeSourceHandle,
+      sourceKind: 'crablink_make_export_mp4',
+      contentType: 'video/mp4',
+      nativeFileAuthority: true,
+    },
+    sourceFacts: makeExportHandoffToSourceFacts({
+      sourceHandle: routeSourceHandle,
+      source: {
+        sourceHandle: routeSourceHandle,
+        sourceKind: 'crablink_make_export_mp4',
+        contentType: 'video/mp4',
+        nativeFileAuthority: true,
+      },
+    }),
+    createdAt: new Date().toISOString(),
+    note: 'Route sourceId handoff. Rust must validate the source handle before preview or prepare.',
+    truthBoundary: {
+      localOnly: true,
+      returnsPrivatePath: false,
+      returnsVideoBytes: false,
+      mintsB3: false,
+      createsReceipt: false,
+      mutatesWallet: false,
+    },
+  };
+}
+
+function sourceHandleFromRoute(route = {}) {
+  const raw = String(route?.rawInput || route?.normalizedInput || '').trim();
+  const match = raw.match(/[?&]sourceId=([^&#]+)/i) || raw.match(/[?&]sourceHandle=([^&#]+)/i);
+
+  if (!match) {
+    return '';
+  }
+
+  try {
+    return decodeURIComponent(match[1] || '').trim();
+  } catch (_error) {
+    return String(match[1] || '').trim();
+  }
+}
+
+function errorMessage(error) {
+  if (typeof error === 'string') return error;
+  if (error?.message) return error.message;
+  if (error?.error) return error.error;
+  return 'Local preview bridge failed.';
+}
+
+
+function makeRouteSourceHandoff(sourceHandle) {
+  const clean = String(sourceHandle || '').trim();
+  return {
+    schema: 'crablink.local.make-export-handoff.v1',
+    status: clean ? 'ready' : 'missing_source_handle',
+    sourceHandle: clean,
+    source: {
+      sourceHandle: clean,
+      sourceKind: 'crablink_make_export_mp4',
+      contentType: 'video/mp4',
+      nativeFileAuthority: true,
+    },
+    createdAt: new Date().toISOString(),
+    note: 'Route sourceId handoff. Rust validates the source handle before preview or prepare.',
+    truthBoundary: {
+      localOnly: true,
+      returnsPrivatePath: false,
+      returnsVideoBytes: false,
+      mintsB3: false,
+      createsReceipt: false,
+      mutatesWallet: false,
+    },
+  };
 }

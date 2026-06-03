@@ -2238,12 +2238,10 @@ function MakePreviewStudioChrome({
   setPreviewDrawer,
   totalDurationMs,
 }) {
-  const timelinePreviewVideoRef = useRef(null);
   const [trimEditorClipId, setTrimEditorClipId] = useState('');
   const [timelineTool, setTimelineTool] = useState('select');
   const [timelineZoom, setTimelineZoom] = useState(1);
   const [timelineSelection, setTimelineSelection] = useState(null);
-  const [timelinePreview, setTimelinePreview] = useState(null);
 
   const hasClips = clips.length > 0;
   const activeDrawer = previewDrawer === 'effects' || previewDrawer === 'settings' || previewDrawer === 'modes';
@@ -2270,12 +2268,6 @@ function MakePreviewStudioChrome({
   const timelineSelectionRangeMs = Math.max(0, timelineSelectionEndMs - timelineSelectionStartMs);
   const canSplitTimelineSelection = Boolean(cursorToolActive && timelineSelectionClip && timelineSelection?.mode !== 'range');
   const canDeleteTimelineSelection = Boolean(cursorToolActive && timelineSelectionClip && timelineSelectionRangeMs >= 80);
-  const timelinePreviewClip = timelinePreview?.clipId
-    ? clips.find((clip) => clip.id === timelinePreview.clipId) || null
-    : null;
-  const timelinePreviewActive = Boolean(timelinePreviewClip && timelinePreview?.visible);
-  const timelineLoopPlaying = timelinePreviewActive && timelinePreview?.status === 'looping';
-  const timelineRangeLoopAvailable = Boolean(cursorToolActive && timelineSelectionClip && timelineSelection?.mode === 'range' && timelineSelectionRangeMs >= 80);
 
   useEffect(() => {
     if (trimEditorClipId && !clips.some((clip) => clip.id === trimEditorClipId)) {
@@ -2286,82 +2278,8 @@ function MakePreviewStudioChrome({
   useEffect(() => {
     if (timelineSelection?.clipId && !clips.some((clip) => clip.id === timelineSelection.clipId)) {
       setTimelineSelection(null);
-      setTimelinePreview(null);
     }
   }, [clips, timelineSelection]);
-
-  useEffect(() => {
-    if (timelinePreview?.clipId && !clips.some((clip) => clip.id === timelinePreview.clipId)) {
-      setTimelinePreview(null);
-    }
-  }, [clips, timelinePreview]);
-
-  useEffect(() => {
-    if (isRecording || inputState.status === 'starting') {
-      setTimelineSelection(null);
-      setTimelinePreview(null);
-    }
-  }, [inputState.status, isRecording]);
-
-  const getTimelinePreviewProgressPct = (clip, sourceMs) => {
-    const trimStartMs = getClipTrimStartMs(clip);
-    const trimEndMs = getClipTrimEndMs(clip);
-    const visibleMs = Math.max(1, trimEndMs - trimStartMs);
-
-    return clamp(((Number(sourceMs || trimStartMs) - trimStartMs) / visibleMs) * 100, 0, 100, 0);
-  };
-
-  const seekTimelinePreviewVideo = useCallback(async (targetMs, { play = false } = {}) => {
-    const video = timelinePreviewVideoRef.current;
-
-    if (!video) {
-      return;
-    }
-
-    try {
-      await waitForSequenceVideoReady(video);
-      await settleSequenceVideoSeek(video, Math.max(0, Number(targetMs || 0)) / 1000);
-
-      if (play) {
-        const playResult = video.play?.();
-
-        if (playResult && typeof playResult.then === 'function') {
-          await playResult;
-        }
-      }
-    } catch (_error) {
-      // Local marker/range preview is best-effort. Timeline editing should keep working.
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!timelinePreviewActive || !timelinePreviewClip) {
-      return undefined;
-    }
-
-    let cancelled = false;
-    const targetMs = timelinePreview.status === 'looping'
-      ? Number(timelinePreview.startMs || getClipTrimStartMs(timelinePreviewClip))
-      : Number(timelinePreview.focusMs || timelinePreview.startMs || getClipTrimStartMs(timelinePreviewClip));
-
-    window.requestAnimationFrame(() => {
-      if (!cancelled) {
-        seekTimelinePreviewVideo(targetMs, { play: timelinePreview.status === 'looping' });
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    seekTimelinePreviewVideo,
-    timelinePreview?.clipId,
-    timelinePreview?.updatedAt,
-    timelinePreview?.status,
-    timelinePreviewActive,
-    timelinePreviewClip,
-    timelinePreviewClip?.objectUrl,
-  ]);
 
   const recordDisabled =
     inputState.status === 'starting' ||
@@ -2494,65 +2412,8 @@ function MakePreviewStudioChrome({
     setTimelineZoom((current) => clamp(Number(typeof nextValue === 'function' ? nextValue(current) : nextValue), 1, 6, 1));
   };
 
-  const stopTimelinePreview = () => {
-    const video = timelinePreviewVideoRef.current;
-
-    try {
-      video?.pause?.();
-    } catch (_error) {
-      // Best-effort local preview cleanup.
-    }
-
-    setTimelinePreview(null);
-  };
-
   const resetTimelineCursorSelection = () => {
     setTimelineSelection(null);
-    stopTimelinePreview();
-  };
-
-  const previewTimelineSelection = (selection) => {
-    if (!selection?.clipId) {
-      stopTimelinePreview();
-      return;
-    }
-
-    const clip = clips.find((item) => item.id === selection.clipId) || null;
-
-    if (!clip) {
-      stopTimelinePreview();
-      return;
-    }
-
-    const trimStartMs = getClipTrimStartMs(clip);
-    const trimEndMs = getClipTrimEndMs(clip);
-    const startMs = clamp(Number(selection.startMs ?? selection.focusMs ?? trimStartMs), trimStartMs, trimEndMs, trimStartMs);
-    const endMs = clamp(Number(selection.endMs ?? selection.focusMs ?? startMs), trimStartMs, trimEndMs, trimEndMs);
-    const focusMs = clamp(Number(selection.focusMs ?? startMs), trimStartMs, trimEndMs, startMs);
-
-    const video = timelinePreviewVideoRef.current;
-    try {
-      video?.pause?.();
-    } catch (_error) {
-      // Best-effort local preview cleanup.
-    }
-
-    setTimelinePreview({
-      visible: true,
-      status: 'frame',
-      clipId: clip.id,
-      mode: selection.mode || 'point',
-      focusMs,
-      startMs: Math.min(startMs, endMs),
-      endMs: Math.max(startMs, endMs),
-      progressPct: getTimelinePreviewProgressPct(clip, focusMs),
-      updatedAt: Date.now(),
-    });
-  };
-
-  const commitTimelineSelection = (selection) => {
-    setTimelineSelection(selection);
-    previewTimelineSelection(selection);
   };
 
   const beginTimelineCursorDrag = (event, clip) => {
@@ -2637,7 +2498,7 @@ function MakePreviewStudioChrome({
         visualWidthPct = Math.max(0, endPct - startPct);
       }
 
-      commitTimelineSelection({
+      setTimelineSelection({
         clipId: clip.id,
         anchorMs,
         focusMs,
@@ -2704,7 +2565,6 @@ function MakePreviewStudioChrome({
       atMs: timelineSelection.focusMs,
     });
     setTimelineSelection(null);
-    stopTimelinePreview();
   };
 
   const deleteSelectedTimelineRange = () => {
@@ -2722,129 +2582,7 @@ function MakePreviewStudioChrome({
     });
 
     setTimelineSelection(null);
-    stopTimelinePreview();
   };
-
-  const playTimelineRangeLoop = () => {
-    if (!timelineRangeLoopAvailable || !timelineSelectionClip || !timelineSelection) {
-      return false;
-    }
-
-    if (sequencePlaying) {
-      onPauseSequence?.();
-    }
-
-    const startMs = clamp(timelineSelectionStartMs, getClipTrimStartMs(timelineSelectionClip), getClipTrimEndMs(timelineSelectionClip), getClipTrimStartMs(timelineSelectionClip));
-    const endMs = clamp(timelineSelectionEndMs, startMs, getClipTrimEndMs(timelineSelectionClip), getClipTrimEndMs(timelineSelectionClip));
-
-    if (endMs - startMs < 80) {
-      return false;
-    }
-
-    setTimelinePreview({
-      visible: true,
-      status: 'looping',
-      clipId: timelineSelectionClip.id,
-      mode: 'range',
-      focusMs: startMs,
-      startMs,
-      endMs,
-      progressPct: getTimelinePreviewProgressPct(timelineSelectionClip, startMs),
-      updatedAt: Date.now(),
-    });
-
-    window.requestAnimationFrame(() => {
-      seekTimelinePreviewVideo(startMs, { play: true });
-    });
-
-    return true;
-  };
-
-  const pauseTimelineRangeLoop = () => {
-    const video = timelinePreviewVideoRef.current;
-
-    try {
-      video?.pause?.();
-    } catch (_error) {
-      // Best-effort local preview cleanup.
-    }
-
-    setTimelinePreview((current) => current
-      ? {
-          ...current,
-          status: 'frame',
-          focusMs: Number.isFinite(video?.currentTime) ? Math.round(video.currentTime * 1000) : current.focusMs,
-          updatedAt: Date.now(),
-        }
-      : current);
-  };
-
-  const handleTimelinePlayClick = () => {
-    if (timelineLoopPlaying) {
-      pauseTimelineRangeLoop();
-      return;
-    }
-
-    if (sequencePlaying) {
-      onPauseSequence?.();
-      return;
-    }
-
-    if (timelineRangeLoopAvailable && playTimelineRangeLoop()) {
-      return;
-    }
-
-    stopTimelinePreview();
-    onPlaySequence?.();
-  };
-
-  const handleTimelinePreviewTimeUpdate = (event) => {
-    const video = event.currentTarget;
-
-    if (!timelinePreviewClip || !timelinePreviewActive || !video) {
-      return;
-    }
-
-    const sourceMs = Number.isFinite(video.currentTime)
-      ? Math.round(video.currentTime * 1000)
-      : Number(timelinePreview?.focusMs || getClipTrimStartMs(timelinePreviewClip));
-
-    if (timelinePreview?.status === 'looping') {
-      const startMs = clamp(Number(timelinePreview.startMs || getClipTrimStartMs(timelinePreviewClip)), getClipTrimStartMs(timelinePreviewClip), getClipTrimEndMs(timelinePreviewClip), getClipTrimStartMs(timelinePreviewClip));
-      const endMs = clamp(Number(timelinePreview.endMs || getClipTrimEndMs(timelinePreviewClip)), startMs, getClipTrimEndMs(timelinePreviewClip), getClipTrimEndMs(timelinePreviewClip));
-
-      if (sourceMs + 34 >= endMs) {
-        setTimelinePreview((current) => current
-          ? {
-              ...current,
-              focusMs: startMs,
-              progressPct: getTimelinePreviewProgressPct(timelinePreviewClip, startMs),
-              updatedAt: Date.now(),
-            }
-          : current);
-
-        seekTimelinePreviewVideo(startMs, { play: true });
-        return;
-      }
-    }
-
-    setTimelinePreview((current) => current
-      ? {
-          ...current,
-          focusMs: sourceMs,
-          progressPct: getTimelinePreviewProgressPct(timelinePreviewClip, sourceMs),
-        }
-      : current);
-  };
-
-  const timelinePlayDisabled = !hasClips || isRecording || trimEditorActive || (cursorToolActive && !timelineRangeLoopAvailable);
-  const timelinePlayTitle = timelineLoopPlaying
-    ? 'Pause selected range loop'
-    : timelineRangeLoopAvailable
-      ? 'Play only the highlighted range as a loop'
-      : sequencePlaying
-        ? 'Pause sequence playback'
-        : 'Play timeline sequence';
 
   const drawerEyebrow = previewDrawer === 'effects' ? 'Effects' : previewDrawer === 'modes' ? 'Modes' : 'Settings';
   const drawerTitle = previewDrawer === 'effects'
@@ -2855,7 +2593,7 @@ function MakePreviewStudioChrome({
 
   return (
     <div
-      className={`make-preview-chrome ${activeDrawer ? 'has-open-drawer' : ''} ${isRecording ? 'is-recording' : ''} ${sequenceActive ? 'is-sequence-active' : ''} ${timelinePreviewActive ? 'has-timeline-preview' : ''} ${timelineLoopPlaying ? 'is-range-looping' : ''} ${trimEditorActive ? 'is-trimming-clip' : ''} ${cursorToolActive ? 'is-timeline-cursor' : ''}`}
+      className={`make-preview-chrome ${activeDrawer ? 'has-open-drawer' : ''} ${isRecording ? 'is-recording' : ''} ${sequenceActive ? 'is-sequence-active' : ''} ${trimEditorActive ? 'is-trimming-clip' : ''} ${cursorToolActive ? 'is-timeline-cursor' : ''}`}
       style={{ '--make-timeline-zoom': timelineZoom }}
       aria-label="Preview controls. These controls are not recorded into the canvas."
     >
@@ -2942,56 +2680,6 @@ function MakePreviewStudioChrome({
         </button>
       </div>
 
-      {timelinePreviewActive && timelinePreviewClip && (
-        <div
-          className={`make-preview-marker-layer ${timelineLoopPlaying ? 'is-looping' : 'is-frame-preview'}`}
-          aria-label="Timeline marker preview"
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <video
-            key={`${timelinePreviewClip.id || ''}:${timelinePreviewClip.objectUrl || ''}`}
-            ref={timelinePreviewVideoRef}
-            className="make-preview-marker-video"
-            src={timelinePreviewClip.objectUrl}
-            playsInline
-            preload="auto"
-            style={{ filter: timelineEffectCssFilter(timelinePreviewClip.timelineEffect) }}
-            onLoadedMetadata={() => {
-              const targetMs = timelinePreview?.status === 'looping'
-                ? Number(timelinePreview?.startMs || getClipTrimStartMs(timelinePreviewClip))
-                : Number(timelinePreview?.focusMs || getClipTrimStartMs(timelinePreviewClip));
-              seekTimelinePreviewVideo(targetMs, { play: timelinePreview?.status === 'looping' });
-            }}
-            onLoadedData={() => {
-              if (timelinePreview?.status !== 'looping') {
-                seekTimelinePreviewVideo(Number(timelinePreview?.focusMs || getClipTrimStartMs(timelinePreviewClip)));
-              }
-            }}
-            onTimeUpdate={handleTimelinePreviewTimeUpdate}
-            onEnded={() => {
-              if (timelinePreview?.status === 'looping') {
-                seekTimelinePreviewVideo(Number(timelinePreview?.startMs || getClipTrimStartMs(timelinePreviewClip)), { play: true });
-              }
-            }}
-          />
-
-          <div className="make-preview-marker-status">
-            <span>{timelineLoopPlaying ? 'Looping range' : 'I-marker preview'}</span>
-            <strong>{timelinePreviewClip.name || 'Selected clip'}</strong>
-            <small>
-              {timelineLoopPlaying
-                ? `${formatTimelinePreciseTimeMs(timelinePreview?.startMs || 0)} – ${formatTimelinePreciseTimeMs(timelinePreview?.endMs || 0)}`
-                : formatTimelinePreciseTimeMs(getTimelineAbsolutePositionMs(
-                    clips,
-                    timelinePreviewClip.id,
-                    Number(timelinePreview?.focusMs || getClipTrimStartMs(timelinePreviewClip)),
-                  ))}
-            </small>
-          </div>
-        </div>
-      )}
-
       <div
         className="make-preview-mini-timeline"
         aria-label="Preview timeline overlay"
@@ -3028,7 +2716,7 @@ function MakePreviewStudioChrome({
                 setPreviewDrawer('');
                 setTrimEditorClipId('');
                 setTimelineTool((current) => (current === 'cursor' ? 'select' : 'cursor'));
-                resetTimelineCursorSelection();
+                setTimelineSelection(null);
               }}
               disabled={!hasClips || isRecording}
               title="I cursor: click to choose a split point, or drag to select a range"
@@ -3050,11 +2738,11 @@ function MakePreviewStudioChrome({
             <button type="button" onClick={() => setTimelineZoomBounded((current) => current + 0.25)} disabled={!hasClips || timelineZoom >= 6} title="Zoom timeline in" aria-label="Zoom timeline in">+</button>
             <button
               type="button"
-              onClick={handleTimelinePlayClick}
-              disabled={timelinePlayDisabled}
-              title={timelinePlayTitle}
+              onClick={sequencePlaying ? onPauseSequence : onPlaySequence}
+              disabled={!hasClips || isRecording || trimEditorActive || cursorToolActive}
+              title={sequencePlaying ? 'Pause sequence playback' : 'Play timeline sequence'}
             >
-              {timelineLoopPlaying || sequencePlaying ? 'Pause' : 'Play'}
+              {sequencePlaying ? 'Pause' : 'Play'}
             </button>
             <button type="button" onClick={onApproveSequence} disabled={!sequenceCanApprove || trimEditorActive || cursorToolActive} title="Approve reviewed sequence for local export">Approve</button>
           </div>
@@ -3065,22 +2753,15 @@ function MakePreviewStudioChrome({
           {hasClips ? (
             clips.map((clip, index) => {
               const active = clip.id === selectedClipId || (!selectedClipId && selectedClip?.id === clip.id);
-              const previewingLoop = timelineLoopPlaying && timelinePreviewClip?.id === clip.id;
-              const playing = (sequenceActive && sequenceClip?.id === clip.id) || previewingLoop;
-              const played = !previewingLoop && (sequenceStatus === 'reviewed' || sequenceStatus === 'approved' || (sequenceActive && index < sequenceCurrentIndex));
+              const playing = sequenceActive && sequenceClip?.id === clip.id;
+              const played = sequenceStatus === 'reviewed' || sequenceStatus === 'approved' || (sequenceActive && index < sequenceCurrentIndex);
               const trimming = trimEditorClipId === clip.id;
               const durationMs = makeOverlayClipDurationMs(clip);
               const rawDurationMs = Math.max(0, Number(clip.durationMs || 0));
               const trimStartPct = rawDurationMs > 0 ? clamp((getClipTrimStartMs(clip) / rawDurationMs) * 100, 0, 96, 0) : 0;
               const trimEndPct = rawDurationMs > 0 ? clamp((getClipTrimEndMs(clip) / rawDurationMs) * 100, trimStartPct, 100, 100) : 100;
               const rightTrimPct = Math.max(0, 100 - trimEndPct);
-              const playProgressPct = played
-                ? 100
-                : previewingLoop
-                  ? clamp(Number(timelinePreview?.progressPct || 0), 0, 100, 0)
-                  : playing
-                    ? clamp(Number(sequenceState?.currentClipProgressPct || 0), 0, 100, 0)
-                    : 0;
+              const playProgressPct = played ? 100 : playing ? clamp(Number(sequenceState?.currentClipProgressPct || 0), 0, 100, 0) : 0;
               const activeTrimWidthPct = Math.max(0, trimEndPct - trimStartPct);
               const playheadPct = trimStartPct + ((activeTrimWidthPct * playProgressPct) / 100);
               const playRightPct = Math.max(0, 100 - playheadPct);

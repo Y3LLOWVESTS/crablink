@@ -4,7 +4,10 @@
 //! RO:INVARIANTS — no lock across await; settings/session/jobs/sources are preferences/display, not backend truth.
 //! RO:SECURITY — no private keys, seeds, raw capabilities, ingest secrets, receipts, media bytes, or spend authority.
 
-use crate::media::{new_video_job_store, new_video_source_store, VideoJobStore, VideoSourceStore};
+use crate::media::{
+    new_make_export_store, new_video_job_store, new_video_source_store, MakeExportStore,
+    VideoJobStore, VideoSourceStore,
+};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 
@@ -64,6 +67,7 @@ pub struct AppState {
     pub local_stream_session: Mutex<Option<LocalStreamSession>>,
     pub video_jobs: VideoJobStore,
     pub video_sources: VideoSourceStore,
+    pub make_exports: MakeExportStore,
 }
 
 impl Default for AppState {
@@ -74,6 +78,7 @@ impl Default for AppState {
             local_stream_session: Mutex::new(None),
             video_jobs: new_video_job_store(),
             video_sources: new_video_source_store(),
+            make_exports: new_make_export_store(),
         }
     }
 }

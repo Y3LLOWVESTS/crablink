@@ -1,0 +1,426 @@
+/**
+ * RO:WHAT — Frontend adapter for approved crab://make sequence export into a Rust-owned MP4 source handle.
+ * RO:WHY — Make needs clip assembly without React owning native paths, minted truth, receipts, or wallet authority.
+ * RO:INTERACTS — MakePage.jsx, platform/tauriPlatform.js, src-tauri commands::media, VideoConverterPanel.
+ * RO:INVARIANTS — bounded clip chunks only; no private paths; no fake CIDs/receipts; no silent ROC spend.
+ * RO:METRICS — none.
+ * RO:CONFIG — chunk cap is local UI policy; Rust enforces the authoritative cap.
+ * RO:SECURITY — no shell/native command strings; output is a redacted local source handle only.
+ * RO:TEST — npm run build; manual Make approved sequence → Export MP4 → crab://video source handoff smoke.
+ */
+
+import { callTauri } from '../../platform/tauriPlatform.js';
+
+export const LATEST_MAKE_EXPORT_HANDOFF_KEY = 'crablink.make.latestExport.v1';
+const DEFAULT_CHUNK_BYTES = 256 * 1024;
+const DEFAULT_HANDOFF_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+export function createMakeExportClient() {
+  return {
+    available: canUseTauriInvoke(),
+
+    async begin(input = {}) {
+      ensureTauri('Make export begin');
+      return callTauri('media_make_export_begin', {
+        input: normalizeBeginInput(input),
+      });
+    },
+
+    async appendChunk(input = {}) {
+      ensureTauri('Make export chunk upload');
+      return callTauri('media_make_export_append_chunk', {
+        input: normalizeAppendChunkInput(input),
+      });
+    },
+
+    async finish(input = {}) {
+      ensureTauri('Make export finish');
+      return callTauri('media_make_export_finish', {
+        input: normalizeFinishInput(input),
+      });
+    },
+
+    async status(sessionId) {
+      ensureTauri('Make export status');
+      return callTauri('media_make_export_status', {
+        sessionId: String(sessionId || '').trim(),
+      });
+    },
+
+    async clear(sessionId) {
+      ensureTauri('Make export clear');
+      return callTauri('media_make_export_clear', {
+        sessionId: String(sessionId || '').trim(),
+      });
+    },
+
+    async exportApprovedClips({
+      clips = [],
+      title = 'CrabLink Make export',
+      targetFileName = '',
+      width,
+      height,
+      fps,
+      chunkBytes = DEFAULT_CHUNK_BYTES,
+      onProgress,
+    } = {}) {
+      ensureTauri('Make export');
+
+      const safeClips = await resolveExportClips(clips);
+
+      if (!safeClips.length) {
+        throw new Error('No recorded clips are available for export. Try recording a fresh clip after this export fix.');
+      }
+
+      const expectedBytes = safeClips.reduce((sum, clip) => sum + Number(clip.blob.size || clip.sizeBytes || 0), 0);
+      const begin = await this.begin({
+        title,
+        targetFileName,
+        width,
+        height,
+        fps,
+        segmentCount: safeClips.length,
+        expectedBytes,
+      });
+
+      notifyProgress(onProgress, {
+        phase: 'begin',
+        progressPercent: begin.progressPercent || 1,
+        status: begin.status || 'receiving',
+        detail: 'Export session created.',
+        session: begin,
+      });
+
+      let uploadedBytes = 0;
+      const totalBytes = Math.max(1, expectedBytes);
+
+      for (let segmentIndex = 0; segmentIndex < safeClips.length; segmentIndex += 1) {
+        const clip = safeClips[segmentIndex];
+        const blob = clip.blob;
+        const segmentTotal = Number(blob.size || clip.sizeBytes || 0);
+        let offset = 0;
+
+        while (offset < segmentTotal) {
+          const end = Math.min(offset + chunkBytes, segmentTotal);
+          const arrayBuffer = await blob.slice(offset, end).arrayBuffer();
+          const bytes = Array.from(new Uint8Array(arrayBuffer));
+
+          const status = await this.appendChunk({
+            sessionId: begin.sessionId,
+            segmentIndex,
+            segmentName: clip.name || `clip-${segmentIndex + 1}.webm`,
+            mimeType: clip.type || clip.mimeType || blob.type || 'video/webm',
+            totalBytes: segmentTotal,
+            offset,
+            bytes,
+          });
+
+          uploadedBytes += bytes.length;
+          offset = end;
+
+          notifyProgress(onProgress, {
+            phase: 'uploading',
+            progressPercent: Math.min(86, Math.max(2, Math.round((uploadedBytes / totalBytes) * 86))),
+            status: status.status || 'receiving',
+            detail: `Uploaded clip ${segmentIndex + 1} of ${safeClips.length}.`,
+            session: status,
+          });
+        }
+      }
+
+      notifyProgress(onProgress, {
+        phase: 'joining',
+        progressPercent: 90,
+        status: 'exporting',
+        detail: 'Joining clips into MP4.',
+        session: begin,
+      });
+
+      const finished = await this.finish({
+        sessionId: begin.sessionId,
+        title,
+        targetFileName,
+        width,
+        height,
+        fps,
+        registerSource: true,
+      });
+
+      const handoff = writeLatestMakeExportHandoff(finished);
+
+      notifyProgress(onProgress, {
+        phase: 'ready',
+        progressPercent: 100,
+        status: finished.status || 'completed',
+        detail: 'MP4 export is ready for Video.',
+        session: finished,
+        handoff,
+      });
+
+      return finished;
+    },
+  };
+}
+
+export function writeLatestMakeExportHandoff(exportStatus = {}) {
+  const source = exportStatus?.source || null;
+  const sourceHandle = source?.sourceHandle || '';
+
+  const handoff = {
+    schema: 'crablink.local.make-export-handoff.v1',
+    status: sourceHandle ? 'ready' : 'missing_source_handle',
+    sourceHandle,
+    source,
+    sourceFacts: makeExportHandoffToSourceFacts({ source, exportStatus }),
+    exportStatus: stripForStorage(exportStatus),
+    createdAt: new Date().toISOString(),
+    note: 'Local display handoff only. This is not a b3 CID, crab URL, receipt, wallet event, or backend publication.',
+    truthBoundary: {
+      localOnly: true,
+      returnsPrivatePath: false,
+      returnsVideoBytes: false,
+      mintsB3: false,
+      createsReceipt: false,
+      mutatesWallet: false,
+    },
+  };
+
+  try {
+    window.localStorage.setItem(LATEST_MAKE_EXPORT_HANDOFF_KEY, JSON.stringify(handoff));
+  } catch (_error) {
+    // Best-effort local handoff cache only.
+  }
+
+  dispatchMakeExportHandoffEvent(handoff);
+  return handoff;
+}
+
+export function readLatestMakeExportHandoff({ maxAgeMs = DEFAULT_HANDOFF_MAX_AGE_MS } = {}) {
+  try {
+    const raw = window.localStorage.getItem(LATEST_MAKE_EXPORT_HANDOFF_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+
+    if (!parsed || parsed.schema !== 'crablink.local.make-export-handoff.v1') {
+      return null;
+    }
+
+    const sourceHandle = String(
+      parsed.sourceHandle ||
+      parsed.source?.sourceHandle ||
+      parsed.exportStatus?.source?.sourceHandle ||
+      '',
+    ).trim();
+
+    if (!sourceHandle) {
+      return null;
+    }
+
+    const createdAtMs = Date.parse(parsed.createdAt || '');
+    if (Number.isFinite(maxAgeMs) && maxAgeMs > 0 && Number.isFinite(createdAtMs)) {
+      if (Date.now() - createdAtMs > maxAgeMs) {
+        return null;
+      }
+    }
+
+    return {
+      ...parsed,
+      sourceHandle,
+      sourceFacts: parsed.sourceFacts || makeExportHandoffToSourceFacts(parsed),
+    };
+  } catch (_error) {
+    return null;
+  }
+}
+
+export function clearLatestMakeExportHandoff() {
+  try {
+    window.localStorage.removeItem(LATEST_MAKE_EXPORT_HANDOFF_KEY);
+  } catch (_error) {
+    // Best-effort cleanup only.
+  }
+}
+
+export function makeExportHandoffToSourceFacts(handoff = {}) {
+  const source = handoff.source || handoff.exportStatus?.source || {};
+  const exportStatus = handoff.exportStatus || handoff || {};
+
+  const width = positiveInteger(source.width, exportStatus.width);
+  const height = positiveInteger(source.height, exportStatus.height);
+
+  return stripEmpty({
+    name: stringValue(source.safeDisplayName, exportStatus.outputFileName, exportStatus.output_file_name, exportStatus.title, 'Make export.mp4'),
+    fileName: stringValue(source.safeDisplayName, exportStatus.outputFileName, exportStatus.output_file_name, exportStatus.title, 'Make export.mp4'),
+    safeDisplayName: stringValue(source.safeDisplayName, exportStatus.outputFileName, exportStatus.output_file_name, 'Make export.mp4'),
+    type: stringValue(source.contentType, exportStatus.outputContentType, exportStatus.output_content_type, 'video/mp4'),
+    contentType: stringValue(source.contentType, exportStatus.outputContentType, exportStatus.output_content_type, 'video/mp4'),
+    size: positiveInteger(source.bytes, exportStatus.outputBytes, exportStatus.output_bytes),
+    bytes: positiveInteger(source.bytes, exportStatus.outputBytes, exportStatus.output_bytes),
+    durationSeconds: positiveNumber(source.durationSeconds, source.duration_seconds, exportStatus.durationSeconds, exportStatus.duration_seconds),
+    width,
+    height,
+    resolution: width && height ? `${width}x${height}` : '',
+    frameRate: stringValue(source.frameRate, source.frame_rate, exportStatus.fps),
+    sourceHandle: stringValue(handoff.sourceHandle, source.sourceHandle),
+    sourceKind: stringValue(source.sourceKind, source.source_kind, 'crablink_make_export_mp4'),
+    nativeFileAuthority: Boolean(source.nativeFileAuthority ?? source.native_file_authority),
+    source: 'make_export_handoff',
+    localOnly: true,
+  });
+}
+
+function dispatchMakeExportHandoffEvent(handoff) {
+  try {
+    window.dispatchEvent(
+      new CustomEvent('crablink:make-export-handoff-ready', {
+        detail: {
+          handoff,
+        },
+      }),
+    );
+  } catch (_error) {
+    // Optional same-window UI sync only.
+  }
+}
+
+async function resolveExportClips(clips = []) {
+  const resolved = [];
+
+  for (const clip of clips || []) {
+    if (!clip) {
+      continue;
+    }
+
+    let blob = clip.blob;
+
+    if (!(blob instanceof Blob) && clip.objectUrl) {
+      try {
+        const response = await fetch(clip.objectUrl);
+        blob = await response.blob();
+      } catch (_error) {
+        blob = null;
+      }
+    }
+
+    if (blob instanceof Blob && blob.size > 0) {
+      resolved.push({
+        ...clip,
+        blob,
+        type: clip.type || clip.mimeType || blob.type || 'video/webm',
+        mimeType: clip.mimeType || clip.type || blob.type || 'video/webm',
+        sizeBytes: clip.sizeBytes || blob.size,
+      });
+    }
+  }
+
+  return resolved;
+}
+
+function normalizeBeginInput(input = {}) {
+  return stripEmpty({
+    title: stringValue(input.title),
+    targetFileName: stringValue(input.targetFileName, input.target_file_name),
+    width: positiveInteger(input.width),
+    height: positiveInteger(input.height),
+    fps: positiveInteger(input.fps, input.targetFps, input.target_fps),
+    segmentCount: positiveInteger(input.segmentCount, input.segment_count),
+    expectedBytes: positiveInteger(input.expectedBytes, input.expected_bytes),
+  });
+}
+
+function normalizeAppendChunkInput(input = {}) {
+  return {
+    sessionId: stringValue(input.sessionId, input.session_id),
+    segmentIndex: Math.max(0, Number.parseInt(input.segmentIndex ?? input.segment_index ?? 0, 10) || 0),
+    segmentName: stringValue(input.segmentName, input.segment_name),
+    mimeType: stringValue(input.mimeType, input.mime_type, input.type),
+    totalBytes: positiveInteger(input.totalBytes, input.total_bytes),
+    offset: Math.max(0, Number.parseInt(input.offset ?? 0, 10) || 0),
+    bytes: Array.isArray(input.bytes) ? input.bytes : [],
+  };
+}
+
+function normalizeFinishInput(input = {}) {
+  return stripEmpty({
+    sessionId: stringValue(input.sessionId, input.session_id),
+    title: stringValue(input.title),
+    targetFileName: stringValue(input.targetFileName, input.target_file_name),
+    width: positiveInteger(input.width),
+    height: positiveInteger(input.height),
+    fps: positiveInteger(input.fps, input.targetFps, input.target_fps),
+    registerSource: input.registerSource !== false,
+  });
+}
+
+function stripForStorage(value) {
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  return JSON.parse(JSON.stringify(value, (key, child) => {
+    if (key.toLowerCase().includes('path')) return undefined;
+    if (key.toLowerCase().includes('bytes') && Array.isArray(child)) return undefined;
+    return child;
+  }));
+}
+
+function notifyProgress(onProgress, event) {
+  if (typeof onProgress === 'function') {
+    onProgress(event);
+  }
+}
+
+function ensureTauri(label) {
+  if (!canUseTauriInvoke()) {
+    throw new Error(`${label} requires the CrabLink Tauri runtime.`);
+  }
+}
+
+function canUseTauriInvoke() {
+  return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__ || window.__TAURI__);
+}
+
+function stringValue(...values) {
+  for (const value of values) {
+    const safe = String(value ?? '').trim();
+
+    if (safe) {
+      return safe;
+    }
+  }
+
+  return '';
+}
+
+function positiveNumber(...values) {
+  for (const value of values) {
+    const number = Number(value);
+
+    if (Number.isFinite(number) && number > 0) {
+      return number;
+    }
+  }
+
+  return undefined;
+}
+
+function positiveInteger(...values) {
+  for (const value of values) {
+    const number = Number(value);
+
+    if (Number.isFinite(number) && number > 0) {
+      return Math.round(number);
+    }
+  }
+
+  return undefined;
+}
+
+function stripEmpty(value) {
+  return Object.fromEntries(
+    Object.entries(value || {}).filter(([, child]) => {
+      if (child === undefined || child === null) return false;
+      if (typeof child === 'string' && !child.trim()) return false;
+      return true;
+    }),
+  );
+}

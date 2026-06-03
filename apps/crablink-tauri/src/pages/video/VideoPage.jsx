@@ -53,7 +53,34 @@ export default function VideoPage({ app, route }) {
         </div>
       </header>
 
-      <VideoDraft app={app} route={route} draftState={draftState} />
+      <VideoDraft app={app} route={route} draftState={draftState} initialSourceHandle={sourceHandleFromVideoRoute(route)} />
     </main>
   );
+}
+
+
+function sourceHandleFromVideoRoute(route = {}) {
+  const candidates = [
+    route?.url,
+    route?.rawInput,
+    route?.normalizedInput,
+    route?.routeContext?.requestedUrl,
+    route?.route_context?.requested_url,
+  ];
+
+  for (const candidate of candidates) {
+    const value = String(candidate || '').trim();
+    if (!value) continue;
+
+    const match = value.match(/[?&](?:sourceId|sourceHandle)=([^&#]+)/i);
+    if (!match) continue;
+
+    try {
+      return decodeURIComponent(match[1] || '').trim();
+    } catch (_error) {
+      return String(match[1] || '').trim();
+    }
+  }
+
+  return '';
 }

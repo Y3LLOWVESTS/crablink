@@ -9,6 +9,7 @@
  * RO:TEST — npm run build; manual crab://video source picker/probe/plan/prepare-job smoke.
  */
 
+import { convertFileSrc } from '@tauri-apps/api/core';
 import { callTauri } from '../../platform/tauriPlatform.js';
 
 export function createVideoConverterClient() {
@@ -43,6 +44,24 @@ export function createVideoConverterClient() {
       return callTauri('media_get_video_source', {
         sourceHandle: String(sourceHandle || '').trim(),
       });
+    },
+
+    async getVideoSourcePreview(sourceHandle) {
+      if (!canUseTauriInvoke()) {
+        return unavailablePreview(sourceHandle);
+      }
+
+      const response = await callTauri('media_get_video_source_preview', {
+        input: normalizePreviewInput(sourceHandle),
+      });
+
+      const appCachePath = stringValue(response?.appCachePath, response?.app_cache_path);
+
+      return {
+        ...response,
+        appCachePath,
+        previewUrl: appCachePath ? convertFileSrc(appCachePath) : '',
+      };
     },
 
     async clearVideoSource(sourceHandle) {
@@ -109,6 +128,18 @@ export function createVideoConverterClient() {
         jobId: String(jobId || '').trim(),
       });
     },
+  };
+}
+
+export function normalizePreviewInput(input = {}) {
+  if (typeof input === 'string') {
+    return {
+      sourceHandle: input.trim(),
+    };
+  }
+
+  return {
+    sourceHandle: stringValue(input.sourceHandle, input.source_handle),
   };
 }
 
@@ -214,6 +245,29 @@ function unavailableSource(input = {}) {
     nativeFileAuthority: false,
     warnings: ['Tauri Rust video source registration is unavailable in this runtime.'],
     truthBoundary: videoSourceTruthBoundary(),
+  };
+}
+
+function unavailablePreview(sourceHandle = '') {
+  return {
+    schema: 'crablink.local.video-source-preview.v1',
+    sourceHandle: typeof sourceHandle === 'string' ? sourceHandle.trim() : stringValue(sourceHandle?.sourceHandle, sourceHandle?.source_handle),
+    status: 'tauri_unavailable',
+    safeDisplayName: 'selected-video',
+    contentType: 'video/mp4',
+    bytes: 0,
+    appCachePath: '',
+    previewUrl: '',
+    copiedToAppCache: false,
+    note: 'Tauri Rust local preview is unavailable in this runtime.',
+    truthBoundary: {
+      returnsPrivateSourcePath: false,
+      returnsVideoBytes: false,
+      returnsAppCachePath: false,
+      mintsB3: false,
+      createsReceipt: false,
+      mutatesWallet: false,
+    },
   };
 }
 

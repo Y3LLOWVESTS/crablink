@@ -16,6 +16,11 @@ import Card from '../../shared/components/Card.jsx';
 import JsonPreview from '../../shared/components/JsonPreview.jsx';
 import StatChip from '../../shared/components/StatChip.jsx';
 import { createVideoConverterClient } from '../../shared/api/videoConverterClient.js';
+import {
+  clearLatestMakeExportHandoff,
+  makeExportHandoffToSourceFacts,
+  readLatestMakeExportHandoff,
+} from '../../shared/api/makeExportClient.js';
 
 const LATEST_JOB_STORAGE_KEY = 'crablink.video.latestPrepareJob.v1';
 
@@ -30,6 +35,7 @@ const IDLE_STATE = Object.freeze({
 
 const ACTIVE_JOB_STATUSES = new Set(['queued', 'running']);
 const BUSY_STATUSES = new Set([
+  'make_export_loading',
   'picking_source',
   'registering_source',
   'planning',
@@ -38,11 +44,13 @@ const BUSY_STATUSES = new Set([
   'clearing_source',
 ]);
 
-export default function VideoConverterPanel({ selectedFileFacts, playbackMeta, draft }) {
+export default function VideoConverterPanel({ selectedFileFacts, playbackMeta, draft, initialMakeExportHandoff = null, initialSourceHandle = '', onPrepareJobUpdate = null }) {
   const client = useMemo(() => createVideoConverterClient(), []);
   const [state, setState] = useState(IDLE_STATE);
   const [nativePathDraft, setNativePathDraft] = useState('');
   const converterSessionStartedAtMs = useRef(Date.now());
+  const autoPrepareStartedKey = useRef('');
+  const makeExportHandoffLoadedRef = useRef('');
   const converterSessionId = useMemo(
     () => `video-prepare-session-${converterSessionStartedAtMs.current}-${Math.random().toString(36).slice(2, 10)}`,
     [],
@@ -60,9 +68,125 @@ export default function VideoConverterPanel({ selectedFileFacts, playbackMeta, d
 
   const effectiveSourceFacts = nativeSourceFacts || previewSourceFacts;
   const canPlan = Boolean(effectiveSourceFacts.fileName && effectiveSourceFacts.bytes);
-  const hasRegisteredSource = Boolean(state.source?.sourceHandle && state.source?.nativeFileAuthority);
+  const hasRegisteredSource = Boolean(state.source?.sourceHandle);
   const canStartJob = Boolean(hasRegisteredSource && state.probe && state.plan?.entries?.length);
   const isBusy = BUSY_STATUSES.has(state.status);
+
+  useEffect(() => {
+    if (!client.available) {
+      return undefined;
+    }
+
+    const handoff = initialMakeExportHandoff?.sourceHandle
+      ? initialMakeExportHandoff
+      : readLatestMakeExportHandoff();
+
+    const sourceHandle = stringValue(
+      initialSourceHandle,
+      selectedFileFacts?.sourceHandle,
+      selectedFileFacts?.source_handle,
+      handoff?.sourceHandle,
+      handoff?.source?.sourceHandle,
+      handoff?.source?.source_handle,
+      handoff?.exportStatus?.source?.sourceHandle,
+      handoff?.exportStatus?.source?.source_handle,
+    );
+
+    if (!sourceHandle) {
+      return undefined;
+    }
+
+    if (makeExportHandoffLoadedRef.current === sourceHandle) {
+      return undefined;
+    }
+
+    makeExportHandoffLoadedRef.current = sourceHandle;
+    let cancelled = false;
+    let finished = false;
+
+    setState((current) => ({
+      ...current,
+      status: 'make_export_loading',
+      error: null,
+      source: null,
+      probe: null,
+      plan: null,
+      job: null,
+    }));
+
+    void (async () => {
+      try {
+        const source = await getRegisteredMakeExportSource(client, sourceHandle, handoff);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!source?.sourceHandle) {
+          throw new Error('Make export source lookup returned no sourceHandle.');
+        }
+
+        const handoffFacts = makeExportHandoffToSourceFacts({
+          ...handoff,
+          source,
+        });
+        const facts = buildFactsFromRegisteredSource(source, {
+          ...previewSourceFacts,
+          ...handoffFacts,
+          sourceHandle,
+          sourceKind: 'crablink_make_export_mp4',
+          nativeFileAuthority: true,
+        });
+
+        setState((current) => ({
+          ...current,
+          status: 'planning',
+          source,
+          probe: null,
+          plan: null,
+          job: null,
+          error: null,
+        }));
+
+        const { probe, plan } = await buildPlanForFacts(client, facts);
+
+        if (cancelled) {
+          return;
+        }
+
+        finished = true;
+        setState((current) => ({
+          ...current,
+          status: 'planned',
+          source,
+          probe,
+          plan,
+          job: null,
+          error: null,
+        }));
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        finished = true;
+        makeExportHandoffLoadedRef.current = '';
+        setState((current) => ({
+          ...current,
+          status: 'error',
+          error: errorMessage(error),
+        }));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+
+      if (!finished && makeExportHandoffLoadedRef.current === sourceHandle) {
+        makeExportHandoffLoadedRef.current = '';
+      }
+    };
+  }, [client, initialMakeExportHandoff, initialSourceHandle, previewSourceFacts, selectedFileFacts]);
 
   useEffect(() => {
     const jobId = state.job?.jobId;
@@ -129,6 +253,10 @@ export default function VideoConverterPanel({ selectedFileFacts, playbackMeta, d
       // Display cache only. Losing this cache must not affect backend truth.
     }
 
+    if (typeof onPrepareJobUpdate === 'function') {
+      onPrepareJobUpdate(safeJob);
+    }
+
     try {
       window.dispatchEvent(
         new CustomEvent('crablink:video-prepare-job-updated', {
@@ -140,7 +268,94 @@ export default function VideoConverterPanel({ selectedFileFacts, playbackMeta, d
     } catch (_error) {
       // Optional UI sync event only.
     }
-  }, [state.job]);
+  }, [state.job, effectiveSourceFacts, onPrepareJobUpdate]);
+
+  useEffect(() => {
+    const source = state.source;
+    const probe = state.probe;
+    const plan = state.plan;
+
+    const isMakeExportSource = source?.sourceKind === 'crablink_make_export_mp4';
+    const hasPlan = Boolean(plan?.entries?.length);
+    const hasJob = Boolean(state.job?.jobId);
+
+    if (!client.available || !isMakeExportSource || !hasRegisteredSource || !probe || !hasPlan || hasJob) {
+      return undefined;
+    }
+
+    if (state.status === 'starting_job' || state.status === 'queued' || state.status === 'running') {
+      return undefined;
+    }
+
+    const autoKey = `${source.sourceHandle || ''}:${plan.entries.length}:${probe?.source?.fileName || ''}`;
+
+    if (!autoKey.trim() || autoPrepareStartedKey.current === autoKey) {
+      return undefined;
+    }
+
+    autoPrepareStartedKey.current = autoKey;
+    let cancelled = false;
+    let finished = false;
+
+    setState((current) => ({
+      ...current,
+      status: 'starting_job',
+      error: null,
+    }));
+
+    void (async () => {
+      try {
+        const job = await client.prepareVideoBundle({
+          probe,
+          plan,
+          sourceHandle: source.sourceHandle,
+          sourceLabel: 'make_export_handoff',
+          requestedBy: 'crablink_video_page_make_export_auto_prepare',
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        finished = true;
+        setState((current) => ({
+          ...current,
+          status: job.status || 'queued',
+          job,
+          error: null,
+        }));
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        finished = true;
+        autoPrepareStartedKey.current = '';
+        setState((current) => ({
+          ...current,
+          status: 'error',
+          error: errorMessage(error),
+        }));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+
+      if (!finished && autoPrepareStartedKey.current === autoKey) {
+        autoPrepareStartedKey.current = '';
+      }
+    };
+  }, [
+    client,
+    hasRegisteredSource,
+    isBusy,
+    state.source?.sourceHandle,
+    state.source?.sourceKind,
+    state.probe,
+    state.plan,
+    state.job?.jobId,
+  ]);
 
   async function handleChooseNativeSourceAndPlan() {
     if (!client.available) {
@@ -273,6 +488,10 @@ export default function VideoConverterPanel({ selectedFileFacts, playbackMeta, d
     try {
       await client.clearVideoSource(sourceHandle);
 
+      if (state.source?.sourceKind === 'crablink_make_export_mp4') {
+        clearLatestMakeExportHandoff();
+      }
+
       setState((current) => ({
         ...current,
         status: 'idle',
@@ -357,8 +576,8 @@ export default function VideoConverterPanel({ selectedFileFacts, playbackMeta, d
         probe: state.probe,
         plan: state.plan,
         sourceHandle: state.source.sourceHandle,
-        sourceLabel: 'native_handle',
-        requestedBy: 'crablink_video_page',
+        sourceLabel: state.source?.sourceKind === 'crablink_make_export_mp4' ? 'make_export_handoff' : 'native_handle',
+        requestedBy: state.source?.sourceKind === 'crablink_make_export_mp4' ? 'crablink_video_page_make_export_manual_prepare' : 'crablink_video_page',
       });
 
       setState((current) => ({
@@ -452,8 +671,22 @@ export default function VideoConverterPanel({ selectedFileFacts, playbackMeta, d
         </div>
       ) : null}
 
+      {state.source?.sourceKind === 'crablink_make_export_mp4' ? (
+        <div className="video-make-handoff-banner video-make-handoff-banner-compact" role="status">
+          <div>
+            <strong>Make MP4 handoff loaded.</strong>
+            <span>
+              This Rust-owned local source handle is now being prepared into mintable MP4/JPEG staged outputs.
+            </span>
+          </div>
+          <Badge tone={state.plan?.entries?.length ? 'success' : 'info'}>
+            {state.plan?.entries?.length ? 'plan ready' : 'building plan'}
+          </Badge>
+        </div>
+      ) : null}
+
       <section className="video-prepare-summary-grid" aria-label="Selected source facts">
-        <StatChip label="Source" value={nativeSourceFacts ? 'Rust native handle' : 'local preview facts'} />
+        <StatChip label="Source" value={state.source ? sourceAuthorityLabel(state.source) : 'local preview facts'} />
         <StatChip label="File" value={truncateMiddle(effectiveSourceFacts.fileName || 'No video selected', 38)} />
         <StatChip label="Size" value={formatBytes(effectiveSourceFacts.bytes)} />
         <StatChip
@@ -587,6 +820,7 @@ export default function VideoConverterPanel({ selectedFileFacts, playbackMeta, d
               job: state.job,
               status: state.status,
               latestJobDisplayCacheKey: LATEST_JOB_STORAGE_KEY,
+              latestMakeExportHandoff: initialMakeExportHandoff || readLatestMakeExportHandoff(),
               truthBoundary: {
                 reactReceivesPrivatePath: false,
                 reactReceivesVideoBytes: false,
@@ -610,6 +844,146 @@ async function buildPlanForFacts(client, facts) {
   const plan = await client.planVideoRenditions({ probe });
 
   return { probe, plan };
+}
+
+async function getRegisteredMakeExportSource(client, sourceHandle, handoff = {}) {
+  const fallback = registeredSourceFromMakeHandoff(handoff, sourceHandle);
+
+  try {
+    const source = await withTimeout(
+      client.getVideoSource(sourceHandle),
+      8000,
+      'Timed out while loading the Rust Make export source handle.',
+    );
+
+    if (source?.sourceHandle || source?.source_handle) {
+      return normalizeRegisteredSource(source, fallback);
+    }
+
+    if (fallback?.sourceHandle) {
+      return {
+        ...fallback,
+        warnings: [
+          ...(fallback.warnings || []),
+          'Used the local Make handoff metadata because Rust source lookup returned no sourceHandle.',
+        ],
+      };
+    }
+
+    throw new Error('Rust source lookup returned no sourceHandle.');
+  } catch (error) {
+    if (fallback?.sourceHandle) {
+      return {
+        ...fallback,
+        warnings: [
+          ...(fallback.warnings || []),
+          `Used the local Make handoff metadata after source lookup failed: ${errorMessage(error)}`,
+        ],
+      };
+    }
+
+    throw error;
+  }
+}
+
+function registeredSourceFromMakeHandoff(handoff = {}, sourceHandle = '') {
+  const source = handoff?.source || handoff?.exportStatus?.source || {};
+  const facts = handoff?.sourceFacts || {};
+  const exportStatus = handoff?.exportStatus || {};
+
+  const cleanHandle = stringValue(
+    sourceHandle,
+    handoff?.sourceHandle,
+    source?.sourceHandle,
+    source?.source_handle,
+    facts?.sourceHandle,
+    facts?.source_handle,
+    exportStatus?.source?.sourceHandle,
+    exportStatus?.source?.source_handle,
+  );
+
+  if (!cleanHandle) {
+    return null;
+  }
+
+  return stripEmpty({
+    schema: stringValue(source?.schema, 'crablink.local.video-source.v1'),
+    sourceHandle: cleanHandle,
+    status: stringValue(source?.status, 'registered'),
+    safeDisplayName: stringValue(
+      source?.safeDisplayName,
+      source?.safe_display_name,
+      facts?.safeDisplayName,
+      facts?.fileName,
+      facts?.name,
+      exportStatus?.outputFileName,
+      'make-export.mp4',
+    ),
+    extension: stringValue(source?.extension, 'mp4'),
+    contentType: stringValue(
+      source?.contentType,
+      source?.content_type,
+      facts?.contentType,
+      facts?.type,
+      exportStatus?.outputContentType,
+      'video/mp4',
+    ),
+    bytes: positiveInteger(source?.bytes, facts?.bytes, facts?.size, exportStatus?.outputBytes),
+    durationSeconds: positiveNumber(source?.durationSeconds, source?.duration_seconds, facts?.durationSeconds, facts?.duration_seconds),
+    width: positiveInteger(source?.width, facts?.width, exportStatus?.width),
+    height: positiveInteger(source?.height, facts?.height, exportStatus?.height),
+    frameRate: stringValue(source?.frameRate, source?.frame_rate, facts?.frameRate, facts?.frame_rate, exportStatus?.fps),
+    sourceKind: stringValue(source?.sourceKind, source?.source_kind, facts?.sourceKind, facts?.source_kind, 'crablink_make_export_mp4'),
+    supportedInput: source?.supportedInput ?? source?.supported_input ?? true,
+    nativeFileAuthority: source?.nativeFileAuthority ?? source?.native_file_authority ?? facts?.nativeFileAuthority ?? true,
+    warnings: Array.isArray(source?.warnings) ? source.warnings : [],
+    truthBoundary: {
+      ...(source?.truthBoundary || source?.truth_boundary || {}),
+      returnsPrivatePath: false,
+      returnsVideoBytes: false,
+      mintsB3: false,
+      createsReceipt: false,
+      mutatesWallet: false,
+    },
+  });
+}
+
+function normalizeRegisteredSource(source = {}, fallback = {}) {
+  const cleanHandle = stringValue(source?.sourceHandle, source?.source_handle, fallback?.sourceHandle);
+
+  return stripEmpty({
+    ...fallback,
+    ...source,
+    sourceHandle: cleanHandle,
+    safeDisplayName: stringValue(source?.safeDisplayName, source?.safe_display_name, fallback?.safeDisplayName),
+    contentType: stringValue(source?.contentType, source?.content_type, fallback?.contentType),
+    durationSeconds: positiveNumber(source?.durationSeconds, source?.duration_seconds, fallback?.durationSeconds),
+    frameRate: stringValue(source?.frameRate, source?.frame_rate, fallback?.frameRate),
+    sourceKind: stringValue(source?.sourceKind, source?.source_kind, fallback?.sourceKind, 'crablink_make_export_mp4'),
+    nativeFileAuthority: source?.nativeFileAuthority ?? source?.native_file_authority ?? fallback?.nativeFileAuthority ?? true,
+    truthBoundary: {
+      ...(fallback?.truthBoundary || {}),
+      ...(source?.truthBoundary || source?.truth_boundary || {}),
+      returnsPrivatePath: false,
+      returnsVideoBytes: false,
+      mintsB3: false,
+      createsReceipt: false,
+      mutatesWallet: false,
+    },
+  });
+}
+
+function withTimeout(promise, timeoutMs, message) {
+  let timer = 0;
+
+  return Promise.race([
+    promise,
+    new Promise((_resolve, reject) => {
+      timer = window.setTimeout(() => reject(new Error(message)), Math.max(1000, Number(timeoutMs || 0)));
+    }),
+  ]).finally(() => {
+    window.clearTimeout(timer);
+  });
 }
 
 function buildSourceFacts({ selectedFileFacts, playbackMeta, draft }) {
@@ -640,20 +1014,27 @@ function buildSourceFacts({ selectedFileFacts, playbackMeta, draft }) {
     width: positiveInteger(selected.width, meta.width, local.width),
     height: positiveInteger(selected.height, meta.height, local.height),
     frameRate: stringValue(selected.frameRate, selected.frame_rate, meta.frameRate, local.frameRate),
-    source: 'local_preview_metadata',
+    source: stringValue(selected.source, 'local_preview_metadata'),
   });
 }
 
 function buildFactsFromRegisteredSource(source, fallback = {}) {
   return stripEmpty({
-    fileName: stringValue(source?.safeDisplayName, fallback.fileName),
-    contentType: stringValue(source?.contentType, fallback.contentType),
+    fileName: stringValue(source?.safeDisplayName, source?.safe_display_name, fallback.fileName),
+    contentType: stringValue(source?.contentType, source?.content_type, fallback.contentType),
     bytes: positiveInteger(source?.bytes, fallback.bytes),
-    durationSeconds: positiveNumber(source?.durationSeconds, fallback.durationSeconds),
+    durationSeconds: positiveNumber(source?.durationSeconds, source?.duration_seconds, fallback.durationSeconds),
     width: positiveInteger(source?.width, fallback.width),
     height: positiveInteger(source?.height, fallback.height),
-    frameRate: stringValue(source?.frameRate, fallback.frameRate),
-    source: source?.nativeFileAuthority ? 'native_registered_source' : 'registered_source',
+    frameRate: stringValue(source?.frameRate, source?.frame_rate, fallback.frameRate),
+    sourceHandle: stringValue(source?.sourceHandle, source?.source_handle, fallback.sourceHandle),
+    sourceKind: stringValue(source?.sourceKind, source?.source_kind, fallback.sourceKind),
+    nativeFileAuthority: Boolean(source?.nativeFileAuthority ?? source?.native_file_authority ?? fallback.nativeFileAuthority),
+    source: source?.sourceKind === 'crablink_make_export_mp4'
+      ? 'make_export_handoff'
+      : source?.nativeFileAuthority
+        ? 'native_registered_source'
+        : 'registered_source',
   });
 }
 
@@ -674,11 +1055,16 @@ function sourceFingerprintForFacts(facts = {}) {
     .join('|');
 }
 
-
 function statusLabel(status, hasRegisteredSource) {
   switch (status) {
     case 'idle':
       return 'Choose one native video source to build the MP4 plan.';
+    case 'make_export_loading':
+      return 'Loading the MP4 exported from Make…';
+    case 'starting_job':
+      return 'Starting local Rust prepare job…';
+    case 'make_export_handoff':
+      return 'Make export source handle is ready.';
     case 'picking_source':
       return 'Opening native file picker…';
     case 'registering_source':
@@ -689,10 +1075,8 @@ function statusLabel(status, hasRegisteredSource) {
       return 'Building MP4 rendition plan…';
     case 'planned':
       return hasRegisteredSource
-        ? 'Plan ready. Start the local prepare job when ready.'
+        ? 'Plan ready. Make exports should auto-start the Rust prepare job; other sources can be started manually.'
         : 'Preview plan ready. Choose a native source before real staging.';
-    case 'starting_job':
-      return 'Starting local prepare job…';
     case 'queued':
       return 'Prepare job queued…';
     case 'running':
@@ -727,7 +1111,8 @@ function jobTone(status) {
 
 function sourceAuthorityLabel(source) {
   if (!source) return '—';
-  if (source.nativeFileAuthority) return 'native handle';
+  if (source.sourceKind === 'crablink_make_export_mp4') return 'Make MP4 export';
+  if (source.nativeFileAuthority) return 'Rust native handle';
   if (source.sourceKind) return humanizePhase(source.sourceKind);
   return 'display only';
 }

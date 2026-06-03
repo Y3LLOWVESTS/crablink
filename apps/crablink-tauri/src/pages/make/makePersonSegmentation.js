@@ -1,12 +1,12 @@
 /**
- * RO:WHAT — Local person/background segmentation helper for CrabLink stream compositor.
- * RO:WHY — Enables popular creator-app style background replacement without requiring a physical backdrop.
- * RO:INTERACTS — streamCompositor.js, StreamLookPanel.jsx, @mediapipe/tasks-vision.
- * RO:INVARIANTS — local visual mask only; no b3, wallet, receipt, entitlement, stream session, ownership, or backend truth.
- * RO:METRICS — exposes lightweight status for UI/compositor badges; no telemetry leaves the client.
+ * RO:WHAT — Local person cutout/background-removal helper for Make Studio.
+ * RO:WHY — Enables software subject isolation for creator recording without requiring a physical backdrop.
+ * RO:INTERACTS — makeCompositor.js, MakePage.jsx, @mediapipe/tasks-vision.
+ * RO:INVARIANTS — local visual mask only; no b3, wallet, receipt, entitlement, ownership, or backend truth.
+ * RO:METRICS — exposes lightweight local status for Make compositor badges; no telemetry leaves the client.
  * RO:CONFIG — uses MediaPipe dev CDN/model URL for the MVP; production should bundle model/wasm locally.
  * RO:SECURITY — no arbitrary code, no secrets, no wallet authority, no local path exposure; model output is display-only.
- * RO:TEST — npm install; npm run build; start camera; set Background removal to Person cutout; verify background replacement.
+ * RO:TEST — npm run build; manual crab://make camera cutout with solid/image/video background smoke.
  */
 
 import { FilesetResolver, ImageSegmenter } from '@mediapipe/tasks-vision';
@@ -34,7 +34,7 @@ const state = {
   centerHistogram: {},
 };
 
-export function getPersonSegmentationStatus() {
+export function getMakePersonSegmentationStatus() {
   return {
     status: state.status,
     error: state.error,
@@ -50,27 +50,27 @@ export function getPersonSegmentationStatus() {
   };
 }
 
-export function clearPersonSegmentationMask() {
+export function clearMakePersonSegmentationMask() {
   state.mask = null;
   state.error = '';
   state.status = state.segmenter ? 'ready' : 'idle';
 }
 
-export function requestPersonSegmentationMask({
+export function requestMakePersonSegmentationMask({
   source,
   enabled,
   minIntervalMs = MIN_SEGMENT_INTERVAL_MS,
 } = {}) {
   if (!enabled) {
     return {
-      ...getPersonSegmentationStatus(),
+      ...getMakePersonSegmentationStatus(),
       mask: null,
     };
   }
 
   if (!source || !source.videoWidth || !source.videoHeight || source.readyState < 2) {
     return {
-      ...getPersonSegmentationStatus(),
+      ...getMakePersonSegmentationStatus(),
       status: 'waiting_for_video',
       mask: state.mask,
     };
@@ -80,7 +80,7 @@ export function requestPersonSegmentationMask({
 
   if (!state.segmenter) {
     return {
-      ...getPersonSegmentationStatus(),
+      ...getMakePersonSegmentationStatus(),
       status: state.status || 'loading',
       mask: state.mask,
     };
@@ -94,7 +94,7 @@ export function requestPersonSegmentationMask({
   }
 
   return {
-    ...getPersonSegmentationStatus(),
+    ...getMakePersonSegmentationStatus(),
     mask: state.mask,
   };
 }
@@ -201,7 +201,7 @@ function copyCategoryMask(result) {
   const finalPick = labelPick || centerPick;
 
   return {
-    schema: 'crablink.local-person-mask.v1',
+    schema: 'crablink.make.local-person-mask.v1',
     width,
     height,
     data,
@@ -212,7 +212,7 @@ function copyCategoryMask(result) {
     centerHistogram: centerPick.centerHistogram,
     generatedAt: performance.now(),
     truthBoundary:
-      'Local ML person mask only. Not backend truth, stream truth, receipt truth, wallet truth, or entitlement truth.',
+      'Local ML person mask only. Not backend truth, receipt truth, wallet truth, entitlement truth, ownership truth, or published media truth.',
   };
 }
 
@@ -229,87 +229,77 @@ function buildHistogram(data) {
 
 function detectLikelyPersonValueFromFrameCenter(data, width, height) {
   /*
-   * This fixes the silhouette bug without trusting model label order.
-   * In normal creator-camera framing, the person occupies the center/upper-body
-   * region. We pick the dominant category there as the subject value.
+   * This keeps the helper resilient when label order differs across model/browser
+   * versions. In normal creator-camera framing, the subject occupies the center
+   * and upper-body region more often than the room background.
    */
-  const x0 = Math.floor(width * 0.32);
-  const x1 = Math.ceil(width * 0.68);
-  const y0 = Math.floor(height * 0.18);
-  const y1 = Math.ceil(height * 0.88);
+  const startX = Math.floor(width * 0.34);
+  const endX = Math.floor(width * 0.66);
+  const startY = Math.floor(height * 0.18);
+  const endY = Math.floor(height * 0.70);
   const centerHistogram = {};
 
-  for (let y = y0; y < y1; y += 1) {
-    for (let x = x0; x < x1; x += 1) {
+  for (let y = startY; y < endY; y += 1) {
+    for (let x = startX; x < endX; x += 1) {
       const value = data[y * width + x];
       centerHistogram[value] = (centerHistogram[value] || 0) + 1;
     }
   }
 
-  const sorted = Object.entries(centerHistogram)
-    .map(([value, count]) => ({
-      value: Number(value),
-      count,
-    }))
+  const entries = Object.entries(centerHistogram)
+    .map(([value, count]) => ({ value: Number(value), count }))
     .sort((a, b) => b.count - a.count);
 
+  const pick = entries[0]?.value ?? 1;
+
   return {
-    value: sorted[0]?.value ?? 1,
-    source: 'center_subject_region',
+    value: pick,
+    source: 'center-region',
     centerHistogram,
   };
 }
 
 function inferPersonValueFromLabels(labels, histogram) {
-  const normalized = Array.isArray(labels)
-    ? labels.map((label) => String(label || '').toLowerCase())
-    : [];
+  const personIndex = labels.findIndex((label) => /person|human|selfie|foreground/i.test(label));
 
-  const likelyIndex = normalized.findIndex(
-    (label) =>
-      label === 'person' ||
-      label.includes('person') ||
-      label.includes('human') ||
-      label.includes('selfie') ||
-      label.includes('foreground'),
-  );
-
-  if (likelyIndex >= 0 && Number.isFinite(histogram[likelyIndex])) {
+  if (personIndex >= 0 && histogram[personIndex] > 0) {
     return {
-      value: likelyIndex,
-      source: `label:${labels[likelyIndex]}`,
+      value: personIndex,
+      source: 'label',
     };
   }
 
   return null;
 }
 
-function closeResult(result) {
-  try {
-    result?.categoryMask?.close?.();
-  } catch (_error) {
-    // Best-effort cleanup only.
-  }
-
-  try {
-    result?.confidenceMasks?.forEach?.((mask) => mask?.close?.());
-  } catch (_error) {
-    // Best-effort cleanup only.
-  }
-}
-
 function safeLabels(segmenter) {
   try {
-    return segmenter.getLabels?.() || [];
+    return segmenter?.getLabels?.() || [];
   } catch (_error) {
     return [];
   }
 }
 
-function normalizeError(error) {
-  if (error instanceof Error) {
-    return error.message;
+function closeResult(result) {
+  try {
+    result?.categoryMask?.close?.();
+  } catch (_error) {
+    // MediaPipe mask cleanup is best effort.
   }
 
-  return String(error || 'Unable to initialize person segmentation.');
+  try {
+    for (const mask of result?.confidenceMasks || []) {
+      mask?.close?.();
+    }
+  } catch (_error) {
+    // MediaPipe mask cleanup is best effort.
+  }
+}
+
+function normalizeError(error) {
+  if (!error) {
+    return 'Unknown segmentation error.';
+  }
+
+  return error.message || error.name || String(error);
 }

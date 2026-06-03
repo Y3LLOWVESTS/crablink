@@ -2948,3 +2948,52 @@
   }
 }
 /* CrabLink video publish full-width + stale-job safety UX — end */
+
+/* CrabLink video Make → Video handoff UX — begin */
+.video-make-handoff-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.85rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--cl-success, #2fbf71) 42%, var(--cl-border, #d7d7d7));
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-success, #2fbf71) 14%, transparent), transparent 64%),
+    var(--video-panel-bg, var(--cl-card));
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.08);
+}
+
+.video-make-handoff-banner > div {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.video-make-handoff-banner strong {
+  color: var(--cl-text, #111);
+  font-size: 0.96rem;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.video-make-handoff-banner span {
+  color: var(--cl-muted, #626262);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.video-make-handoff-banner-compact {
+  margin-top: 0;
+  margin-bottom: 0.9rem;
+}
+
+@media (max-width: 760px) {
+  .video-make-handoff-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+/* CrabLink video Make → Video handoff UX — end */

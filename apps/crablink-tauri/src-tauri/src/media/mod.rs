@@ -8,6 +8,7 @@
 //! RO:TEST — cargo check; future unit tests for probe/rendition/source/job state decisions.
 
 pub mod limits;
+pub mod make_export;
 pub mod video_jobs;
 pub mod video_probe;
 pub mod video_renditions;
@@ -16,8 +17,7 @@ pub mod video_transcode;
 
 pub use video_jobs::{
     cancel_video_prepare_job, get_video_prepare_job_status, new_video_job_store,
-    start_video_prepare_job, VideoJobRecord, VideoJobStatus, VideoJobStore,
-    VideoPrepareBundleInput,
+    start_video_prepare_job, VideoJobStatus, VideoJobStore, VideoPrepareBundleInput,
 };
 pub use video_probe::{
     probe_video_from_local_facts, VideoProbeInput, VideoProbeSummary,
@@ -28,6 +28,12 @@ pub use video_renditions::{
 pub use video_sources::{
     clear_video_source_registration, get_registered_video_source_for_job,
     get_video_source_registration, new_video_source_store, register_video_source_from_path,
-    RegisteredVideoSource, VideoRegisterSourceInput, VideoSourceClearResponse,
-    VideoSourceRegistration, VideoSourceStore,
+    VideoRegisterSourceInput, VideoSourceClearResponse, VideoSourceRegistration, VideoSourceStore,
+};
+
+pub use make_export::{
+    append_make_export_chunk, begin_make_export_session, clear_make_export_session,
+    finish_make_export_session, get_make_export_status, new_make_export_store,
+    MakeExportAppendChunkInput, MakeExportBeginInput, MakeExportFinishInput,
+    MakeExportStatus, MakeExportStore,
 };

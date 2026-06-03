@@ -8,16 +8,20 @@
 //! RO:TEST — cargo check; manual crab://video → choose native source → build plan → start prepare job.
 
 use crate::media::{
-    cancel_video_prepare_job, clear_video_source_registration, get_registered_video_source_for_job,
-    get_video_prepare_job_status, get_video_source_registration, plan_video_renditions_from_probe,
-    probe_video_from_local_facts, register_video_source_from_path, start_video_prepare_job,
-    VideoJobStatus, VideoPrepareBundleInput, VideoProbeInput, VideoProbeSummary,
-    VideoRegisterSourceInput, VideoRenditionPlanInput, VideoRenditionPlanResponse,
-    VideoSourceClearResponse, VideoSourceRegistration,
+    append_make_export_chunk, begin_make_export_session, cancel_video_prepare_job,
+    clear_make_export_session, clear_video_source_registration, finish_make_export_session,
+    get_make_export_status, get_registered_video_source_for_job, get_video_prepare_job_status,
+    get_video_source_registration, plan_video_renditions_from_probe, probe_video_from_local_facts,
+    register_video_source_from_path, start_video_prepare_job, MakeExportAppendChunkInput,
+    MakeExportBeginInput, MakeExportFinishInput, MakeExportStatus, VideoJobStatus,
+    VideoPrepareBundleInput, VideoProbeInput, VideoProbeSummary, VideoRegisterSourceInput,
+    VideoRenditionPlanInput, VideoRenditionPlanResponse, VideoSourceClearResponse,
+    VideoSourceRegistration,
 };
 use crate::state::AppState;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, State};
+use std::path::Path;
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 
 const VIDEO_PICKER_EXTENSIONS: &[&str] = &["mp4", "m4v", "mov", "webm", "ogv", "ogg", "mkv", "avi"];
@@ -32,6 +36,38 @@ pub struct VideoChooseSourceInput {
     pub frame_rate: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VideoSourcePreviewInput {
+    pub source_handle: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VideoSourcePreviewResponse {
+    pub schema: String,
+    pub source_handle: String,
+    pub status: String,
+    pub safe_display_name: String,
+    pub content_type: String,
+    pub bytes: u64,
+    pub app_cache_path: String,
+    pub copied_to_app_cache: bool,
+    pub note: String,
+    pub truth_boundary: VideoSourcePreviewTruthBoundary,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VideoSourcePreviewTruthBoundary {
+    pub returns_private_source_path: bool,
+    pub returns_video_bytes: bool,
+    pub returns_app_cache_path: bool,
+    pub mints_b3: bool,
+    pub creates_receipt: bool,
+    pub mutates_wallet: bool,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NativeMediaStatus {
@@ -44,6 +80,8 @@ pub struct NativeMediaStatus {
     pub video_native_file_picker_wired: bool,
     pub video_prepare_jobs_wired: bool,
     pub video_transcode_jobs_wired: bool,
+    pub make_export_wired: bool,
+    pub make_export_chunk_cap_bytes: usize,
     pub webview_capture_expected: String,
     pub camera_permission_model: String,
     pub microphone_permission_model: String,
@@ -77,6 +115,8 @@ pub struct NativeMediaTruthBoundary {
     pub registers_native_video_source: bool,
     pub starts_video_prepare_job: bool,
     pub runs_video_transcode: bool,
+    pub accepts_make_export_chunks: bool,
+    pub joins_make_segments: bool,
 }
 
 #[tauri::command]
@@ -86,7 +126,7 @@ pub fn media_status() -> NativeMediaStatus {
     let bundle_id = "com.rustyonions.crablink".to_string();
 
     NativeMediaStatus {
-        schema: "crablink.media-status.v7".to_string(),
+        schema: "crablink.media-status.v8".to_string(),
         platform: platform.clone(),
         os_family,
         native_capture_wired: false,
@@ -95,6 +135,8 @@ pub fn media_status() -> NativeMediaStatus {
         video_native_file_picker_wired: true,
         video_prepare_jobs_wired: true,
         video_transcode_jobs_wired: true,
+        make_export_wired: true,
+        make_export_chunk_cap_bytes: 512 * 1024,
         webview_capture_expected: "optional_react_webview_preview".to_string(),
         camera_permission_model: camera_permission_model(&platform).to_string(),
         microphone_permission_model: microphone_permission_model(&platform).to_string(),
@@ -122,6 +164,8 @@ pub fn media_status() -> NativeMediaStatus {
             registers_native_video_source: true,
             starts_video_prepare_job: true,
             runs_video_transcode: true,
+            accepts_make_export_chunks: true,
+            joins_make_segments: true,
         },
         warnings: media_warnings(&platform),
     }
@@ -183,6 +227,65 @@ pub fn media_get_video_source(
 }
 
 #[tauri::command]
+pub async fn media_get_video_source_preview(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    input: VideoSourcePreviewInput,
+) -> Result<VideoSourcePreviewResponse, String> {
+    let source_handle = input.source_handle.trim().to_string();
+    if source_handle.is_empty() {
+        return Err("sourceHandle is required for local preview".to_string());
+    }
+
+    let registered = get_registered_video_source_for_job(&state.video_sources, &source_handle)?;
+    let source_path = registered.canonical_path.clone();
+    let public = registered.public.clone();
+
+    let app_cache_dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|_| "app cache directory is unavailable for local video preview".to_string())?
+        .join("media-preview")
+        .join("video-sources");
+
+    let extension = clean_preview_extension(&public.extension, &public.content_type);
+    let preview_path = app_cache_dir.join(format!(
+        "{}-preview.{}",
+        sanitize_preview_file_stem(&source_handle),
+        extension
+    ));
+    let expected_bytes = public.bytes;
+
+    let copied_to_app_cache = tauri::async_runtime::spawn_blocking({
+        let source_path = source_path.clone();
+        let preview_path = preview_path.clone();
+        move || copy_preview_source_if_needed(&source_path, &preview_path, expected_bytes)
+    })
+    .await
+    .map_err(|_| "local video preview cache task failed".to_string())??;
+
+    Ok(VideoSourcePreviewResponse {
+        schema: "crablink.local.video-source-preview.v1".to_string(),
+        source_handle,
+        status: "ready".to_string(),
+        safe_display_name: public.safe_display_name,
+        content_type: public.content_type,
+        bytes: public.bytes,
+        app_cache_path: preview_path.to_string_lossy().to_string(),
+        copied_to_app_cache,
+        note: "Preview uses an app-cache copy of the Rust-owned local source. This is not a backend CID, receipt, or paid unlock.".to_string(),
+        truth_boundary: VideoSourcePreviewTruthBoundary {
+            returns_private_source_path: false,
+            returns_video_bytes: false,
+            returns_app_cache_path: true,
+            mints_b3: false,
+            creates_receipt: false,
+            mutates_wallet: false,
+        },
+    })
+}
+
+#[tauri::command]
 pub fn media_clear_video_source(
     state: State<'_, AppState>,
     source_handle: String,
@@ -224,6 +327,47 @@ pub fn media_prepare_video_bundle(
     };
 
     start_video_prepare_job(&state.video_jobs, input, registered_source)
+}
+
+
+#[tauri::command]
+pub fn media_make_export_begin(
+    state: State<'_, AppState>,
+    input: MakeExportBeginInput,
+) -> Result<MakeExportStatus, String> {
+    begin_make_export_session(&state.make_exports, input)
+}
+
+#[tauri::command]
+pub fn media_make_export_append_chunk(
+    state: State<'_, AppState>,
+    input: MakeExportAppendChunkInput,
+) -> Result<MakeExportStatus, String> {
+    append_make_export_chunk(&state.make_exports, input)
+}
+
+#[tauri::command]
+pub fn media_make_export_finish(
+    state: State<'_, AppState>,
+    input: MakeExportFinishInput,
+) -> Result<MakeExportStatus, String> {
+    finish_make_export_session(&state.make_exports, &state.video_sources, input)
+}
+
+#[tauri::command]
+pub fn media_make_export_status(
+    state: State<'_, AppState>,
+    session_id: String,
+) -> Result<MakeExportStatus, String> {
+    get_make_export_status(&state.make_exports, session_id)
+}
+
+#[tauri::command]
+pub fn media_make_export_clear(
+    state: State<'_, AppState>,
+    session_id: String,
+) -> Result<MakeExportStatus, String> {
+    clear_make_export_session(&state.make_exports, session_id)
 }
 
 #[tauri::command]
@@ -308,6 +452,8 @@ fn media_warnings(platform: &str) -> Vec<String> {
         "Native video source picking returns only a redacted source registration DTO to React."
             .to_string(),
         "Video prepare jobs can now run a fixed Rust-owned FFmpeg path for staged local MP4/JPEG outputs when a native source handle is registered.".to_string(),
+        "Make export can accept approved local clip chunks, join them into one MP4, and register a redacted video source handle.".to_string(),
+        "Make export can accept bounded clip chunks, join them into one local MP4, and register a redacted source handle for crab://video.".to_string(),
         "Staged handles are not backend CIDs, crab URLs, receipts, or ownership proofs."
             .to_string(),
     ];
@@ -320,4 +466,75 @@ fn media_warnings(platform: &str) -> Vec<String> {
     }
 
     warnings
+}
+
+fn copy_preview_source_if_needed(
+    source_path: &Path,
+    preview_path: &Path,
+    expected_bytes: u64,
+) -> Result<bool, String> {
+    if !source_path.exists() {
+        return Err("local source file is no longer available for preview".to_string());
+    }
+
+    if let Some(parent) = preview_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|_| "could not create app-cache preview directory".to_string())?;
+    }
+
+    let existing_matches = std::fs::metadata(preview_path)
+        .ok()
+        .filter(|metadata| metadata.is_file())
+        .map(|metadata| metadata.len() == expected_bytes && expected_bytes > 0)
+        .unwrap_or(false);
+
+    if existing_matches {
+        return Ok(false);
+    }
+
+    std::fs::copy(source_path, preview_path)
+        .map_err(|_| "could not copy local source into app-cache preview file".to_string())?;
+
+    let copied_len = std::fs::metadata(preview_path)
+        .map_err(|_| "could not verify copied preview file".to_string())?
+        .len();
+
+    if expected_bytes > 0 && copied_len != expected_bytes {
+        let _ = std::fs::remove_file(preview_path);
+        return Err("copied preview file size did not match source".to_string());
+    }
+
+    Ok(true)
+}
+
+fn clean_preview_extension(extension: &str, content_type: &str) -> String {
+    let clean = extension
+        .trim()
+        .trim_start_matches('.')
+        .to_ascii_lowercase();
+
+    if matches!(clean.as_str(), "mp4" | "m4v" | "mov" | "webm" | "ogv" | "ogg") {
+        return clean;
+    }
+
+    match content_type.trim().to_ascii_lowercase().as_str() {
+        "video/webm" => "webm".to_string(),
+        "video/quicktime" => "mov".to_string(),
+        "video/ogg" => "ogv".to_string(),
+        _ => "mp4".to_string(),
+    }
+}
+
+fn sanitize_preview_file_stem(value: &str) -> String {
+    let safe: String = value
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric() || *ch == '_' || *ch == '-')
+        .take(120)
+        .collect();
+
+    if safe.trim().is_empty() {
+        "video-source".to_string()
+    } else {
+        safe
+    }
 }

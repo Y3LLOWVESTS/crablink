@@ -1,15 +1,15 @@
 /**
  * RO:WHAT — Local draft/session model helpers for the crab://make creator studio.
  * RO:WHY — App Integration; Concerns: DX/SEC/RES; keeps Make draft state explicit without creating backend truth.
- * RO:INTERACTS — MakePage.jsx, browser MediaRecorder APIs, future VideoPage handoff, localStorage/sessionStorage.
+ * RO:INTERACTS — MakePage.jsx, makeCompositor.js, browser MediaRecorder APIs, future VideoPage handoff, localStorage/sessionStorage.
  * RO:INVARIANTS — local draft only; no fake CIDs; no fake receipts; no wallet mutation; no paid unlock from cache.
  * RO:METRICS — none.
  * RO:CONFIG — browser-local draft and latest session plan keys.
- * RO:SECURITY — no media bytes, tokens, secrets, private paths, or spend authority are persisted here.
- * RO:TEST — npm run build; manual crab://make draft save/clear and session-plan JSON smoke.
+ * RO:SECURITY — no video bytes, tokens, secrets, private paths, or spend authority are persisted here.
+ * RO:TEST — npm run build; manual crab://make draft save/clear, cutout controls, and session-plan JSON smoke.
  */
 
-export const MAKE_DRAFT_STORAGE_KEY = 'crablink.make.draft.v1';
+export const MAKE_DRAFT_STORAGE_KEY = 'crablink.make.draft.v2';
 export const MAKE_SESSION_PLAN_STORAGE_KEY = 'crablink.make.latestSessionPlan.v1';
 
 export const MAKE_MODES = Object.freeze([
@@ -39,9 +39,9 @@ export const MAKE_MODES = Object.freeze([
   },
   {
     value: 'camera_background',
-    label: 'Camera + Scene',
-    shortLabel: 'Scene',
-    copy: 'Record camera over a local studio scene. True person cutout stays delegated to the stream compositor path.',
+    label: 'Person Cutout',
+    shortLabel: 'Cutout',
+    copy: 'Record camera with software background removal and a local solid, image, or video background.',
     needsCamera: true,
     needsScreen: false,
   },
@@ -78,6 +78,47 @@ export const MAKE_SCENES = Object.freeze([
   },
 ]);
 
+export const MAKE_BACKGROUND_KINDS = Object.freeze([
+  {
+    value: 'scene',
+    label: 'Studio scene',
+    copy: 'Use the selected Make scene gradient.',
+  },
+  {
+    value: 'solid',
+    label: 'Solid color',
+    copy: 'Use a local solid color behind the subject.',
+  },
+  {
+    value: 'image',
+    label: 'Image',
+    copy: 'Use a local image data URL behind the subject.',
+  },
+  {
+    value: 'video',
+    label: 'Video',
+    copy: 'Use a local looping video object URL behind the subject. The video file itself is not persisted.',
+  },
+]);
+
+export const MAKE_CUTOUT_POLARITIES = Object.freeze([
+  { value: 'auto', label: 'Auto subject' },
+  { value: 'flip', label: 'Flip mask' },
+]);
+
+export const MAKE_PIP_STYLES = Object.freeze([
+  {
+    value: 'regular',
+    label: 'Regular camera',
+    copy: 'Draw the webcam as a framed PiP card over the screen.',
+  },
+  {
+    value: 'cutout',
+    label: 'Person cutout',
+    copy: 'Draw only the locally cut-out subject over the screen.',
+  },
+]);
+
 export const MAKE_SCENE_PRESETS = Object.freeze([
   {
     value: 'studio_demo',
@@ -92,6 +133,34 @@ export const MAKE_SCENE_PRESETS = Object.freeze([
       includeMic: true,
       pipCorner: 'bottom-right',
       pipSize: 28,
+      pipStyle: 'regular',
+      backgroundRemovalMode: 'off',
+      backgroundKind: 'scene',
+      personCutoutEnabled: false,
+      pipCutoutEnabled: false,
+    },
+  },
+  {
+    value: 'cutout_solid',
+    label: 'Cutout Studio',
+    eyebrow: 'Background replacement',
+    copy: 'Camera with software person cutout over a clean local studio color.',
+    patch: {
+      selectedMode: 'camera_background',
+      selectedScene: 'midnight',
+      outputPreset: 'social_720p',
+      targetFps: 30,
+      includeMic: true,
+      backgroundRemovalMode: 'person_cutout',
+      personCutoutEnabled: true,
+      backgroundKind: 'solid',
+      backgroundSolidColor: '#071f14',
+      subjectMirror: true,
+      subjectScale: 100,
+      subjectOffsetX: 0,
+      subjectOffsetY: 0,
+      cutoutFeather: 3,
+      pipCutoutEnabled: false,
     },
   },
   {
@@ -107,6 +176,30 @@ export const MAKE_SCENE_PRESETS = Object.freeze([
       includeMic: true,
       pipCorner: 'bottom-right',
       pipSize: 24,
+      pipStyle: 'regular',
+      backgroundRemovalMode: 'off',
+      personCutoutEnabled: false,
+      pipCutoutEnabled: false,
+    },
+  },
+  {
+    value: 'screen_cutout_pip',
+    label: 'Cutout PiP',
+    eyebrow: 'Screen + subject',
+    copy: 'Screen recording with camera PiP using software person cutout.',
+    patch: {
+      selectedMode: 'screen_pip',
+      selectedScene: 'ocean',
+      outputPreset: 'desktop_1080p',
+      targetFps: 30,
+      includeMic: true,
+      pipCorner: 'bottom-right',
+      pipSize: 28,
+      pipStyle: 'cutout',
+      backgroundRemovalMode: 'off',
+      personCutoutEnabled: false,
+      pipCutoutEnabled: true,
+      pipCutoutBackground: false,
     },
   },
   {
@@ -122,6 +215,11 @@ export const MAKE_SCENE_PRESETS = Object.freeze([
       includeMic: true,
       pipCorner: 'bottom-right',
       pipSize: 28,
+      pipStyle: 'regular',
+      backgroundRemovalMode: 'off',
+      backgroundKind: 'scene',
+      personCutoutEnabled: false,
+      pipCutoutEnabled: false,
     },
   },
   {
@@ -137,6 +235,11 @@ export const MAKE_SCENE_PRESETS = Object.freeze([
       includeMic: true,
       pipCorner: 'bottom-right',
       pipSize: 28,
+      pipStyle: 'regular',
+      backgroundRemovalMode: 'off',
+      backgroundKind: 'scene',
+      personCutoutEnabled: false,
+      pipCutoutEnabled: false,
     },
   },
   {
@@ -152,6 +255,10 @@ export const MAKE_SCENE_PRESETS = Object.freeze([
       includeMic: true,
       pipCorner: 'top-right',
       pipSize: 22,
+      pipStyle: 'regular',
+      backgroundRemovalMode: 'off',
+      personCutoutEnabled: false,
+      pipCutoutEnabled: false,
     },
   },
   {
@@ -167,6 +274,11 @@ export const MAKE_SCENE_PRESETS = Object.freeze([
       includeMic: true,
       pipCorner: 'bottom-right',
       pipSize: 28,
+      pipStyle: 'regular',
+      backgroundRemovalMode: 'off',
+      backgroundKind: 'scene',
+      personCutoutEnabled: false,
+      pipCutoutEnabled: false,
     },
   },
 ]);
@@ -219,6 +331,27 @@ export const DEFAULT_MAKE_DRAFT = Object.freeze({
   autoGainControl: true,
   pipCorner: 'bottom-right',
   pipSize: 28,
+  pipStyle: 'regular',
+  backgroundRemovalMode: 'off',
+  backgroundKind: 'scene',
+  backgroundSolidColor: '#071f14',
+  backgroundImageDataUrl: '',
+  backgroundImageName: '',
+  backgroundVideoName: '',
+  personCutoutEnabled: false,
+  pipCutoutEnabled: false,
+  pipCutoutBackground: false,
+  subjectMirror: true,
+  subjectScale: 100,
+  subjectOffsetX: 0,
+  subjectOffsetY: 0,
+  subjectBrightness: 100,
+  subjectContrast: 100,
+  subjectSaturation: 100,
+  cutoutFeather: 3,
+  cutoutOpacity: 1,
+  cutoutMaskPolarity: 'auto',
+  cutoutIntervalMs: 105,
 });
 
 const MAX_TITLE_CHARS = 90;
@@ -227,6 +360,8 @@ const MAX_NOTES_CHARS = 2000;
 const MAX_SCRIPT_CHARS = 5000;
 const MAX_TAGS = 12;
 const MAX_TAG_CHARS = 32;
+const MAX_BACKGROUND_DATA_URL_CHARS = 640_000;
+const IMAGE_DATA_URL_PATTERN = /^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\r\n]+$/i;
 
 export function createMakeDraft(overrides = {}) {
   return normalizeMakeDraft({
@@ -237,7 +372,9 @@ export function createMakeDraft(overrides = {}) {
 
 export function readStoredMakeDraft() {
   try {
-    const raw = localStorage.getItem(MAKE_DRAFT_STORAGE_KEY);
+    const raw =
+      localStorage.getItem(MAKE_DRAFT_STORAGE_KEY) ||
+      localStorage.getItem('crablink.make.draft.v1');
 
     if (!raw) {
       return createMakeDraft();
@@ -264,6 +401,7 @@ export function writeStoredMakeDraft(draft) {
 export function clearStoredMakeDraft() {
   try {
     localStorage.removeItem(MAKE_DRAFT_STORAGE_KEY);
+    localStorage.removeItem('crablink.make.draft.v1');
   } catch (_error) {
     // Ignore optional localStorage cleanup failure.
   }
@@ -286,8 +424,19 @@ export function normalizeMakeDraft(input = {}) {
   const selectedScene = enumValue(input.selectedScene, MAKE_SCENES, DEFAULT_MAKE_DRAFT.selectedScene);
   const scenePreset = enumValue(input.scenePreset, MAKE_SCENE_PRESETS, DEFAULT_MAKE_DRAFT.scenePreset);
   const outputPreset = enumValue(input.outputPreset, MAKE_OUTPUT_PRESETS, DEFAULT_MAKE_DRAFT.outputPreset);
+  const backgroundKind = enumValue(input.backgroundKind, MAKE_BACKGROUND_KINDS, DEFAULT_MAKE_DRAFT.backgroundKind);
   const preset = findOutputPreset(outputPreset);
   const fps = clampInteger(input.targetFps, 12, 60, preset.fps || 30);
+  const backgroundRemovalMode = ['off', 'person_cutout'].includes(input.backgroundRemovalMode)
+    ? input.backgroundRemovalMode
+    : input.personCutoutEnabled === true
+      ? 'person_cutout'
+      : DEFAULT_MAKE_DRAFT.backgroundRemovalMode;
+  const pipStyle = enumValue(
+    input.pipStyle,
+    MAKE_PIP_STYLES,
+    input.pipCutoutEnabled === true ? 'cutout' : DEFAULT_MAKE_DRAFT.pipStyle,
+  );
 
   return {
     title: clampText(input.title, MAX_TITLE_CHARS),
@@ -313,7 +462,28 @@ export function normalizeMakeDraft(input = {}) {
     pipCorner: ['top-left', 'top-right', 'bottom-left', 'bottom-right'].includes(input.pipCorner)
       ? input.pipCorner
       : DEFAULT_MAKE_DRAFT.pipCorner,
-    pipSize: clampInteger(input.pipSize, 18, 42, DEFAULT_MAKE_DRAFT.pipSize),
+    pipSize: clampInteger(input.pipSize, 18, 46, DEFAULT_MAKE_DRAFT.pipSize),
+    pipStyle,
+    backgroundRemovalMode,
+    backgroundKind,
+    backgroundSolidColor: normalizeHexColor(input.backgroundSolidColor, DEFAULT_MAKE_DRAFT.backgroundSolidColor),
+    backgroundImageDataUrl: normalizeBackgroundImageDataUrl(input.backgroundImageDataUrl),
+    backgroundImageName: clampText(input.backgroundImageName, 120),
+    backgroundVideoName: clampText(input.backgroundVideoName, 120),
+    personCutoutEnabled: backgroundRemovalMode === 'person_cutout' || input.personCutoutEnabled === true,
+    pipCutoutEnabled: pipStyle === 'cutout',
+    pipCutoutBackground: pipStyle === 'cutout' && input.pipCutoutBackground === true,
+    subjectMirror: input.subjectMirror !== false,
+    subjectScale: clampInteger(input.subjectScale, 60, 180, DEFAULT_MAKE_DRAFT.subjectScale),
+    subjectOffsetX: clampInteger(input.subjectOffsetX, -100, 100, DEFAULT_MAKE_DRAFT.subjectOffsetX),
+    subjectOffsetY: clampInteger(input.subjectOffsetY, -100, 100, DEFAULT_MAKE_DRAFT.subjectOffsetY),
+    subjectBrightness: clampInteger(input.subjectBrightness, 40, 180, DEFAULT_MAKE_DRAFT.subjectBrightness),
+    subjectContrast: clampInteger(input.subjectContrast, 40, 200, DEFAULT_MAKE_DRAFT.subjectContrast),
+    subjectSaturation: clampInteger(input.subjectSaturation, 0, 220, DEFAULT_MAKE_DRAFT.subjectSaturation),
+    cutoutFeather: clampInteger(input.cutoutFeather, 0, 16, DEFAULT_MAKE_DRAFT.cutoutFeather),
+    cutoutOpacity: clampFloat(input.cutoutOpacity, 0.2, 1, DEFAULT_MAKE_DRAFT.cutoutOpacity),
+    cutoutMaskPolarity: enumValue(input.cutoutMaskPolarity, MAKE_CUTOUT_POLARITIES, DEFAULT_MAKE_DRAFT.cutoutMaskPolarity),
+    cutoutIntervalMs: clampInteger(input.cutoutIntervalMs, 70, 500, DEFAULT_MAKE_DRAFT.cutoutIntervalMs),
   };
 }
 
@@ -346,6 +516,10 @@ export function findMakeScenePreset(value) {
   return MAKE_SCENE_PRESETS.find((preset) => preset.value === value) || MAKE_SCENE_PRESETS[0];
 }
 
+export function findMakeBackgroundKind(value) {
+  return MAKE_BACKGROUND_KINDS.find((kind) => kind.value === value) || MAKE_BACKGROUND_KINDS[0];
+}
+
 export function applyMakePreset(draft, presetValue) {
   const preset = findMakeScenePreset(presetValue);
 
@@ -364,6 +538,10 @@ export function deriveMakeReadiness({ draft, clips = [], inputStatus = 'idle', r
   const hasClips = clips.length > 0;
   const inputReady = inputStatus === 'ready';
   const recorderSupported = typeof window !== 'undefined' && typeof window.MediaRecorder === 'function';
+  const cutoutWanted =
+    safeDraft.selectedMode === 'camera_background' ||
+    safeDraft.backgroundRemovalMode === 'person_cutout' ||
+    safeDraft.pipStyle === 'cutout';
 
   return {
     summary: hasTitle && hasClips ? 'ready_to_export_draft' : 'drafting',
@@ -381,6 +559,15 @@ export function deriveMakeReadiness({ draft, clips = [], inputStatus = 'idle', r
         value: inputReady ? 'ready' : inputStatus,
         tone: inputReady ? 'success' : 'info',
         help: `${mode.label} mode`,
+      },
+      {
+        key: 'cutout',
+        label: 'Cutout',
+        value: cutoutWanted ? 'local effect' : 'off',
+        tone: cutoutWanted ? 'info' : 'neutral',
+        help: cutoutWanted
+          ? 'Software cutout is local compositor state; it creates no backend truth.'
+          : 'Background replacement is optional.',
       },
       {
         key: 'recorder',
@@ -422,10 +609,11 @@ export function buildMakeSessionPlan({ draft, clips = [], inputStatus = 'idle', 
   const scene = findMakeScene(safeDraft.selectedScene);
   const preset = findOutputPreset(safeDraft.outputPreset);
   const scenePreset = findMakeScenePreset(safeDraft.scenePreset);
+  const backgroundKind = findMakeBackgroundKind(safeDraft.backgroundKind);
   const tags = normalizeTags(safeDraft.tagsText);
 
   return stripSessionPlanForStorage({
-    schema: 'crablink.make.session-plan.v1',
+    schema: 'crablink.make.session-plan.v2',
     generatedAt: new Date().toISOString(),
     route: 'crab://make',
     targetRoute: 'crab://video',
@@ -463,6 +651,28 @@ export function buildMakeSessionPlan({ draft, clips = [], inputStatus = 'idle', 
       },
       pipCorner: safeDraft.pipCorner,
       pipSizePercent: safeDraft.pipSize,
+      pipStyle: safeDraft.pipStyle,
+      cutout: {
+        backgroundRemovalMode: safeDraft.backgroundRemovalMode,
+        personCutoutEnabled: safeDraft.personCutoutEnabled,
+        pipCutoutEnabled: safeDraft.pipCutoutEnabled,
+        pipCutoutBackground: safeDraft.pipCutoutBackground,
+        cutoutFeather: safeDraft.cutoutFeather,
+        cutoutMaskPolarity: safeDraft.cutoutMaskPolarity,
+        subjectMirror: safeDraft.subjectMirror,
+        subjectBrightness: safeDraft.subjectBrightness,
+        subjectContrast: safeDraft.subjectContrast,
+        subjectSaturation: safeDraft.subjectSaturation,
+      },
+      background: {
+        kind: backgroundKind.value,
+        label: backgroundKind.label,
+        solidColor: safeDraft.backgroundSolidColor,
+        imageName: safeDraft.backgroundImageName,
+        imageDataUrlPersisted: Boolean(safeDraft.backgroundImageDataUrl),
+        videoName: safeDraft.backgroundVideoName,
+        videoBytesPersisted: false,
+      },
     },
     clips: clips.map((clip, index) => ({
       index,
@@ -548,6 +758,31 @@ function clampInteger(value, min, max, fallback) {
   }
 
   return Math.min(max, Math.max(min, parsed));
+}
+
+function clampFloat(value, min, max, fallback) {
+  const parsed = Number.parseFloat(String(value));
+
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function normalizeHexColor(value, fallback) {
+  const raw = String(value || '').trim();
+  return /^#[0-9a-f]{6}$/i.test(raw) ? raw : fallback;
+}
+
+function normalizeBackgroundImageDataUrl(value) {
+  const raw = String(value || '');
+
+  if (!raw || raw.length > MAX_BACKGROUND_DATA_URL_CHARS || !IMAGE_DATA_URL_PATTERN.test(raw)) {
+    return '';
+  }
+
+  return raw;
 }
 
 function normalizeRocText(value) {

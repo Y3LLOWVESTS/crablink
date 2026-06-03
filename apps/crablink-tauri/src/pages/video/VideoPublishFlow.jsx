@@ -51,7 +51,7 @@ const IDLE_RESULT = Object.freeze({
   nonceRecovery: null,
 });
 
-export default function VideoPublishFlow({ app, draftState, selectedFile, fileFacts }) {
+export default function VideoPublishFlow({ app, draftState, selectedFile, fileFacts, latestPrepareJobOverride = null }) {
   const settings = app?.settings || {};
   const gateway = app?.clients?.gateway || null;
   const videoClient = useMemo(() => createVideoAssetClient(gateway), [gateway]);
@@ -77,6 +77,34 @@ export default function VideoPublishFlow({ app, draftState, selectedFile, fileFa
 
   const draft = draftState?.draft || {};
   const updateDraft = draftState?.updateDraft;
+
+  useEffect(() => {
+    if (!latestPrepareJobOverride?.jobId) {
+      return;
+    }
+
+    const stampedJob = {
+      ...latestPrepareJobOverride,
+      crabLinkVideoPreparedAtUnixMs: Number(latestPrepareJobOverride.crabLinkVideoPreparedAtUnixMs || 0) > 0
+        ? latestPrepareJobOverride.crabLinkVideoPreparedAtUnixMs
+        : Date.now(),
+    };
+    const normalized = normalizeCurrentSessionPrepareJob(stampedJob, 0);
+
+    if (!normalized?.jobId) {
+      return;
+    }
+
+    setLatestPrepareJob((current) => {
+      const currentStamp = current?.crabLinkVideoPreparedAtUnixMs || '';
+      const nextStamp = normalized?.crabLinkVideoPreparedAtUnixMs || '';
+      if (current?.jobId === normalized.jobId && current?.status === normalized.status && currentStamp === nextStamp) {
+        return current;
+      }
+      return normalized;
+    });
+  }, [latestPrepareJobOverride]);
+
 
   useEffect(() => {
     function refreshFromEvent(event) {
@@ -1259,7 +1287,7 @@ function getPreflight({ gateway, settings, publishTargets, selectedFile, usingSt
     if (!selectedFile) {
       return {
         ok: false,
-        reason: 'Run a Rust prepare job first, or choose a video preview file for the old single-file path.',
+        reason: 'Make export/source is loaded, but minting requires completed Rust-staged outputs first. Wait for auto-prepare to finish, or open Prepare MP4 versions and start the local prepare job.',
       };
     }
 
