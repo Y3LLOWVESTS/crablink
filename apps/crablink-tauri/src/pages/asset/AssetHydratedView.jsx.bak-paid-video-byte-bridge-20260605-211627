@@ -379,13 +379,15 @@ export default function AssetHydratedView({ route, app, result, assetClient, res
 
       for (const routeCandidate of routes) {
         try {
-          const response = await fetchPaidVideoBytes({
-            route: routeCandidate.route,
-            summary,
-            assetClient,
+          const response = await assetClient.gateway.request(routeCandidate.route, {
+            label: 'Video playback bytes',
+            parseAs: 'blob',
+            headers: {
+              Accept: videoAcceptHeader(summary.contentType),
+            },
           });
 
-          const blob = await normalizeVideoBytesResponse(response, summary.contentType);
+          const blob = await normalizeVideoBlobResponse(response?.data, summary.contentType);
 
           if (blob.size > MAX_VIDEO_BLOB_PREVIEW_BYTES) {
             throw new Error(
@@ -3004,9 +3006,9 @@ function inferAudioContentType(contentType, kind = 'music') {
 function audioModeLabel(status) {
   switch (status) {
     case 'loading':
-      return canUseTauriInvoke() ? 'Tauri byte bridge loading' : 'paid blob fetch loading';
+      return 'paid blob fetch loading';
     case 'ready':
-      return canUseTauriInvoke() ? 'Tauri blob playback' : 'paid blob playback';
+      return 'paid blob playback';
     case 'error':
       return 'audio blob unavailable';
     default:
@@ -3079,93 +3081,6 @@ function videoAcceptHeader(contentType) {
   return 'video/mp4,video/webm,video/ogg,video/*,*/*';
 }
 
-async function fetchPaidVideoBytes({ route, summary = {}, assetClient }) {
-  const objectRoute = canonicalVideoObjectRoute(route, summary);
-
-  if (canUseTauriInvoke()) {
-    if (!objectRoute) {
-      throw new Error('No canonical /o/b3:<hash> video route was available for the Tauri byte bridge.');
-    }
-
-    const response = await invoke('fetch_asset_bytes_gateway', {
-      request: {
-        route: objectRoute,
-        accept: videoAcceptHeader(summary?.contentType),
-        contentTypeHint: inferVideoContentType(summary?.contentType),
-        maxBytes: MAX_VIDEO_BLOB_PREVIEW_BYTES,
-        headers: {
-          'x-ron-asset-kind': summary?.kind || 'video',
-        },
-      },
-    });
-
-    return {
-      status: Number(response?.status || 0),
-      route: response?.route || objectRoute,
-      correlationId: response?.correlationId || response?.correlation_id || '',
-      contentType: response?.contentType || response?.content_type || '',
-      bodyBytes: response?.bodyBytes || response?.body_bytes || [],
-    };
-  }
-
-  if (!assetClient?.gateway?.request) {
-    throw new Error('Gateway client is unavailable for video preview.');
-  }
-
-  const response = await assetClient.gateway.request(route, {
-    label: 'Video playback bytes',
-    parseAs: 'blob',
-    headers: {
-      Accept: videoAcceptHeader(summary?.contentType),
-    },
-  });
-
-  return {
-    status: Number(response?.status || 0),
-    route: response?.route || route,
-    correlationId: response?.correlationId || '',
-    contentType: response?.data?.type || summary?.contentType || '',
-    blob: response?.data,
-  };
-}
-
-async function normalizeVideoBytesResponse(response, contentType) {
-  if (response?.blob) {
-    return normalizeVideoBlobResponse(response.blob, contentType);
-  }
-
-  const bytes = normalizeByteList(response?.bodyBytes || response?.body_bytes);
-
-  if (!bytes.length) {
-    throw new Error('Gateway returned empty video bytes.');
-  }
-
-  const blob = new Blob([bytes], {
-    type: response?.contentType || response?.content_type || inferVideoContentType(contentType),
-  });
-
-  return normalizeVideoBlobResponse(blob, contentType);
-}
-
-function canonicalVideoObjectRoute(route, summary = {}) {
-  const raw = normalizeGatewayRoute(route);
-  const objectMatch = raw.match(/^\/o\/b3:([0-9a-f]{64})$/i);
-
-  if (objectMatch) {
-    return `/o/b3:${objectMatch[1].toLowerCase()}`;
-  }
-
-  const cidHash = hashFromCid(summary?.cid || summary?.contentCid || summary?.assetCid);
-  const summaryHash = cleanHash(summary?.hash);
-  const hash = summaryHash || cidHash;
-
-  if (hash) {
-    return `/o/b3:${hash}`;
-  }
-
-  return '';
-}
-
 async function normalizeVideoBlobResponse(blob, contentType) {
   if (!(blob instanceof Blob)) {
     throw new Error('Gateway did not return a video blob.');
@@ -3176,17 +3091,9 @@ async function normalizeVideoBlobResponse(blob, contentType) {
   }
 
   const returnedType = String(blob.type || '').toLowerCase();
-  const bytes = await blob.arrayBuffer();
-  const sniffedType = sniffVideoContentType(bytes);
 
   if (returnedType.includes('json') || returnedType.startsWith('text/')) {
-    if (sniffedType) {
-      return new Blob([bytes], {
-        type: sniffedType,
-      });
-    }
-
-    const text = decodePreviewText(bytes);
+    const text = await blob.text();
     throw new Error(`Gateway returned non-video data: ${text.slice(0, 180)}`);
   }
 
@@ -3194,27 +3101,9 @@ async function normalizeVideoBlobResponse(blob, contentType) {
     return blob;
   }
 
-  return new Blob([bytes], {
-    type: sniffedType || inferVideoContentType(contentType),
+  return new Blob([blob], {
+    type: inferVideoContentType(contentType),
   });
-}
-
-function sniffVideoContentType(buffer) {
-  const bytes = new Uint8Array(buffer || new ArrayBuffer(0));
-
-  if (bytes.length >= 12 && ascii(bytes, 4, 4) === 'ftyp') {
-    return 'video/mp4';
-  }
-
-  if (bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) {
-    return 'video/webm';
-  }
-
-  if (bytes.length >= 4 && ascii(bytes, 0, 4) === 'OggS') {
-    return 'video/ogg';
-  }
-
-  return '';
 }
 
 function inferVideoContentType(contentType) {

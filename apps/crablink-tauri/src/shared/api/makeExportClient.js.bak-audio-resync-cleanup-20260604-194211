@@ -350,12 +350,12 @@ function assertSafeVideoExportClips(clips = []) {
 
     if (clip?.mixedAudio) {
       throw new Error(
-        `Blocked stale browser audio-mix blob for ${label}. Browser-side audio mix blobs are obsolete; use the Rust/FFmpeg bounded audio-track mixer.`,
+        `Blocked stale browser audio-mix blob for ${label}. Audio lane export is disabled until the Rust/FFmpeg mixer is wired.`,
       );
     }
 
     if (kind.includes('audio') || mimeType.startsWith('audio/')) {
-      throw new Error(`Blocked audio item ${label}. Make export video clips must remain video-only; local audio files are uploaded through the dedicated Rust/FFmpeg audio-track path.`);
+      throw new Error(`Blocked audio item ${label}. Make export currently accepts video clips only.`);
     }
 
     if (!(blob instanceof Blob) || blob.size <= 0) {

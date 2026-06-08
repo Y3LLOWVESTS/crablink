@@ -30,10 +30,7 @@ static NEXT_MAKE_EXPORT_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 const MAKE_EXPORT_SCHEMA: &str = "crablink.local.make-export.v2";
 const MAX_MAKE_EXPORT_SEGMENTS: usize = 64;
-const MAX_MAKE_EXPORT_AUDIO_TRACKS: usize = 8;
 const MAX_MAKE_EXPORT_CHUNK_BYTES: usize = 512 * 1024;
-const MAX_MAKE_EXPORT_AUDIO_CHUNK_BYTES: usize = MAX_MAKE_EXPORT_CHUNK_BYTES;
-const MAX_MAKE_EXPORT_AUDIO_BYTES: u64 = 50 * 1024 * 1024;
 const DEFAULT_EXPORT_WIDTH: u32 = 1280;
 const DEFAULT_EXPORT_HEIGHT: u32 = 720;
 const DEFAULT_EXPORT_FPS: u32 = 30;
@@ -70,23 +67,6 @@ pub struct MakeExportAppendChunkInput {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MakeExportAppendAudioChunkInput {
-    pub session_id: String,
-    pub audio_track_id: String,
-    pub track_name: Option<String>,
-    pub mime_type: Option<String>,
-    pub total_bytes: u64,
-    pub offset: u64,
-    pub bytes: Vec<u8>,
-    pub timeline_offset_ms: Option<u64>,
-    pub trim_start_ms: Option<u64>,
-    pub trim_end_ms: Option<u64>,
-    pub volume_pct: Option<u32>,
-    pub muted: Option<bool>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct MakeExportFinishInput {
     pub session_id: String,
     pub title: Option<String>,
@@ -95,7 +75,6 @@ pub struct MakeExportFinishInput {
     pub height: Option<u32>,
     pub fps: Option<u32>,
     pub register_source: Option<bool>,
-    pub expected_audio_tracks: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -120,10 +99,6 @@ pub struct MakeExportStatus {
     pub uploaded_segments: usize,
     pub received_bytes: u64,
     pub expected_bytes: Option<u64>,
-    pub audio_track_count: usize,
-    pub uploaded_audio_tracks: usize,
-    pub received_audio_bytes: u64,
-    pub audio_mixed: bool,
     pub source: Option<VideoSourceRegistration>,
     pub warnings: Vec<String>,
     pub error: Option<MakeExportError>,
@@ -142,8 +117,6 @@ pub struct MakeExportError {
 #[serde(rename_all = "camelCase")]
 pub struct MakeExportTruthBoundary {
     pub accepts_bounded_chunks: bool,
-    pub accepts_bounded_audio_chunks: bool,
-    pub mixes_audio_tracks: bool,
     pub returns_private_path: bool,
     pub returns_video_bytes: bool,
     pub runs_transcode: bool,
@@ -174,12 +147,9 @@ pub struct MakeExportRecord {
     pub segment_count: usize,
     pub expected_bytes: Option<u64>,
     pub received_bytes: u64,
-    pub received_audio_bytes: u64,
     pub dir: PathBuf,
     pub output_path: PathBuf,
     pub segments: Vec<MakeExportSegment>,
-    pub audio_tracks: Vec<MakeExportAudioTrack>,
-    pub audio_mixed: bool,
     pub source: Option<VideoSourceRegistration>,
     pub warnings: Vec<String>,
     pub error: Option<MakeExportError>,
@@ -194,22 +164,6 @@ pub struct MakeExportSegment {
     pub expected_bytes: u64,
     pub received_bytes: u64,
     pub path: PathBuf,
-}
-
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub struct MakeExportAudioTrack {
-    pub id: String,
-    pub file_name: String,
-    pub mime_type: String,
-    pub expected_bytes: u64,
-    pub received_bytes: u64,
-    pub path: PathBuf,
-    pub timeline_offset_ms: u64,
-    pub trim_start_ms: u64,
-    pub trim_end_ms: Option<u64>,
-    pub volume_pct: u32,
-    pub muted: bool,
 }
 
 pub fn begin_make_export_session(
@@ -238,7 +192,6 @@ pub fn begin_make_export_session(
     let mut warnings = vec![
         "Make export accepts browser clip bytes as bounded chunks and writes them to a Rust-owned temp staging directory.".to_string(),
         "Browser-recorded clips may arrive as WebM; Rust normalizes each clip before writing the final MP4.".to_string(),
-        "Local audio lane tracks may be uploaded as bounded chunks and mixed by Rust/FFmpeg during finish.".to_string(),
         "The returned source handle is local Tauri authority only; it is not a backend CID, crab URL, receipt, ownership proof, or paid unlock.".to_string(),
     ];
 
@@ -265,12 +218,9 @@ pub fn begin_make_export_session(
         segment_count: input.segment_count,
         expected_bytes,
         received_bytes: 0,
-        received_audio_bytes: 0,
         dir,
         output_path,
         segments: Vec::new(),
-        audio_tracks: Vec::new(),
-        audio_mixed: false,
         source: None,
         warnings,
         error: None,
@@ -375,93 +325,6 @@ pub fn append_make_export_chunk(
     get_make_export_status(store, clean_session_id)
 }
 
-pub fn append_make_export_audio_chunk(
-    store: &MakeExportStore,
-    input: MakeExportAppendAudioChunkInput,
-) -> Result<MakeExportStatus, String> {
-    validate_append_audio_input(&input)?;
-    let clean_session_id = clean_handle(&input.session_id, "sessionId")?;
-
-    let (audio_path, expected_offset) = {
-        let mut guard = store
-            .lock()
-            .map_err(|_| "Make export store lock poisoned".to_string())?;
-        let record = guard
-            .get_mut(&clean_session_id)
-            .ok_or_else(|| "Make export session not found".to_string())?;
-
-        if record.status != "receiving" {
-            return Err("Make export session is not accepting audio chunks".to_string());
-        }
-
-        let audio_track = ensure_audio_track(record, &input)?;
-        (audio_track.path.clone(), audio_track.received_bytes)
-    };
-
-    if expected_offset != input.offset {
-        return Err(format!(
-            "audio chunk offset mismatch for track {}: expected {}, got {}",
-            input.audio_track_id, expected_offset, input.offset
-        ));
-    }
-
-    {
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&audio_path)
-            .map_err(|_| "could not open Make export audio track for append".to_string())?;
-
-        file.write_all(&input.bytes)
-            .map_err(|_| "could not write Make export audio chunk".to_string())?;
-        file.flush()
-            .map_err(|_| "could not flush Make export audio chunk".to_string())?;
-    }
-
-    {
-        let mut guard = store
-            .lock()
-            .map_err(|_| "Make export store lock poisoned".to_string())?;
-        let record = guard
-            .get_mut(&clean_session_id)
-            .ok_or_else(|| "Make export session not found".to_string())?;
-
-        let clean_audio_id = clean_handle(&input.audio_track_id, "audioTrackId")?;
-        let audio_track = record
-            .audio_tracks
-            .iter_mut()
-            .find(|candidate| candidate.id == clean_audio_id)
-            .ok_or_else(|| "Make export audio track disappeared".to_string())?;
-
-        audio_track.received_bytes = audio_track
-            .received_bytes
-            .checked_add(input.bytes.len() as u64)
-            .ok_or_else(|| "Make export audio byte count overflow".to_string())?;
-        record.received_audio_bytes = record
-            .received_audio_bytes
-            .checked_add(input.bytes.len() as u64)
-            .ok_or_else(|| "Make export audio byte count overflow".to_string())?;
-
-        if audio_track.received_bytes > audio_track.expected_bytes {
-            return Err("Make export audio track received more bytes than declared".to_string());
-        }
-
-        if record.received_audio_bytes > MAX_MAKE_EXPORT_AUDIO_BYTES {
-            return Err(format!(
-                "Make export audio exceeds local audio cap of {} bytes",
-                MAX_MAKE_EXPORT_AUDIO_BYTES
-            ));
-        }
-
-        record.updated_at_unix_ms = now_unix_ms()?;
-        record.phase = format!("receiving_audio_track_{}", record.audio_tracks.len());
-        record.progress_percent = receiving_progress(record);
-    }
-
-    get_make_export_status(store, clean_session_id)
-}
-
-
 pub fn finish_make_export_session(
     store: &MakeExportStore,
     source_store: &VideoSourceStore,
@@ -469,7 +332,7 @@ pub fn finish_make_export_session(
 ) -> Result<MakeExportStatus, String> {
     let clean_session_id = clean_handle(&input.session_id, "sessionId")?;
 
-    let (dir, output_path, fps, width, height, title, output_file_name, segments, audio_tracks) = {
+    let (dir, output_path, fps, width, height, title, output_file_name, segments) = {
         let mut guard = store
             .lock()
             .map_err(|_| "Make export store lock poisoned".to_string())?;
@@ -494,35 +357,8 @@ pub fn finish_make_export_session(
             }
         }
 
-        for audio_track in &record.audio_tracks {
-            if audio_track.received_bytes != audio_track.expected_bytes {
-                return Err(format!(
-                    "Make export audio track {} is incomplete",
-                    audio_track.id
-                ));
-            }
-        }
-
-        if let Some(expected_audio_tracks) = input.expected_audio_tracks {
-            let uploaded_unmuted = record
-                .audio_tracks
-                .iter()
-                .filter(|track| !track.muted && track.volume_pct > 0)
-                .count();
-            if uploaded_unmuted < expected_audio_tracks {
-                return Err(format!(
-                    "Make export expected {} audio track(s), but only {} unmuted local track(s) were uploaded",
-                    expected_audio_tracks, uploaded_unmuted
-                ));
-            }
-        }
-
         record.status = "transcoding".to_string();
-        record.phase = if record.audio_tracks.is_empty() {
-            "normalizing_clip_segments".to_string()
-        } else {
-            "normalizing_clip_segments_before_audio_mix".to_string()
-        };
+        record.phase = "normalizing_clip_segments".to_string();
         record.progress_percent = 88;
         record.updated_at_unix_ms = now_unix_ms()?;
 
@@ -534,9 +370,6 @@ pub fn finish_make_export_session(
         let mut segments = record.segments.clone();
         segments.sort_by_key(|segment| segment.index);
 
-        let mut audio_tracks = record.audio_tracks.clone();
-        audio_tracks.sort_by(|left, right| left.id.cmp(&right.id));
-
         (
             record.dir.clone(),
             record.output_path.clone(),
@@ -546,7 +379,6 @@ pub fn finish_make_export_session(
             clean_title(input.title.as_deref(), &record.title),
             record.output_file_name.clone(),
             segments,
-            audio_tracks,
         )
     };
 
@@ -586,34 +418,7 @@ pub fn finish_make_export_session(
     let concat_list_path = dir.join("normalized-concat-list.txt");
     write_concat_list_from_paths(&normalized_paths, &concat_list_path)?;
 
-    let ready_audio_tracks: Vec<MakeExportAudioTrack> = audio_tracks
-        .iter()
-        .filter(|track| !track.muted && track.volume_pct > 0)
-        .cloned()
-        .collect();
-    let audio_mix_requested = !ready_audio_tracks.is_empty();
-    let base_video_path = if audio_mix_requested {
-        dir.join("video-before-audio-mix.mp4")
-    } else {
-        output_path.clone()
-    };
-
-    run_ffmpeg_concat_normalized(&concat_list_path, &base_video_path)?;
-
-    if audio_mix_requested {
-        {
-            let mut guard = store
-                .lock()
-                .map_err(|_| "Make export store lock poisoned".to_string())?;
-            if let Some(record) = guard.get_mut(&clean_session_id) {
-                record.phase = "mixing_audio_lane_into_mp4".to_string();
-                record.progress_percent = 97;
-                record.updated_at_unix_ms = now_unix_ms()?;
-            }
-        }
-
-        run_ffmpeg_mix_audio_tracks(&base_video_path, &ready_audio_tracks, &output_path)?;
-    }
+    run_ffmpeg_concat_normalized(&concat_list_path, &output_path)?;
 
     let output_bytes = fs::metadata(&output_path)
         .map_err(|_| "Make export completed but output metadata could not be read".to_string())?
@@ -637,13 +442,6 @@ pub fn finish_make_export_session(
             "Make export produced an MP4 without a readable video stream: output={} bytes from input={} bytes.",
             output_bytes, total_input_bytes
         ));
-    }
-
-    if audio_mix_requested && !has_audio_stream(&output_path) {
-        return Err(
-            "Make export audio mix failed: expected audio output but no audio stream was found."
-                .to_string(),
-        );
     }
 
     if output_bytes > MVP_MAX_LOCAL_VIDEO_BYTES {
@@ -679,11 +477,7 @@ pub fn finish_make_export_session(
             .ok_or_else(|| "Make export session not found".to_string())?;
 
         record.status = "completed".to_string();
-        record.phase = if audio_mix_requested {
-            "mp4_source_handle_ready_with_audio_mix".to_string()
-        } else {
-            "mp4_source_handle_ready".to_string()
-        };
+        record.phase = "mp4_source_handle_ready".to_string();
         record.progress_percent = 100;
         record.completed_at_unix_ms = Some(now_unix_ms()?);
         record.updated_at_unix_ms = record.completed_at_unix_ms.unwrap_or(record.updated_at_unix_ms);
@@ -692,18 +486,11 @@ pub fn finish_make_export_session(
         record.width = Some(target_width);
         record.height = Some(target_height);
         record.fps = Some(target_fps);
-        record.audio_mixed = audio_mix_requested;
         record.source = source;
         record.warnings.push(
             "MP4 export is a local source handle for crab://video. It is not uploaded or minted yet."
                 .to_string(),
         );
-        if audio_mix_requested {
-            record.warnings.push(
-                "Local audio lane tracks were mixed into this MP4 by Rust/FFmpeg before video-page handoff."
-                    .to_string(),
-            );
-        }
     }
 
     get_make_export_status(store, clean_session_id)
@@ -809,52 +596,6 @@ fn validate_append_input(input: &MakeExportAppendChunkInput) -> Result<(), Strin
     Ok(())
 }
 
-fn validate_append_audio_input(input: &MakeExportAppendAudioChunkInput) -> Result<(), String> {
-    if input.bytes.is_empty() {
-        return Err("Make export audio chunk is empty".to_string());
-    }
-
-    if input.bytes.len() > MAX_MAKE_EXPORT_AUDIO_CHUNK_BYTES {
-        return Err(format!(
-            "Make export audio chunk exceeds {} byte command cap",
-            MAX_MAKE_EXPORT_AUDIO_CHUNK_BYTES
-        ));
-    }
-
-    if input.total_bytes == 0 {
-        return Err("Make export audio totalBytes is required".to_string());
-    }
-
-    if input.total_bytes > MAX_MAKE_EXPORT_AUDIO_BYTES {
-        return Err(format!(
-            "Make export audio track exceeds local audio cap of {} bytes",
-            MAX_MAKE_EXPORT_AUDIO_BYTES
-        ));
-    }
-
-    let chunk_len = input.bytes.len() as u64;
-    let end = input
-        .offset
-        .checked_add(chunk_len)
-        .ok_or_else(|| "Make export audio chunk offset overflow".to_string())?;
-
-    if end > input.total_bytes {
-        return Err("Make export audio chunk extends past declared track length".to_string());
-    }
-
-    let mime = input
-        .mime_type
-        .as_deref()
-        .unwrap_or("audio/*")
-        .trim()
-        .to_ascii_lowercase();
-    if !mime.is_empty() && mime != "audio/*" && !mime.starts_with("audio/") {
-        return Err("Make export audio upload expects an audio/* MIME type".to_string());
-    }
-
-    Ok(())
-}
-
 fn ensure_segment<'a>(
     record: &'a mut MakeExportRecord,
     input: &MakeExportAppendChunkInput,
@@ -909,79 +650,6 @@ fn ensure_segment<'a>(
         .ok_or_else(|| "Make export segment insert failed".to_string())
 }
 
-fn ensure_audio_track<'a>(
-    record: &'a mut MakeExportRecord,
-    input: &MakeExportAppendAudioChunkInput,
-) -> Result<&'a mut MakeExportAudioTrack, String> {
-    let clean_audio_id = clean_handle(&input.audio_track_id, "audioTrackId")?;
-
-    if let Some(position) = record
-        .audio_tracks
-        .iter()
-        .position(|candidate| candidate.id == clean_audio_id)
-    {
-        let audio_track = record
-            .audio_tracks
-            .get_mut(position)
-            .ok_or_else(|| "Make export audio track lookup failed".to_string())?;
-
-        if audio_track.expected_bytes != input.total_bytes {
-            return Err("audio totalBytes changed after upload started".to_string());
-        }
-
-        return Ok(audio_track);
-    }
-
-    if record.audio_tracks.len() >= MAX_MAKE_EXPORT_AUDIO_TRACKS {
-        return Err(format!(
-            "Make export supports at most {MAX_MAKE_EXPORT_AUDIO_TRACKS} local audio tracks"
-        ));
-    }
-
-    let file_name = safe_audio_file_name(
-        input.track_name.as_deref().unwrap_or("make-audio-track"),
-        &clean_audio_id,
-        input.mime_type.as_deref().unwrap_or("audio/*"),
-    );
-    let path = record.dir.join("audio").join(&file_name);
-
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|_| "could not create Make export audio staging directory".to_string())?;
-    }
-
-    if path.exists() {
-        let _ = fs::remove_file(&path);
-    }
-
-    let trim_start_ms = input.trim_start_ms.unwrap_or(0);
-    let trim_end_ms = input.trim_end_ms.filter(|value| *value > trim_start_ms);
-
-    record.audio_tracks.push(MakeExportAudioTrack {
-        id: clean_audio_id.clone(),
-        file_name,
-        mime_type: input
-            .mime_type
-            .clone()
-            .unwrap_or_else(|| "audio/*".to_string()),
-        expected_bytes: input.total_bytes,
-        received_bytes: 0,
-        path,
-        timeline_offset_ms: input.timeline_offset_ms.unwrap_or(0),
-        trim_start_ms,
-        trim_end_ms,
-        volume_pct: input.volume_pct.unwrap_or(100).clamp(0, 150),
-        muted: input.muted.unwrap_or(false),
-    });
-    record.audio_tracks.sort_by(|left, right| left.id.cmp(&right.id));
-
-    record
-        .audio_tracks
-        .iter_mut()
-        .find(|track| track.id == clean_audio_id)
-        .ok_or_else(|| "Make export audio track insert failed".to_string())
-}
-
 fn run_ffmpeg_normalize_segment(
     input_path: &Path,
     output_path: &Path,
@@ -990,7 +658,6 @@ fn run_ffmpeg_normalize_segment(
     fps: u32,
 ) -> Result<(), String> {
     let ffmpeg = ffmpeg_binary();
-    let input_has_audio = has_audio_stream(input_path);
 
     let mut command = Command::new(&ffmpeg);
     configure_command_stdio(&mut command);
@@ -1002,15 +669,11 @@ fn run_ffmpeg_normalize_segment(
         .arg("-fflags")
         .arg("+genpts")
         .arg("-i")
-        .arg(input_path);
-
-    if !input_has_audio {
-        command
-            .arg("-f")
-            .arg("lavfi")
-            .arg("-i")
-            .arg("anullsrc=channel_layout=stereo:sample_rate=48000");
-    }
+        .arg(input_path)
+        .arg("-f")
+        .arg("lavfi")
+        .arg("-i")
+        .arg("anullsrc=channel_layout=stereo:sample_rate=48000");
 
     let video_filter = format!(
         "scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,fps={fps},format=yuv420p,setpts=PTS-STARTPTS"
@@ -1019,15 +682,8 @@ fn run_ffmpeg_normalize_segment(
     command
         .arg("-map")
         .arg("0:v:0")
-        .arg("-map");
-
-    if input_has_audio {
-        command.arg("0:a:0");
-    } else {
-        command.arg("1:a:0");
-    }
-
-    command
+        .arg("-map")
+        .arg("1:a:0")
         .arg("-vf")
         .arg(video_filter)
         .arg("-c:v")
@@ -1085,99 +741,6 @@ fn run_ffmpeg_concat_normalized(
         .arg(output_path);
 
     run_command(command, "FFmpeg normalized MP4 join failed")
-}
-
-fn run_ffmpeg_mix_audio_tracks(
-    base_video_path: &Path,
-    audio_tracks: &[MakeExportAudioTrack],
-    output_path: &Path,
-) -> Result<(), String> {
-    if audio_tracks.is_empty() {
-        return Err("Make export audio mix requested with no audio tracks".to_string());
-    }
-
-    let ffmpeg = ffmpeg_binary();
-    let mut command = Command::new(&ffmpeg);
-    configure_command_stdio(&mut command);
-
-    command
-        .arg("-hide_banner")
-        .arg("-nostdin")
-        .arg("-y")
-        .arg("-i")
-        .arg(base_video_path);
-
-    for track in audio_tracks {
-        if !track.path.exists() {
-            return Err("Make export audio track missing on disk before mix".to_string());
-        }
-        command.arg("-i").arg(&track.path);
-    }
-
-    let base_has_audio = has_audio_stream(base_video_path);
-    let mut filter_parts: Vec<String> = Vec::new();
-    let mut mix_inputs: Vec<String> = Vec::new();
-
-    if base_has_audio {
-        filter_parts.push("[0:a:0]aresample=48000,aformat=sample_rates=48000:channel_layouts=stereo[basea]".to_string());
-        mix_inputs.push("[basea]".to_string());
-    }
-
-    for (index, track) in audio_tracks.iter().enumerate() {
-        let input_index = index + 1;
-        let label = format!("a{}", input_index);
-        let volume = (track.volume_pct.clamp(0, 150) as f64 / 100.0).clamp(0.0, 1.5);
-        let mut trim = format!("atrim=start={}", ms_to_ffmpeg_seconds(track.trim_start_ms));
-        if let Some(trim_end_ms) = track.trim_end_ms.filter(|value| *value > track.trim_start_ms) {
-            trim.push_str(&format!(":end={}", ms_to_ffmpeg_seconds(trim_end_ms)));
-        }
-
-        filter_parts.push(format!(
-            "[{input_index}:a:0]{trim},asetpts=PTS-STARTPTS,aresample=48000,aformat=sample_rates=48000:channel_layouts=stereo,volume={volume:.3},adelay={delay}|{delay}[{label}]",
-            delay = track.timeline_offset_ms,
-        ));
-        mix_inputs.push(format!("[{label}]"));
-    }
-
-    if mix_inputs.is_empty() {
-        return Err("Make export audio mix found no usable audio inputs".to_string());
-    }
-
-    if mix_inputs.len() == 1 {
-        filter_parts.push(format!("{}anull[mix]", mix_inputs[0]));
-    } else {
-        filter_parts.push(format!(
-            "{}amix=inputs={}:duration=first:dropout_transition=0,alimiter=limit=0.98[mix]",
-            mix_inputs.join(""),
-            mix_inputs.len()
-        ));
-    }
-
-    command
-        .arg("-filter_complex")
-        .arg(filter_parts.join(";"))
-        .arg("-map")
-        .arg("0:v:0")
-        .arg("-map")
-        .arg("[mix]")
-        .arg("-c:v")
-        .arg("copy")
-        .arg("-c:a")
-        .arg("aac")
-        .arg("-ar")
-        .arg("48000")
-        .arg("-ac")
-        .arg("2")
-        .arg("-b:a")
-        .arg("192k")
-        .arg("-shortest")
-        .arg("-map_metadata")
-        .arg("-1")
-        .arg("-movflags")
-        .arg("+faststart")
-        .arg(output_path);
-
-    run_command(command, "FFmpeg Make audio lane mix failed")
 }
 
 fn run_command(mut command: Command, label: &str) -> Result<(), String> {
@@ -1307,21 +870,11 @@ fn status_from_record(record: &MakeExportRecord) -> MakeExportStatus {
             .count(),
         received_bytes: record.received_bytes,
         expected_bytes: record.expected_bytes,
-        audio_track_count: record.audio_tracks.len(),
-        uploaded_audio_tracks: record
-            .audio_tracks
-            .iter()
-            .filter(|track| track.received_bytes == track.expected_bytes)
-            .count(),
-        received_audio_bytes: record.received_audio_bytes,
-        audio_mixed: record.audio_mixed,
         source: record.source.clone(),
         warnings: record.warnings.clone(),
         error: record.error.clone(),
         truth_boundary: MakeExportTruthBoundary {
             accepts_bounded_chunks: true,
-            accepts_bounded_audio_chunks: true,
-            mixes_audio_tracks: record.audio_mixed,
             returns_private_path: false,
             returns_video_bytes: false,
             runs_transcode: record.status == "transcoding" || record.status == "completed",
@@ -1451,45 +1004,6 @@ fn segment_extension(value: &str) -> &'static str {
     } else {
         "webm"
     }
-}
-
-fn safe_audio_file_name(value: &str, audio_track_id: &str, mime_type: &str) -> String {
-    let stem = sanitize_file_stem(value);
-    let id = clean_handle(audio_track_id, "audioTrackId").unwrap_or_else(|_| "audio".to_string());
-    format!(
-        "audio-{}-{}.{}",
-        id,
-        if stem.is_empty() { "track" } else { &stem },
-        audio_extension(value, mime_type)
-    )
-}
-
-fn audio_extension(value: &str, mime_type: &str) -> &'static str {
-    let lower = value.to_lowercase();
-    if lower.ends_with(".mp3") {
-        "mp3"
-    } else if lower.ends_with(".m4a") || lower.ends_with(".aac") {
-        "m4a"
-    } else if lower.ends_with(".wav") {
-        "wav"
-    } else if lower.ends_with(".ogg") || lower.ends_with(".oga") {
-        "ogg"
-    } else if lower.ends_with(".flac") {
-        "flac"
-    } else {
-        match mime_type.trim().to_ascii_lowercase().as_str() {
-            "audio/mpeg" | "audio/mp3" => "mp3",
-            "audio/mp4" | "audio/aac" | "audio/x-m4a" => "m4a",
-            "audio/wav" | "audio/x-wav" => "wav",
-            "audio/ogg" => "ogg",
-            "audio/flac" => "flac",
-            _ => "m4a",
-        }
-    }
-}
-
-fn ms_to_ffmpeg_seconds(ms: u64) -> String {
-    format!("{:.3}", ms as f64 / 1000.0)
 }
 
 fn concat_escape_path(path: &Path) -> String {

@@ -1,0 +1,277 @@
+/**
+ * RO:WHAT — Local linked-media and audio-lane helpers for crab://make.
+ * RO:WHY — App Integration; Concerns: DX/SEC; lets Make draft reuse/audio references without backend authority.
+ * RO:INTERACTS — MakePage.jsx session plan, local object URLs, future manifest rights/economics helpers.
+ * RO:INVARIANTS — local draft metadata only; no b3 minting; no receipts; no wallet mutation; no payout proof.
+ * RO:METRICS — none.
+ * RO:CONFIG — none.
+ * RO:SECURITY — no private file paths, tokens, raw capabilities, or spend authority are persisted.
+ * RO:TEST — npm run build; manual crab://make link/audio lane smoke.
+ */
+
+const HEX_64 = '[0-9a-f]{64}';
+const CRAB_VIDEO_RE = new RegExp(`^crab://${HEX_64}\\.video$`, 'i');
+const CRAB_AUDIO_RE = new RegExp(`^crab://${HEX_64}\\.(music|audio|podcast)$`, 'i');
+const MAX_LINKED_URL_CHARS = 240;
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function safeId(prefix) {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function cleanUrl(value) {
+  return String(value || '').trim().slice(0, MAX_LINKED_URL_CHARS);
+}
+
+function normalizeCrabUrl(value) {
+  const raw = cleanUrl(value);
+
+  if (!raw) {
+    return '';
+  }
+
+  const lower = raw.toLowerCase();
+
+  if (lower.startsWith('crab://')) {
+    return lower;
+  }
+
+  return raw;
+}
+
+function labelFromCrabUrl(url, fallback) {
+  const raw = String(url || '');
+  const match = raw.match(/^crab:\/\/([0-9a-f]{12})[0-9a-f]{52}\.([a-z0-9_-]+)$/i);
+
+  if (!match) {
+    return fallback;
+  }
+
+  return `${match[2]} ${match[1]}…`;
+}
+
+function reject(message) {
+  throw new Error(message);
+}
+
+export function createLinkedVideoDraft(rawUrl, options = {}) {
+  const url = normalizeCrabUrl(rawUrl);
+
+  if (!CRAB_VIDEO_RE.test(url)) {
+    reject('Paste a public typed video URL like crab://<64 lowercase hex>.video.');
+  }
+
+  return {
+    id: options.id || safeId('make-linked-video'),
+    kind: 'linked_video',
+    assetKind: 'video',
+    url,
+    displayName: labelFromCrabUrl(url, 'Linked video'),
+    addedAt: options.nowIso || nowIso(),
+    status: 'unverified',
+    rightsStatus: 'not_checked',
+    rightsStatusLabel: 'Rights not checked',
+    payoutStatus: 'not_configured',
+    payoutStatusLabel: 'No payout split yet',
+    localOnly: true,
+    canPreviewLocally: false,
+    createsBackendTruth: false,
+    createsReceipt: false,
+    mutatesWallet: false,
+  };
+}
+
+export function createLinkedAudioDraft(rawUrl, options = {}) {
+  const url = normalizeCrabUrl(rawUrl);
+
+  if (!CRAB_AUDIO_RE.test(url)) {
+    reject('Paste a public typed audio URL like crab://<64 lowercase hex>.music.');
+  }
+
+  return {
+    id: options.id || safeId('make-audio-link'),
+    kind: 'linked_audio',
+    assetKind: url.endsWith('.podcast') ? 'podcast' : url.endsWith('.audio') ? 'audio' : 'music',
+    url,
+    displayName: labelFromCrabUrl(url, 'Linked audio'),
+    name: labelFromCrabUrl(url, 'Linked audio'),
+    volumePct: 100,
+    addedAt: options.nowIso || nowIso(),
+    status: 'unverified',
+    rightsStatus: 'not_checked',
+    rightsStatusLabel: 'Rights not checked',
+    payoutStatus: 'not_configured',
+    payoutStatusLabel: 'No payout split yet',
+    localOnly: true,
+    canPreviewLocally: false,
+    createsBackendTruth: false,
+    createsReceipt: false,
+    mutatesWallet: false,
+  };
+}
+
+function probeAudioDurationMs(objectUrl) {
+  if (typeof document === 'undefined' || !objectUrl) {
+    return Promise.resolve(0);
+  }
+
+  return new Promise((resolve) => {
+    const audio = document.createElement('audio');
+    let done = false;
+
+    const finish = (durationMs = 0) => {
+      if (done) {
+        return;
+      }
+
+      done = true;
+      audio.removeAttribute('src');
+
+      try {
+        audio.load();
+      } catch (_error) {
+        // Best-effort metadata probe cleanup.
+      }
+
+      resolve(Number.isFinite(durationMs) && durationMs > 0 ? Math.round(durationMs) : 0);
+    };
+
+    const timer = window.setTimeout(() => finish(0), 1800);
+
+    audio.preload = 'metadata';
+    audio.onloadedmetadata = () => {
+      window.clearTimeout(timer);
+      finish(Number(audio.duration || 0) * 1000);
+    };
+    audio.onerror = () => {
+      window.clearTimeout(timer);
+      finish(0);
+    };
+    audio.src = objectUrl;
+
+    try {
+      audio.load();
+    } catch (_error) {
+      window.clearTimeout(timer);
+      finish(0);
+    }
+  });
+}
+
+export async function createLocalAudioTrackFromFile(file, options = {}) {
+  if (!file) {
+    reject('Choose an audio file.');
+  }
+
+  if (!String(file.type || '').startsWith('audio/')) {
+    reject('The audio lane expects a local audio file.');
+  }
+
+  if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
+    reject('This WebView cannot create a local audio preview URL.');
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  const durationMs = await probeAudioDurationMs(objectUrl);
+
+  return {
+    id: options.id || safeId('make-audio-track'),
+    kind: 'local_audio',
+    sourceKind: 'local_file',
+    name: file.name || options.fallbackName || 'Local audio',
+    mimeType: file.type || 'audio/*',
+    sizeBytes: Number(file.size || 0),
+    durationMs,
+    objectUrl,
+    volumePct: 100,
+    addedAt: options.nowIso || nowIso(),
+    localOnly: true,
+    bytesPersisted: false,
+    pathPersisted: false,
+    includedInExport: false,
+    createsBackendTruth: false,
+    createsReceipt: false,
+    mutatesWallet: false,
+  };
+}
+
+export function revokeMakeAudioTrackUrl(track) {
+  if (!track?.objectUrl || typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') {
+    return;
+  }
+
+  try {
+    URL.revokeObjectURL(track.objectUrl);
+  } catch (_error) {
+    // Object URL cleanup is best effort.
+  }
+}
+
+function audioTrackForSession(track) {
+  if (!track) {
+    return null;
+  }
+
+  return {
+    id: String(track.id || ''),
+    kind: String(track.kind || 'local_audio'),
+    sourceKind: String(track.sourceKind || track.kind || 'audio'),
+    name: String(track.name || track.displayName || 'Audio track').slice(0, 160),
+    url: track.kind === 'linked_audio' ? String(track.url || '').slice(0, MAX_LINKED_URL_CHARS) : '',
+    assetKind: String(track.assetKind || ''),
+    mimeType: String(track.mimeType || ''),
+    sizeBytes: Number(track.sizeBytes || 0),
+    durationMs: Number(track.durationMs || 0),
+    volumePct: Number(track.volumePct ?? 100),
+    localOnly: true,
+    bytesPersisted: false,
+    pathPersisted: false,
+    rightsStatus: String(track.rightsStatus || (track.kind === 'linked_audio' ? 'not_checked' : 'local_file')),
+    payoutStatus: String(track.payoutStatus || 'not_configured'),
+    canPreviewLocally: track.kind === 'local_audio',
+    includedInExport: false,
+  };
+}
+
+function linkedVideoForSession(item) {
+  if (!item) {
+    return null;
+  }
+
+  return {
+    id: String(item.id || ''),
+    kind: 'linked_video',
+    assetKind: 'video',
+    url: String(item.url || '').slice(0, MAX_LINKED_URL_CHARS),
+    displayName: String(item.displayName || 'Linked video').slice(0, 160),
+    status: 'unverified',
+    rightsStatus: String(item.rightsStatus || 'not_checked'),
+    payoutStatus: String(item.payoutStatus || 'not_configured'),
+    localOnly: true,
+    canPreviewLocally: false,
+    createsBackendTruth: false,
+    createsReceipt: false,
+    mutatesWallet: false,
+  };
+}
+
+export function buildMakeLinkedMediaSessionSummary({ linkedVideoDrafts = [], audioTracks = [] } = {}) {
+  return {
+    schema: 'crablink.make.linked-media-session.v1',
+    localOnly: true,
+    videos: linkedVideoDrafts.map(linkedVideoForSession).filter(Boolean),
+    audioTracks: audioTracks.map(audioTrackForSession).filter(Boolean),
+    exportMixingEnabled: false,
+    rightsVerificationEnabled: false,
+    payoutSplitEnabled: false,
+    truthBoundary:
+      'Linked media and audio lane entries are local draft metadata only. Rights, reuse permission, payout splits, backend manifests, receipts, and wallet settlement are not proven here.',
+  };
+}

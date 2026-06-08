@@ -1,0 +1,630 @@
+/**
+ * RO:WHAT — Local audio timeline preview/export helpers for crab://make.
+ * RO:WHY — App Integration; Concerns: DX/SEC/RES; lets Make preview and attempt local audio mix export without backend truth.
+ * RO:INTERACTS — MakePage.jsx, makeTimelineModel.js, browser AudioContext, MediaRecorder, canvas captureStream.
+ * RO:INVARIANTS — local object URLs only; no b3 minting; no receipts; no wallet mutation; no raw native paths.
+ * RO:METRICS — progress callbacks only.
+ * RO:CONFIG — safe FPS/size/mime inputs from Make presets.
+ * RO:SECURITY — local audio bytes stay in browser memory; export result is still handed to Rust as bounded chunks.
+ * RO:TEST — npm run build; manual Make local audio preview/export smoke.
+ */
+
+import {
+  getClipTimelineDurationMs,
+  getClipTrimEndMs,
+  getClipTrimStartMs,
+  seekVideoToTimelineStart,
+  timelineEffectCssFilter,
+} from './makeTimelineModel.js';
+
+const DEFAULT_AUDIO_EXPORT_MIME = 'video/webm;codecs=vp8,opus';
+const AUDIO_EXPORT_START_DELAY_MS = 140;
+
+export function clampAudioTimelineMs(value, min = 0, max = Number.MAX_SAFE_INTEGER, fallback = 0) {
+  const n = Number(value);
+
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
+
+  return Math.min(Math.max(n, min), max);
+}
+
+export function makeAudioTimelineTotalMs(clips = []) {
+  return (clips || []).reduce((sum, clip) => sum + Math.max(0, getClipTimelineDurationMs(clip)), 0);
+}
+
+export function normalizeMakeAudioTrack(track, totalTimelineMs = 0) {
+  const durationMs = Math.max(0, Number(track?.durationMs || 0));
+  const trimStartMs = clampAudioTimelineMs(track?.trimStartMs, 0, durationMs, 0);
+  const trimEndMs = clampAudioTimelineMs(
+    track?.trimEndMs || durationMs,
+    trimStartMs,
+    durationMs || Number.MAX_SAFE_INTEGER,
+    durationMs,
+  );
+  const offsetMs = clampAudioTimelineMs(track?.offsetMs, 0, Math.max(0, totalTimelineMs), 0);
+  const volumePct = clampAudioTimelineMs(track?.volumePct ?? 100, 0, 150, 100);
+
+  return {
+    ...track,
+    trimStartMs,
+    trimEndMs,
+    offsetMs,
+    volumePct,
+    muted: Boolean(track?.muted),
+    effectiveDurationMs: Math.max(0, trimEndMs - trimStartMs),
+  };
+}
+
+export function prepareAudioTracksForTimeline(audioTracks = [], totalTimelineMs = 0) {
+  return (audioTracks || [])
+    .filter(Boolean)
+    .map((track) => normalizeMakeAudioTrack(track, totalTimelineMs));
+}
+
+export function formatTimelineClockMs(value) {
+  const totalMs = Math.max(0, Math.round(Number(value || 0)));
+  const totalSeconds = Math.floor(totalMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+export function parseMinutesSecondsToMs(minutesValue, secondsValue) {
+  const minutes = clampAudioTimelineMs(minutesValue, 0, 24 * 60, 0);
+  const seconds = clampAudioTimelineMs(secondsValue, 0, 59, 0);
+
+  return Math.round((Math.floor(minutes) * 60 + Math.floor(seconds)) * 1000);
+}
+
+export function getAudioTrackTimelinePlate(track, totalTimelineMs = 0) {
+  const prepared = normalizeMakeAudioTrack(track, totalTimelineMs);
+  const total = Math.max(1, Number(totalTimelineMs || 0));
+  const leftPct = clampAudioTimelineMs((prepared.offsetMs / total) * 100, 0, 100, 0);
+  const widthPct = clampAudioTimelineMs((prepared.effectiveDurationMs / total) * 100, 2, 100 - leftPct, 2);
+
+  return {
+    ...prepared,
+    leftPct,
+    widthPct,
+    endMs: prepared.offsetMs + prepared.effectiveDurationMs,
+  };
+}
+
+export function activeAudioTimeForTimelineMs(track, timelineMs) {
+  const prepared = normalizeMakeAudioTrack(track);
+  const safeTimelineMs = Math.max(0, Number(timelineMs || 0));
+  const relativeMs = safeTimelineMs - prepared.offsetMs;
+
+  if (relativeMs < 0 || relativeMs > prepared.effectiveDurationMs) {
+    return null;
+  }
+
+  return {
+    trackTimeSeconds: (prepared.trimStartMs + relativeMs) / 1000,
+    volume: prepared.muted ? 0 : clampAudioTimelineMs(prepared.volumePct, 0, 150, 100) / 100,
+  };
+}
+
+function notifyProgress(onProgress, event) {
+  if (typeof onProgress !== 'function') {
+    return;
+  }
+
+  try {
+    onProgress(event);
+  } catch (_error) {
+    // Progress reporting is best effort.
+  }
+}
+
+function waitMs(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, Math.max(0, Number(ms || 0)));
+  });
+}
+
+function nextAnimationFrame() {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+}
+
+function waitForMediaReady(media) {
+  return new Promise((resolve) => {
+    if (!media || media.readyState >= 2) {
+      resolve();
+      return;
+    }
+
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve();
+    };
+
+    const cleanup = () => {
+      media.removeEventListener('loadedmetadata', finish);
+      media.removeEventListener('loadeddata', finish);
+      media.removeEventListener('canplay', finish);
+      media.removeEventListener('error', finish);
+    };
+
+    media.addEventListener('loadedmetadata', finish, { once: true });
+    media.addEventListener('loadeddata', finish, { once: true });
+    media.addEventListener('canplay', finish, { once: true });
+    media.addEventListener('error', finish, { once: true });
+
+    window.setTimeout(finish, 3000);
+
+    try {
+      media.load?.();
+    } catch (_error) {
+      finish();
+    }
+  });
+}
+
+function settleMediaSeek(media, seconds) {
+  return new Promise((resolve) => {
+    if (!media) {
+      resolve();
+      return;
+    }
+
+    let settled = false;
+    const target = Math.max(0, Number(seconds || 0));
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      media.removeEventListener('seeked', finish);
+      media.removeEventListener('loadeddata', finish);
+      media.removeEventListener('error', finish);
+      resolve();
+    };
+
+    media.addEventListener('seeked', finish, { once: true });
+    media.addEventListener('loadeddata', finish, { once: true });
+    media.addEventListener('error', finish, { once: true });
+
+    try {
+      media.currentTime = target;
+    } catch (_error) {
+      finish();
+      return;
+    }
+
+    window.setTimeout(finish, 1100);
+  });
+}
+
+function waitForVideoFrame(video) {
+  if (!video) {
+    return waitMs(16);
+  }
+
+  if (typeof video.requestVideoFrameCallback === 'function') {
+    return new Promise((resolve) => {
+      let settled = false;
+      const timer = window.setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      }, 90);
+
+      video.requestVideoFrameCallback(() => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        resolve();
+      });
+    });
+  }
+
+  return waitMs(24);
+}
+
+function pickRecorderMimeType() {
+  if (typeof MediaRecorder === 'undefined') {
+    return '';
+  }
+
+  const candidates = [
+    DEFAULT_AUDIO_EXPORT_MIME,
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm',
+  ];
+
+  return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) || '';
+}
+
+function createCaptureCanvas(width, height) {
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(2, Math.round(Number(width || 1280)));
+  canvas.height = Math.max(2, Math.round(Number(height || 720)));
+  canvas.setAttribute('aria-hidden', 'true');
+  canvas.style.position = 'fixed';
+  canvas.style.left = '-10000px';
+  canvas.style.top = '0';
+  canvas.style.width = '4px';
+  canvas.style.height = '4px';
+  canvas.style.opacity = '0.01';
+  canvas.style.pointerEvents = 'none';
+  document.body.appendChild(canvas);
+
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  if (!ctx) {
+    canvas.remove();
+    throw new Error('Could not create Make audio mix canvas.');
+  }
+
+  return { canvas, ctx };
+}
+
+function createExportVideoElement(clip) {
+  const video = document.createElement('video');
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = 'auto';
+  video.src = clip.objectUrl || '';
+  video.crossOrigin = 'anonymous';
+  video.style.position = 'fixed';
+  video.style.left = '-10000px';
+  video.style.top = '8px';
+  video.style.width = '4px';
+  video.style.height = '4px';
+  video.style.opacity = '0.01';
+  video.style.pointerEvents = 'none';
+  document.body.appendChild(video);
+  return video;
+}
+
+function requestCanvasFrame(videoTrack) {
+  try {
+    videoTrack?.requestFrame?.();
+  } catch (_error) {
+    // Some WebViews expose requestFrame but do not allow it in every state.
+  }
+}
+
+function drawVideoContain(ctx, video, width, height, filter = 'none', videoTrack = null) {
+  ctx.save();
+  ctx.fillStyle = '#020617';
+  ctx.fillRect(0, 0, width, height);
+
+  const vw = Number(video?.videoWidth || width);
+  const vh = Number(video?.videoHeight || height);
+  const scale = Math.min(width / Math.max(1, vw), height / Math.max(1, vh));
+  const dw = Math.max(1, vw * scale);
+  const dh = Math.max(1, vh * scale);
+  const dx = (width - dw) / 2;
+  const dy = (height - dh) / 2;
+
+  ctx.filter = filter || 'none';
+
+  try {
+    if (video && video.readyState >= 2) {
+      ctx.drawImage(video, dx, dy, dw, dh);
+    }
+  } catch (_error) {
+    // Draw failures can happen while decoding/seeking. Keep export alive and draw next frame.
+  }
+
+  ctx.restore();
+  requestCanvasFrame(videoTrack);
+}
+
+async function drawClipRealtime({ ctx, clip, width, height, fps, videoTrack, onTick }) {
+  const visibleMs = Math.max(1, getClipTimelineDurationMs(clip));
+  const trimStartMs = getClipTrimStartMs(clip);
+  const trimEndMs = getClipTrimEndMs(clip);
+  const filter = timelineEffectCssFilter(clip.timelineEffect);
+  const video = createExportVideoElement(clip);
+  const frameMs = 1000 / Math.max(1, Number(fps || 30));
+
+  try {
+    await waitForMediaReady(video);
+    await seekVideoToTimelineStart(video, clip);
+    await settleMediaSeek(video, trimStartMs / 1000);
+    await waitForVideoFrame(video);
+
+    drawVideoContain(ctx, video, width, height, filter, videoTrack);
+    await nextAnimationFrame();
+
+    let playbackWorks = true;
+    const playResult = video.play?.();
+
+    if (playResult && typeof playResult.then === 'function') {
+      try {
+        await playResult;
+      } catch (_error) {
+        playbackWorks = false;
+      }
+    }
+
+    const startedAt = performance.now();
+    let lastSeekAt = 0;
+
+    while (performance.now() - startedAt < visibleMs) {
+      const elapsedMs = performance.now() - startedAt;
+      const targetSeconds = Math.min(trimEndMs, trimStartMs + elapsedMs) / 1000;
+      const driftSeconds = Math.abs(Number(video.currentTime || 0) - targetSeconds);
+
+      if ((!playbackWorks || driftSeconds > 0.55) && performance.now() - lastSeekAt > 450) {
+        lastSeekAt = performance.now();
+
+        try {
+          video.currentTime = targetSeconds;
+          await waitForVideoFrame(video);
+        } catch (_error) {
+          // Best-effort seek correction.
+        }
+      }
+
+      drawVideoContain(ctx, video, width, height, filter, videoTrack);
+      onTick?.(elapsedMs);
+      await waitMs(frameMs);
+    }
+
+    drawVideoContain(ctx, video, width, height, filter, videoTrack);
+    await nextAnimationFrame();
+  } finally {
+    try {
+      video.pause?.();
+    } catch (_error) {
+      // Ignore cleanup failures.
+    }
+
+    video.removeAttribute('src');
+
+    try {
+      video.load?.();
+    } catch (_error) {
+      // Ignore cleanup failures.
+    }
+
+    video.remove();
+  }
+}
+
+async function decodeAudioTrack(context, track) {
+  if (!track?.objectUrl || track.kind === 'linked_audio') {
+    return null;
+  }
+
+  try {
+    const response = await fetch(track.objectUrl);
+    const buffer = await response.arrayBuffer();
+    return await context.decodeAudioData(buffer.slice(0));
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function scheduleAudioTracks(context, destination, audioTracks, totalTimelineMs, baseDelaySeconds = 0) {
+  const prepared = prepareAudioTracksForTimeline(audioTracks, totalTimelineMs);
+  const scheduled = [];
+
+  for (const track of prepared) {
+    if (track.kind === 'linked_audio' || track.muted || !track.effectiveDurationMs) {
+      continue;
+    }
+
+    const audioBuffer = await decodeAudioTrack(context, track);
+
+    if (!audioBuffer) {
+      continue;
+    }
+
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+
+    source.buffer = audioBuffer;
+    gain.gain.value = clampAudioTimelineMs(track.volumePct, 0, 150, 100) / 100;
+
+    source.connect(gain);
+    gain.connect(destination);
+
+    const whenSeconds = context.currentTime + baseDelaySeconds + (track.offsetMs / 1000);
+    const offsetSeconds = track.trimStartMs / 1000;
+    const durationSeconds = Math.min(
+      Math.max(0.01, track.effectiveDurationMs / 1000),
+      Math.max(0.01, audioBuffer.duration - offsetSeconds),
+    );
+
+    try {
+      source.start(whenSeconds, offsetSeconds, durationSeconds);
+      scheduled.push(source);
+    } catch (_error) {
+      try {
+        source.disconnect();
+      } catch (_innerError) {
+        // Ignore cleanup failures.
+      }
+    }
+  }
+
+  return scheduled;
+}
+
+export async function renderTimelineSequenceWithAudioForExport({
+  clips = [],
+  audioTracks = [],
+  width = 1280,
+  height = 720,
+  fps = 30,
+  title = 'CrabLink Make mixed export',
+  onProgress,
+} = {}) {
+  if (!clips.length) {
+    throw new Error('No clips are available for audio mix export.');
+  }
+
+  if (typeof document === 'undefined' || typeof MediaRecorder === 'undefined') {
+    throw new Error('This WebView cannot render a mixed Make export.');
+  }
+
+  const safeWidth = Math.max(2, Math.round(Number(width || 1280)));
+  const safeHeight = Math.max(2, Math.round(Number(height || 720)));
+  const safeFps = Math.min(60, Math.max(12, Math.round(Number(fps || 30))));
+  const totalTimelineMs = makeAudioTimelineTotalMs(clips);
+  const { canvas, ctx } = createCaptureCanvas(safeWidth, safeHeight);
+
+  const videoStream = canvas.captureStream(safeFps);
+  const videoTrack = videoStream.getVideoTracks()[0] || null;
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  const audioContext = AudioContextCtor ? new AudioContextCtor() : null;
+  const mixedStream = new MediaStream();
+
+  for (const track of videoStream.getVideoTracks()) {
+    mixedStream.addTrack(track);
+  }
+
+  let scheduledSources = [];
+  let destination = null;
+
+  try {
+    drawVideoContain(ctx, null, safeWidth, safeHeight, 'none', videoTrack);
+
+    if (audioContext) {
+      destination = audioContext.createMediaStreamDestination();
+
+      for (const track of destination.stream.getAudioTracks()) {
+        mixedStream.addTrack(track);
+      }
+    }
+
+    const mimeType = pickRecorderMimeType();
+    const chunks = [];
+    const recorder = new MediaRecorder(mixedStream, mimeType ? { mimeType } : undefined);
+
+    const stopped = new Promise((resolve, reject) => {
+      recorder.ondataavailable = (event) => {
+        if (event.data?.size) {
+          chunks.push(event.data);
+        }
+      };
+      recorder.onerror = () => reject(new Error('Make audio mix recorder failed.'));
+      recorder.onstop = () => resolve();
+    });
+
+    notifyProgress(onProgress, {
+      phase: 'audio_mix',
+      progressPercent: 3,
+      detail: 'Rendering sequence with local audio.',
+    });
+
+    if (audioContext?.state === 'suspended') {
+      await audioContext.resume();
+    }
+
+    recorder.start(500);
+
+    if (audioContext && destination) {
+      scheduledSources = await scheduleAudioTracks(
+        audioContext,
+        destination,
+        audioTracks,
+        totalTimelineMs,
+        AUDIO_EXPORT_START_DELAY_MS / 1000,
+      );
+    }
+
+    await waitMs(AUDIO_EXPORT_START_DELAY_MS);
+
+    let elapsedBeforeClipMs = 0;
+
+    for (let index = 0; index < clips.length; index += 1) {
+      const clip = clips[index];
+
+      await drawClipRealtime({
+        ctx,
+        clip,
+        width: safeWidth,
+        height: safeHeight,
+        fps: safeFps,
+        videoTrack,
+        onTick: (clipElapsedMs) => {
+          const totalElapsed = Math.min(totalTimelineMs, elapsedBeforeClipMs + clipElapsedMs);
+          notifyProgress(onProgress, {
+            phase: 'audio_mix',
+            progressPercent: Math.min(78, Math.max(4, Math.round((totalElapsed / Math.max(1, totalTimelineMs)) * 78))),
+            detail: `Mixing clip ${index + 1} of ${clips.length} with audio.`,
+          });
+        },
+      });
+
+      elapsedBeforeClipMs += Math.max(0, getClipTimelineDurationMs(clip));
+    }
+
+    drawVideoContain(ctx, null, safeWidth, safeHeight, 'none', videoTrack);
+    await waitMs(220);
+
+    if (recorder.state !== 'inactive') {
+      recorder.stop();
+    }
+
+    await stopped;
+
+    const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || 'video/webm' });
+
+    if (!blob.size) {
+      throw new Error('Make audio mix export produced an empty local clip.');
+    }
+
+    return [{
+      id: `make-audio-mix-${Date.now()}`,
+      name: `${title || 'crablink-make-audio-mix'}.webm`,
+      type: blob.type || 'video/webm',
+      mimeType: blob.type || 'video/webm',
+      sizeBytes: blob.size,
+      durationMs: totalTimelineMs,
+      blob,
+      localOnly: true,
+      mixedAudio: true,
+      audioTrackCount: (audioTracks || []).filter((track) => track?.kind !== 'linked_audio').length,
+    }];
+  } finally {
+    for (const source of scheduledSources) {
+      try {
+        source.stop();
+      } catch (_error) {
+        // Ignore already-stopped sources.
+      }
+      try {
+        source.disconnect();
+      } catch (_error) {
+        // Ignore cleanup failures.
+      }
+    }
+
+    for (const track of mixedStream.getTracks()) {
+      try {
+        track.stop();
+      } catch (_error) {
+        // Ignore cleanup failures.
+      }
+    }
+
+    if (audioContext) {
+      try {
+        await audioContext.close();
+      } catch (_error) {
+        // Ignore cleanup failures.
+      }
+    }
+
+    try {
+      canvas.remove();
+    } catch (_error) {
+      // Ignore cleanup failures.
+    }
+  }
+}

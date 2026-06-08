@@ -32,8 +32,8 @@ pub use video_sources::{
 };
 
 pub use make_export::{
-    append_make_export_audio_chunk, append_make_export_chunk, begin_make_export_session,
-    clear_make_export_session, finish_make_export_session, get_make_export_status,
-    new_make_export_store, MakeExportAppendAudioChunkInput, MakeExportAppendChunkInput,
-    MakeExportBeginInput, MakeExportFinishInput, MakeExportStatus, MakeExportStore,
+    append_make_export_chunk, begin_make_export_session, clear_make_export_session,
+    finish_make_export_session, get_make_export_status, new_make_export_store,
+    MakeExportAppendChunkInput, MakeExportBeginInput, MakeExportFinishInput,
+    MakeExportStatus, MakeExportStore,
 };

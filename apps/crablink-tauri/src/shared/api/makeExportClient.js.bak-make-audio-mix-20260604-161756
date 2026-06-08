@@ -33,13 +33,6 @@ export function createMakeExportClient() {
       });
     },
 
-    async appendAudioChunk(input = {}) {
-      ensureTauri('Make export audio chunk upload');
-      return callTauri('media_make_export_append_audio_chunk', {
-        input: normalizeAppendAudioChunkInput(input),
-      });
-    },
-
     async finish(input = {}) {
       ensureTauri('Make export finish');
       return callTauri('media_make_export_finish', {
@@ -63,7 +56,6 @@ export function createMakeExportClient() {
 
     async exportApprovedClips({
       clips = [],
-      audioTracks = [],
       title = 'CrabLink Make export',
       targetFileName = '',
       width,
@@ -81,9 +73,6 @@ export function createMakeExportClient() {
       }
 
       assertSafeVideoExportClips(safeClips);
-
-      const safeAudioTracks = await resolveExportAudioTracks(audioTracks);
-      assertSafeAudioExportTracks(safeAudioTracks);
 
       const expectedBytes = safeClips.reduce((sum, clip) => sum + Number(clip.blob.size || clip.sizeBytes || 0), 0);
       const begin = await this.begin({
@@ -141,56 +130,11 @@ export function createMakeExportClient() {
         }
       }
 
-      if (safeAudioTracks.length) {
-        const audioExpectedBytes = safeAudioTracks.reduce((sum, track) => sum + Number(track.blob.size || track.sizeBytes || 0), 0);
-        const audioTotalBytes = Math.max(1, audioExpectedBytes);
-        let uploadedAudioBytes = 0;
-
-        for (let audioIndex = 0; audioIndex < safeAudioTracks.length; audioIndex += 1) {
-          const track = safeAudioTracks[audioIndex];
-          const blob = track.blob;
-          const audioTotal = Number(blob.size || track.sizeBytes || 0);
-          let offset = 0;
-
-          while (offset < audioTotal) {
-            const end = Math.min(offset + chunkBytes, audioTotal);
-            const arrayBuffer = await blob.slice(offset, end).arrayBuffer();
-            const bytes = Array.from(new Uint8Array(arrayBuffer));
-
-            const status = await this.appendAudioChunk({
-              sessionId: begin.sessionId,
-              audioTrackId: track.id || `audio-${audioIndex + 1}`,
-              trackName: track.name || track.displayName || `audio-${audioIndex + 1}`,
-              mimeType: track.mimeType || track.type || blob.type || 'audio/*',
-              totalBytes: audioTotal,
-              offset,
-              bytes,
-              timelineOffsetMs: track.offsetMs || 0,
-              trimStartMs: track.trimStartMs || 0,
-              trimEndMs: track.trimEndMs || track.durationMs || 0,
-              volumePct: track.volumePct ?? 100,
-              muted: Boolean(track.muted),
-            });
-
-            uploadedAudioBytes += bytes.length;
-            offset = end;
-
-            notifyProgress(onProgress, {
-              phase: 'uploading_audio',
-              progressPercent: Math.min(89, Math.max(80, 80 + Math.round((uploadedAudioBytes / audioTotalBytes) * 9))),
-              status: status.status || 'receiving',
-              detail: `Uploaded audio track ${audioIndex + 1} of ${safeAudioTracks.length}.`,
-              session: status,
-            });
-          }
-        }
-      }
-
       notifyProgress(onProgress, {
-        phase: safeAudioTracks.length ? 'joining_with_audio' : 'joining',
+        phase: 'joining',
         progressPercent: 90,
         status: 'exporting',
-        detail: safeAudioTracks.length ? 'Joining clips and mixing audio into MP4.' : 'Joining clips into MP4.',
+        detail: 'Joining clips into MP4.',
         session: begin,
       });
 
@@ -202,7 +146,6 @@ export function createMakeExportClient() {
         height,
         fps,
         registerSource: true,
-        expectedAudioTracks: safeAudioTracks.length,
       });
 
       const handoff = writeLatestMakeExportHandoff(finished);
@@ -211,7 +154,7 @@ export function createMakeExportClient() {
         phase: 'ready',
         progressPercent: 100,
         status: finished.status || 'completed',
-        detail: finished.audioMixed ? 'MP4 export with audio is ready for Video.' : 'MP4 export is ready for Video.',
+        detail: 'MP4 export is ready for Video.',
         session: finished,
         handoff,
       });
@@ -350,12 +293,12 @@ function assertSafeVideoExportClips(clips = []) {
 
     if (clip?.mixedAudio) {
       throw new Error(
-        `Blocked stale browser audio-mix blob for ${label}. Browser-side audio mix blobs are obsolete; use the Rust/FFmpeg bounded audio-track mixer.`,
+        `Blocked stale browser audio-mix blob for ${label}. Audio lane export is disabled until the Rust/FFmpeg mixer is wired.`,
       );
     }
 
     if (kind.includes('audio') || mimeType.startsWith('audio/')) {
-      throw new Error(`Blocked audio item ${label}. Make export video clips must remain video-only; local audio files are uploaded through the dedicated Rust/FFmpeg audio-track path.`);
+      throw new Error(`Blocked audio item ${label}. Make export currently accepts video clips only.`);
     }
 
     if (!(blob instanceof Blob) || blob.size <= 0) {
@@ -397,61 +340,6 @@ async function resolveExportClips(clips = []) {
   return resolved;
 }
 
-async function resolveExportAudioTracks(audioTracks = []) {
-  const resolved = [];
-
-  for (const [index, track] of (audioTracks || []).entries()) {
-    if (!track || track.kind === 'linked_audio' || track.muted || Number(track.volumePct ?? 100) <= 0) {
-      continue;
-    }
-
-    let blob = track.blob;
-
-    if (!(blob instanceof Blob) && track.objectUrl) {
-      try {
-        const response = await fetch(track.objectUrl);
-        blob = await response.blob();
-      } catch (_error) {
-        blob = null;
-      }
-    }
-
-    if (blob instanceof Blob && blob.size > 0) {
-      resolved.push({
-        ...track,
-        id: safeHandle(track.id) || `audio-${index + 1}`,
-        blob,
-        type: track.type || track.mimeType || blob.type || 'audio/*',
-        mimeType: track.mimeType || track.type || blob.type || 'audio/*',
-        sizeBytes: track.sizeBytes || blob.size,
-      });
-    }
-  }
-
-  return resolved;
-}
-
-function assertSafeAudioExportTracks(audioTracks = []) {
-  for (const [index, track] of (audioTracks || []).entries()) {
-    const label = track?.name || track?.displayName || track?.id || `audio-${index + 1}`;
-    const kind = String(track?.kind || '').toLowerCase();
-    const blob = track?.blob;
-    const mimeType = String(track?.mimeType || track?.type || blob?.type || '').toLowerCase();
-
-    if (kind === 'linked_audio') {
-      throw new Error(`Blocked linked audio item ${label}. Linked audio reuse needs backend rights/payout work first.`);
-    }
-
-    if (!(blob instanceof Blob) || blob.size <= 0) {
-      throw new Error(`Make export audio track ${label} is missing valid local audio bytes.`);
-    }
-
-    if (mimeType && mimeType !== 'audio/*' && !mimeType.startsWith('audio/')) {
-      throw new Error(`Make export audio track ${label} is not an audio/* file.`);
-    }
-  }
-}
-
 function normalizeBeginInput(input = {}) {
   return stripEmpty({
     title: stringValue(input.title),
@@ -476,23 +364,6 @@ function normalizeAppendChunkInput(input = {}) {
   };
 }
 
-function normalizeAppendAudioChunkInput(input = {}) {
-  return {
-    sessionId: stringValue(input.sessionId, input.session_id),
-    audioTrackId: safeHandle(input.audioTrackId, input.audio_track_id, input.id),
-    trackName: stringValue(input.trackName, input.track_name, input.name),
-    mimeType: stringValue(input.mimeType, input.mime_type, input.type),
-    totalBytes: positiveInteger(input.totalBytes, input.total_bytes),
-    offset: Math.max(0, Number.parseInt(input.offset ?? 0, 10) || 0),
-    bytes: Array.isArray(input.bytes) ? input.bytes : [],
-    timelineOffsetMs: Math.max(0, Number.parseInt(input.timelineOffsetMs ?? input.timeline_offset_ms ?? input.offsetMs ?? 0, 10) || 0),
-    trimStartMs: Math.max(0, Number.parseInt(input.trimStartMs ?? input.trim_start_ms ?? 0, 10) || 0),
-    trimEndMs: positiveInteger(input.trimEndMs, input.trim_end_ms),
-    volumePct: Math.max(0, Math.min(150, Number.parseInt(input.volumePct ?? input.volume_pct ?? 100, 10) || 100)),
-    muted: Boolean(input.muted),
-  };
-}
-
 function normalizeFinishInput(input = {}) {
   return stripEmpty({
     sessionId: stringValue(input.sessionId, input.session_id),
@@ -502,7 +373,6 @@ function normalizeFinishInput(input = {}) {
     height: positiveInteger(input.height),
     fps: positiveInteger(input.fps, input.targetFps, input.target_fps),
     registerSource: input.registerSource !== false,
-    expectedAudioTracks: positiveInteger(input.expectedAudioTracks, input.expected_audio_tracks),
   });
 }
 
@@ -544,13 +414,6 @@ function stringValue(...values) {
   }
 
   return '';
-}
-
-function safeHandle(...values) {
-  const raw = stringValue(...values);
-  return raw
-    .replace(/[^a-zA-Z0-9_-]/g, '_')
-    .slice(0, 96);
 }
 
 function positiveNumber(...values) {

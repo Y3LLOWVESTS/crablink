@@ -218,7 +218,7 @@ export async function renderTimelineClipsForExport({
   fps = 30,
   mimeType = '',
   forceRender = false,
-  includeSourceAudio = false,
+  includeSourceAudio = true,
   onProgress,
 } = {}) {
   const safeClips = normalizeMakeClips(clips);
@@ -316,7 +316,7 @@ function hasTrimEdit(clip = {}) {
   return duration > 0 && (start > 80 || Math.abs(duration - end) > 120);
 }
 
-async function renderTimelineClipForExport({ clip, width, height, fps, mimeType, includeSourceAudio = false }) {
+async function renderTimelineClipForExport({ clip, width, height, fps, mimeType, includeSourceAudio = true }) {
   const safeClip = normalizeMakeClip(clip);
   const sourceUrl = safeClip.objectUrl;
 
@@ -337,11 +337,7 @@ async function renderTimelineClipForExport({ clip, width, height, fps, mimeType,
   video.src = sourceUrl;
   video.playsInline = true;
   video.preload = 'auto';
-  // Export rendering is an off-screen, programmatic playback path.
-  // Keep it muted so Tauri/WebView autoplay policy does not reject video.play().
-  video.muted = true;
-  video.defaultMuted = true;
-  video.volume = 0;
+  video.muted = !includeSourceAudio;
 
   const metadata = await waitForVideoMetadata(video);
   const startSeconds = getClipTrimStartMs(safeClip) / 1000;
@@ -427,7 +423,7 @@ async function renderTimelineClipForExport({ clip, width, height, fps, mimeType,
     }
     stopTracks(stream);
     stopTracks(sourceCapture);
-    throw new Error(`Timeline render could not play ${safeClip.name || 'clip'} in the muted export renderer: ${errorMessage(error)}`);
+    throw new Error(`Timeline render could not play ${safeClip.name || 'clip'}: ${errorMessage(error)}`);
   }
 
   await stopPromise;

@@ -42866,3 +42866,5133 @@ That should keep the next batch focused and prevent revisiting solved marker/ran
 
 
 ### END NOTE - JUNE 2 2026 - 22:55 CST
+
+
+### BEGIN NOTE - JUNE 3 2026 - 19:15 CST
+
+Absolutely — here are the carryover notes for the next session.
+
+The key new finding is important:
+
+```text
+When no audio track is added:
+  Make export → crab://video handoff → prepare → mint works.
+
+When an audio track is added:
+  Make export produces a suspiciously tiny MP4, for example:
+  output = 54,486 bytes
+  input = 1,703,741 bytes
+  durationSeconds = null
+  minting is blocked.
+```
+
+That means the audio lane is still influencing the export path somewhere, even after we tried to disable audio export mixing. The latest JSON proves the Rust-side guard is doing the right thing now: it refuses to register a collapsed/tiny MP4 instead of letting a broken source handle reach minting. 
+
+# CrabLink Tauri Carryover Notes — `crab://make` Audio Lane / Export Regression
+
+## 0. Current checkpoint
+
+We are continuing Tauri-first CrabLink work. `crab://make` is the centerpiece local creator studio for recording, assembling, trimming, previewing, exporting, and handing finished local MP4 source handles into `crab://video`.
+
+The core doctrine is unchanged:
+
+```text
+Make = local creator workspace
+Video = prepare/mint/publish route
+Backend = durable b3 / receipt / wallet / manifest truth
+```
+
+Make may own local timeline edits, clips, object URLs, local drafts, preview state, local exports, and Rust-owned source handles. Make must not claim b3 truth, wallet receipts, paid unlocks, payout execution, ownership truth, or backend publication. Prior notes already locked this boundary and specifically state that Make hands off to `crab://video` only after a local source handle exists. 
+
+## 1. Most important new result
+
+The latest user test proves:
+
+```text
+Video-only Make export works.
+Video-only Make export can hand off to crab://video.
+Video-only Make export can prepare/mint.
+
+Adding an audio track causes export failure.
+The produced MP4 is tiny/collapsed.
+Minting is blocked because the exported local source is invalid.
+```
+
+The exact bad export evidence from the JSON:
+
+```text
+input receivedBytes: 1,703,741
+outputBytes: 54,486
+durationSeconds: null
+contentType: video/mp4
+width: 1280
+height: 720
+status before guard: mp4_source_handle_ready
+```
+
+The new Rust guard now reports:
+
+```text
+Make export produced a suspiciously small MP4:
+output=54486 bytes from input=1703741 bytes.
+Refusing to register a likely collapsed browser/WebM export.
+```
+
+That guard is good. It prevents a broken tiny file from becoming a valid local source handle and blocking/confusing the mint flow later.
+
+## 2. What we accomplished so far on `crab://make`
+
+### 2.1 Make page exists as a real route
+
+Active Make files now include:
+
+```text
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/make.css
+apps/crablink-tauri/src/pages/make/makeCompositor.js
+apps/crablink-tauri/src/pages/make/makeDraftModel.js
+apps/crablink-tauri/src/pages/make/makeTimelineModel.js
+apps/crablink-tauri/src/pages/make/makePersonSegmentation.js
+apps/crablink-tauri/src/pages/make/makeLinkedMediaModel.js
+apps/crablink-tauri/src/pages/make/makeAudioTimelineModel.js
+```
+
+The newer codebundle confirms these files exist in the current app snapshot. 
+
+### 2.2 Studio concept is now validated
+
+The Make page is no longer just a dev panel. It is moving toward a compact creator-app workflow:
+
+```text
+large preview
+in-preview controls
+record/start button
+mode/puzzle button
+settings/effects/move buttons
+video timeline inside preview
+clip strip
+local video plus button
+linked video button
+audio lane
+local audio plus button
+linked audio button
+export to crab://video
+```
+
+The user likes this direction and wants Make to be the “batteries included” creator studio.
+
+### 2.3 Recording and local clip workflow works
+
+Working or previously confirmed:
+
+```text
+camera preview
+screen tutorial / screen recording
+screen + PiP after media diagnostics fixes
+regular PiP fallback
+recording segments
+local WebM clip generation
+adding local video clips
+clip strip display
+sequence review
+approval before export
+```
+
+### 2.4 Make → Video handoff works for video-only
+
+Important confirmed milestone:
+
+```text
+Make can export local MP4.
+Make can create a Rust-owned local video source handle.
+Make can hand off to crab://video.
+Video page can load the Make source.
+Video page can prepare/stage versions.
+Video page can mint at least original/master and 720p.
+```
+
+Earlier notes already warned: do not break the working Make → Video mint path. 
+
+### 2.5 Timeline UX progress
+
+Solved or mostly solved:
+
+```text
+timeline moved into preview window
+clip bubbles are visible and modern
+plus button at end of timeline works
+linked video button appears beside plus
+timeline zoom works
+scroll containment works
+clip progress shading exists
+undo/redo exists
+split/delete local timeline actions work
+```
+
+### 2.6 I-marker and range work
+
+Confirmed as working in prior session:
+
+```text
+I-marker point selection works.
+absolute timeline time badge works.
+click-hold-drag range selection works.
+range visual issue was solved with a clean tall range plate.
+range delete and undo work.
+range loop playback was added.
+I-marker preview frame was added.
+```
+
+### 2.7 Trim visual dead-space improvement
+
+We patched timeline clip display so trimmed clips visually shrink to their kept duration. The intended behavior was:
+
+```text
+raw clip = 10s
+trimmed to 4s
+clip card shrinks visually
+I-marker maps to visible trimmed duration
+play sequence uses visible duration
+```
+
+This should be preserved.
+
+### 2.8 Linked media UI started
+
+Added:
+
+```text
+video link button beside local video plus
+audio link button beside audio plus
+linked media model helper
+unverified linked video draft item
+unverified linked audio draft item
+local-only session summary metadata
+```
+
+Known issue:
+
+```text
+The link popup is still clumsy/partly hidden.
+It needs a proper modal/drawer.
+It needs editable start/end fields in mm:ss with no decimals.
+It needs “use entire clip” checkbox.
+It must remain unverified until backend/manifest rights checks exist.
+```
+
+### 2.9 Audio lane UI started
+
+Added:
+
+```text
+audio lane below video timeline
+local audio plus button
+audio file picker
+audio item appears after import
+volume slider
+mute/unmute
+start-position slider
+−1s / +1s nudges
+draft metadata in Make session plan
+```
+
+User confirmed:
+
+```text
+audio file loads
+audio can play during preview
+```
+
+Known issue:
+
+```text
+preview audio/video playback is glitchy
+export breaks when audio track exists
+```
+
+## 3. What went wrong with audio export
+
+### 3.1 Browser-side mixed export was the wrong path
+
+We attempted a browser-side canvas + MediaRecorder mixed export path:
+
+```text
+video canvas captureStream
+AudioContext / decoded audio source
+MediaRecorder WebM output
+then pass mixed WebM blob to Rust Make exporter
+```
+
+Symptoms:
+
+```text
+audio came through
+video did not reliably come through
+file became very small
+minting blocked
+```
+
+This path should be considered failed for now.
+
+Do not continue trying to make WebView MediaRecorder the final audio mixer unless only for a temporary diagnostic experiment. The correct path is Rust/FFmpeg source-handle mixing.
+
+### 3.2 Audio track still contaminates export
+
+Even after trying to disable audio mixing, the user reports:
+
+```text
+No audio track: export/mint works.
+Audio track added: export still tiny/collapsed and blocked.
+```
+
+Therefore next session must inspect the actual current `MakePage.jsx` export callback and verify that **no audio-dependent branch** still calls:
+
+```text
+renderTimelineSequenceWithAudioForExport(...)
+```
+
+Also verify that adding audio does not change the clip array passed into:
+
+```text
+renderTimelineClipsForExport(...)
+makeExportClient.exportApprovedClips(...)
+```
+
+### 3.3 Rust guard is good and should stay
+
+The latest Rust guard should remain:
+
+```text
+if total input is substantial and output MP4 is suspiciously tiny,
+reject instead of registering source handle
+```
+
+This is correct because it prevents bad local source handles from reaching `crab://video` and later minting.
+
+## 4. Highest-priority next session task
+
+The next session should **not** start with linked payout, manifest reuse, or UI polish. It should start with a focused export regression fix:
+
+```text
+Goal:
+  Adding an audio track must not break video-only export.
+
+Acceptance:
+  Add audio track.
+  Preview may play audio.
+  Export should still produce the same valid video-only MP4 as no-audio export.
+  Video page should receive normal-sized source.
+  Prepare/mint should work.
+  Audio export can remain disabled/draft-only.
+```
+
+This means the next patch should first isolate audio from export completely.
+
+Recommended immediate debug checklist:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+grep -R "renderTimelineSequenceWithAudioForExport" -n apps/crablink-tauri/src/pages/make
+grep -R "localAudioTracksForExport" -n apps/crablink-tauri/src/pages/make/MakePage.jsx
+grep -R "audioTracks" -n apps/crablink-tauri/src/pages/make/MakePage.jsx
+grep -R "exportApprovedClips" -n apps/crablink-tauri/src/pages/make apps/crablink-tauri/src/shared/api
+```
+
+Expected near-term fix:
+
+```text
+1. Keep audio lane state and preview UI.
+2. Do not pass any audio-derived clip/blob into export.
+3. Make export should always use original video clips via renderTimelineClipsForExport.
+4. Audio tracks should only appear in linkedMedia/sessionPlan metadata as draft-only.
+5. Export button should show “audio lane preview-only for now.”
+```
+
+Potential patch approach:
+
+```text
+- Remove or stop importing renderTimelineSequenceWithAudioForExport from MakePage.jsx.
+- Leave makeAudioTimelineModel.js only for preview/timing helpers.
+- Ensure exportSequence/handleExport uses renderTimelineClipsForExport unconditionally.
+- Ensure dependency array uses audioTracks only for UI/session plan, not export rendering.
+- Add a defensive assertion before export:
+    exportClips.every(clip => clip.kind !== 'local_audio' && clip.blob?.type.startsWith('video/'))
+- Add app notify if audio tracks exist:
+    “Audio lane is preview-only; exporting video only.”
+```
+
+## 5. Next real audio export design
+
+The correct audio export implementation should be Rust/FFmpeg-side, not WebView MediaRecorder.
+
+### 5.1 Safe target architecture
+
+The correct design is:
+
+```text
+React:
+  owns timeline UI
+  owns user intent
+  collects local audio file through picker
+  sends audio as bounded chunks or asks Rust to register a local audio source handle
+  sends only timing/volume metadata to Rust
+
+Tauri Rust:
+  owns local audio/video source handles
+  owns temp staging paths
+  owns FFmpeg invocation
+  owns bounded output files
+  returns redacted source handles only
+
+Video page:
+  receives final local MP4 source handle
+  prepares/stages renditions
+  mints through normal backend flow
+```
+
+### 5.2 New Rust capability needed
+
+Add a real Rust-side audio mixer path, probably in:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/make_export.rs
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src/shared/api/makeExportClient.js
+```
+
+Do not expose native paths to React.
+
+Possible new flow:
+
+```text
+media_make_audio_register_begin
+media_make_audio_append_chunk
+media_make_audio_finish
+media_make_export_begin receives audioTimeline[]
+media_make_export_finish mixes audio tracks with final concat
+```
+
+Or simpler first version:
+
+```text
+media_make_export_begin accepts audio track count metadata
+React uploads video segments as today
+React uploads audio files as bounded chunks
+Rust stores audio temp files in same session
+finish:
+  normalize video clips
+  concat video
+  mix audio tracks at offsetMs with volumePct
+  write final MP4
+  register video source handle
+```
+
+### 5.3 FFmpeg mixer shape
+
+A reasonable first FFmpeg design:
+
+```text
+1. Normalize/concat video-only sequence to intermediate MP4.
+2. For each audio track:
+   - trim start/end if needed
+   - apply volume
+   - delay by offsetMs
+3. Mix all audio tracks.
+4. Combine final video with mixed AAC audio.
+5. If no audio tracks, generate silent AAC as today.
+```
+
+Possible FFmpeg concepts:
+
+```text
+atrim
+asetpts=PTS-STARTPTS
+volume=0.0..1.5
+adelay=<offsetMs>|<offsetMs>
+amix=inputs=N:duration=longest:dropout_transition=0
+-map video from concat
+-map mixed audio
+-c:v copy or libx264 depending intermediate
+-c:a aac
+-shortest only after audio duration is sane
+```
+
+Critical warning:
+
+```text
+Do not use an untrusted browser audio stream as the timeline truth.
+Do not let a short/broken source audio stream truncate the whole MP4.
+Do not use -shortest too early in a way that collapses video.
+```
+
+## 6. Audio preview problem remains
+
+Current preview behavior:
+
+```text
+audio plays with video preview
+but playback is glitchy
+```
+
+Likely causes:
+
+```text
+React state updates drive timeline progress frequently.
+Audio.currentTime corrections are still too aggressive.
+Audio and video are two independent media elements.
+Sequence playback may jump/seeks between clips.
+```
+
+Keep it acceptable for now, but after export isolation is fixed, improve preview:
+
+```text
+- Only seek audio when starting playback, pausing, jumping, or changing offset.
+- During normal playback, let audio run freely.
+- Use a single preview clock.
+- Track last known sequence start timestamp.
+- Compute audio start offset once per play session.
+- Do not call audio.play() every render/effect tick.
+```
+
+Do not spend too much time polishing preview until the export path is stable again.
+
+## 7. Linked media popup remains later
+
+The user explicitly said link popup can be fixed later, but the desired behavior is now clear:
+
+```text
+The popup should not be hidden behind other elements.
+It should allow paste of crab:// video/audio URL.
+It should allow start time in mm:ss, no decimals.
+It should allow end time in mm:ss, no decimals.
+It should have “use entire clip” option.
+If entire clip is selected, start/end fields should disable or be ignored.
+```
+
+Important boundary:
+
+```text
+Linked media remains unverified local draft metadata until backend manifest rights/reuse/payout verification exists.
+```
+
+Do not implement payout yet.
+
+## 8. What remains for Make page
+
+### 8.1 Immediate blockers
+
+```text
+A. Fix audio track causing export collapse.
+B. Ensure video-only export works even when audio tracks exist.
+C. Clear old bad handoffs/source handles before retesting.
+D. Verify the suspicious-small-output guard stays in Rust.
+```
+
+### 8.2 Next audio milestones
+
+```text
+1. Audio lane preview stable enough.
+2. Audio track offset and volume preserved in session plan.
+3. Rust audio source registration.
+4. Rust FFmpeg audio mix.
+5. Final MP4 includes video + audio at correct offset/volume.
+6. Handoff to crab://video still normal.
+7. Video page prepare/mint works with mixed-audio Make export.
+```
+
+### 8.3 Next timeline/editor milestones
+
+```text
+- Polish preview playback between clips.
+- Ensure last clip always plays.
+- Reduce black gaps between clips.
+- Keep range loop stable.
+- Keep trim visual duration stable.
+- Add better frame preview at I-marker if needed.
+- Add audio waveform later.
+- Add draggable audio clip blocks later, not just slider/nudge controls.
+```
+
+### 8.4 Next linked-media milestones
+
+```text
+- Fix popup/modal layering.
+- Add start/end mm:ss fields.
+- Add entire-clip checkbox.
+- Store startMs/endMs in local linked-video/audio draft metadata.
+- Later: resolve linked crab URL through gateway.
+- Later: verify rights/reuse manifest.
+- Later: build payout split manifest draft.
+- Last: backend/rewarder/accounting/wallet support for actual payout truth.
+```
+
+### 8.5 Video page polish remains
+
+The video page still needs to look more like the image page and less like a dev page:
+
+```text
+normal creator sees:
+  source loaded
+  preview
+  outputs ready
+  mint CTA
+
+developer details hidden:
+  probe JSON
+  plan JSON
+  job JSON
+  raw staged outputs
+  redacted errors
+```
+
+Earlier notes already flagged this as a remaining product task. 
+
+## 9. Do not regress these working paths
+
+Next session must protect:
+
+```text
+crab://make loads
+recording still works
+local video plus works
+I-marker point works
+range selection works
+range delete/undo works
+trim handles work
+trimmed clips visually shrink
+video-only export works
+crab://video source handoff works
+video prepare/mint works
+```
+
+Most important:
+
+```text
+Do not let audio lane break video-only export.
+```
+
+## 10. Commands for next session
+
+Build:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+```
+
+Rust/media check:
+
+```bash
+npm run check:rust:mac-media
+```
+
+Run full stack:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Clear stale bad handoffs before testing:
+
+```js
+localStorage.removeItem('crablink.make.latestExport.v1')
+localStorage.removeItem('crablink.video.latestPrepareJob.v1')
+```
+
+Search for the broken path:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+grep -R "renderTimelineSequenceWithAudioForExport" -n apps/crablink-tauri/src/pages/make
+grep -R "localAudioTracksForExport" -n apps/crablink-tauri/src/pages/make/MakePage.jsx
+grep -R "exportApprovedClips" -n apps/crablink-tauri/src/pages/make apps/crablink-tauri/src/shared/api
+grep -R "suspiciously small MP4" -n apps/crablink-tauri/src-tauri/src/media
+```
+
+## 11. Acceptance test for next session
+
+Minimum next-session green gate:
+
+```text
+1. Open crab://make.
+2. Add one local video clip.
+3. Add one local audio clip.
+4. Do not rely on old local handoff.
+5. Approve sequence.
+6. Export MP4.
+7. Export should show audio lane preview-only message.
+8. Output file size should be normal, not ~54 KB.
+9. Open crab://video from handoff.
+10. Prepare MP4 versions.
+11. Mint.
+12. Mint succeeds.
+```
+
+Then, after that is green, start real Rust audio mixing:
+
+```text
+1. Add video clip.
+2. Add audio clip.
+3. Set audio start offset.
+4. Set volume.
+5. Export with Rust audio mixer.
+6. Output MP4 has both picture and audio.
+7. Audio starts at chosen time.
+8. Volume is respected.
+9. Video page prepare/mint succeeds.
+```
+
+## 12. Recommended first message for next session
+
+Use this to restart cleanly:
+
+```text
+We need to continue from the Make audio export regression. Video-only Make export and mint works, but adding an audio track causes the Make exporter to produce a collapsed tiny MP4 around 54 KB from about 1.7 MB of input. The new Rust guard correctly blocks the bad source. First task: fully isolate audio lane from export so video-only export works even when audio tracks exist. Then implement real Rust/FFmpeg audio mixing with safe audio source handles.
+```
+
+That is the right next step.
+
+
+### END NOTE - JUNE 3 2026 - 19:15 CST
+
+
+### BEGIN NOTE - JUNE 4 2026 - 12:40 CST
+
+The minted video having no added audio is expected from the current code path: we intentionally made the audio lane preview-only to get export → video page → prepare → mint working again. The current model still marks local audio tracks `includedInExport: false` and the linked-media summary has `exportMixingEnabled: false`, so the audio file is not being sent into the final MP4 yet.  The diagnostics also showed the source screen-recording segment had video only, while the exported MP4 had a very low-bitrate AAC stream consistent with silence/fallback audio, not the added audio file. 
+
+That terminal message — `RemoteLayerTreeDrawingAreaProxyMac::scheduleDisplayLink(): page has no displayID` — appears in Tauri/WebKit macOS reports, often around display/render scheduling. If the app is visible and working, I would treat it as a noisy WebKit/Tauri macOS warning for now; if it comes with a blank screen, freeze, or display failure, then it becomes actionable. Similar reports exist in Tauri issues where users mention the same log, including cases where the app otherwise appears to run and cases involving blank-screen symptoms. ([GitHub][1])
+
+Here are the carryover notes for the next session:
+
+# CrabLink Tauri Carryover Notes — Make Page Audio Export / Minted Video Missing Added Audio
+
+## 0. Current checkpoint
+
+We are continuing Tauri-first CrabLink work from:
+
+```text
+/Users/mymac/Desktop/crablink
+```
+
+The normal full local dev command is:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+The active product surface is:
+
+```text
+crab://make → local creator editor/export
+crab://video → native source prepare/stage/mint flow
+RustyOnions backend → durable b3 / wallet / receipt / manifest truth
+```
+
+The key current result:
+
+```text
+Make export can now hand off to the video mint page.
+Video prepare can now progress.
+Minting works again.
+The minted video does NOT include the local audio file added on the Make audio lane.
+```
+
+This is expected from the current implementation because the audio lane is intentionally preview/draft-only after we disabled the broken browser-side audio mixing path.
+
+## 1. Highest-priority next-session goal
+
+Fix the audio file not being included in the exported/minted video.
+
+The correct direction is:
+
+```text
+Rust/FFmpeg-side audio mixing.
+Not WebView MediaRecorder audio mixing.
+```
+
+Do not return to the browser `MediaRecorder + AudioContext + canvas.captureStream()` mixed export as the final implementation. That path already produced tiny/collapsed WebM/MP4 artifacts and blocked minting. It can remain only as a diagnostic reference or be removed from active export paths.
+
+## 2. Current proven state
+
+### 2.1 Make → video handoff works
+
+The Make page can export a local MP4 and register it as a Rust-owned local video source handle.
+
+The handoff model is correct:
+
+```text
+Make export
+→ Rust temp output MP4
+→ Rust registers local video source handle
+→ React receives redacted source metadata / sourceHandle
+→ Video page loads the sourceHandle
+```
+
+Correct truth boundary:
+
+```text
+The sourceHandle is local Tauri authority only.
+It is not a b3 CID.
+It is not a crab URL.
+It is not a receipt.
+It is not backend publication.
+It does not mutate wallet or ledger truth.
+```
+
+### 2.2 Video page prepare/mint works again
+
+The video page got stuck earlier because auto-prepare set:
+
+```text
+status: "starting_job"
+job: null
+```
+
+The root cause was a React effect self-cancel:
+
+```text
+isBusy was in the auto-prepare effect dependency list.
+Setting status to "starting_job" changed isBusy.
+That reran/cleaned up the effect before the returned job was stored.
+```
+
+Patch applied:
+
+```text
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+```
+
+Change:
+
+```text
+Removed isBusy from the auto-prepare useEffect dependency list.
+```
+
+Result:
+
+```text
+The prepare job can now return/store the job object.
+Mint flow can proceed.
+```
+
+### 2.3 Small MP4 guard was fixed
+
+Earlier Rust blocked valid small MP4s with:
+
+```text
+Make export produced a suspiciously small MP4
+```
+
+Diagnostics proved the output MP4 could be small but valid:
+
+```text
+H.264 video
+1280x720
+30 fps
+duration around 4.77 seconds
+real video frame count
+```
+
+Patch applied:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/make_export.rs
+```
+
+Change:
+
+```text
+Replace naive byte-size/ratio guard with ffprobe-based has_video_stream guard.
+Reject implausibly tiny files or no-video files.
+Allow small valid MP4s that have a readable video stream.
+```
+
+This was the correct fix. Keep it.
+
+### 2.4 Source video audio preservation was partially addressed
+
+Patch attempted:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/make_export.rs
+```
+
+Goal:
+
+```text
+If an input video segment already has audio, map 0:a:0.
+If the input video segment has no audio, use silent anullsrc fallback.
+```
+
+This helps for source videos that already contain audio.
+
+But it does not solve the current Make audio lane problem because the added audio file is not part of the uploaded Make export session yet.
+
+## 3. Current missing piece
+
+The added audio file on `crab://make` is not being sent to Rust as an export input.
+
+Current state of local audio tracks:
+
+```text
+kind: local_audio
+sourceKind: local_file
+localOnly: true
+bytesPersisted: false
+pathPersisted: false
+includedInExport: false
+createsBackendTruth: false
+createsReceipt: false
+mutatesWallet: false
+```
+
+Current linked-media session summary says:
+
+```text
+exportMixingEnabled: false
+rightsVerificationEnabled: false
+payoutSplitEnabled: false
+```
+
+That means:
+
+```text
+Preview can play the audio file locally.
+Timeline UI can show/use audio timing.
+But export does not include audio bytes.
+Rust does not receive the audio file.
+FFmpeg cannot mix it.
+Video page only receives the exported video MP4.
+Minted output has no added music/audio.
+```
+
+## 4. Current relevant files
+
+### Make page / frontend
+
+```text
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/make.css
+apps/crablink-tauri/src/pages/make/makeDraftModel.js
+apps/crablink-tauri/src/pages/make/makeTimelineModel.js
+apps/crablink-tauri/src/pages/make/makeAudioTimelineModel.js
+apps/crablink-tauri/src/pages/make/makeLinkedMediaModel.js
+apps/crablink-tauri/src/shared/api/makeExportClient.js
+```
+
+Important active behavior:
+
+```text
+MakePage.jsx uses renderTimelineClipsForExport(...)
+MakePage.jsx no longer actively calls renderTimelineSequenceWithAudioForExport(...)
+makeAudioTimelineModel.js still contains renderTimelineSequenceWithAudioForExport(...) but it should not be used as the final export path.
+makeExportClient.js rejects stale mixedAudio blobs defensively.
+```
+
+### Tauri/Rust media path
+
+```text
+apps/crablink-tauri/src-tauri/src/media/make_export.rs
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+apps/crablink-tauri/src-tauri/src/media/video_sources.rs
+```
+
+Important active behavior:
+
+```text
+make_export.rs stages approved Make video clip chunks.
+make_export.rs normalizes each video segment.
+make_export.rs joins normalized clips into final MP4.
+make_export.rs registers a local video source handle.
+video_jobs.rs prepares staged outputs for the video mint flow.
+```
+
+## 5. What went wrong with browser-side audio mixing
+
+The previous browser audio-mix path used:
+
+```text
+canvas.captureStream()
+AudioContext
+MediaStreamDestination
+MediaRecorder
+Blob/WebM output
+```
+
+Observed failure mode:
+
+```text
+Adding a local audio track caused Make export to create very small/collapsed files.
+Rust then blocked the export or mint flow.
+When the file was allowed, it still did not reliably contain the intended audio.
+```
+
+Conclusion:
+
+```text
+Do not rely on WebView MediaRecorder as the final Make audio mixer.
+Use Rust/FFmpeg-side mixing.
+```
+
+## 6. Correct architecture for the next session
+
+### 6.1 React responsibilities
+
+React should own:
+
+```text
+Timeline UI
+User intent
+Audio track selection
+Audio trim/offset/volume settings
+Preview-only object URLs
+Export metadata DTOs
+Calling small typed Tauri commands/adapters
+```
+
+React must not own:
+
+```text
+Native paths
+FFmpeg commands
+Backend truth
+b3 truth
+Receipts
+Wallet mutation
+Raw spend authority
+```
+
+### 6.2 Rust/Tauri responsibilities
+
+Rust should own:
+
+```text
+Local audio source registration
+Temporary audio/video staging files
+Bounded chunk writing
+FFmpeg invocation
+Safe fixed filter generation
+Final MP4 writing
+Registering final MP4 as local video source handle
+Redacted DTOs back to React
+```
+
+Rust must not:
+
+```text
+Expose private paths to React
+Accept arbitrary FFmpeg arguments from React
+Mint b3 locally
+Create fake receipts
+Mutate wallet/ledger
+Unlock paid content from cache
+```
+
+### 6.3 Video page responsibilities
+
+Video page should continue to own:
+
+```text
+Native source preview
+Prepare/stage jobs
+Mint flow
+Backend upload/mint confirmation
+Display of backend-derived b3/crab URLs
+```
+
+Video page should not care whether Make’s final MP4 came from:
+
+```text
+video-only export
+source-audio preservation
+audio-lane FFmpeg mix
+```
+
+It should simply receive a valid local video source handle.
+
+## 7. Proposed implementation plan for next session
+
+### Phase 1 — Add Rust-side audio asset/session support
+
+Add structures in:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/make_export.rs
+```
+
+Possible new DTOs:
+
+```rust
+MakeExportAudioTrackInput
+MakeExportAppendAudioChunkInput
+MakeExportAudioTrackRecord
+MakeExportAudioTimelineEntry
+```
+
+Minimum metadata needed:
+
+```text
+trackId
+audioIndex
+trackName
+mimeType
+totalBytes
+offsetMs
+trimStartMs
+trimEndMs or effectiveDurationMs
+volumePct
+muted
+```
+
+Audio upload should use bounded chunks, similar to video segments.
+
+Suggested session shape:
+
+```text
+begin_make_export_session:
+  segment_count
+  audio_track_count
+  width
+  height
+  fps
+  title
+
+append_make_export_chunk:
+  existing video segment upload
+
+append_make_export_audio_chunk:
+  new audio file upload
+
+finish_make_export_session:
+  verify all video segments complete
+  verify all declared audio tracks complete
+  normalize video
+  concat video
+  mix audio
+  register final MP4 source handle
+```
+
+Alternative simpler first version:
+
+```text
+Add audio chunks to the existing Make export session using a separate command:
+media_append_make_export_audio_chunk
+```
+
+### Phase 2 — Update Tauri command bridge
+
+Update:
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+apps/crablink-tauri/src-tauri/capabilities/default.json
+```
+
+Possible new command names:
+
+```text
+media_append_make_export_audio_chunk
+```
+
+Or if using a begin/finish sub-session:
+
+```text
+media_begin_make_export_audio
+media_append_make_export_audio_chunk
+media_finish_make_export_audio
+```
+
+Keep names typed and allowlisted. Do not add generic file/native/shell/execute commands.
+
+### Phase 3 — Update makeExportClient.js
+
+Update:
+
+```text
+apps/crablink-tauri/src/shared/api/makeExportClient.js
+```
+
+Add upload support for audio tracks:
+
+```text
+exportApprovedClips({
+  clips,
+  audioTracks,
+  output,
+  ...
+})
+```
+
+But the adapter should send only safe fields:
+
+```text
+audio track display name
+blob bytes through bounded chunks
+offset/trim/volume metadata
+```
+
+Do not send:
+
+```text
+objectUrl as an authority
+native file path
+arbitrary command strings
+backend truth fields
+```
+
+### Phase 4 — Update MakePage export callback
+
+Update:
+
+```text
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+```
+
+Current export can continue:
+
+```text
+const exportClips = await renderTimelineClipsForExport(...)
+```
+
+Then pass audio tracks separately:
+
+```text
+const exportAudioTracks = localAudioTracksForExport.filter(track => !track.muted)
+await makeExportClient.exportApprovedClips({
+  clips: exportClips,
+  audioTracks: exportAudioTracks,
+  ...
+})
+```
+
+Do not convert audio tracks into fake clips.
+
+Do not use:
+
+```text
+renderTimelineSequenceWithAudioForExport(...)
+```
+
+### Phase 5 — FFmpeg mixer
+
+First safe FFmpeg plan:
+
+```text
+1. Normalize video clips to MP4 intermediate with predictable:
+   - H.264
+   - yuv420p
+   - fps target
+   - target width/height
+   - AAC or silent fallback only if source has no audio
+
+2. Concat normalized video into base final video.
+
+3. Mix audio lane tracks into the base final video:
+   - Each local audio file gets:
+     atrim=start=trimStart:end=trimEnd
+     asetpts=PTS-STARTPTS
+     volume=volumePct/100
+     adelay=offsetMs|offsetMs
+   - Mix all audio tracks with source video audio if present.
+   - Use amix with dropout_transition=0.
+   - Map final video stream + mixed audio stream.
+   - Output final MP4 with H.264/AAC/yuv420p/faststart.
+```
+
+Important: for first implementation, it is acceptable to support:
+
+```text
+one local audio track
+offsetMs
+trimStartMs
+volumePct
+```
+
+Then extend to multiple tracks after one-track path is stable.
+
+### Phase 6 — Validation / guard
+
+Add output checks after final mix:
+
+```text
+has_video_stream(final)
+has_audio_stream(final) if audio tracks were requested and unmuted
+duration roughly matches expected timeline
+output bytes > minimal threshold
+ffprobe can read final
+```
+
+If audio tracks were requested but final MP4 has no audio:
+
+```text
+return explicit error:
+"Make export audio mix failed: expected audio output but no audio stream was found."
+```
+
+Do not silently mint a no-audio video when the user expected audio.
+
+## 8. FFmpeg command concept for one-track prototype
+
+This is not meant to be copied blindly into production, but it describes the concept.
+
+Input:
+
+```text
+base-video.mp4
+audio-track-001.<ext>
+```
+
+Filter concept:
+
+```text
+[1:a]
+  atrim=start=<trimStartSec>:duration=<durationSec>,
+  asetpts=PTS-STARTPTS,
+  volume=<volume>,
+  adelay=<offsetMs>|<offsetMs>
+[a1];
+
+[0:a][a1]
+  amix=inputs=2:duration=longest:dropout_transition=0
+[mix]
+```
+
+Map:
+
+```text
+-map 0:v:0
+-map [mix]
+-c:v copy or re-encode if needed
+-c:a aac
+-ar 48000
+-ac 2
+-shortest maybe not if audio extends timeline intentionally
+-movflags +faststart
+```
+
+If base video has no real audio, Rust can add `anullsrc` or use only the audio track as the output audio.
+
+## 9. Known current issue: silent AAC fallback
+
+The current Make export has historically used:
+
+```text
+anullsrc=channel_layout=stereo:sample_rate=48000
+```
+
+That creates a valid but silent AAC stream. That was useful for normalizing concatenation, but it is not user audio.
+
+The next session should ensure:
+
+```text
+If user adds audio lane:
+  final audio stream must come from added audio file, not only anullsrc.
+
+If source clip has audio:
+  preserve source audio unless audio-lane mixing explicitly replaces or mixes with it.
+
+If source clip has no audio and no audio lane:
+  silent fallback is acceptable.
+```
+
+## 10. Known current issue: mobile_480p zero-byte prepare output
+
+Diagnostics showed some prepare jobs wrote:
+
+```text
+source_clean_master.mp4 — nonzero valid
+tablet_720p.mp4 — nonzero valid
+mobile_480p.mp4 — 0 bytes / invalid moov atom
+```
+
+This is not the current audio blocker, but it remains a video prepare bug.
+
+Next-session priority order:
+
+```text
+1. Fix Make audio-lane FFmpeg mix.
+2. Verify final Make MP4 has expected audio before handoff.
+3. Verify video prepare/mint still works with audio-bearing MP4.
+4. Then investigate zero-byte mobile_480p/360p rendition failure.
+```
+
+## 11. Current user-observed terminal message
+
+Terminal showed:
+
+```text
+Running `target/debug/crablink-tauri`
+RemoteLayerTreeDrawingAreaProxyMac::scheduleDisplayLink(): page has no displayID
+RemoteLayerTreeDrawingAreaProxyMac::scheduleDisplayLink(): page has no displayID
+```
+
+Current interpretation:
+
+```text
+Likely a macOS WebKit/Tauri display-link warning.
+If the app is visible and responsive, treat as low-priority noise.
+If accompanied by blank screen, freeze, or missing rendering, investigate Tauri/WebKit/macOS display issues separately.
+```
+
+Do not confuse this warning with the audio export bug. The audio issue is in the Make export/mix pipeline, not display rendering.
+
+## 12. Commands used recently / useful diagnostics
+
+### Build checks
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+npm run check:rust:mac-media
+```
+
+### Full stack
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+### Make export media probe
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+find "${TMPDIR:-/tmp}" /tmp -type f \
+  \( -iname "*.mp4" -o -iname "*.mov" -o -iname "*.webm" -o -iname "*.m4a" -o -iname "*.wav" -o -iname "*.txt" \) \
+  -mmin -60 \
+  -print 2>/dev/null | sort
+```
+
+### ffprobe a temp MP4
+
+```bash
+ffprobe -hide_banner -v error \
+  -show_entries format=format_name,duration,size,bit_rate \
+  -show_entries stream=index,codec_type,codec_name,width,height,r_frame_rate,avg_frame_rate,duration,bit_rate,nb_frames \
+  -of default=noprint_wrappers=0 "/path/to/file.mp4"
+```
+
+### Check active Make export paths
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+grep -R "renderTimelineSequenceWithAudioForExport" -n apps/crablink-tauri/src/pages/make apps/crablink-tauri/src/shared/api || true
+grep -R "mixedAudio" -n apps/crablink-tauri/src/pages/make apps/crablink-tauri/src/shared/api || true
+grep -R "includedInExport" -n apps/crablink-tauri/src/pages/make apps/crablink-tauri/src/shared/api || true
+grep -R "exportMixingEnabled" -n apps/crablink-tauri/src/pages/make apps/crablink-tauri/src/shared/api || true
+```
+
+## 13. Acceptance tests for the next session
+
+### Test A — Audio lane should actually export
+
+```text
+1. Open crab://make.
+2. Add one local video clip.
+3. Add one local audio file.
+4. Place audio at offset 0.
+5. Export to video page.
+6. ffprobe exported Make MP4.
+7. Confirm final Make MP4 has:
+   - video stream
+   - audio stream
+   - audio bitrate not just tiny silent fallback
+8. Preview final MP4 locally if possible.
+9. Send to crab://video.
+10. Prepare.
+11. Mint.
+12. Open minted video.
+13. Confirm added audio is audible.
+```
+
+### Test B — Video-only export must still work
+
+```text
+1. Open crab://make.
+2. Add video only.
+3. Export.
+4. Prepare.
+5. Mint.
+6. Confirm no regressions.
+```
+
+### Test C — Audio track muted
+
+```text
+1. Add video.
+2. Add audio.
+3. Mute audio track.
+4. Export.
+5. Final video may have silent/no meaningful audio.
+6. No error should occur.
+```
+
+### Test D — Audio offset
+
+```text
+1. Add video.
+2. Add audio with offset around 1 second.
+3. Export.
+4. Confirm audio begins around that offset.
+```
+
+### Test E — Audio trim
+
+```text
+1. Add video.
+2. Add audio.
+3. Set trim start/end if UI supports it.
+4. Export.
+5. Confirm only trimmed audio region appears.
+```
+
+## 14. Do not violate these boundaries
+
+Do not:
+
+```text
+Expose native file paths to React.
+Send full video/audio bytes back through command results.
+Accept arbitrary FFmpeg args from React.
+Invent a b3 CID locally.
+Invent receipts.
+Mutate wallet/ledger from Make or Video UI.
+Claim linked-media rights/reuse/payout is solved.
+Make linked video/audio reuse payout splits yet.
+Push QuickChain/external settlement.
+```
+
+Preserve:
+
+```text
+Tauri Rust = native trust boundary.
+React = display/user intent.
+Backend = durable b3/receipt/wallet/ledger truth.
+Make = local editor/exporter.
+Video = prepare/mint flow.
+Cache/display state = not truth.
+```
+
+## 15. Recommended first patch next session
+
+Start with a minimal Rust/FFmpeg audio-lane export path:
+
+```text
+Scope:
+  one local audio track
+  audio offsetMs
+  volumePct
+  no linked audio URL support
+  no payout split support
+  no rights verification
+  no multi-track UI complexity beyond existing local audio lane
+```
+
+Files likely touched:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/make_export.rs
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+apps/crablink-tauri/src-tauri/capabilities/default.json
+apps/crablink-tauri/src/shared/api/makeExportClient.js
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/makeLinkedMediaModel.js
+```
+
+Suggested sequencing:
+
+```text
+1. Add Rust DTO + storage for audio tracks inside Make export session.
+2. Add command/adapter to upload audio chunks.
+3. Update Make export adapter to upload local_audio blobs separately from video clips.
+4. Update finish export to run FFmpeg final audio mix.
+5. Add ffprobe guard: if audio requested, final output must have readable audio.
+6. Keep existing video-only path unchanged.
+7. Run npm build and check:rust:mac-media.
+8. Manual test with one audio file.
+```
+
+## 16. Current human-readable summary
+
+We successfully got the Make → Video → Mint path working again. The missing audio is not a minting bug. It is because the Make audio lane is still local preview/draft metadata only. The right fix is to upload the audio file into the Rust Make export session and let Rust/FFmpeg mix it into the final MP4 before the source handle is handed to the video page. The macOS `page has no displayID` terminal line is likely a Tauri/WebKit display warning and should be treated as low priority unless the app window actually blanks/freezes.
+
+[1]: https://github.com/tauri-apps/tauri/issues/11984?utm_source=chatgpt.com "scheduleDisplayLink(): page has no displayID · Issue # ..."
+
+
+### END NOTE - JUNE 4 2026 - 12:40 CST
+
+
+### BEGIN NOTE - JUNE 4 2026 - 23:10 CST
+
+Below are the **carryover notes for the next CrabLink Make page session**. Current working reference is the newer `CODEBUNDLE_TAURI_APP.md` you attached, generated from the Tauri app source after the latest Make-page patches. 
+
+# CrabLink Make Page Carryover Notes
+
+## Current Status
+
+We made major progress on `crab://make`. The Make page is now becoming the central creator/editor page for CrabLink video creation.
+
+The biggest confirmed wins:
+
+```text
+1. Make page can record/build video clips.
+2. Make page can add local audio into an audio lane.
+3. Export with local audio now works.
+4. Exported Make video can go to crab://video.
+5. Video page prepare/transcode/mint flow still works.
+6. Linked video insertion from crab://<hash>.video works as draft metadata.
+7. Linked video source start/end time selection works.
+8. Linked video preview composer now appears above the timeline correctly.
+9. Linked video quote/pay flow works.
+10. Wallet deduction works for linked-video paid preview.
+11. Paid linked-video preview now works through the Tauri byte bridge.
+```
+
+The Make page is no longer just a camera proof. It is now a working creator flow with local video, local audio, draft linked-media reuse, paid preview access, and safe gateway/Tauri boundaries.
+
+---
+
+# Major Accomplishments So Far
+
+## 1. Make page editor shell exists and is usable
+
+The Make page has a modern creator layout with:
+
+```text
+camera/preview window
+timeline area
+clip controls
+audio lane
+scene presets
+right-side stacked controls
+timeline buttons
+approve/export flow
+linked media buttons
+```
+
+We have been moving toward the correct UX model: controls should live inside or near the preview window like a modern video creator app, instead of looking like a dev page.
+
+Current UI direction:
+
+```text
+compact
+modern
+video-first
+timeline over/inside preview
+buttons grouped near the preview
+drawers/popovers layered above editor content
+Make page as the central creator page
+```
+
+This should continue.
+
+---
+
+## 2. Local audio export bug was solved
+
+This was the big backend-side fix.
+
+### Problem
+
+Local audio could be added and previewed in the Make page, but it did not appear in the final exported/minted video.
+
+Earlier browser-side audio mixing attempts caused broken exports:
+
+```text
+tiny/collapsed MP4 files
+missing video stream
+mint flow blocked
+MediaRecorder/WebView instability
+audio-only or invalid output
+```
+
+### Correct fix
+
+We moved audio inclusion into the Rust/Tauri FFmpeg export path.
+
+The successful pipeline is now:
+
+```text
+Make page local audio track
+→ upload audio bytes as bounded chunks
+→ Rust Make export session stores temporary audio files
+→ Rust normalizes video clips
+→ Rust concatenates normalized video into base MP4
+→ FFmpeg mixes local audio tracks into final MP4
+→ Rust validates final video/audio streams
+→ Rust registers final MP4 as local video source handle
+→ crab://video prepare/mint path continues unchanged
+```
+
+### Key files involved
+
+```text
+apps/crablink-tauri/src-tauri/src/media/make_export.rs
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+apps/crablink-tauri/src/shared/api/makeExportClient.js
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/makeLinkedMediaModel.js
+apps/crablink-tauri/src/pages/make/makeAudioTimelineModel.js
+```
+
+### Important invariant preserved
+
+The Make export result is still only a **local Tauri source handle** until it goes through the video page/backend mint flow.
+
+It is **not**:
+
+```text
+a backend CID
+a crab URL
+a receipt
+a wallet event
+an ownership proof
+a paid unlock
+```
+
+That boundary is correct and must be preserved.
+
+---
+
+## 3. Browser-side audio mixing was retired
+
+We intentionally removed/avoided the old browser-side final audio mixer path.
+
+Reason:
+
+```text
+Browser MediaRecorder + canvas/video/audio mixing was fragile.
+Rust/FFmpeg is now the proven path.
+```
+
+Do not reintroduce browser-side final audio export.
+
+Browser/React should own:
+
+```text
+timeline UI
+local preview intent
+track ordering
+track offset/trim/volume intent
+draft state
+```
+
+Rust/Tauri should own:
+
+```text
+bounded file staging
+FFmpeg commands
+final MP4 generation
+validation
+local source registration
+```
+
+Backend still owns:
+
+```text
+CID truth
+mint truth
+ledger truth
+paid access truth
+receipts
+ownership
+```
+
+---
+
+## 4. Linked video insertion now exists
+
+We added linked video draft insertion from a `crab://<64 lowercase hex>.video` URL.
+
+The user can now:
+
+```text
+click link button beside video timeline
+paste crab://<hash>.video
+set source start time
+set source end time
+insert draft clip/reference
+see it in the linked video strip
+```
+
+The linked video stores:
+
+```text
+url
+asset kind
+sourceStartMs
+sourceEndMs
+range label
+rightsStatus: not_checked
+payoutStatus: not_configured
+includedInExport: false
+exportStatus: reference_only_not_rendered
+```
+
+This is correct.
+
+Linked video insertion is currently **draft metadata only**.
+
+It does **not** yet:
+
+```text
+verify reuse rights
+include remote video in final Make export
+create payout split metadata
+create receipt truth
+create backend truth
+grant remix/export rights
+```
+
+---
+
+## 5. Linked video composer layering was fixed
+
+The linked-media composer originally appeared behind the timeline/editor area.
+
+We fixed this by moving it into a React portal attached to `document.body` and making it fixed/high z-index.
+
+Current behavior:
+
+```text
+click linked video button
+→ composer appears above the editor/timeline
+→ backdrop appears
+→ clicking outside closes it
+```
+
+This is working and should be kept.
+
+---
+
+## 6. Paid linked-video preview flow now works
+
+This was the latest confirmed success.
+
+### What was proven
+
+The Make page can now:
+
+```text
+insert linked video
+→ request preview quote
+→ show quote
+→ pay quote
+→ deduct ROC from wallet
+→ fetch paid preview bytes
+→ display linked video preview
+```
+
+### Important distinction
+
+Payment is for **preview/viewing only**.
+
+It does **not** grant:
+
+```text
+reuse rights
+export rights
+remix rights
+ownership
+payout rights
+mint rights
+```
+
+This is the correct architecture.
+
+### Why preview was originally blocked
+
+The raw gateway preview attempt failed because the asset was likely behind a paid content gate.
+
+The browser/WebView fetch path was not enough after payment.
+
+### Fix
+
+We changed paid preview byte fetching to prefer the Rust/Tauri bounded asset byte bridge:
+
+```text
+fetch_asset_bytes_gateway
+```
+
+The preview now forwards backend-returned payment/receipt facts from the successful `content_view` payment, then fetches the paid bytes through Tauri.
+
+This preserved the correct trust boundary:
+
+```text
+React asks for preview
+backend quotes
+backend wallet path charges
+backend returns receipt/payment facts
+Tauri fetches bounded preview bytes
+React displays preview
+```
+
+No fake receipts or fake unlocks were created.
+
+---
+
+# Current Linked Video Preview Flow
+
+Current linked video preview behavior:
+
+```text
+1. User inserts crab://<hash>.video with start/end range.
+2. Make page shows linked video chip.
+3. User clicks preview.
+4. Preview panel opens.
+5. User gets quote.
+6. User pays quote.
+7. Wallet balance is deducted.
+8. Tauri bridge fetches paid video bytes.
+9. Preview video loads.
+10. Preview seeks to selected start time.
+11. Preview stops/resets around selected end time.
+```
+
+Current status: **working**.
+
+---
+
+# Critical Boundaries to Preserve
+
+## React / Make page
+
+React may:
+
+```text
+display draft state
+capture user intent
+show preview UI
+send typed requests to Tauri/backend clients
+show receipts returned by backend
+show local source handles
+```
+
+React must not:
+
+```text
+invent balances
+invent receipts
+invent ownership
+invent payout recipients
+unlock paid content from cache alone
+mutate ledger truth
+hold private keys/secrets
+pretend linked media is reusable without backend policy
+```
+
+## Tauri Rust
+
+Tauri may:
+
+```text
+stage local media bytes
+run FFmpeg
+validate MP4/audio/video streams
+fetch bounded paid preview bytes through gateway
+register local video source handles
+mediate native capabilities
+```
+
+Tauri must not:
+
+```text
+mutate ledger truth directly
+invent receipts
+unlock paid content without backend receipt/session
+act as backend storage/index/policy authority
+```
+
+## Backend
+
+Backend owns:
+
+```text
+content_view quote/pay
+wallet mutation
+ledger truth
+receipts
+paid access enforcement
+CID/storage truth
+reuse policy truth
+payout split enforcement
+```
+
+---
+
+# What Remains for the Make Page
+
+## 1. Polish Make page UI/UX
+
+The Make page is functional but still needs UI cleanup.
+
+Main goals:
+
+```text
+make preview area larger
+reduce clutter
+keep controls inside preview region
+make timeline feel more modern
+make audio lane visually cleaner
+make linked video strip more compact
+make preview/payment panels feel native
+```
+
+Specific UI ideas from previous sessions:
+
+```text
+timeline should span more of the preview width
+right-side control stack should move up slightly
+edit clip button should be cleaner
+mode/puzzle button should switch video modes
+control stack should disappear when mouse leaves preview
+controls should appear when mouse enters preview
+timeline progress fill should be more transparent and full-height
+clip bubbles should show elapsed progress while playing
+```
+
+---
+
+## 2. Improve selected range playback / I-marker behavior
+
+User requested:
+
+```text
+when placing the I marker, show preview of that selected spot
+when highlighting a range with I marker, play only that section
+loop selected section for review
+```
+
+Next likely patch area:
+
+```text
+MakePage.jsx
+makeTimelineModel.js
+make.css
+```
+
+Needed behavior:
+
+```text
+select timeline range
+→ show range preview
+→ play range only
+→ loop range
+→ stop cleanly
+→ preserve current full-sequence playback behavior
+```
+
+This is frontend/editor behavior only.
+
+---
+
+## 3. Improve clip editing
+
+We still need better clip editing controls.
+
+Requested/desired:
+
+```text
+edit clip button in timeline
+trim UI should be smoother
+clip handles should be less clumsy
+remove weird visual artifacts
+make clip movement/trim feel less jumpy
+make selected clip state obvious
+```
+
+Important issue from earlier:
+
+```text
+During trim/move, JavaScript/layout resizing can feel clumsy.
+```
+
+Need to avoid heavy reflow while dragging.
+
+Potential next patch:
+
+```text
+use pointer capture
+keep drag state lightweight
+avoid rerendering whole editor on every small movement
+use requestAnimationFrame for visual updates if needed
+```
+
+---
+
+## 4. Continue improving timeline playback
+
+Known/previous issues:
+
+```text
+between clips there was sometimes black screen
+last clip sometimes would not play
+preview playback could be glitchy
+timeline progress visualization needs polish
+```
+
+Some of this was improved, but it needs regression testing after linked-video preview work.
+
+Test cases:
+
+```text
+single recorded clip
+two recorded clips
+three recorded clips
+last clip playback
+play whole sequence
+play approved sequence
+play selected range
+export after playback
+export after audio added
+```
+
+---
+
+## 5. Linked video export inclusion is still future work
+
+Current linked videos are previewable after payment, but they are not included in the final exported Make video.
+
+This is the next major backend-heavy feature after UI polish.
+
+Correct future flow should be:
+
+```text
+linked video draft
+→ resolve source manifest through gateway/omnigate
+→ verify source exists
+→ verify reuse/remix policy
+→ verify required attribution
+→ verify required payout split
+→ user explicitly accepts reuse terms
+→ backend records/returns reuse permission facts
+→ Make export includes linked source segment
+→ final video manifest includes source reference + split obligations
+→ backend enforces payout split during paid views
+```
+
+Do **not** simply splice paid preview bytes into export yet.
+
+A paid view receipt only means:
+
+```text
+the user can watch/preview the source
+```
+
+It does not mean:
+
+```text
+the user can remix/export/monetize the source
+```
+
+---
+
+## 6. Need backend reuse-rights manifest path
+
+For linked video reuse, source manifests need policy fields such as:
+
+```text
+reuse allowed / not allowed
+clip allowed / not allowed
+max reusable duration
+attribution required
+commercial use allowed / not allowed
+minimum creator split
+payout recipient account
+policy version
+source asset CID
+source creator/profile/passport facts
+```
+
+Future linked video export manifest should include something like:
+
+```text
+linkedSources: [
+  {
+    kind: "video",
+    sourceCrabUrl: "crab://<hash>.video",
+    sourceCid: "b3:<hash>",
+    sourceStartMs: 10000,
+    sourceEndMs: 25000,
+    reusePolicyId: "...",
+    attributionRequired: true,
+    payoutSplitBps: 2500,
+    recipientAccount: "...",
+    verificationReceipt: "..."
+  }
+]
+```
+
+But React must not invent any of this.
+
+React can display/edit requested splits, but backend must verify and enforce.
+
+---
+
+## 7. Need linked payout split design
+
+For commentary/reuse videos, user wants original creator to receive a percentage of ROC from views.
+
+Important rule:
+
+```text
+split payout must be specified in the manifest of the new video
+```
+
+But backend must enforce it.
+
+Potential future paid-view payout flow:
+
+```text
+viewer pays ROC to watch remixed video
+→ svc-wallet receives/captures payment
+→ ledger records payment
+→ rewarder/accounting calculates split plan
+→ source creator receives configured portion
+→ remix creator receives remainder
+→ receipts show split facts
+```
+
+Do not put payout enforcement in React.
+
+Do not let Make page create fake payout obligations.
+
+---
+
+## 8. Need linked audio reuse later
+
+Local audio now exports correctly.
+
+Linked audio currently remains draft-only.
+
+Future linked audio flow should mirror linked video:
+
+```text
+paste crab://<hash>.music or crab://<hash>.audio
+→ store draft reference
+→ paid preview if gated
+→ verify reuse policy
+→ verify payout split
+→ include in export only after backend permission
+```
+
+No linked audio export inclusion yet.
+
+---
+
+## 9. Need better paid preview session handling
+
+The current linked-video preview now works, but next session should consider making the paid preview unlock smoother.
+
+Current likely behavior:
+
+```text
+pay quote
+→ Tauri byte bridge fetches preview bytes
+→ preview works
+```
+
+Potential improvements:
+
+```text
+cache preview receipt display-only
+avoid asking to pay again immediately for same asset if valid receipt/session exists
+show “Paid preview unlocked” chip
+show receipt/proof drawer
+make Load Preview button clearer after pay
+```
+
+Important:
+
+```text
+Receipt display cache is display-only.
+It cannot unlock paid content offline by itself.
+```
+
+Backend/gateway should remain source of paid access truth.
+
+---
+
+## 10. Need preview range/segment optimization
+
+Current paid linked-video preview fetch has a bounded max byte cap.
+
+This is okay for now, but not final.
+
+Future media-scale behavior should use:
+
+```text
+range requests
+segments
+renditions
+preview clips
+bounded streams
+```
+
+We should avoid full large video downloads into React/Tauri command results.
+
+Current cap is protective, but long-term linked preview should be:
+
+```text
+preview selected source range
+→ fetch only needed segment/range/rendition
+→ do not pull full source file
+```
+
+This matters before large videos.
+
+---
+
+## 11. Need linked video export using FFmpeg safely
+
+When backend reuse rights are verified, Make export will need a Rust/FFmpeg path for linked source inclusion.
+
+Possible future pipeline:
+
+```text
+Make export session receives local clips
+Make export session receives local audio
+Make export session receives verified linked source references
+Tauri/Rust asks gateway/backend for permitted source media/ranges
+Rust stages allowed source segment(s)
+FFmpeg trims source segment(s)
+FFmpeg normalizes linked source segment(s)
+FFmpeg concatenates local + linked segments
+FFmpeg mixes audio
+final MP4 registered as local video source handle
+video page prepare/mint continues unchanged
+```
+
+Important:
+
+```text
+The linked source segment must not come from unauthenticated raw browser fetch.
+It needs gateway/backend permission and bounded staging.
+```
+
+---
+
+## 12. Need source attribution overlay/options
+
+For linked video commentary, Make page may need UI for attribution.
+
+Potential UI:
+
+```text
+“Uses clip from @creator”
+“Source: crab://<hash>.video”
+small watermark option
+credits panel
+manifest attribution facts
+```
+
+Do not hardcode attribution until backend/source manifest says what is required.
+
+---
+
+## 13. Need Make manifest preview / export facts
+
+Eventually, before exporting/minting, Make should show a manifest facts panel:
+
+```text
+local clips count
+audio tracks count
+linked video sources
+linked audio sources
+rights status
+payout status
+export status
+receipt status
+local source handle status
+```
+
+Current draft should clearly distinguish:
+
+```text
+Local media: exportable if local bytes exist
+Linked media: previewable after pay, not exportable until reuse verified
+```
+
+---
+
+## 14. Need “approve sequence” polish
+
+The approve/export flow exists, but now that linked video exists, approval should make distinctions:
+
+```text
+approve local-only sequence
+approve with draft linked references
+block export if linked references are not export-includable
+show warning: linked video preview is not export permission
+allow export local clips only if linked videos are reference-only
+```
+
+Current state should not accidentally imply linked video will appear in final exported MP4.
+
+---
+
+## 15. Need video mode / puzzle button
+
+User wanted a puzzle-piece or mode button near the start area to switch video modes.
+
+Possible modes:
+
+```text
+camera only
+screen + camera
+cutout studio
+background replacement
+picture-in-picture
+audio-first
+linked commentary mode
+```
+
+This should be UI-only at first.
+
+---
+
+## 16. Need cutout/background features ported from stream page
+
+User wants stream-page features brought into Make page:
+
+```text
+cutout effect
+background replacement
+image background
+video background
+screen/background + subject
+```
+
+Important wording:
+
+```text
+This is software person cutout, not old green-screen behavior.
+```
+
+Future flow:
+
+```text
+import background image/video
+enable person segmentation
+preview in Make
+record/render clips with background
+export through existing Make path
+```
+
+Need to stay bounded and avoid executing creator-provided code.
+
+---
+
+## 17. Need media export quality/rendition work later
+
+Make page export currently hands off to video page prepare/mint.
+
+Previously noted:
+
+```text
+regular videos could mint several qualities
+Make-created videos initially only had original and 720p in some tests
+```
+
+Need future check:
+
+```text
+Make export output dimensions
+ffprobe output validity
+rendition plan generation
+360p / 480p / 720p / original
+manifest cross-linking
+```
+
+---
+
+## 18. Need video bundle manifest cross-linking
+
+Previously for video page:
+
+```text
+Each video version should appear in the manifest of the other versions.
+```
+
+This applies to Make-exported videos too after prepare/mint.
+
+Need ensure:
+
+```text
+original references 720p/480p/360p siblings
+720p references original/480p/360p
+etc.
+```
+
+This is video page/backend manifest work, not just Make page.
+
+---
+
+## 19. Need large media path eventually
+
+There is/was a 10 MB cap in parts of the video upload/mint path.
+
+For Make and linked preview/export, future direction must be:
+
+```text
+bounded chunks
+range/segment
+staged files
+no giant command payloads
+no full-file React state
+no localStorage media bytes
+```
+
+We already followed this for Make audio export.
+
+Need keep doing it.
+
+---
+
+# Current Tests to Run at Start of Next Session
+
+Run:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+npm run check:rust:mac-media
+```
+
+Full stack:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Recommended manual smoke tests:
+
+```text
+1. Open crab://make.
+2. Record a simple video clip.
+3. Export without audio.
+4. Confirm video page handoff works.
+5. Prepare/mint.
+6. Return to Make.
+7. Record/add clip.
+8. Add local audio.
+9. Export with audio.
+10. Confirm audio is in final video.
+11. Prepare/mint.
+12. Return to Make.
+13. Insert linked video crab://<hash>.video.
+14. Set source start/end.
+15. Preview.
+16. Quote.
+17. Pay.
+18. Confirm ROC deducted.
+19. Confirm paid preview loads.
+20. Confirm linked video is still not exported as part of final Make export.
+```
+
+---
+
+# Suggested Next Session Priority
+
+The next best work order:
+
+```text
+1. Regression test the new paid linked-video preview.
+2. Add clearer UI labels:
+   “Paid preview only”
+   “Not exportable yet”
+   “Reuse rights not checked”
+3. Polish linked video chip/preview panel.
+4. Improve I-marker selected range preview/loop playback.
+5. Improve clip/timeline polish.
+6. Add better approve/export warnings for linked media.
+7. Only after that, design backend reuse-rights manifest verification.
+```
+
+The most important next technical feature is probably:
+
+```text
+Selected range preview / loop playback using the I marker.
+```
+
+The most important next architecture feature is:
+
+```text
+Reuse-rights verification before linked video export inclusion.
+```
+
+---
+
+# Do Not Do Yet
+
+Do **not** add:
+
+```text
+linked video export inclusion without backend reuse policy
+automatic payout splits invented in React
+fake receipts
+fake CIDs
+fake ownership
+cache-only paid unlock
+external settlement
+QuickChain
+ROX/Solana/public-chain logic
+browser-side final audio/video mixing
+large full-file command buffering
+```
+
+---
+
+# Golden Mental Model Going Forward
+
+```text
+Make page = creator/editor UX.
+
+Local files:
+  can be previewed locally
+  can be staged by Tauri
+  can be exported by Rust/FFmpeg
+  can be handed to video page for backend prepare/mint
+
+Linked crab:// media:
+  can be inserted as draft metadata
+  can be paid-previewed through backend content_view
+  cannot be exported/reused until backend policy verifies reuse rights
+
+Paid preview receipt:
+  means user may view source bytes
+  does not mean user may remix/export/monetize source bytes
+
+Tauri:
+  stages/fetches bounded bytes
+  runs FFmpeg
+  mediates native capability
+
+Backend:
+  owns wallet, ledger, receipts, paid access, reuse policy, payout enforcement
+
+React:
+  displays state and captures intent
+  owns no backend truth
+```
+
+That is where we should pick up next session.
+
+
+### END NOTE - JUNE 4 2026 - 23:10 CST
+
+
+
+### BEGIN NOTE - JUNE 6 2026 - 12:05 CST
+
+Below are complete carryover notes for the next session. These are written so the next instance can pick up the project without re-discovering the Make page history.
+
+---
+
+# CrabLink Tauri / RustyOnions Carryover Notes — Make Page + Linked Video Reuse
+
+## Current project doctrine
+
+RustyOnions backend owns durable truth. CrabLink Tauri is the primary native client. Chrome remains a proof/companion surface, but major product work should target Tauri first.
+
+Preserve these invariants:
+
+```text
+CrabLink Tauri = client/product layer
+svc-gateway/omnigate = public/backend route boundary
+svc-wallet + ron-ledger = economic truth
+svc-storage/svc-index = object/index truth
+React = display + user intent only
+Tauri Rust = native privilege / bounded media / FFmpeg / command bridge
+Cache = convenience, never truth
+crab:// = navigation, not authority
+b3:<64 lowercase hex> = canonical content address
+```
+
+Never invent balances, receipts, ownership, payout recipients, paid unlocks, or reuse rights in React. Backend must own paid access, wallet mutation, ledger truth, receipts, reuse policy, and payout split enforcement.
+
+The latest attached Tauri codebundle is the active working reference for this session. It includes the CrabLink Tauri app, Tauri Rust command bridge, Make page files, asset page files, media export code, and Tauri docs. 
+
+---
+
+# What we accomplished recently
+
+## 1. Local RustyOnions stack proof is working
+
+User demonstrated the local stack successfully:
+
+```text
+svc-gateway /healthz -> ok
+svc-gateway /readyz -> ready
+identity route works
+wallet balance route works
+crab://site resolves
+crab://image resolves
+crab://music resolves
+crab://article resolves
+svc-wallet listening on 8088
+svc-passport listening on 5307
+svc-storage listening on 5303
+svc-index listening on 5304
+omnigate listening on 9090
+svc-gateway listening on 8090
+```
+
+User also demonstrated dev wallet funding:
+
+```text
+POST /v1/issue to svc-wallet
+returned txid
+returned ledger_seq_start / ledger_seq_end
+returned ledger_root
+returned receipt_hash
+balance increased from 3552 ROC to 5328 ROC
+```
+
+This is demo-worthy because it proves:
+
+```text
+gateway ready
+omnigate route hydration
+backend-derived wallet balance
+ledger-backed ROC mutation
+receipt/hash facts returned by backend
+```
+
+Important wording for demos:
+
+```text
+The direct /v1/issue call is a dev/admin funding command.
+Normal clients should go CrabLink -> svc-gateway -> backend services.
+CrabLink displays backend truth; it does not invent balances or receipts.
+```
+
+---
+
+## 2. Make page image background regression was fixed
+
+Bug found:
+
+```text
+Video background worked for person cutout.
+Image background no longer worked.
+```
+
+Root cause:
+
+```text
+drawPreviewLoop received/needed backgroundImageUrl,
+but did not forward it into drawMakeFrame.
+```
+
+Fix applied:
+
+```text
+MakePage.jsx
+- drawPreviewLoop now accepts backgroundImageUrl
+- drawPreviewLoop forwards backgroundImageUrl to drawMakeFrame
+- duplicate image background cleanup removed
+- video background chooser clears previous image URL
+```
+
+Result:
+
+```text
+Person cutout + image background works again.
+Person cutout + video background still works.
+Switching image/video backgrounds behaves correctly.
+```
+
+The compositor already supported image backgrounds, and the bug was wiring in the Make page loop rather than missing compositor capability. 
+
+---
+
+## 3. Make export autoplay/platform error was patched
+
+Bug found after recording/exporting a video:
+
+```text
+Timeline render could not play Screen Recording ...mov:
+The request is not allowed by the user agent or the platform in the current context,
+possibly because the user denied permission.
+```
+
+Likely root cause:
+
+```text
+Browser/WebView off-screen export renderer attempted programmatic video.play()
+with source audio enabled or not reliably muted.
+Tauri/WebView autoplay/media policy rejected playback outside a direct user gesture.
+```
+
+Patch applied:
+
+```text
+apps/crablink-tauri/src/pages/make/makeTimelineModel.js
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+```
+
+Behavior changed:
+
+```text
+renderTimelineClipForExport defaults includeSourceAudio = false
+renderTimelineClipsForExport defaults includeSourceAudio = false
+hidden render video is always muted
+video.defaultMuted = true
+video.volume = 0
+MakePage export call explicitly passes includeSourceAudio: false
+error copy clarifies muted export renderer
+```
+
+Important consequence:
+
+```text
+Browser-side timeline rendering is now video-only.
+Durable audio mixing belongs in the Rust/FFmpeg Make export path.
+Do not reintroduce browser MediaRecorder/canvas/audio final mixing.
+```
+
+---
+
+## 4. Rust/FFmpeg Make audio export path is the correct path
+
+Prior browser-side audio export attempts caused:
+
+```text
+tiny/collapsed MP4 files
+audio-only exports
+missing video stream
+mint blocking
+MediaRecorder/WebView instability
+```
+
+The correct design now is:
+
+```text
+Make page local audio track
+-> upload audio bytes as bounded chunks
+-> Tauri Rust Make export session stores temporary audio files
+-> Rust normalizes video clips
+-> Rust concatenates normalized video into base MP4
+-> FFmpeg mixes local audio tracks into final MP4
+-> Rust validates final video/audio streams
+-> Rust registers final MP4 as local video source handle
+-> crab://video prepare/mint path continues unchanged
+```
+
+The notes explicitly say the Make export result remains only a local Tauri source handle until it goes through the video page/backend mint flow. It is not a backend CID, crab URL, receipt, ownership proof, paid unlock, or wallet event. 
+
+Key files:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/make_export.rs
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+apps/crablink-tauri/src/shared/api/makeExportClient.js
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/makeAudioTimelineModel.js
+apps/crablink-tauri/src/pages/make/makeLinkedMediaModel.js
+```
+
+Rust Make export has the correct trust-boundary header: it stages approved Make clip chunks and exports one normalized local MP4 source handle, without inventing backend truth. 
+
+---
+
+## 5. Linked video insertion and paid preview exist
+
+Current linked video behavior:
+
+```text
+User clicks video link button near Make timeline
+User pastes crab://<64 lowercase hex>.video
+User can set source start/end range
+Make stores linked video draft/reference
+Linked video preview panel opens
+User gets quote
+User pays quote
+Wallet balance is deducted
+Tauri bridge fetches paid video bytes
+Preview video loads
+Preview seeks to selected source start
+Preview stops/resets around selected end
+```
+
+This is working as a paid preview flow. Existing notes confirm the linked video preview behavior and state that it preserves the correct trust boundary: React asks for preview, backend quotes, backend wallet path charges, backend returns receipt/payment facts, Tauri fetches bounded preview bytes, and React displays preview. 
+
+Current linked video draft facts include:
+
+```text
+url
+asset kind
+sourceStartMs
+sourceEndMs
+range label
+rightsStatus: not_checked
+payoutStatus: not_configured
+includedInExport: false or not fully proven
+exportStatus: reference_only_not_rendered / local proxy state depending on patch state
+```
+
+The important current problem:
+
+```text
+Linked video acts more like an embedded preview than a true imported editor clip.
+It does not yet feel like a normal clip in the Make timeline.
+Reuse/payout policy is not implemented.
+```
+
+---
+
+## 6. Paid video playback on asset page was patched toward Tauri byte bridge
+
+Bug found:
+
+```text
+After minting video with one account,
+switching to a different account,
+paying to view,
+asset hydrated successfully,
+but video byte route did not load inside player.
+```
+
+Error shown:
+
+```text
+The asset hydrated successfully, but the video byte route did not load inside the player.
+Try Open source, check gateway /o support, or confirm the local dev storage still contains this object.
+```
+
+Likely root cause:
+
+```text
+Video page/player tried direct WebView/browser loading of protected gateway /o bytes.
+The <video> element cannot attach wallet/passport headers/session facts needed after paid unlock.
+Image/audio paid playback already used Tauri byte bridge pattern.
+Video needed same bounded byte bridge path.
+```
+
+Patch provided:
+
+```text
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+```
+
+Patch intent:
+
+```text
+Use fetch_asset_bytes_gateway for paid video bytes after canView unlock
+Create local Blob URL for player
+Sniff MP4/WebM/Ogg binary content
+Record route/status/correlationId in diagnostics
+Label playback as Tauri byte bridge loading / Tauri blob playback
+Align Rust asset byte bridge cap to 12 MiB for MVP video blobs
+```
+
+This mirrors the existing paid audio player pattern, whose header explicitly says browser/WebView direct media loading can fail for gateway `/o/b3:<hash>`, so Tauri Rust fetches bounded bytes and React plays a typed Blob URL. 
+
+Next session should confirm this patch compiled and smoke-test it with:
+
+```text
+Account A mints video
+Account B opens crab://<hash>.video
+Account B pays content view quote
+Video player shows Tauri byte bridge loading / Tauri blob playback
+Video plays
+Diagnostics show successful /o/b3:<hash> byte fetch
+```
+
+If it fails because response is too large, do not keep raising limits indefinitely. The next durable fix is bounded range/segment playback.
+
+---
+
+# Current Make page status
+
+The Make page is now a substantial prototype and is becoming the centerpiece page.
+
+Working or mostly working:
+
+```text
+record clips
+add local media clips
+play/preview clips
+timeline rail
+clip trim/range basics
+person cutout
+image background behind cutout
+video background behind cutout
+linked video URL insertion
+linked video paid preview
+local audio lane preview
+Rust/FFmpeg Make export
+audio mix into final MP4
+export to local Tauri source handle
+handoff into crab://video
+video page prepare/mint flow
+paid video playback bridge patch provided
+```
+
+Still not fully polished:
+
+```text
+timeline UX is still clumsy in places
+linked video still feels embedded, not imported
+linked video needs to show as a real timeline clip
+linked video reuse rights are not verified
+linked video reuse payout split is not in final manifest
+linked video source segment is not durably exported through backend reuse policy
+I-marker/range preview needs improvement
+range-loop playback needs improvement
+video editor UI still needs polish
+```
+
+---
+
+# Main next-session priority
+
+## Linked video should become a real imported clip, not an embedded preview
+
+User’s next priority:
+
+```text
+When we add a linked video in the Make video editor,
+it should behave like a real imported clip.
+
+It should:
+- show up directly in the video editor timeline
+- have a clip bubble like other clips
+- be selectable
+- be trimmable
+- be movable/reorderable
+- show source range/duration
+- participate in preview playback
+- participate in export only after proper reuse policy
+- carry reuse fee/split facts into the final new video manifest
+```
+
+Current problem:
+
+```text
+Linked video feels like an embedded video/preview panel.
+It does not feel like an imported clip in the editor.
+```
+
+Need to change mental model from:
+
+```text
+linked video = separate preview window / embed
+```
+
+to:
+
+```text
+linked video = timeline clip whose bytes/policy are staged through backend-approved reuse flow
+```
+
+---
+
+# Correct architecture for linked video reuse
+
+Do **not** confuse paid viewing with reuse rights.
+
+Paid viewing means:
+
+```text
+viewer paid to watch source asset
+```
+
+It does **not** mean:
+
+```text
+viewer can remix it
+viewer can export it
+viewer can monetize it
+viewer owns it
+viewer can create payout recipients
+viewer can bypass source creator policy
+```
+
+Existing notes explicitly warn that paid view receipt only means the user can watch/preview the source, not remix/export/monetize it. 
+
+The correct future linked video flow should be:
+
+```text
+1. User inserts crab://<source_hash>.video into Make.
+2. Make resolves source through gateway/omnigate.
+3. Backend returns manifest/policy facts.
+4. Make creates a linked clip placeholder in timeline immediately.
+5. User chooses source start/end range.
+6. Make requests reuse quote/terms, separate from content-view quote.
+7. Backend verifies source policy:
+   - reuse allowed
+   - clipping allowed
+   - max reusable duration
+   - attribution required
+   - commercial reuse allowed
+   - minimum split
+   - payout recipient account
+   - policy version
+   - source CID
+   - source creator/profile/passport facts
+8. User explicitly accepts reuse terms.
+9. Backend returns reuse authorization / license receipt / policy proof.
+10. Tauri fetches bounded source bytes or segment bytes for editor preview/export.
+11. Linked clip becomes exportable.
+12. Make export includes linked source segment.
+13. Final new video manifest includes:
+   - source video CID/crab URL
+   - reused source range
+   - source creator attribution
+   - reuse policy version
+   - payout split obligation
+   - proof/receipt/license ID from backend
+14. When someone pays to view the new video:
+   - backend wallet path charges viewer
+   - backend splits ROC automatically between new video maker and source video creator
+   - backend returns receipt showing split facts
+```
+
+---
+
+# Proposed linked video clip states
+
+Implement linked video in phases. Do not jump straight to final economics.
+
+## Phase 1 — Real timeline placeholder
+
+When user inserts `crab://<hash>.video`, immediately create a timeline item:
+
+```javascript
+{
+  id: "make-linked-video-...",
+  kind: "linked_video",
+  sourceMode: "linked_video_reference",
+  crabUrl: "crab://<hash>.video",
+  sourceCid: "b3:<hash>",
+  sourceStartMs,
+  sourceEndMs,
+  timelineDurationMs,
+  title,
+  rightsStatus: "not_checked",
+  reuseStatus: "not_requested",
+  payoutStatus: "not_configured",
+  previewStatus: "not_loaded",
+  exportStatus: "blocked_until_reuse_verified",
+  includedInExport: false,
+  createsBackendTruth: false
+}
+```
+
+UI should show this in the same timeline rail as local clips, but visually marked as:
+
+```text
+Linked
+Needs reuse terms
+Preview not loaded
+Not exportable yet
+```
+
+This should solve the user’s complaint that linked video acts like an embed instead of a clip.
+
+## Phase 2 — Paid preview bytes become editor preview proxy only
+
+After user pays to preview/view the source, Make can fetch bounded preview bytes through Tauri and use those bytes for timeline preview.
+
+Important label:
+
+```text
+Preview proxy only
+Not reuse permission
+Not export permission
+```
+
+This can make timeline playback feel real while still preserving rights boundaries.
+
+## Phase 3 — Reuse authorization makes clip exportable
+
+Only after backend reuse terms are confirmed should the clip state become:
+
+```javascript
+{
+  reuseStatus: "authorized",
+  rightsStatus: "reuse_verified",
+  payoutStatus: "split_configured",
+  exportStatus: "exportable_linked_source",
+  includedInExport: true,
+  reuseAuthorizationId,
+  reuseReceiptHash,
+  sourceCreatorAccount,
+  sourceCreatorSplitBps,
+  makerSplitBps
+}
+```
+
+Then export can include the clip.
+
+## Phase 4 — Manifest split facts
+
+Final new video manifest needs a `reuse` or `linked_sources` section. Example shape:
+
+```json
+{
+  "linked_sources": [
+    {
+      "kind": "video",
+      "source_cid": "b3:<source_hash>",
+      "source_crab_url": "crab://<source_hash>.video",
+      "source_range_ms": {
+        "start": 12000,
+        "end": 42000
+      },
+      "reuse_policy": {
+        "policy_id": "reuse_policy_v1",
+        "policy_version": 1,
+        "commercial_allowed": true,
+        "clip_allowed": true,
+        "max_duration_ms": 60000,
+        "attribution_required": true
+      },
+      "payout_split": {
+        "asset": "roc",
+        "maker_bps": 7000,
+        "source_creator_bps": 3000,
+        "source_creator_account": "acct_source_creator"
+      },
+      "authorization": {
+        "reuse_authorization_id": "reuse_auth_...",
+        "receipt_hash": "b3:<receipt_hash>",
+        "issued_by": "svc-wallet/svc-policy",
+        "created_at": "..."
+      }
+    }
+  ]
+}
+```
+
+Use integer basis points only:
+
+```text
+10000 bps = 100%
+7000 bps = 70%
+3000 bps = 30%
+```
+
+No floats.
+
+---
+
+# Backend work required for reuse split
+
+The reuse split feature is not just frontend.
+
+Needed backend/service contracts:
+
+```text
+reuse policy read endpoint
+reuse quote endpoint
+reuse confirm endpoint
+reuse authorization/receipt endpoint
+paid view split enforcement
+manifest hydration of linked source/split facts
+receipt display of split facts
+```
+
+Suggested service ownership:
+
+```text
+ron-policy:
+  declares/reports reuse policy
+
+svc-wallet:
+  performs paid reuse fee / future paid-view split mutations
+
+ron-ledger:
+  durable truth for all wallet events
+
+svc-gateway:
+  public route boundary for reuse quote/confirm
+
+omnigate:
+  hydrates source video policy and final video linked-source facts
+
+svc-index:
+  optional relation lookup between new video and source videos
+
+svc-storage:
+  stores bytes by b3 only; does not decide rights/payouts
+```
+
+Do not let React or Tauri invent split recipients. The backend must return source creator account and split obligations.
+
+---
+
+# Make export rules for linked video
+
+Until reuse is verified:
+
+```text
+linked video can appear in timeline
+linked video can be previewed after paid view
+linked video can be selected/trimmed/moved as draft intent
+linked video cannot be exported as reusable content
+linked video cannot create payout split metadata
+linked video cannot be minted as part of new video
+```
+
+After reuse is verified:
+
+```text
+linked video segment can be staged into export
+final Make export can include the segment
+new video manifest must contain source reference and split obligations
+paid views of new video must split ROC automatically
+```
+
+Tauri can help with:
+
+```text
+bounded byte fetch
+local preview proxy
+temporary file staging
+FFmpeg segment extraction
+FFmpeg final composition
+local source handle registration
+```
+
+Tauri must not:
+
+```text
+grant reuse rights
+invent split recipients
+invent reuse receipt
+mutate ledger directly
+unlock paid content without backend session
+```
+
+---
+
+# UX requirements for linked video as a real clip
+
+The editor should feel like this:
+
+```text
+User adds linked video URL
+-> clip appears on timeline immediately
+-> clip has chain/link badge
+-> clip duration equals selected source range
+-> clip can be selected like local clips
+-> preview panel/drawer appears as clip inspector, not separate embed
+-> pay/load preview button lives inside clip inspector
+-> after preview loads, timeline thumbnail/preview updates
+-> reuse status badge shows:
+   Not checked
+   Preview paid
+   Reuse terms needed
+   Reuse authorized
+   Exportable
+-> export button explains why blocked if reuse not authorized
+```
+
+Recommended visual statuses:
+
+```text
+gray = linked reference only
+blue = preview loaded
+yellow = reuse terms required
+green = reuse authorized/exportable
+red = source unavailable/reuse denied
+```
+
+Suggested clip labels:
+
+```text
+Linked video
+Preview proxy
+Reuse terms required
+Reuse authorized
+Split: 70/30
+```
+
+---
+
+# Timeline work remaining
+
+## I-marker / selected range playback
+
+User requested:
+
+```text
+When placing the I marker on a spot, show preview of selected spot.
+When highlighting a section with I marker, play only that section.
+Loop selected section for review.
+```
+
+Needed behavior:
+
+```text
+select timeline range
+show range preview
+play range only
+loop range
+stop cleanly
+preserve full-sequence playback
+```
+
+Likely files:
+
+```text
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/makeTimelineModel.js
+apps/crablink-tauri/src/pages/make/make.css
+```
+
+Existing notes identify this as a next patch area. 
+
+## Clip editing polish
+
+Still needed:
+
+```text
+clean edit clip button
+smoother trim handles
+less clumsy drag/resize behavior
+remove visual artifacts
+make selected clip state obvious
+avoid layout reflow while dragging
+use pointer capture
+possibly use requestAnimationFrame for visual updates
+```
+
+## Playback polish
+
+Known/previous issues to regression-test:
+
+```text
+black screen between clips
+last clip sometimes not playing
+glitchy preview playback
+timeline progress visualization
+full-sequence approval after multiple clips
+export after playback
+export after background cutout
+export after local audio
+export after linked preview proxy
+```
+
+Existing notes call these out as ongoing playback test cases. 
+
+---
+
+# UI/UX work remaining for Make page
+
+The Make page is functional but still needs polish. Existing carryover notes list these goals:
+
+```text
+make preview area larger
+reduce clutter
+keep controls inside preview region
+make timeline feel more modern
+make audio lane visually cleaner
+make linked video strip more compact
+make preview/payment panels feel native
+timeline should span more of preview width
+right-side control stack should move up slightly
+mode/puzzle button should switch video modes
+controls should disappear when mouse leaves preview
+controls should appear when mouse enters preview
+timeline progress fill should be more transparent and full-height
+clip bubbles should show elapsed progress while playing
+```
+
+These are still valid. 
+
+---
+
+# Recommended next-session order
+
+## Step 1 — Confirm current build and latest patches
+
+Run:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+npm run check:rust:mac-media
+```
+
+Then run the full stack normally from root if needed:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+## Step 2 — Smoke test paid video playback bridge
+
+Before more Make work, verify the latest paid video byte bridge fix:
+
+```text
+Account A mints video
+Account B pays to view
+Video plays through Tauri blob playback
+```
+
+If it fails, inspect diagnostics and fix video byte path before linked video reuse work.
+
+## Step 3 — Make linked video visible as timeline clip immediately
+
+First actual Make patch should be frontend/editor only:
+
+```text
+create linked video timeline item immediately
+show it in main timeline
+make it selectable
+make it movable/reorderable if current timeline supports that
+show source range and duration
+show status badges
+do not make it exportable yet
+```
+
+## Step 4 — Convert preview window into clip inspector
+
+Instead of acting like embedded video, paid preview UI should become the selected linked clip’s inspector:
+
+```text
+selected linked clip
+-> inspector drawer/panel
+-> source facts
+-> quote/pay preview
+-> preview bytes status
+-> reuse status
+-> split/reuse policy status
+```
+
+## Step 5 — Add local preview proxy for timeline playback
+
+After paid preview loads:
+
+```text
+store Blob/objectUrl as preview proxy
+update linked clip previewStatus = ready
+allow timeline playback using preview proxy
+keep exportStatus blocked_until_reuse_verified
+```
+
+## Step 6 — Design reuse policy manifest contract
+
+Do not overbuild implementation yet. First define DTOs:
+
+```text
+source reuse policy DTO
+reuse quote DTO
+reuse confirm DTO
+reuse authorization DTO
+final video linked_sources manifest section
+paid view receipt split section
+```
+
+## Step 7 — Backend reuse/split path
+
+Only after DTO shape is clear:
+
+```text
+svc-gateway routes
+omnigate hydration
+ron-policy or equivalent policy facts
+svc-wallet split enforcement
+ron-ledger receipt truth
+final manifest display
+```
+
+---
+
+# Testing matrix for next session
+
+## Basic Make tests
+
+```text
+record one clip
+record two clips
+import local clip
+trim clip
+move clip
+play full sequence
+approve sequence
+export
+open video page
+prepare/mint
+pay/view minted result
+```
+
+## Background/cutout tests
+
+```text
+person cutout no background
+person cutout image background
+person cutout video background
+switch image -> video
+switch video -> image
+export after image background
+export after video background
+```
+
+## Audio tests
+
+```text
+add local audio file
+preview audio
+export with audio
+mint exported video
+play minted video
+confirm audio present
+```
+
+## Linked video tests
+
+```text
+insert linked video
+linked video appears in timeline immediately
+select linked clip
+set source start/end
+pay/load preview
+preview proxy plays
+timeline preview uses linked proxy
+export remains blocked until reuse verified
+remove linked clip
+reinsert linked clip
+linked clip does not create fake receipt/ownership/split
+```
+
+## Paid video playback tests
+
+```text
+creator account mints video
+viewer account opens video
+viewer pays quote
+Tauri byte bridge fetches bytes
+video plays from Blob URL
+diagnostics show route/status/correlationId
+object URL revoked on unmount/reload
+```
+
+---
+
+# Files to inspect first next session
+
+## Make frontend
+
+```text
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/make.css
+apps/crablink-tauri/src/pages/make/makeTimelineModel.js
+apps/crablink-tauri/src/pages/make/makeAudioTimelineModel.js
+apps/crablink-tauri/src/pages/make/makeLinkedMediaModel.js
+apps/crablink-tauri/src/pages/make/makeCompositor.js
+apps/crablink-tauri/src/pages/make/makePersonSegmentation.js
+```
+
+## Make export / media Rust
+
+```text
+apps/crablink-tauri/src-tauri/src/media/make_export.rs
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+apps/crablink-tauri/src/shared/api/makeExportClient.js
+```
+
+## Paid asset playback
+
+```text
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/pages/asset/AssetPaidAudioPlayer.jsx
+apps/crablink-tauri/src/pages/asset/VideoAssetManifestFacts.jsx
+apps/crablink-tauri/src-tauri/src/commands/assets.rs
+apps/crablink-tauri/src/shared/api/assetClient.js
+apps/crablink-tauri/src/shared/api/contentViewClient.js
+```
+
+## Video publish/mint
+
+```text
+apps/crablink-tauri/src/pages/video/VideoPage.jsx
+apps/crablink-tauri/src/pages/video/VideoPublishFlow.jsx
+apps/crablink-tauri/src/pages/video/VideoConverterPanel.jsx
+apps/crablink-tauri/src/pages/video/VideoRenditions.jsx
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+apps/crablink-tauri/src-tauri/src/media/video_jobs.rs
+apps/crablink-tauri/src-tauri/src/media/video_sources.rs
+apps/crablink-tauri/src-tauri/src/media/video_transcode.rs
+apps/crablink-tauri/src-tauri/src/media/video_renditions.rs
+```
+
+---
+
+# Commands to start next session
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+npm run check:rust:mac-media
+```
+
+Optional stack proof:
+
+```bash
+curl -fsS http://127.0.0.1:8090/healthz && echo
+curl -fsS http://127.0.0.1:8090/readyz && echo
+curl -fsS http://127.0.0.1:8090/wallet/acct_dev/balance | jq .
+```
+
+Useful listener check:
+
+```bash
+lsof -nP \
+  -iTCP:8090 \
+  -iTCP:9090 \
+  -iTCP:8088 \
+  -iTCP:5307 \
+  -iTCP:5303 \
+  -iTCP:5304 \
+  -sTCP:LISTEN
+```
+
+---
+
+# Highest-risk areas
+
+## 1. Accidentally treating paid preview as reuse permission
+
+Do not do this. A paid view unlock is not a remix/export/license grant.
+
+## 2. Inventing payout split in React
+
+React can display proposed split terms, but backend must return actual enforceable split facts.
+
+## 3. Exporting linked video bytes before backend reuse policy exists
+
+For prototype preview, local proxy playback is okay. For final export/mint, require reuse authorization.
+
+## 4. Large video byte bridge limits
+
+The 12 MiB Tauri blob bridge is MVP only. If paid video playback hits size limits, the correct long-term answer is range/segment streaming, not unsafe full-file command buffering.
+
+## 5. Reintroducing browser-side final audio/video mixing
+
+Avoid browser MediaRecorder/canvas final audio mixing for production export. Rust/FFmpeg path is the proven path.
+
+---
+
+# One-sentence next-session mission
+
+Make linked videos behave like real Make timeline clips first, while preserving the boundary that preview access is not reuse permission; then design the backend-backed reuse license and ROC payout split manifest path so future paid views of the new video automatically split revenue between the new creator and the original reusable source creator.
+
+
+### END NOTE - JUNE 6 2026 - 12:05 CST
+
+
+### BEGIN NOTE - JUNE 7 2026 - 13:25 CST
+
+I based these notes on the latest uploaded Tauri bundle, which is the June 7 generated CrabLink Tauri app bundle and includes the active Make files: `MakePage.jsx`, `make.css`, `makeLinkedMediaModel.js`, `makeAudioTimelineModel.js`, and `makeTimelineModel.js`.
+
+### BEGIN NOTE - JUNE 7 2026 - CRABLINK MAKE PAGE CARRYOVER
+
+# CrabLink Tauri / RustyOnions Carryover Notes — crab://make Timeline, Linked Video, Preview, Playback, Drag-Reorder
+
+## Current project doctrine
+
+RustyOnions backend owns durable truth. CrabLink Tauri is the primary native client/product layer. Chrome remains a proof/companion/gateway smoke surface, but new product work is Tauri-first.
+
+Keep these invariants:
+
+```text
+RustyOnions backend = durable truth
+ron-ledger = economic truth
+svc-wallet = wallet mutation front door
+svc-gateway / omnigate = public/backend route boundary
+svc-storage = bytes by b3
+svc-index = lookup/reference graph truth
+CrabLink Tauri = client/product layer
+Tauri Rust = native trust boundary / bounded media / FFmpeg / secure command bridge
+React = display + user intent only
+Cache/local draft = convenience, never truth
+crab:// = navigation, not authority
+b3:<64 lowercase hex> = canonical content address
+ROC = internal integer accounting only
+```
+
+Do not let React or Tauri invent:
+
+```text
+balances
+wallet receipts
+ownership
+reuse rights
+payout recipients
+payout split facts
+paid unlock truth
+backend CIDs
+mint receipts
+ledger events
+```
+
+Paid preview/view is not remix/reuse/export permission.
+
+---
+
+# Active user preference for future patches
+
+The user does not want downloadable files. Provide paste-ready code directly in chat.
+
+Preferred patch format:
+
+```text
+1. Exact path.
+2. Full file replacement when manageable.
+3. Otherwise a terminal script that writes/patches files directly.
+4. No git patch blocks.
+5. No git apply workflow.
+6. No unified diff blocks.
+```
+
+User is okay with terminal patch scripts if they are clear and operate directly on files. Earlier scripts should auto-detect whether run from:
+
+```text
+/Users/mymac/Desktop/crablink
+```
+
+or:
+
+```text
+/Users/mymac/Desktop/crablink/apps/crablink-tauri
+```
+
+because one earlier script failed due to relative path assumptions.
+
+---
+
+# Current run/build commands
+
+Use these first next session:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run build
+npm run check:rust:mac-media
+```
+
+Normal full-stack run path:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+scripts/run-tauri-dev-full-stack.sh
+```
+
+Useful backend proof checks:
+
+```bash
+curl -fsS http://127.0.0.1:8090/healthz && echo
+curl -fsS http://127.0.0.1:8090/readyz && echo
+curl -fsS http://127.0.0.1:8090/wallet/acct_dev/balance | jq .
+```
+
+Useful listener check:
+
+```bash
+lsof -nP \
+  -iTCP:8090 \
+  -iTCP:9090 \
+  -iTCP:8088 \
+  -iTCP:5307 \
+  -iTCP:5303 \
+  -iTCP:5304 \
+  -sTCP:LISTEN
+```
+
+---
+
+# Latest uploaded bundle
+
+Latest attached bundle:
+
+```text
+CODEBUNDLE_TAURI_APP.md
+Generated: 2026-06-07T17:54:00Z
+Root: /Users/mymac/Desktop/crablink
+Git: 29cc3e8 (dirty)
+```
+
+Relevant Make files in that bundle:
+
+```text
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/make.css
+apps/crablink-tauri/src/pages/make/makeAudioTimelineModel.js
+apps/crablink-tauri/src/pages/make/makeCompositor.js
+apps/crablink-tauri/src/pages/make/makeDraftModel.js
+apps/crablink-tauri/src/pages/make/makeLinkedMediaModel.js
+apps/crablink-tauri/src/pages/make/makePersonSegmentation.js
+apps/crablink-tauri/src/pages/make/makeTimelineModel.js
+```
+
+Important: several `.bak` Make files now exist from repeated patching. Do not patch against a stale backup. Always inspect the current `MakePage.jsx` and `make.css`.
+
+---
+
+# Current screenshot observation
+
+The latest screenshot shows:
+
+```text
+TIMELINE 2 local clips · 22s · 100%
+two local clip bubbles side by side
+audio lane below
+add clip plus button on right
+link button on right
+NO visible drag/reorder handle on either local clip bubble
+```
+
+User confirms:
+
+```text
+Drag and drop is still not working for any clips.
+```
+
+This means the previous drag-reorder patch did not create an actually usable drag surface. It may not have applied, may have been hidden by CSS, may have patched the wrong JSX block, or may rely on an invisible hover-only handle that is unusable in the current UI.
+
+The next session should not keep stacking patch scripts blindly. First inspect current `MakePage.jsx` around the local clip render block and the current `make.css` around `.make-preview-mini-clip`, `.make-preview-mini-clip-main`, `.make-preview-mini-clip-edit`, `.make-preview-trim-handle`, and any `.make-preview-mini-reorder-handle` rules.
+
+---
+
+# What was accomplished recently
+
+## 1. Linked video can appear in the main Make timeline
+
+Earlier problem:
+
+```text
+Linked video preview/payment UI appeared in a separate area.
+Linked video did not appear as a clip bubble in the main timeline.
+Recorded clip timeline could disappear or be visually covered by linked preview UI.
+```
+
+Current state:
+
+```text
+Linked video ref can now appear in the real timeline rail as a linked clip bubble.
+Local clips remain visible.
+The timeline summary can count local clips and linked video refs.
+```
+
+This is major progress toward:
+
+```text
+linked video = real editor timeline intent
+```
+
+rather than:
+
+```text
+linked video = separate embed only
+```
+
+But it is not finished.
+
+## 2. Linked video paid preview flow was restored
+
+Earlier problem:
+
+```text
+After moving linked video into the timeline, the pay/quote UI disappeared.
+The user could not approve/pay for the linked preview.
+```
+
+Current state:
+
+```text
+A payment/preview inspector exists.
+Pay/preview can load linked source preview bytes after backend quote/payment.
+The flow can deduct ROC and load preview bytes.
+```
+
+Expected model:
+
+```text
+Add linked video
+-> payment drawer/inspector opens
+-> quote/pay
+-> Tauri byte bridge fetches preview bytes
+-> preview becomes local display proxy
+-> linked clip can participate in local preview playback
+```
+
+Important boundary:
+
+```text
+Paid preview is display-only.
+Paid preview does not grant reuse/export/mint permission.
+```
+
+## 3. Linked video preview can be resized/trimmed
+
+Recent state:
+
+```text
+Linked clip source window can be adjusted by timeline trim handles.
+```
+
+User confirmed earlier:
+
+```text
+We can adjust the link clip.
+```
+
+Problem:
+
+```text
+The drawer/window kept opening while resizing.
+```
+
+Patch attempted to change behavior:
+
+```text
+clip body selects only
+Pay / preview button opens drawer
+resize should not open payment drawer
+```
+
+Needs regression test.
+
+## 4. Local clips and linked preview playback started to be connected
+
+Recent patch attempted:
+
+```text
+Build linkedVideoPreviewClipsForSequence from paid preview proxy bytes.
+Use sequencePlaybackClips = local clips + paid linked preview clips.
+Make Play use sequencePlaybackClips.
+Keep export based on local clips only / block export with linked preview.
+```
+
+Current status is not fully proven. User previously said linked preview did not show up in playback when a local clip came before it. After the most recent patch, this still needs to be smoke-tested after fixing drag/reorder.
+
+## 5. Rust/FFmpeg Make export path exists and is the right final export path
+
+The correct export design remains:
+
+```text
+Make page draft clips/audio
+-> Tauri Rust bounded staging
+-> Rust normalizes/concats video
+-> Rust/FFmpeg mixes local audio
+-> Rust validates output streams
+-> Rust registers final MP4 as local video source handle
+-> crab://video prepare/mint flow
+```
+
+Do not reintroduce browser-side final audio/video mixing. Browser MediaRecorder/canvas mixing caused tiny/collapsed MP4s, audio-only exports, and mint blockers.
+
+## 6. Local audio lane exists
+
+Current state:
+
+```text
+Audio lane is visible under the video timeline.
+Local audio files can be added.
+Local audio is draft-only until Rust/FFmpeg export.
+Linked audio references remain draft-only until rights/payout checks exist.
+```
+
+Still to polish:
+
+```text
+better audio clip bubbles
+audio drag/trim
+audio link preview/payment
+audio sync with timeline
+```
+
+---
+
+# Current core blocker
+
+## Drag/drop reorder does not work for any clips
+
+User’s latest report:
+
+```text
+Drag and drop is still not working for any clips.
+```
+
+Screenshot confirms:
+
+```text
+two local clip bubbles are visible
+no obvious reorder handle is visible
+drag action appears unavailable
+```
+
+Most likely causes:
+
+```text
+1. Previous reorder patch did not apply to the current JSX block.
+2. The reorder handle was inserted into a stale block or backup-era block.
+3. The handle exists but is hidden by CSS opacity and never appears because hover/focus target is wrong.
+4. The handle exists but is covered by the main clip button or edit/trim layer.
+5. Pointer events are swallowed by the clip selection button, trim mode, overlay controls, or timeline container.
+6. CSS z-index puts the handle behind the clip body or play/progress overlay.
+7. The patch used `document.elementsFromPoint` but data attributes were not actually added to rendered clip elements.
+8. The state order model exists but rendered JSX does not use `style={{ order: ... }}` or the rail layout does not honor `order`.
+9. The rail might use width/flex-grow rules that visually override reorder.
+10. The drag handler may never fire because the handle is missing, disabled, or hidden.
+```
+
+Next session should fix this with a simpler, explicit design.
+
+---
+
+# Recommended next-session priority
+
+## Step 1 — Stop patch stacking; inspect actual current render
+
+Open current files:
+
+```text
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/make.css
+```
+
+Search in `MakePage.jsx` for:
+
+```text
+make-preview-mini-rail
+make-preview-mini-clip
+make-preview-mini-clip-main
+make-preview-mini-clip-edit
+make-preview-mini-reorder-handle
+beginPreviewTimelineReorderDrag
+timelineItemOrder
+onReorderPreviewTimelineItems
+MAKE_PREVIEW_TIMELINE_LOCAL_KIND
+MAKE_PREVIEW_TIMELINE_LINKED_VIDEO_KIND
+linkedVideoDrafts.map
+clips.map
+```
+
+Search in `make.css` for:
+
+```text
+.make-preview-mini-rail
+.make-preview-mini-clip
+.make-preview-mini-reorder-handle
+.make-preview-mini-clip-main
+.make-preview-trim-handle
+.is-reordering
+.is-reorder-target
+```
+
+Determine whether the previous reorder patch is actually present.
+
+## Step 2 — Replace hover-only reorder handle with always-visible move handle
+
+The screenshot shows no visible drag handle. Next patch should make the move handle obvious and always visible on each clip bubble.
+
+Recommended UI:
+
+```text
+left side of every clip bubble:
+  small pill/button with "☰" or "↔" or "MOVE"
+```
+
+Do not depend on hover opacity for now. The user is on a MacBook touchpad, and hover-only controls can be frustrating.
+
+Use:
+
+```css
+opacity: 1;
+pointer-events: auto;
+touch-action: none;
+z-index: high;
+cursor: grab;
+```
+
+The handle must be separate from:
+
+```text
+clip body selection
+trim handles
+edit button
+delete button
+Pay / preview button
+```
+
+## Step 3 — Use pointer-drag reorder, not HTML5 drag/drop
+
+Use pointer events because Tauri/WebView + nested buttons + touchpad is more predictable with pointer events.
+
+Recommended event flow:
+
+```text
+onPointerDown on MOVE handle
+-> preventDefault
+-> stopPropagation
+-> setPointerCapture
+-> record active item key
+-> add document/body class is-dragging-timeline
+-> on pointermove:
+     locate target clip under pointer
+     highlight before/after drop side
+-> on pointerup:
+     compute active index and target index
+     reorder unified timeline array
+     update local clips and linked refs accordingly
+     clear drag state
+```
+
+Do not rely only on `document.elementsFromPoint` unless the clips have simple data attributes and no overlay eats the pointer. Alternative simpler method:
+
+```text
+On pointermove/up, read all clip DOMRects from the rail.
+Pick target by pointer X coordinate.
+Insert active item before the first clip whose center is greater than pointer X.
+If pointer is past all centers, insert at end.
+```
+
+This avoids dependency on which child element is under the cursor.
+
+## Step 4 — Add a real unified editor timeline order model
+
+Current architecture is split:
+
+```text
+local clips live in `clips`
+linked videos live in `linkedVideoDrafts`
+sequence playback may use `sequencePlaybackClips`
+export uses local `clips`
+linked preview export remains blocked
+```
+
+For editor ordering, add a separate order array:
+
+```javascript
+timelineItemOrder = [
+  { kind: 'local_clip', id: '...' },
+  { kind: 'linked_video', id: '...' },
+]
+```
+
+or string keys:
+
+```javascript
+local_clip:<id>
+linked_video:<id>
+audio_track:<id> // future
+```
+
+Rules:
+
+```text
+Adding local clip appends local_clip:<id>
+Adding linked video appends linked_video:<id>
+Removing local clip removes key
+Removing linked video removes key
+Clearing clips clears local keys and linked keys as appropriate
+Undo/redo should be considered for local clips; linked order can be local-only for now
+```
+
+Rendering should use `timelineItemOrder` directly. Avoid rendering local clips first and linked clips second, because that makes drag-reorder across types difficult.
+
+Better render flow:
+
+```javascript
+const timelineItems = buildTimelineItemsFromOrder({
+  timelineItemOrder,
+  clips,
+  linkedVideoDrafts,
+});
+timelineItems.map(item => item.kind === 'local_clip' ? renderLocalClip(item.clip) : renderLinkedClip(item.linkedVideo))
+```
+
+This is simpler and more reliable than CSS `order`.
+
+## Step 5 — Make sequence playback follow unified timeline order
+
+Current attempted sequence flow appended linked preview proxies after local clips:
+
+```text
+sequencePlaybackClips = [...clips, ...linkedVideoPreviewClipsForSequence]
+```
+
+That means even if visual order is linked -> local -> linked, playback may still be local clips first and linked preview clips last.
+
+Next fix should derive playback sequence from `timelineItems`:
+
+```javascript
+const sequencePlaybackClips = timelineItems
+  .map(item => {
+    if item.kind === 'local_clip':
+      return clip
+    if item.kind === 'linked_video' and preview paid/ready:
+      return preview proxy clip
+    return null
+  })
+  .filter(Boolean)
+```
+
+If linked video is not preview-paid yet:
+
+```text
+Play should either skip it with a visible warning
+or block playback with: “Pay/load preview for linked clip first.”
+```
+
+Preferred UX:
+
+```text
+If sequence contains unpaid linked refs:
+  Play disabled or warning shown
+If sequence contains paid preview refs:
+  Play local + linked preview in visual order
+```
+
+Export should remain separate:
+
+```text
+Export clips = local clips only for now.
+If timeline contains linked refs:
+  export blocked until reuse authorization exists.
+```
+
+## Step 6 — Make local export order follow visual local order
+
+If the unified timeline order is:
+
+```text
+local A, linked X, local B
+```
+
+Export before reuse support should either:
+
+```text
+block export because linked X exists
+```
+
+or, if linked refs are ignored for local-only export:
+
+```text
+export local A then local B in their visual local order
+```
+
+Current project doctrine says linked video cannot be exported until reuse authorization, so safest behavior:
+
+```text
+If any linked video exists in timeline:
+  export blocked with explicit message:
+  “Linked video refs are preview-only until backend reuse authorization exists.”
+```
+
+But if local-only export is allowed while linked refs remain ignored, label it explicitly:
+
+```text
+Export local clips only
+Linked refs omitted
+```
+
+For now, safest is block export with linked refs.
+
+---
+
+# Specific next patch recommendation
+
+Do a targeted full replacement of the timeline rendering logic inside `MakePreviewStudioChrome`, not a broad regex patch.
+
+The next patch should implement these helper functions in `MakePage.jsx`:
+
+```javascript
+const TIMELINE_ITEM_KIND = Object.freeze({
+  LOCAL_CLIP: 'local_clip',
+  LINKED_VIDEO: 'linked_video',
+});
+
+function timelineKey(kind, id) {
+  return `${kind}:${id}`;
+}
+
+function parseTimelineKey(key) {
+  const [kind, ...rest] = String(key || '').split(':');
+  return { kind, id: rest.join(':') };
+}
+
+function reconcileTimelineOrder(order, clips, linkedVideoDrafts) {
+  // keep valid keys, append missing valid keys
+}
+
+function buildTimelineItems(order, clips, linkedVideoDrafts) {
+  // return ordered array of { key, kind, clip? linkedVideo? }
+}
+
+function moveArrayItem(array, fromIndex, toIndex) {
+  // immutable reorder
+}
+```
+
+Add state in `MakePage` parent:
+
+```javascript
+const [timelineItemOrder, setTimelineItemOrder] = useState([]);
+```
+
+On `clips` / `linkedVideoDrafts` change:
+
+```javascript
+useEffect(() => {
+  setTimelineItemOrder((current) => reconcileTimelineOrder(current, clips, linkedVideoDrafts));
+}, [clips, linkedVideoDrafts]);
+```
+
+Add parent callback:
+
+```javascript
+const reorderTimelineItem = useCallback((activeKey, targetIndex) => {
+  setTimelineItemOrder((current) => move key to targetIndex);
+  // If local clip order changes, update `clips` via commitTimelineClips using local key order.
+  // If linked order changes, update `linkedVideoDrafts` by linked key order.
+}, [commitTimelineClips]);
+```
+
+Inside `MakePreviewStudioChrome`:
+
+```javascript
+const timelineItems = useMemo(
+  () => buildTimelineItems(timelineItemOrder, clips, linkedVideoDrafts),
+  [timelineItemOrder, clips, linkedVideoDrafts]
+);
+```
+
+Render one list:
+
+```jsx
+{timelineItems.map((item, index) => {
+  if (item.kind === 'local_clip') return renderLocalClip(item.clip, index);
+  if (item.kind === 'linked_video') return renderLinkedVideo(item.linkedVideo, index);
+})}
+```
+
+Add the always-visible move handle to both:
+
+```jsx
+<button
+  className="make-preview-mini-move-handle"
+  type="button"
+  onPointerDown={(event) => beginTimelineItemDrag(event, item.key)}
+  aria-label="Move clip on timeline"
+>
+  ⇆
+</button>
+```
+
+Use rect-based hit testing:
+
+```javascript
+function getDropIndexFromPointer(railElement, pointerX, activeKey) {
+  const nodes = [...railElement.querySelectorAll('[data-timeline-key]')]
+    .filter(node => node.dataset.timelineKey !== activeKey);
+
+  for (let i = 0; i < nodes.length; i += 1) {
+    const rect = nodes[i].getBoundingClientRect();
+    if (pointerX < rect.left + rect.width / 2) {
+      return i;
+    }
+  }
+
+  return nodes.length;
+}
+```
+
+During drag:
+
+```text
+Add placeholder line between clips.
+Do not rely on reordering during pointermove at first.
+On pointerup, commit final index.
+```
+
+This is much more robust than trying to detect a drop target from nested button elements.
+
+---
+
+# Why the last drag patch probably failed
+
+The last patch likely tried to add a `.make-preview-mini-reorder-handle`, but latest screenshot shows no such handle visible. Possible reasons:
+
+```text
+- The JSX insertion did not find the current local clip block.
+- CSS set opacity: 0 until hover/focus; the screenshot may not show hover.
+- The handle may be under another button or hidden behind z-index.
+- The handle may be disabled due to cursorToolActive/trimming/isRecording.
+- The main clip button covers the handle.
+- The local clip render block still does not include data attributes such as data-make-timeline-kind.
+- The pointer down handler is not bound to the rendered elements.
+```
+
+Next session should verify by adding temporary visible debug:
+
+```css
+.make-preview-mini-move-handle {
+  opacity: 1 !important;
+  background: red !important;
+  z-index: 999 !important;
+}
+```
+
+If the handle still does not show, the JSX did not render it.
+
+---
+
+# Current Make timeline behavior to preserve
+
+Do not regress:
+
+```text
+Local clip bubble appears after recording/importing.
+Two local clips show side by side.
+Timeline summary shows local clip count and duration.
+Edit Clip button still works for trim mode.
+Trim handles still work for local clips.
+Add local video button still works.
+Link video button still opens linked video composer.
+Audio lane remains below timeline.
+Preview area remains large.
+Controls are compact and inside/near preview region.
+```
+
+Current screenshot confirms the timeline looks visually close to desired. Do not redesign the entire page in the next patch. Focus on making drag reorder real.
+
+---
+
+# Linked video current behavior to preserve
+
+Preserve:
+
+```text
+crab://<hash>.video can be added from link button.
+Linked video appears as a timeline bubble.
+Payment/preview drawer can open from Pay / preview.
+Quote/pay/load preview flow can load source preview bytes.
+Preview/view payment is display-only.
+Linked video stays not exported / rights unverified until backend reuse exists.
+```
+
+Do not regress into:
+
+```text
+linked video only in separate shelf
+linked video hidden above the video frame
+linked preview drawer pushing timeline around
+timeline disappearing when link is added
+payment UI hidden
+fake reuse permission
+fake payout split
+fake export
+```
+
+---
+
+# Linked video trust-boundary notes
+
+Current linked-video draft model includes the right safety shape:
+
+```text
+rightsStatus: not_checked / view_preview_paid / reuse_verified / reuse_denied
+reuseStatus: not_requested / terms_required / authorized / denied
+payoutStatus: not_configured / split_configured
+previewStatus: not_loaded / loading / ready / failed
+exportStatus: blocked_until_reuse_verified / exportable_linked_source / reference_only_not_rendered
+includedInExport: false unless backend reuse says exportable
+createsBackendTruth: false
+createsReceipt: false
+mutatesWallet: false
+viewReceiptIsReusePermission: false
+```
+
+Keep these semantics.
+
+Paid preview receipt:
+
+```text
+means user paid to view/preview source
+does not mean user can remix/export/monetize it
+does not authorize payout split metadata
+does not authorize source bytes in final exported MP4
+```
+
+Future reuse path must come from backend:
+
+```text
+reuse policy read
+reuse quote
+reuse confirm
+reuse authorization receipt
+source creator payout account
+split basis points
+paid view split enforcement
+final manifest linked_sources section
+```
+
+No floats; use integer basis points:
+
+```text
+10000 bps = 100%
+7000 bps = 70%
+3000 bps = 30%
+```
+
+---
+
+# Linked video reuse architecture still needed later
+
+Correct future flow:
+
+```text
+1. User inserts crab://<source_hash>.video.
+2. Make resolves/hydrates source facts through gateway/omnigate.
+3. Backend returns source policy facts.
+4. Make shows linked clip placeholder in timeline.
+5. User chooses source start/end.
+6. User pays view/preview fee if needed to preview.
+7. Make requests reuse quote/terms separately.
+8. Backend verifies:
+   - reuse allowed
+   - clipping allowed
+   - max reusable duration
+   - commercial allowed
+   - attribution required
+   - minimum source creator split
+   - source creator account
+   - policy version
+9. User explicitly accepts reuse terms.
+10. Backend returns reuse authorization/receipt.
+11. Tauri can stage bounded preview/export bytes.
+12. Final Make export can include source segment.
+13. New video manifest includes linked_sources facts.
+14. When viewer pays for new video, backend splits ROC automatically.
+```
+
+Service ownership:
+
+```text
+ron-policy = declarative reuse policy facts
+svc-wallet = quote/confirm/reuse fee/future split mutation front-door
+ron-ledger = durable economic truth
+svc-gateway = public route boundary
+omnigate = hydrates source/final video linked-source facts
+svc-index = optional relation lookup
+svc-storage = bytes by b3 only, no rights decisions
+```
+
+---
+
+# Playback status
+
+Current goal:
+
+```text
+Timeline Play should play visual order:
+local clip A
+linked preview clip X if paid/ready
+local clip B
+linked preview clip Y if paid/ready
+```
+
+Current risk:
+
+```text
+sequencePlaybackClips may still be derived as local clips first, then linked preview clips, instead of timeline visual order.
+```
+
+Next session should derive playback from unified `timelineItems`, not from separate arrays appended together.
+
+Playback rules:
+
+```text
+Local clips can always play.
+Linked clips can only play if paid preview proxy exists.
+Unpaid linked clips should block sequence playback or show “Pay/load preview first.”
+Export should not use linked preview bytes.
+```
+
+Test cases:
+
+```text
+local A + local B -> Play A then B
+local A + linked X paid -> Play A then X
+linked X paid + local A -> Play X then A
+local A + linked X unpaid -> Play blocked with message
+local A + linked X paid + local B -> Play A, X, B
+```
+
+---
+
+# Export status
+
+Current safe export rule:
+
+```text
+Local clips can export through Rust/FFmpeg.
+Local audio can mix through Rust/FFmpeg.
+Linked video preview proxy cannot export.
+Any linked video in timeline should block export unless backend reuse authorization exists.
+```
+
+Do not export linked preview bytes merely because the user paid to preview them.
+
+The final export path still needs:
+
+```text
+linked video reuse authorization
+bounded source segment staging
+FFmpeg segment extraction
+manifest linked_sources section
+backend receipt/split facts
+```
+
+Until that exists, the UI should say:
+
+```text
+Linked video refs are preview-only. Remove them or authorize reuse before export.
+```
+
+---
+
+# Audio lane status
+
+Current audio lane exists and should remain below timeline.
+
+Working or partially working:
+
+```text
+local audio files can be added
+local audio can preview
+Rust/FFmpeg Make export should mix local audio into final MP4
+linked audio refs remain draft-only
+```
+
+Remaining:
+
+```text
+drag audio clips along audio lane
+trim audio start/end
+audio waveform or compact bar UI
+audio link payment/preview
+audio ducking/fades
+keep audio in sync after video reorder
+```
+
+Audio export invariant:
+
+```text
+Do not reintroduce browser-side final audio/video mixing.
+Use Rust/FFmpeg path.
+```
+
+---
+
+# UI/UX goals still active
+
+User wants Make page to feel like a modern video editor:
+
+```text
+large preview area
+compact controls inside preview region
+timeline inside/under preview
+controls disappear when mouse leaves preview
+controls appear when mouse enters preview
+right-side buttons compact
+timeline spans most of preview width
+audio lane below video timeline
+linked video appears as real clip bubble
+linked clip can be selected, resized, moved
+local clips can be selected, resized, moved
+range marker can preview/play selected section
+```
+
+Still needed:
+
+```text
+drag reorder working
+range/I-marker preview
+range loop playback
+better selected clip inspector
+less clutter around linked payment drawer
+more obvious clip states
+smoother trim handles
+proper move cursor
+stable layout when panels open
+```
+
+---
+
+# I-marker / selected range feature still pending
+
+User requested:
+
+```text
+When placing the I marker on a spot, show preview of that selected spot.
+When highlighting a section with I marker, hit play and only play that selected section.
+Selected section should loop for review.
+```
+
+Needed behavior:
+
+```text
+point marker -> seek preview to timeline position
+range marker -> play only range
+range loop -> repeat selection
+full play -> play whole timeline
+```
+
+This should use the same unified timeline model, because selected range may span:
+
+```text
+local clip tail
+linked paid preview middle
+local clip beginning
+```
+
+Do this after drag reorder is fixed.
+
+---
+
+# Known high-risk areas
+
+## 1. Patch accumulation in MakePage.jsx
+
+There are now many backup files and many previous patches. The Make page has been patched repeatedly. Next session should inspect and simplify rather than stack more regex patches.
+
+Potential approach:
+
+```text
+Extract timeline logic into a separate component/file:
+apps/crablink-tauri/src/pages/make/MakeTimelineRail.jsx
+```
+
+This could reduce risk, but if doing so, provide full paste-ready files and update imports exactly.
+
+## 2. CSS conflicts
+
+`make.css` is large and contains many appended patch sections. CSS specificity and later rules may override intended behavior.
+
+Next session should search for conflicting rules:
+
+```text
+.make-preview-mini-clip-main
+.make-preview-mini-clip-edit
+.make-preview-trim-handle
+.make-preview-linked-video-trim-handle
+.make-preview-mini-reorder-handle
+.make-preview-mini-clip > span
+z-index
+opacity
+pointer-events
+position
+```
+
+Reorder handle should be late in CSS and use explicit rules while debugging.
+
+## 3. Hover-only controls
+
+User is on a MacBook Pro/touchpad. Hover-only controls are less reliable. For core actions like move/reorder, make handles always visible or visible when clip is selected.
+
+## 4. Linked preview vs reuse permission
+
+Never let the linked paid preview become export permission. This is the most important economic boundary.
+
+## 5. Browser/WebView media policy
+
+Prior browser-side export/playback had autoplay and MediaRecorder issues. Keep final export in Rust/FFmpeg. Preview playback is okay in React, but final MP4 generation should stay Rust-side.
+
+## 6. Large video byte bridge
+
+Bounded byte bridge is MVP only. If large preview/playback fails due to size, long-term solution is range/segment playback, not raising full-blob limits forever.
+
+---
+
+# Suggested next-session implementation plan
+
+## Phase A — Diagnostic mini-patch or direct inspection
+
+Before writing the full patch, inspect current HTML in DevTools if possible:
+
+```text
+Right-click a clip bubble
+Inspect element
+Look for:
+  .make-preview-mini-reorder-handle
+  data-make-timeline-kind
+  data-make-timeline-id
+  onPointerDown handler not visible directly but JSX should render button
+```
+
+If no handle exists:
+
+```text
+previous patch did not apply to current JSX block
+```
+
+If handle exists but hidden:
+
+```text
+CSS issue
+```
+
+If handle exists and visible but pointerdown does nothing:
+
+```text
+handler/state issue
+```
+
+## Phase B — Minimal visible move handle patch
+
+Add always-visible move handle to local clip bubble only first:
+
+```text
+local clip only
+no linked yet
+no CSS order yet
+drag local clip A over B
+commit local `clips` reorder
+```
+
+Do not patch linked and local at the same time until local works.
+
+Test:
+
+```text
+record/import two local clips
+drag MOVE handle of clip 2 before clip 1
+timeline order updates
+Play follows new order
+Export follows new local order
+Undo/redo still reasonable
+```
+
+## Phase C — Add linked video to same reorder model
+
+After local works:
+
+```text
+add linked video ref
+drag linked before/after local
+visual order updates
+play uses visual order if linked paid preview ready
+export remains blocked
+```
+
+## Phase D — Add paid preview proxy to visual-order playback
+
+Build playback from ordered timeline items.
+
+## Phase E — Persist draft order later
+
+For MVP, in-memory order is fine. Later persist order in Make draft/session.
+
+---
+
+# Recommended exact UI for drag reorder
+
+Move handle should look like:
+
+```text
+[↔] Screen Recording...
+```
+
+or:
+
+```text
+[☰] Screen Recording...
+```
+
+It should be:
+
+```text
+always visible
+small but clickable
+left edge of bubble
+not overlapping trim handles
+not overlapping clip title
+not overlapping edit button
+```
+
+CSS debugging version:
+
+```css
+.make-preview-mini-move-handle {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  z-index: 50 !important;
+  background: rgba(20, 184, 166, 0.95) !important;
+  color: #02111a !important;
+}
+```
+
+Once proven, style it more subtly.
+
+---
+
+# Testing matrix for next session
+
+## Drag/reorder local only
+
+```text
+record two clips
+drag clip 2 before clip 1
+drag clip 1 after clip 2
+select clip after reorder
+trim selected clip after reorder
+delete selected clip after reorder
+undo after reorder
+redo after reorder
+play after reorder
+approve after reorder
+export after reorder
+mint exported video
+```
+
+## Drag/reorder linked video
+
+```text
+add linked video
+pay/load preview
+drag linked before local clip
+drag linked after local clip
+drag local around linked
+resize linked after reorder
+click Pay / preview after reorder
+remove linked after reorder
+```
+
+## Playback
+
+```text
+two local clips play in order
+reordered local clips play in new order
+local + paid linked preview plays in visual order
+unpaid linked preview blocks or warns
+last clip plays reliably
+no black frame between clips if possible
+```
+
+## Export
+
+```text
+local only export still works
+local only export order follows reordered local order
+local + linked preview export blocked
+local + audio export still works
+local + reordered clips + audio export works
+```
+
+## UI regression
+
+```text
+timeline remains under preview
+payment drawer does not push timeline
+payment drawer does not open while resizing
+move handle visible
+trim handles visible only in edit/trim mode
+audio lane remains below timeline
+plus/link buttons remain on right
+timeline does not disappear after adding link
+```
+
+---
+
+# Specific files to inspect/edit next
+
+Primary:
+
+```text
+apps/crablink-tauri/src/pages/make/MakePage.jsx
+apps/crablink-tauri/src/pages/make/make.css
+```
+
+Secondary:
+
+```text
+apps/crablink-tauri/src/pages/make/makeTimelineModel.js
+apps/crablink-tauri/src/pages/make/makeLinkedMediaModel.js
+apps/crablink-tauri/src/pages/make/makeAudioTimelineModel.js
+apps/crablink-tauri/src/shared/api/contentViewClient.js
+apps/crablink-tauri/src/shared/api/makeExportClient.js
+```
+
+Rust export files for later:
+
+```text
+apps/crablink-tauri/src-tauri/src/media/make_export.rs
+apps/crablink-tauri/src-tauri/src/media/mod.rs
+apps/crablink-tauri/src-tauri/src/commands/media.rs
+```
+
+---
+
+# Important notes about current linked-media model
+
+`makeLinkedMediaModel.js` defines linked video draft helpers and keeps the right truth boundary:
+
+```text
+local draft metadata only
+linked preview/view is not remix permission
+backend must authorize reuse and payout splits before export/mint
+```
+
+It also has fields such as:
+
+```text
+sourceStartMs
+sourceEndMs
+timelineDurationMs
+rightsStatus
+reuseStatus
+payoutStatus
+previewStatus
+exportStatus
+includedInExport
+createsBackendTruth
+createsReceipt
+mutatesWallet
+viewReceiptIsReusePermission
+truthBoundary
+```
+
+Do not remove these fields. Use them to render status badges.
+
+---
+
+# One-sentence next-session mission
+
+Make the timeline use a real unified ordered item model and an always-visible pointer-drag move handle, first proving drag-reorder for local clips, then adding linked video refs to that same order model while keeping linked preview display-only and export blocked until backend reuse authorization exists.
+
+### END NOTE - JUNE 7 2026 - CRABLINK MAKE PAGE CARRYOVER
+
+The most important next step is to **stop patching around the existing timeline renderer** and replace the timeline list with a clear unified ordered model. The screenshot strongly suggests the previous drag patch either did not render a handle at all or rendered one that is hidden/unusable.
+
+
+### END NOTE - JUNE 7 2026 - 13:25 CST

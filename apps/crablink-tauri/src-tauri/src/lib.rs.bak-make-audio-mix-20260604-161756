@@ -47,7 +47,6 @@ pub fn run() {
             commands::media::media_cancel_video_job,
             commands::media::media_make_export_begin,
             commands::media::media_make_export_append_chunk,
-            commands::media::media_make_export_append_audio_chunk,
             commands::media::media_make_export_finish,
             commands::media::media_make_export_status,
             commands::media::media_make_export_clear,

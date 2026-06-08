@@ -10,7 +10,6 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import { createPortal } from 'react-dom';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
@@ -71,13 +70,11 @@ import {
   updateClipTimeline,
 } from './makeTimelineModel.js';
 import {
-  attachLinkedVideoPreviewToClip,
   buildMakeLinkedMediaSessionSummary,
   createLinkedAudioDraft,
   createLinkedVideoDraft,
   createLocalAudioTrackFromFile,
   revokeMakeAudioTrackUrl,
-  updateLinkedVideoRange,
 } from './makeLinkedMediaModel.js';
 import {
   activeAudioTimeForTimelineMs,
@@ -142,80 +139,6 @@ const PREVIEW_TIMELINE_EFFECTS = Object.freeze([
   },
 ]);
 
-
-const MAKE_TIMELINE_ITEM_PREFIX = Object.freeze({
-  LOCAL: 'local:',
-  LINKED_VIDEO: 'linked-video:',
-});
-
-function makeLocalTimelineItemKey(id) {
-  return `${MAKE_TIMELINE_ITEM_PREFIX.LOCAL}${String(id || '').trim()}`;
-}
-
-function makeLinkedVideoTimelineItemKey(id) {
-  return `${MAKE_TIMELINE_ITEM_PREFIX.LINKED_VIDEO}${String(id || '').trim()}`;
-}
-
-function isLocalTimelineItemKey(key) {
-  return String(key || '').startsWith(MAKE_TIMELINE_ITEM_PREFIX.LOCAL);
-}
-
-function isLinkedVideoTimelineItemKey(key) {
-  return String(key || '').startsWith(MAKE_TIMELINE_ITEM_PREFIX.LINKED_VIDEO);
-}
-
-function idFromTimelineItemKey(key) {
-  const raw = String(key || '');
-
-  if (isLocalTimelineItemKey(raw)) {
-    return raw.slice(MAKE_TIMELINE_ITEM_PREFIX.LOCAL.length);
-  }
-
-  if (isLinkedVideoTimelineItemKey(raw)) {
-    return raw.slice(MAKE_TIMELINE_ITEM_PREFIX.LINKED_VIDEO.length);
-  }
-
-  return raw;
-}
-
-function createTimelineItemKeys(clips = [], linkedVideoDrafts = []) {
-  return [
-    ...(clips || []).map((clip) => makeLocalTimelineItemKey(clip?.id)).filter((key) => key !== MAKE_TIMELINE_ITEM_PREFIX.LOCAL),
-    ...(linkedVideoDrafts || [])
-      .map((item) => makeLinkedVideoTimelineItemKey(item?.id))
-      .filter((key) => key !== MAKE_TIMELINE_ITEM_PREFIX.LINKED_VIDEO),
-  ];
-}
-
-function normalizeTimelineItemOrderKeys(order = [], validKeys = []) {
-  const valid = (validKeys || []).filter(Boolean);
-  const validSet = new Set(valid);
-  const next = [];
-  const seen = new Set();
-
-  for (const key of order || []) {
-    const safeKey = String(key || '').trim();
-
-    if (safeKey && validSet.has(safeKey) && !seen.has(safeKey)) {
-      next.push(safeKey);
-      seen.add(safeKey);
-    }
-  }
-
-  for (const key of valid) {
-    if (!seen.has(key)) {
-      next.push(key);
-      seen.add(key);
-    }
-  }
-
-  return next;
-}
-
-function timelineOrderSignature(order = []) {
-  return (order || []).join('|');
-}
-
 export default function MakePage({ app }) {
   const canvasRef = useRef(null);
   const previewShellRef = useRef(null);
@@ -230,7 +153,6 @@ export default function MakePage({ app }) {
   const audioTrackInputRef = useRef(null);
   const audioTrackObjectUrlsRef = useRef(new Set());
   const audioPreviewRefs = useRef(new Map());
-  const linkedVideoPreviewObjectUrlsRef = useRef(new Map());
   const backgroundVideoObjectUrlRef = useRef('');
   const backgroundImageObjectUrlRef = useRef('');
   const streamsRef = useRef(EMPTY_INPUT_STATE);
@@ -256,7 +178,6 @@ export default function MakePage({ app }) {
   const [clips, setClips] = useState([]);
   const [linkedVideoDrafts, setLinkedVideoDrafts] = useState([]);
   const [audioTracks, setAudioTracks] = useState([]);
-  const [timelineItemOrder, setTimelineItemOrder] = useState([]);
   const [selectedClipId, setSelectedClipId] = useState('');
   const [sequenceState, setSequenceState] = useState(() => createSequenceReviewState('idle'));
   const [deviceState, setDeviceState] = useState({
@@ -286,31 +207,6 @@ export default function MakePage({ app }) {
       setSubjectEditMode(false);
     }
   }, [previewDrawer]);
-
-  useEffect(() => () => {
-    for (const objectUrl of linkedVideoPreviewObjectUrlsRef.current.values()) {
-      try {
-        URL.revokeObjectURL(objectUrl);
-      } catch (_error) {
-        // Best-effort cleanup for local linked-preview proxy URLs.
-      }
-    }
-
-    linkedVideoPreviewObjectUrlsRef.current.clear();
-  }, []);
-
-
-  useEffect(() => {
-    const validKeys = createTimelineItemKeys(clips, linkedVideoDrafts);
-
-    setTimelineItemOrder((current) => {
-      const next = normalizeTimelineItemOrderKeys(current, validKeys);
-
-      return timelineOrderSignature(next) === timelineOrderSignature(current)
-        ? current
-        : next;
-    });
-  }, [clips, linkedVideoDrafts]);
 
   const selectedMode = useMemo(() => findMakeMode(draft.selectedMode), [draft.selectedMode]);
   const outputPreset = useMemo(() => findOutputPreset(draft.outputPreset), [draft.outputPreset]);
@@ -348,85 +244,15 @@ export default function MakePage({ app }) {
     setMediaDebug((current) => [entry, ...current].slice(0, 16));
   }, []);
   const latestClip = clips[clips.length - 1] || null;
-  const linkedVideoPreviewClipsForSequence = useMemo(() => linkedVideoDrafts
-    .filter((item) => item?.previewStatus === 'ready' && (item.previewObjectUrl || item.objectUrl))
-    .map((item) => {
-      const sourceStartMs = Math.max(0, Number(item.sourceStartMs || 0));
-      const sourceEndMs = Math.max(
-        sourceStartMs + 1_000,
-        Number(item.sourceEndMs || item.timelineDurationMs || sourceStartMs + 30_000),
-      );
-      const sourceDurationMs = Math.max(sourceEndMs, sourceStartMs + Math.max(1_000, Number(item.timelineDurationMs || 0)));
-
-      return normalizeMakeClip({
-        id: item.id,
-        kind: 'linked_video_preview_proxy',
-        sourceMode: 'linked_video_preview_proxy',
-        linkedVideoDraftId: item.id,
-        name: item.displayName || item.title || 'Linked video preview',
-        displayName: item.displayName || item.title || 'Linked video preview',
-        objectUrl: item.previewObjectUrl || item.objectUrl,
-        previewObjectUrl: item.previewObjectUrl || item.objectUrl,
-        mimeType: item.mimeType || 'video/mp4',
-        durationMs: sourceDurationMs,
-        trimStartMs: sourceStartMs,
-        trimEndMs: sourceEndMs,
-        timelineEffect: 'none',
-        localOnly: true,
-        previewProxyOnly: true,
-        includedInExport: false,
-        exportStatus: 'blocked_until_reuse_verified',
-        truthBoundary:
-          'Paid linked-video preview proxy is sequence playback only. It is not reuse permission, export permission, ownership, or backend mint truth.',
-      });
-    }), [linkedVideoDrafts]);
-  const timelinePlaybackItemOrder = useMemo(
-    () => normalizeTimelineItemOrderKeys(
-      timelineItemOrder,
-      createTimelineItemKeys(clips, linkedVideoDrafts),
-    ),
-    [clips, linkedVideoDrafts, timelineItemOrder],
-  );
-  const sequencePlaybackClips = useMemo(() => {
-    const localClipByKey = new Map(
-      clips.map((clip) => [makeLocalTimelineItemKey(clip.id), clip]),
-    );
-    const linkedPreviewByKey = new Map(
-      linkedVideoPreviewClipsForSequence.map((clip) => [
-        makeLinkedVideoTimelineItemKey(clip.linkedVideoDraftId || clip.id),
-        clip,
-      ]),
-    );
-    const ordered = [];
-
-    for (const key of timelinePlaybackItemOrder) {
-      if (isLocalTimelineItemKey(key)) {
-        const clip = localClipByKey.get(key);
-
-        if (clip) ordered.push(clip);
-
-        continue;
-      }
-
-      if (isLinkedVideoTimelineItemKey(key)) {
-        const clip = linkedPreviewByKey.get(key);
-
-        if (clip) ordered.push(clip);
-      }
-    }
-
-    return ordered.length ? ordered : [...clips, ...linkedVideoPreviewClipsForSequence];
-  }, [clips, linkedVideoPreviewClipsForSequence, timelinePlaybackItemOrder]);
-  const hasPreviewOnlyLinkedVideoInSequence = linkedVideoPreviewClipsForSequence.length > 0;
-  const currentSequenceClip = sequencePlaybackClips[sequenceState.currentIndex] || sequencePlaybackClips[0] || null;
-  const nextSequenceClip = sequencePlaybackClips[sequenceState.currentIndex + 1] || null;
+  const currentSequenceClip = clips[sequenceState.currentIndex] || clips[0] || null;
+  const nextSequenceClip = clips[sequenceState.currentIndex + 1] || null;
   const sequenceApproved = sequenceState.status === 'approved';
   const makeExportBusy = makeExportState.status === 'exporting';
   const makeExportReady = Boolean(makeExportState.result?.source?.sourceHandle);
-  const canExportSequence = sequenceApproved && clips.length > 0 && !isRecording && !makeExportBusy && !hasPreviewOnlyLinkedVideoInSequence;
+  const canExportSequence = sequenceApproved && clips.length > 0 && !isRecording && !makeExportBusy;
   const sequenceClipKey = useMemo(
-    () => sequencePlaybackClips.map((clip) => clipTimelineSignature(clip)).join('|'),
-    [sequencePlaybackClips],
+    () => clips.map((clip) => clipTimelineSignature(clip)).join('|'),
+    [clips],
   );
   const totalDurationMs = useMemo(
     () => clips.reduce((sum, clip) => sum + getClipTimelineDurationMs(clip), 0),
@@ -445,12 +271,6 @@ export default function MakePage({ app }) {
     )),
     [preparedAudioTracks],
   );
-  const linkedAudioReferenceCount = useMemo(
-    () => preparedAudioTracks.filter((track) => track.kind === 'linked_audio').length,
-    [preparedAudioTracks],
-  );
-  const linkedVideoReferenceCount = linkedVideoDrafts.length;
-  const hasReferenceOnlyLinkedMedia = linkedVideoReferenceCount > 0 || linkedAudioReferenceCount > 0;
   const recordingElapsedMs = useMemo(() => {
     if (!isRecording || !recorderState.startedAtMs) {
       return 0;
@@ -555,6 +375,7 @@ export default function MakePage({ app }) {
       return;
     }
 
+    clearBackgroundImageObjectUrl();
     clearBackgroundImageObjectUrl();
     clearBackgroundVideoObjectUrl();
 
@@ -1212,7 +1033,7 @@ export default function MakePage({ app }) {
     setClips([]);
     setSelectedClipId('');
     setSequenceState(createSequenceReviewState('idle'));
-  }, [sequencePlaybackClips]);
+  }, [clips]);
 
   const refreshTimelineHistoryState = useCallback(() => {
     const history = timelineHistoryRef.current;
@@ -1257,75 +1078,6 @@ export default function MakePage({ app }) {
 
     return true;
   }, [refreshTimelineHistoryState]);
-
-  const commitTimelineItemOrder = useCallback((nextKeys = [], options = {}) => {
-    const localClips = snapshotTimelineClips(clipsRef.current);
-    const linkedDrafts = linkedVideoDrafts || [];
-    const validKeys = createTimelineItemKeys(localClips, linkedDrafts);
-    const nextOrder = normalizeTimelineItemOrderKeys(nextKeys, validKeys);
-
-    setTimelineItemOrder(nextOrder);
-
-    const localById = new Map(localClips.map((clip) => [clip.id, clip]));
-    const linkedById = new Map(linkedDrafts.map((item) => [item.id, item]));
-
-    const nextLocal = [];
-    const nextLinked = [];
-    const usedLocal = new Set();
-    const usedLinked = new Set();
-
-    for (const key of nextOrder) {
-      if (isLocalTimelineItemKey(key)) {
-        const id = idFromTimelineItemKey(key);
-        const clip = localById.get(id);
-
-        if (clip) {
-          nextLocal.push(clip);
-          usedLocal.add(id);
-        }
-
-        continue;
-      }
-
-      if (isLinkedVideoTimelineItemKey(key)) {
-        const id = idFromTimelineItemKey(key);
-        const item = linkedById.get(id);
-
-        if (item) {
-          nextLinked.push(item);
-          usedLinked.add(id);
-        }
-      }
-    }
-
-    for (const clip of localClips) {
-      if (!usedLocal.has(clip.id)) {
-        nextLocal.push(clip);
-      }
-    }
-
-    for (const item of linkedDrafts) {
-      if (!usedLinked.has(item.id)) {
-        nextLinked.push(item);
-      }
-    }
-
-    if (makeTimelineClipArraySignature(localClips) !== makeTimelineClipArraySignature(nextLocal)) {
-      commitTimelineClips(nextLocal, {
-        selectClipId: options.selectClipId !== undefined ? options.selectClipId : selectedClipId,
-      });
-    }
-
-    const linkedBefore = linkedDrafts.map((item) => item.id).join('|');
-    const linkedAfter = nextLinked.map((item) => item.id).join('|');
-
-    if (linkedBefore !== linkedAfter) {
-      setLinkedVideoDrafts(nextLinked);
-    }
-
-    setSequenceState(createSequenceReviewState('idle'));
-    return true;
-  }, [commitTimelineClips, linkedVideoDrafts, selectedClipId]);
 
   const undoTimeline = useCallback(() => {
     const history = timelineHistoryRef.current;
@@ -1606,7 +1358,7 @@ export default function MakePage({ app }) {
         useEntireSource: timing.useEntireSource,
       });
 
-      setLinkedVideoDrafts((current) => [...current, linkedVideo].slice(-12));
+      setLinkedVideoDrafts((current) => [linkedVideo, ...current].slice(0, 12));
       setSequenceState(createSequenceReviewState('idle'));
 
       app?.notify?.({
@@ -1615,7 +1367,7 @@ export default function MakePage({ app }) {
         message: `${linkedVideo.rangeLabel || 'Source window saved'} was stored as an unverified Make draft reference. Rights, payout, and export inclusion remain backend work.`,
       });
 
-      return linkedVideo;
+      return true;
     } catch (error) {
       app?.notify?.({
         tone: 'warning',
@@ -1624,76 +1376,10 @@ export default function MakePage({ app }) {
       });
       return false;
     }
-  }, [app, audioTracks]);
+  }, [app]);
 
   const removeLinkedVideoDraft = useCallback((draftId) => {
-    const previewUrl = linkedVideoPreviewObjectUrlsRef.current.get(draftId);
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      linkedVideoPreviewObjectUrlsRef.current.delete(draftId);
-    }
-
     setLinkedVideoDrafts((current) => current.filter((item) => item.id !== draftId));
-  }, []);
-
-  const updateLinkedVideoDraftTiming = useCallback((draftId, patch = {}) => {
-    if (!draftId) return;
-
-    setLinkedVideoDrafts((current) =>
-      current.map((item) =>
-        item.id === draftId
-          ? updateLinkedVideoRange(item, patch)
-          : item,
-      ),
-    );
-
-    setSequenceState(createSequenceReviewState('idle'));
-  }, []);
-
-  const handleLinkedVideoPreviewReady = useCallback((draftId, preview = {}) => {
-    if (!draftId || !preview?.blob) return;
-
-    const previousUrl = linkedVideoPreviewObjectUrlsRef.current.get(draftId);
-    if (previousUrl) {
-      URL.revokeObjectURL(previousUrl);
-    }
-
-    const objectUrl = URL.createObjectURL(preview.blob);
-    linkedVideoPreviewObjectUrlsRef.current.set(draftId, objectUrl);
-
-    setLinkedVideoDrafts((current) =>
-      current.map((item) =>
-        item.id === draftId
-          ? {
-              ...item,
-              previewObjectUrl: objectUrl,
-              objectUrl,
-              mimeType: preview.blob?.type || item.mimeType || 'video/mp4',
-              previewStatus: 'ready',
-              previewProxyOnly: true,
-              canPreviewLocally: true,
-              previewLoadedAt: new Date().toISOString(),
-              previewRoute: preview.source?.route || item.previewRoute || '',
-              previewReceiptHash:
-                preview.payment?.receipt_hash ||
-                preview.payment?.receiptHash ||
-                item.previewReceiptHash ||
-                '',
-              previewPaymentId:
-                preview.payment?.payment_id ||
-                preview.payment?.paymentId ||
-                preview.payment?.id ||
-                item.previewPaymentId ||
-                '',
-              rightsStatus: item.rightsStatus === 'reuse_verified' ? item.rightsStatus : 'view_preview_paid',
-              rightsStatusLabel: 'Preview paid',
-              updatedAt: new Date().toISOString(),
-            }
-          : item,
-      ),
-    );
-
-    setSequenceState(createSequenceReviewState('idle'));
   }, []);
 
   const requestAddAudioTrack = useCallback(() => {
@@ -1713,16 +1399,6 @@ export default function MakePage({ app }) {
     }
 
     const importedTracks = [];
-    const existingAudioEndMs = audioTracks.reduce((max, track) => {
-      const startMs = Math.max(0, Number(track?.offsetMs || 0));
-      const rawDurationMs = Math.max(0, Number(track?.durationMs || 0));
-      const trimStartMs = Math.max(0, Number(track?.trimStartMs || 0));
-      const trimEndMs = Math.max(trimStartMs, Number(track?.trimEndMs || rawDurationMs || 1000));
-      const effectiveMs = Math.max(500, Number(track?.effectiveDurationMs || 0) || (trimEndMs - trimStartMs) || rawDurationMs || 1000);
-
-      return Math.max(max, startMs + effectiveMs);
-    }, 0);
-    let nextAudioOffsetMs = existingAudioEndMs;
 
     try {
       for (const [index, file] of files.entries()) {
@@ -1730,18 +1406,6 @@ export default function MakePage({ app }) {
           id: createId('make-audio-track'),
           fallbackName: `Audio ${audioTracks.length + index + 1}`,
         });
-
-        const audioStartMs = Math.max(0, nextAudioOffsetMs);
-        const audioDurationMs = Math.max(0, Number(track.durationMs || 0));
-        const audioTrimStartMs = Math.max(0, Number(track.trimStartMs || 0));
-        const audioTrimEndMs = Math.max(audioTrimStartMs + 500, Number(track.trimEndMs || audioDurationMs || 1000));
-        const audioEffectiveMs = Math.max(500, Math.min(audioDurationMs || audioTrimEndMs, audioTrimEndMs) - audioTrimStartMs || audioDurationMs || 1000);
-
-        track.offsetMs = audioStartMs;
-        track.trimStartMs = audioTrimStartMs;
-        track.trimEndMs = Math.min(audioDurationMs || audioTrimEndMs, audioTrimEndMs);
-        track.effectiveDurationMs = audioEffectiveMs;
-        nextAudioOffsetMs += audioEffectiveMs;
 
         if (track.objectUrl) {
           audioTrackObjectUrlsRef.current.add(track.objectUrl);
@@ -1777,30 +1441,15 @@ export default function MakePage({ app }) {
         message: errorMessage(error),
       });
     }
-  }, [app, audioTracks, isRecording]);
+  }, [app, audioTracks.length, isRecording]);
 
   const addLinkedAudioDraft = useCallback((rawUrl) => {
     try {
-      const linkedAudioOffsetMs = audioTracks.reduce((max, track) => {
-        const startMs = Math.max(0, Number(track?.offsetMs || 0));
-        const rawDurationMs = Math.max(0, Number(track?.durationMs || 0));
-        const trimStartMs = Math.max(0, Number(track?.trimStartMs || 0));
-        const trimEndMs = Math.max(trimStartMs, Number(track?.trimEndMs || rawDurationMs || 15_000));
-        const effectiveMs = Math.max(500, Number(track?.effectiveDurationMs || 0) || (trimEndMs - trimStartMs) || rawDurationMs || 15_000);
-
-        return Math.max(max, startMs + effectiveMs);
-      }, 0);
       const linkedAudio = createLinkedAudioDraft(rawUrl, {
         id: createId('make-audio-link'),
       });
 
-      linkedAudio.offsetMs = linkedAudioOffsetMs;
-      linkedAudio.durationMs = Math.max(15_000, Number(linkedAudio.durationMs || 0));
-      linkedAudio.trimStartMs = 0;
-      linkedAudio.trimEndMs = linkedAudio.durationMs;
-      linkedAudio.effectiveDurationMs = linkedAudio.durationMs;
-
-      setAudioTracks((current) => [...current, linkedAudio].slice(-16));
+      setAudioTracks((current) => [linkedAudio, ...current].slice(0, 16));
 
       app?.notify?.({
         tone: 'info',
@@ -1849,7 +1498,6 @@ export default function MakePage({ app }) {
         return track;
       }
 
-      const durationMs = Math.max(0, Number(track.durationMs || 0));
       const next = {
         ...track,
         ...patch,
@@ -1860,25 +1508,11 @@ export default function MakePage({ app }) {
       }
 
       if (Object.prototype.hasOwnProperty.call(patch, 'trimStartMs')) {
-        next.trimStartMs = clamp(Number(patch.trimStartMs), 0, durationMs, 0);
+        next.trimStartMs = clamp(Number(patch.trimStartMs), 0, Math.max(0, Number(track.durationMs || 0)), 0);
       }
 
       if (Object.prototype.hasOwnProperty.call(patch, 'trimEndMs')) {
-        const minEndMs = Math.min(durationMs, Math.max(0, Number(next.trimStartMs || 0)) + 500);
-        next.trimEndMs = clamp(Number(patch.trimEndMs), minEndMs, durationMs || minEndMs, durationMs || minEndMs);
-      }
-
-      if (durationMs > 0) {
-        const safeStartMs = clamp(Number(next.trimStartMs || 0), 0, durationMs, 0);
-        const safeEndMs = clamp(
-          Number(next.trimEndMs || durationMs),
-          Math.min(durationMs, safeStartMs + 500),
-          durationMs,
-          durationMs,
-        );
-
-        next.trimStartMs = safeStartMs;
-        next.trimEndMs = safeEndMs;
+        next.trimEndMs = clamp(Number(patch.trimEndMs), 0, Math.max(0, Number(track.durationMs || 0)), Number(track.durationMs || 0));
       }
 
       if (Object.prototype.hasOwnProperty.call(patch, 'muted')) {
@@ -1952,15 +1586,15 @@ export default function MakePage({ app }) {
   }, [app, selectedClip]);
 
   const playSequence = useCallback(() => {
-    if (!sequencePlaybackClips.length || isRecording) {
+    if (!clips.length || isRecording) {
       return;
     }
 
     setSequenceState(createSequenceReviewState('playing', {
       currentIndex: 0,
-      currentClipId: sequencePlaybackClips[0]?.id || '',
+      currentClipId: clips[0]?.id || '',
     }));
-  }, [isRecording, sequencePlaybackClips]);
+  }, [clips, isRecording]);
 
   const pauseSequence = useCallback(() => {
     const video = sequenceVideoRef.current;
@@ -1977,15 +1611,15 @@ export default function MakePage({ app }) {
   }, []);
 
   const restartSequence = useCallback(() => {
-    if (!sequencePlaybackClips.length || isRecording) {
+    if (!clips.length || isRecording) {
       return;
     }
 
     setSequenceState(createSequenceReviewState('playing', {
       currentIndex: 0,
-      currentClipId: sequencePlaybackClips[0]?.id || '',
+      currentClipId: clips[0]?.id || '',
     }));
-  }, [isRecording, sequencePlaybackClips]);
+  }, [clips, isRecording]);
 
   const handleSequenceClipEnded = useCallback((endedClip = null) => {
     const endedClipId = String(endedClip?.id || '').trim();
@@ -1997,7 +1631,7 @@ export default function MakePage({ app }) {
     sequenceAdvanceLockRef.current = true;
 
     setSequenceState((current) => {
-      const currentClip = sequencePlaybackClips[current.currentIndex] || null;
+      const currentClip = clips[current.currentIndex] || null;
 
       if (endedClipId && currentClip?.id && currentClip.id !== endedClipId) {
         return current;
@@ -2005,11 +1639,11 @@ export default function MakePage({ app }) {
 
       const nextIndex = current.currentIndex + 1;
 
-      if (nextIndex >= sequencePlaybackClips.length) {
+      if (nextIndex >= clips.length) {
         return {
           ...current,
           status: 'reviewed',
-          currentIndex: Math.max(0, sequencePlaybackClips.length - 1),
+          currentIndex: Math.max(0, clips.length - 1),
           currentClipId: currentClip?.id || endedClipId || '',
           currentClipProgressPct: 100,
           totalProgressPct: 100,
@@ -2018,8 +1652,8 @@ export default function MakePage({ app }) {
         };
       }
 
-      const nextClip = sequencePlaybackClips[nextIndex] || null;
-      const previousProgress = calculateSequenceTimelineProgress(sequencePlaybackClips, nextIndex, nextClip, null);
+      const nextClip = clips[nextIndex] || null;
+      const previousProgress = calculateSequenceTimelineProgress(clips, nextIndex, nextClip, null);
 
       return {
         ...current,
@@ -2040,7 +1674,7 @@ export default function MakePage({ app }) {
   }, [clips]);
 
   const handleSequenceClipTimeUpdate = useCallback((event, eventClip = null) => {
-    const clip = eventClip || sequencePlaybackClips[sequenceState.currentIndex] || null;
+    const clip = eventClip || clips[sequenceState.currentIndex] || null;
     const video = event?.currentTarget || sequenceVideoRef.current;
 
     if (sequenceState.status !== 'playing' || !clip || !video) {
@@ -2064,10 +1698,10 @@ export default function MakePage({ app }) {
       return;
     }
 
-    const clipIndex = sequencePlaybackClips.findIndex((item) => item?.id === clip.id);
+    const clipIndex = clips.findIndex((item) => item?.id === clip.id);
     const safeClipIndex = clipIndex >= 0 ? clipIndex : sequenceState.currentIndex;
     const reachedEnd = timelinePreviewTimeReachedEnd(video, clip);
-    const progress = calculateSequenceTimelineProgress(sequencePlaybackClips, safeClipIndex, clip, video);
+    const progress = calculateSequenceTimelineProgress(clips, safeClipIndex, clip, video);
 
     const now = Date.now();
     if (reachedEnd || now - sequenceProgressTickRef.current > 80) {
@@ -2097,10 +1731,10 @@ export default function MakePage({ app }) {
       }
       handleSequenceClipEnded(clip);
     }
-  }, [handleSequenceClipEnded, sequencePlaybackClips, sequenceState.currentIndex, sequenceState.status]);
+  }, [clips, handleSequenceClipEnded, sequenceState.currentIndex, sequenceState.status]);
 
   const handleSequenceClipReady = useCallback((event, eventClip = null) => {
-    const clip = eventClip || sequencePlaybackClips[sequenceState.currentIndex] || null;
+    const clip = eventClip || clips[sequenceState.currentIndex] || null;
     const video = event?.currentTarget || sequenceVideoRef.current;
 
     if (sequenceState.status !== 'playing' || !clip || !video) {
@@ -2111,16 +1745,16 @@ export default function MakePage({ app }) {
       return;
     }
 
-    const expectedClip = sequencePlaybackClips[sequenceState.currentIndex] || null;
+    const expectedClip = clips[sequenceState.currentIndex] || null;
     if (expectedClip?.id && clip.id && expectedClip.id !== clip.id) {
       return;
     }
 
     requestSequenceVideoPlay(video, setSequenceState, clip);
-  }, [sequencePlaybackClips, sequenceState.currentIndex, sequenceState.status]);
+  }, [clips, sequenceState.currentIndex, sequenceState.status]);
 
   const approveSequence = useCallback(() => {
-    if (!sequencePlaybackClips.length || sequenceState.status !== 'reviewed') {
+    if (!clips.length || sequenceState.status !== 'reviewed') {
       return;
     }
 
@@ -2128,10 +1762,10 @@ export default function MakePage({ app }) {
       ...current,
       status: 'approved',
       approvedAt: new Date().toISOString(),
-      approvedClipIds: sequencePlaybackClips.map((clip) => clip.id),
+      approvedClipIds: clips.map((clip) => clip.id),
       error: null,
     }));
-  }, [sequencePlaybackClips, sequenceState.status]);
+  }, [clips, sequenceState.status]);
 
   const exportApprovedSequence = useCallback(async () => {
     if (!sequenceApproved) {
@@ -2139,15 +1773,6 @@ export default function MakePage({ app }) {
         tone: 'info',
         title: 'Approve the sequence first',
         message: 'Play the full clip sequence and approve it before exporting one MP4.',
-      });
-      return;
-    }
-
-    if (hasPreviewOnlyLinkedVideoInSequence) {
-      app?.notify?.({
-        tone: 'warning',
-        title: 'Linked preview is not export permission',
-        message: 'The linked video can now play in the editor preview, but export remains blocked until backend reuse authorization and payout split policy exist.',
       });
       return;
     }
@@ -2163,15 +1788,6 @@ export default function MakePage({ app }) {
         message: 'MP4 export requires the CrabLink Tauri runtime.',
       });
       return;
-    }
-
-    if (hasReferenceOnlyLinkedMedia) {
-      app?.notify?.({
-        tone: 'warning',
-        title: 'Linked media stays reference-only',
-        message: `${linkedVideoReferenceCount} linked video reference${linkedVideoReferenceCount === 1 ? '' : 's'} and ${linkedAudioReferenceCount} linked audio reference${linkedAudioReferenceCount === 1 ? '' : 's'} will stay in the Make plan, but will not be rendered into the MP4 until backend reuse rights and payout policy are verified.`,
-        ttlMs: 11000,
-      });
     }
 
     clearLatestMakeExportHandoff();
@@ -2216,7 +1832,6 @@ export default function MakePage({ app }) {
         height: outputPreset.height,
         fps: draft.targetFps,
         mimeType: recorderMimeType,
-        includeSourceAudio: false,
         onProgress: updateExportProgress,
       });
 
@@ -2262,19 +1877,7 @@ export default function MakePage({ app }) {
         ttlMs: 9000,
       });
     }
-  }, [
-    app,
-    clips,
-    draft,
-    hasReferenceOnlyLinkedMedia,
-    linkedAudioReferenceCount,
-    linkedVideoReferenceCount,
-    localAudioTracksForExport,
-    makeExportClient,
-    outputPreset,
-    recorderMimeType,
-    sequenceApproved,
-  ]);
+  }, [app, clips, draft, localAudioTracksForExport, makeExportClient, outputPreset, recorderMimeType, sequenceApproved]);
 
   const copyPlan = useCallback(async () => {
     const plan = writeLatestMakeSessionPlan({
@@ -2721,11 +2324,6 @@ export default function MakePage({ app }) {
               onAddTimelineClip={requestAddTimelineClip}
               onAddLinkedVideoDraft={addLinkedVideoDraft}
               onRemoveLinkedVideoDraft={removeLinkedVideoDraft}
-              onReorderClips={(nextClips) => commitTimelineClips(nextClips, { selectClipId: selectedClipId })}
-              timelineItemOrder={timelinePlaybackItemOrder}
-              onReorderTimelineItems={commitTimelineItemOrder}
-              onUpdateLinkedVideoDraftTiming={updateLinkedVideoDraftTiming}
-              onLinkedVideoPreviewReady={handleLinkedVideoPreviewReady}
               audioTracks={audioTracks}
               linkedVideoDrafts={linkedVideoDrafts}
               onRequestAddAudioTrack={requestAddAudioTrack}
@@ -2853,12 +2451,10 @@ export default function MakePage({ app }) {
         />
 
         <MakeHandoffCard
-          audioTracks={preparedAudioTracks}
           canExportSequence={canExportSequence}
           clips={clips}
           exportedSourceReady={makeExportReady}
           exportState={makeExportState}
-          linkedVideoDrafts={linkedVideoDrafts}
           onCopyPlan={copyPlan}
           onDownload={downloadClip}
           onExportSequence={exportApprovedSequence}
@@ -2997,295 +2593,6 @@ function linkedVideoPreviewAcceptHeader() {
   return 'video/mp4,video/webm,video/ogg,video/*,*/*';
 }
 
-
-function canUseLinkedVideoTauriBytesBridge() {
-  return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__) && typeof invoke === 'function';
-}
-
-function linkedVideoPreviewFirstString(...values) {
-  for (const value of values) {
-    if (value === null || value === undefined) {
-      continue;
-    }
-
-    const clean = String(value).trim();
-
-    if (clean) {
-      return clean;
-    }
-  }
-
-  return '';
-}
-
-function linkedVideoPreviewDropEmpty(value = {}) {
-  const out = {};
-
-  for (const [key, item] of Object.entries(value || {})) {
-    if (item === null || item === undefined || item === '') {
-      continue;
-    }
-
-    out[key] = String(item);
-  }
-
-  return out;
-}
-
-function linkedVideoPreviewPaymentSummary(payment = {}) {
-  const summary = payment?.summary || {};
-  const data = payment?.data || {};
-  const nestedPayment = data?.payment || {};
-  const receipt = data?.receipt || {};
-  const walletReceipt =
-    data?.wallet_receipt ||
-    data?.walletReceipt ||
-    nestedPayment?.wallet_receipt ||
-    nestedPayment?.walletReceipt ||
-    {};
-
-  return {
-    asset: linkedVideoPreviewFirstString(summary.asset, data.asset, nestedPayment.asset, walletReceipt.asset, 'roc').toLowerCase(),
-    amountMinor: linkedVideoPreviewFirstString(
-      summary.amountMinor,
-      summary.amount_minor,
-      data.amountMinor,
-      data.amount_minor,
-      nestedPayment.amountMinor,
-      nestedPayment.amount_minor,
-      walletReceipt.amountMinor,
-      walletReceipt.amount_minor,
-    ),
-    payerAccount: linkedVideoPreviewFirstString(
-      summary.payerAccount,
-      summary.payer_account,
-      summary.viewerWalletAccount,
-      summary.viewer_wallet_account,
-      data.payerAccount,
-      data.payer_account,
-      nestedPayment.payerAccount,
-      nestedPayment.payer_account,
-      walletReceipt.from,
-    ),
-    recipientAccount: linkedVideoPreviewFirstString(
-      summary.recipientAccount,
-      summary.recipient_account,
-      data.recipientAccount,
-      data.recipient_account,
-      nestedPayment.recipientAccount,
-      nestedPayment.recipient_account,
-      walletReceipt.to,
-    ),
-    txid: linkedVideoPreviewFirstString(
-      summary.txid,
-      summary.tx_id,
-      data.txid,
-      data.tx_id,
-      nestedPayment.txid,
-      nestedPayment.tx_id,
-      walletReceipt.txid,
-      walletReceipt.tx_id,
-      receipt.walletTxid,
-      receipt.wallet_txid,
-    ),
-    receiptHash: linkedVideoPreviewFirstString(
-      summary.receiptHash,
-      summary.receipt_hash,
-      data.receiptHash,
-      data.receipt_hash,
-      nestedPayment.receiptHash,
-      nestedPayment.receipt_hash,
-      walletReceipt.receiptHash,
-      walletReceipt.receipt_hash,
-      receipt.walletReceiptHash,
-      receipt.wallet_receipt_hash,
-    ),
-    quoteId: linkedVideoPreviewFirstString(
-      summary.quoteId,
-      summary.quote_id,
-      data.quoteId,
-      data.quote_id,
-      nestedPayment.quoteId,
-      nestedPayment.quote_id,
-    ),
-    quoteHash: linkedVideoPreviewFirstString(
-      summary.quoteHash,
-      summary.quote_hash,
-      data.quoteHash,
-      data.quote_hash,
-      nestedPayment.quoteHash,
-      nestedPayment.quote_hash,
-    ),
-    idempotencyKey: linkedVideoPreviewFirstString(
-      summary.idempotencyKey,
-      summary.idempotency_key,
-      data.clientIdempotencyKey,
-      data.client_idempotency_key,
-      nestedPayment.clientIdempotencyKey,
-      nestedPayment.client_idempotency_key,
-      walletReceipt.idem,
-    ),
-  };
-}
-
-function linkedVideoPreviewProofHeaders(payment, { payerAccount = '', passportSubject = '', target = {} } = {}) {
-  const proof = linkedVideoPreviewPaymentSummary(payment);
-
-  return linkedVideoPreviewDropEmpty({
-    'x-ron-passport': passportSubject,
-    'x-ron-wallet-account': linkedVideoPreviewFirstString(proof.payerAccount, payerAccount),
-    'x-ron-asset-kind': 'video',
-    'x-ron-asset-cid': target.cid,
-    'x-ron-asset-crab-url': target.assetCrabUrl,
-
-    // Backend-returned payment proof only. These are not invented locally and
-    // remain scoped to previewing this same content_view target.
-    'x-ron-paid-op': 'content_view',
-    'x-ron-paid-asset': proof.asset || 'roc',
-    'x-ron-paid-estimate-minor': proof.amountMinor,
-    'x-ron-wallet-txid': proof.txid,
-    'x-ron-wallet-receipt-hash': proof.receiptHash,
-    'x-ron-wallet-from': linkedVideoPreviewFirstString(proof.payerAccount, payerAccount),
-    'x-ron-wallet-to': proof.recipientAccount,
-    'x-ron-wallet-idem': proof.idempotencyKey,
-    'x-ron-content-view-quote-id': proof.quoteId,
-    'x-ron-content-view-quote-hash': proof.quoteHash,
-  });
-}
-
-function linkedVideoPreviewBytesToUint8Array(value) {
-  if (value instanceof Uint8Array) {
-    return value;
-  }
-
-  if (value instanceof ArrayBuffer) {
-    return new Uint8Array(value);
-  }
-
-  if (ArrayBuffer.isView?.(value)) {
-    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
-  }
-
-  if (Array.isArray(value)) {
-    return new Uint8Array(value);
-  }
-
-  return new Uint8Array();
-}
-
-function linkedVideoPreviewDecodeText(bytes) {
-  try {
-    return new TextDecoder().decode(bytes).trim();
-  } catch (_error) {
-    return '';
-  }
-}
-
-async function normalizeLinkedVideoPreviewCommandBlob(response, routeCandidate) {
-  const status = Number(response?.status || 0);
-  const ok = response?.ok === true || (status >= 200 && status < 300);
-  const contentType = linkedVideoPreviewFirstString(response?.contentType, response?.content_type, 'video/mp4');
-  const bytes = linkedVideoPreviewBytesToUint8Array(response?.bodyBytes || response?.body_bytes);
-
-  if (!ok) {
-    const text = linkedVideoPreviewDecodeText(bytes);
-    throw new Error(
-      `Gateway preview bridge failed for ${routeCandidate.route} with HTTP ${status || 'unknown'}${text ? `: ${text.slice(0, 220)}` : ''}`,
-    );
-  }
-
-  if (!bytes.length) {
-    throw new Error(`Gateway preview bridge returned empty bytes for ${routeCandidate.route}.`);
-  }
-
-  if (bytes.length > MAX_LINKED_VIDEO_PREVIEW_BYTES) {
-    throw new Error(
-      `Linked-video preview exceeded ${formatBytes(MAX_LINKED_VIDEO_PREVIEW_BYTES)}. Future range/segment preview is required.`,
-    );
-  }
-
-  const cleanContentType = String(contentType || '').toLowerCase();
-
-  if (cleanContentType.includes('json') || cleanContentType.startsWith('text/')) {
-    const text = linkedVideoPreviewDecodeText(bytes);
-    throw new Error(`Gateway returned non-video preview data: ${text.slice(0, 220)}`);
-  }
-
-  return new Blob([bytes], {
-    type: cleanContentType.startsWith('video/') ? cleanContentType : 'video/mp4',
-  });
-}
-
-async function fetchLinkedVideoPreviewBlobViaTauri({
-  item,
-  payment,
-  payerAccount,
-  passportSubject,
-  target,
-}) {
-  const routes = buildLinkedVideoPreviewRoutes(item).filter((routeCandidate) => (
-    /^\/o\/(b3:)?[0-9a-f]{64}$/i.test(routeCandidate.route)
-  ));
-
-  if (!routes.length) {
-    throw new Error('No Tauri-safe /o/b3:<hash> preview route could be built.');
-  }
-
-  const attempts = [];
-  const headers = linkedVideoPreviewProofHeaders(payment, {
-    payerAccount,
-    passportSubject,
-    target,
-  });
-
-  for (const routeCandidate of routes) {
-    try {
-      const response = await invoke('fetch_asset_bytes_gateway', {
-        request: {
-          route: routeCandidate.route,
-          accept: linkedVideoPreviewAcceptHeader(),
-          contentTypeHint: 'video/mp4',
-          maxBytes: MAX_LINKED_VIDEO_PREVIEW_BYTES,
-          headers,
-        },
-      });
-
-      const blob = await normalizeLinkedVideoPreviewCommandBlob(response, routeCandidate);
-
-      attempts.push({
-        route: routeCandidate.route,
-        label: `${routeCandidate.label} · Tauri bridge`,
-        status: response?.status || 0,
-        ok: true,
-        bytes: blob.size,
-        contentType: blob.type || response?.contentType || response?.content_type || '',
-      });
-
-      return {
-        blob,
-        route: routeCandidate.route,
-        label: `${routeCandidate.label} · Tauri bridge`,
-        status: response?.status || 0,
-        correlationId: response?.correlationId || response?.correlation_id || '',
-        attempts,
-        transport: 'tauri_fetch_asset_bytes_gateway',
-      };
-    } catch (error) {
-      attempts.push({
-        route: routeCandidate.route,
-        label: `${routeCandidate.label} · Tauri bridge`,
-        ok: false,
-        error: linkedVideoPreviewErrorMessage(error),
-      });
-    }
-  }
-
-  const error = new Error(attempts[attempts.length - 1]?.error || 'Tauri linked-video preview byte fetch failed.');
-  error.attempts = attempts;
-  throw error;
-}
-
-
 async function normalizeLinkedVideoPreviewBlob(blob, contentType = '') {
   if (!(blob instanceof Blob)) {
     throw new Error('Gateway did not return preview video bytes.');
@@ -3319,15 +2626,7 @@ async function normalizeLinkedVideoPreviewBlob(blob, contentType = '') {
   });
 }
 
-async function fetchLinkedVideoPreviewBlob({
-  item,
-  app,
-  gateway,
-  payment,
-  payerAccount = '',
-  passportSubject = '',
-  target = {},
-}) {
+async function fetchLinkedVideoPreviewBlob({ item, app, gateway }) {
   const routes = buildLinkedVideoPreviewRoutes(item);
 
   if (!routes.length) {
@@ -3336,41 +2635,15 @@ async function fetchLinkedVideoPreviewBlob({
 
   const attempts = [];
 
-  if (canUseLinkedVideoTauriBytesBridge()) {
-    try {
-      return await fetchLinkedVideoPreviewBlobViaTauri({
-        item,
-        payment,
-        payerAccount,
-        passportSubject,
-        target,
-      });
-    } catch (error) {
-      attempts.push(...(Array.isArray(error?.attempts) ? error.attempts : [{
-        route: '/o/b3:<hash>',
-        label: 'Tauri bridge',
-        ok: false,
-        error: linkedVideoPreviewErrorMessage(error),
-      }]));
-    }
-  }
-
-  const browserHeaders = {
-    Accept: linkedVideoPreviewAcceptHeader(),
-    ...linkedVideoPreviewProofHeaders(payment, {
-      payerAccount,
-      passportSubject,
-      target,
-    }),
-  };
-
   for (const routeCandidate of routes) {
     try {
       if (typeof gateway?.request === 'function') {
         const response = await gateway.request(routeCandidate.route, {
           label: 'Linked video paid preview bytes',
           parseAs: 'blob',
-          headers: browserHeaders,
+          headers: {
+            Accept: linkedVideoPreviewAcceptHeader(),
+          },
         });
 
         const blob = await normalizeLinkedVideoPreviewBlob(response?.data, response?.contentType);
@@ -3378,11 +2651,10 @@ async function fetchLinkedVideoPreviewBlob({
         return {
           blob,
           route: routeCandidate.route,
-          label: `${routeCandidate.label} · browser fetch`,
+          label: routeCandidate.label,
           status: response?.status || 0,
           correlationId: response?.correlationId || '',
           attempts,
-          transport: 'browser_gateway_request_blob',
         };
       }
 
@@ -3392,14 +2664,13 @@ async function fetchLinkedVideoPreviewBlob({
       }
 
       const response = await fetch(url, {
-        headers: browserHeaders,
+        headers: {
+          Accept: linkedVideoPreviewAcceptHeader(),
+        },
       });
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        throw new Error(
-          `Gateway preview request failed with HTTP ${response.status}${errorText ? `: ${errorText.slice(0, 220)}` : ''}.`,
-        );
+        throw new Error(`Gateway preview request failed with HTTP ${response.status}.`);
       }
 
       const blob = await normalizeLinkedVideoPreviewBlob(
@@ -3410,11 +2681,10 @@ async function fetchLinkedVideoPreviewBlob({
       return {
         blob,
         route: routeCandidate.route,
-        label: `${routeCandidate.label} · browser fetch`,
+        label: routeCandidate.label,
         status: response.status,
         correlationId: '',
         attempts,
-        transport: 'browser_fetch_blob',
       };
     } catch (error) {
       attempts.push({
@@ -3426,9 +2696,7 @@ async function fetchLinkedVideoPreviewBlob({
     }
   }
 
-  const error = new Error(attempts[attempts.length - 1]?.error || 'Linked-video preview byte fetch failed.');
-  error.attempts = attempts;
-  throw error;
+  throw new Error(attempts[attempts.length - 1]?.error || 'Linked-video preview byte fetch failed.');
 }
 
 function linkedVideoPreviewDisplayAmount(quoteOrPayment) {
@@ -3468,7 +2736,7 @@ function linkedVideoPreviewCanFetch(status) {
 }
 
 
-function LinkedVideoDraftPreview({ item, app, onClose, onPreviewReady }) {
+function LinkedVideoDraftPreview({ item, app, onClose }) {
   const videoRef = useRef(null);
   const gateway = app?.clients?.gateway || app?.gateway || null;
   const contentViewClient = useMemo(() => createContentViewClient(gateway), [gateway]);
@@ -3591,9 +2859,7 @@ function LinkedVideoDraftPreview({ item, app, onClose, onPreviewReady }) {
     }
   };
 
-  const fetchPaidPreview = async (paymentOverride = null) => {
-    const paymentForFetch = paymentOverride?.summary ? paymentOverride : access.payment;
-
+  const fetchPaidPreview = async () => {
     setPreview((current) => ({
       ...current,
       status: 'fetching',
@@ -3605,10 +2871,6 @@ function LinkedVideoDraftPreview({ item, app, onClose, onPreviewReady }) {
         item,
         app,
         gateway,
-        payment: paymentForFetch,
-        payerAccount,
-        passportSubject,
-        target,
       });
       const objectUrl = URL.createObjectURL(result.blob);
 
@@ -3617,38 +2879,24 @@ function LinkedVideoDraftPreview({ item, app, onClose, onPreviewReady }) {
       }
 
       previewObjectUrlRef.current = objectUrl;
-      const sourceFacts = {
-        route: result.route,
-        label: result.label,
-        status: result.status,
-        bytes: result.blob.size,
-        contentType: result.blob.type || '',
-        correlationId: result.correlationId || '',
-        attempts: result.attempts || [],
-        transport: result.transport || '',
-      };
-
       setPreview({
         status: 'ready',
         objectUrl,
-        source: sourceFacts,
+        source: {
+          route: result.route,
+          label: result.label,
+          status: result.status,
+          bytes: result.blob.size,
+          contentType: result.blob.type || '',
+          correlationId: result.correlationId || '',
+          attempts: result.attempts || [],
+        },
         error: null,
-      });
-
-      onPreviewReady?.({
-        blob: result.blob,
-        objectUrl,
-        source: sourceFacts,
-        payment: paymentForFetch,
       });
     } catch (error) {
       setPreview((current) => ({
         ...current,
         status: 'error',
-        source: {
-          ...(current.source || {}),
-          attempts: Array.isArray(error?.attempts) ? error.attempts : current.source?.attempts || [],
-        },
         error,
       }));
     }
@@ -3707,7 +2955,7 @@ function LinkedVideoDraftPreview({ item, app, onClose, onPreviewReady }) {
         message: `${linkedVideoPreviewDisplayAmount(payment)} paid for source preview only. Reuse/export rights are still unverified.`,
       });
 
-      await fetchPaidPreview(payment);
+      await fetchPaidPreview();
     } catch (error) {
       setAccess((current) => ({
         ...current,
@@ -3814,7 +3062,7 @@ function LinkedVideoDraftPreview({ item, app, onClose, onPreviewReady }) {
               <button
                 type="button"
                 className="is-primary"
-                onClick={access.status === 'paid' ? () => fetchPaidPreview(access.payment) : payPreview}
+                onClick={access.status === 'paid' ? fetchPaidPreview : payPreview}
                 disabled={isBusy || (!access.quote?.summary && access.status !== 'paid')}
               >
                 {preview.status === 'fetching'
@@ -3868,14 +3116,6 @@ function LinkedVideoDraftPreview({ item, app, onClose, onPreviewReady }) {
             <strong>{preview.source?.route || 'Preview bytes not loaded yet'}</strong>
           </div>
           <div>
-            <span>Transport</span>
-            <strong>{preview.source?.transport || preview.source?.label || 'Not loaded yet'}</strong>
-          </div>
-          <div>
-            <span>Status</span>
-            <strong>{preview.source?.status ? `HTTP ${preview.source.status}` : 'Not loaded yet'}</strong>
-          </div>
-          <div>
             <span>Tx</span>
             <strong>{receiptFacts.txid || 'Not paid yet'}</strong>
           </div>
@@ -3883,19 +3123,6 @@ function LinkedVideoDraftPreview({ item, app, onClose, onPreviewReady }) {
             <span>Receipt</span>
             <strong>{receiptFacts.receiptHash || 'Not returned yet'}</strong>
           </div>
-          {preview.source?.attempts?.length > 0 && (
-            <div>
-              <span>Attempts</span>
-              <strong>
-                {preview.source.attempts
-                  .map((attempt) => attempt.ok
-                    ? `${attempt.label || attempt.route}: ok ${attempt.status || ''}`.trim()
-                    : `${attempt.label || attempt.route}: ${attempt.error || 'failed'}`)
-                  .join(' | ')
-                  .slice(0, 900)}
-              </strong>
-            </div>
-          )}
           <p>
             This is display-only preview access. It is not a reuse license, payout split, export permission, ownership proof, or backend mint.
           </p>
@@ -3921,11 +3148,6 @@ function MakePreviewStudioChrome({
   onAddTimelineClip,
   onAddLinkedVideoDraft,
   onRemoveLinkedVideoDraft,
-  onReorderClips,
-  timelineItemOrder = [],
-  onReorderTimelineItems,
-  onUpdateLinkedVideoDraftTiming,
-  onLinkedVideoPreviewReady,
   audioTracks = [],
   linkedVideoDrafts = [],
   onRequestAddAudioTrack,
@@ -3983,12 +3205,6 @@ function MakePreviewStudioChrome({
   const [timelinePreview, setTimelinePreview] = useState(null);
   const [linkedMediaComposer, setLinkedMediaComposer] = useState(null);
   const [linkedVideoPreviewId, setLinkedVideoPreviewId] = useState('');
-  const [selectedLinkedVideoId, setSelectedLinkedVideoId] = useState('');
-  const previewTimelineRailRef = useRef(null);
-  const [previewClipMoveDrag, setPreviewClipMoveDrag] = useState(null);
-  const [audioMoveDrag, setAudioMoveDrag] = useState(null);
-  const [selectedAudioTrackId, setSelectedAudioTrackId] = useState('');
-  const audioAutoSpreadSignatureRef = useRef('');
 
   const hasClips = clips.length > 0;
   const activeDrawer = previewDrawer === 'effects' || previewDrawer === 'settings' || previewDrawer === 'modes';
@@ -4022,46 +3238,6 @@ function MakePreviewStudioChrome({
   const timelineLoopPlaying = timelinePreviewActive && timelinePreview?.status === 'looping';
   const timelineRangeLoopAvailable = Boolean(cursorToolActive && timelineSelectionClip && timelineSelection?.mode === 'range' && timelineSelectionRangeMs >= 80);
   const hasLinkedVideoDrafts = linkedVideoDrafts.length > 0;
-  const linkedVideoTimelineDurationMs = useMemo(
-    () => linkedVideoDrafts.reduce((sum, item) => {
-      const explicitDuration = Number(item?.timelineDurationMs || 0);
-      const sourceStartMs = Number(item?.sourceStartMs || 0);
-      const sourceEndMs = Number(item?.sourceEndMs || 0);
-      const rangedDuration = sourceEndMs > sourceStartMs ? sourceEndMs - sourceStartMs : 0;
-
-      return sum + Math.max(1, explicitDuration || rangedDuration || 30_000);
-    }, 0),
-    [linkedVideoDrafts],
-  );
-  const timelineHasItems = hasClips || hasLinkedVideoDrafts;
-  const timelineVisualTotalDurationMs = Math.max(
-    1,
-    visibleTotalDurationMs + linkedVideoTimelineDurationMs,
-  );
-  const timelineSummaryLabel = timelineHasItems
-    ? [
-        hasClips ? `${clips.length} local clip${clips.length === 1 ? '' : 's'}` : '',
-        hasLinkedVideoDrafts
-          ? `${linkedVideoDrafts.length} linked video ref${linkedVideoDrafts.length === 1 ? '' : 's'}`
-          : '',
-        hasClips ? formatDurationMs(totalDurationMs) : '',
-        `${Math.round(timelineZoom * 100)}%`,
-      ].filter(Boolean).join(' · ')
-    : 'No clips yet';
-  const timelineVisualItemKeys = useMemo(
-    () => normalizeTimelineItemOrderKeys(
-      timelineItemOrder,
-      createTimelineItemKeys(clips, linkedVideoDrafts),
-    ),
-    [clips, linkedVideoDrafts, timelineItemOrder],
-  );
-  const timelineVisualOrderMap = useMemo(
-    () => new Map(timelineVisualItemKeys.map((key, index) => [key, index])),
-    [timelineVisualItemKeys],
-  );
-  const timelineVisualOrderForKey = (key) => (
-    timelineVisualOrderMap.has(key) ? timelineVisualOrderMap.get(key) * 4 : 10_000
-  );
   const linkedVideoPreviewItem = useMemo(() => {
     if (!linkedVideoDrafts.length) {
       return null;
@@ -4071,85 +3247,20 @@ function MakePreviewStudioChrome({
   }, [linkedVideoDrafts, linkedVideoPreviewId]);
 
   useEffect(() => {
-    if (!linkedVideoPreviewId) {
-      return;
-    }
-
-    if (!linkedVideoDrafts.some((item) => item.id === linkedVideoPreviewId)) {
+    if (!linkedVideoDrafts.length) {
       setLinkedVideoPreviewId('');
+      return;
     }
-  }, [linkedVideoDrafts, linkedVideoPreviewId]);
 
-  const audioLaneRawEndMs = (audioTracks || []).reduce((max, track) => {
-    const startMs = Math.max(0, Number(track?.offsetMs || 0));
-    const rawDurationMs = Math.max(0, Number(track?.durationMs || 0));
-    const trimStartMs = Math.max(0, Number(track?.trimStartMs || 0));
-    const trimEndMs = Math.max(trimStartMs, Number(track?.trimEndMs || rawDurationMs || 1000));
-    const effectiveMs = Math.max(500, Number(track?.effectiveDurationMs || 0) || (trimEndMs - trimStartMs) || rawDurationMs || 1000);
+    setLinkedVideoPreviewId((current) => (
+      current && linkedVideoDrafts.some((item) => item.id === current)
+        ? current
+        : linkedVideoDrafts[0].id
+    ));
+  }, [linkedVideoDrafts]);
 
-    return Math.max(max, startMs + effectiveMs);
-  }, 0);
-  const audioLaneVisualDurationMs = Math.max(
-    1,
-    Number(totalTimelineDurationMs || 0),
-    audioLaneRawEndMs,
-  );
-  const preparedAudioTracks = prepareAudioTracksForTimeline(audioTracks, audioLaneVisualDurationMs);
+  const preparedAudioTracks = prepareAudioTracksForTimeline(audioTracks, totalTimelineDurationMs);
   const hasAudioTracks = preparedAudioTracks.length > 0;
-  const selectedAudioTrack = useMemo(
-    () => preparedAudioTracks.find((track) => track.id === selectedAudioTrackId) || preparedAudioTracks[0] || null,
-    [preparedAudioTracks, selectedAudioTrackId],
-  );
-
-  useEffect(() => {
-    if (!preparedAudioTracks.length) {
-      if (selectedAudioTrackId) {
-        setSelectedAudioTrackId('');
-      }
-
-      return;
-    }
-
-    if (!preparedAudioTracks.some((track) => track.id === selectedAudioTrackId)) {
-      setSelectedAudioTrackId(preparedAudioTracks[0]?.id || '');
-    }
-  }, [preparedAudioTracks, selectedAudioTrackId]);
-
-  const audioLaneSpreadSignature = preparedAudioTracks
-    .map((track) => [
-      track.id,
-      Math.round(Number(track.offsetMs || 0)),
-      Math.round(Number(track.effectiveDurationMs || track.durationMs || 0)),
-    ].join(':'))
-    .join('|');
-
-  useEffect(() => {
-    if (
-      preparedAudioTracks.length < 2 ||
-      typeof onUpdateAudioTrackTiming !== 'function' ||
-      !preparedAudioTracks.every((track) => Math.abs(Number(track.offsetMs || 0)) < 10)
-    ) {
-      return;
-    }
-
-    if (audioAutoSpreadSignatureRef.current === audioLaneSpreadSignature) {
-      return;
-    }
-
-    audioAutoSpreadSignatureRef.current = audioLaneSpreadSignature;
-
-    let cursorMs = 0;
-
-    for (const [index, track] of preparedAudioTracks.entries()) {
-      const effectiveMs = Math.max(500, Number(track.effectiveDurationMs || track.durationMs || 1000));
-
-      if (index > 0) {
-        onUpdateAudioTrackTiming(track.id, { offsetMs: cursorMs });
-      }
-
-      cursorMs += effectiveMs;
-    }
-  }, [audioLaneSpreadSignature, onUpdateAudioTrackTiming, preparedAudioTracks.length]);
 
   const openLinkedMediaComposer = (kind) => {
     setLinkedMediaComposer({
@@ -4212,14 +3323,6 @@ function MakePreviewStudioChrome({
         });
 
     if (saved !== false) {
-      if (linkedMediaComposer?.kind === 'video') {
-        const savedId = typeof saved === 'object' && saved ? saved.id : '';
-        if (savedId) {
-          setSelectedLinkedVideoId(savedId);
-          setLinkedVideoPreviewId(savedId);
-        }
-      }
-
       closeLinkedMediaComposer();
     }
   };
@@ -4426,6 +3529,7 @@ function MakePreviewStudioChrome({
     }
 
     onSelectClip(clipId);
+    setPreviewDrawer('');
     setTimelineTool('select');
     setTimelineSelection(null);
     onTimelineHoverChange?.(true);
@@ -4449,7 +3553,6 @@ function MakePreviewStudioChrome({
 
     onSelectClip(clip.id);
     setPreviewDrawer('');
-    setTrimEditorClipId('');
     setTimelineTool('select');
     setTimelineSelection(null);
     setTrimEditorClipId(clip.id);
@@ -4504,297 +3607,6 @@ function MakePreviewStudioChrome({
     }
 
     applyPointer(event.clientX);
-  };
-
-  const beginLinkedVideoTrimDrag = (event, item, edge) => {
-    if (!item?.id || isRecording || typeof onUpdateLinkedVideoDraftTiming !== 'function') {
-      return;
-    }
-
-    const shell = event.currentTarget.closest('.make-preview-linked-video-clip');
-    const rect = shell?.getBoundingClientRect?.();
-
-    if (!rect || rect.width <= 0) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    setPreviewDrawer('');
-    setTimelineTool('select');
-    setTimelineSelection(null);
-    onTimelineHoverChange?.(true);
-
-    const minWindowMs = 1_000;
-    const originalStartMs = Math.max(0, Number(item.sourceStartMs || 0));
-    const originalEndMs = Math.max(originalStartMs + minWindowMs, Number(item.sourceEndMs || originalStartMs + 30_000));
-    const originalDurationMs = Math.max(minWindowMs, originalEndMs - originalStartMs);
-
-    const pointerToWindowMs = (clientX) => {
-      const pct = (Number(clientX || rect.left) - rect.left) / Math.max(1, rect.width);
-      return Math.round(originalStartMs + (Math.max(0, Math.min(1, pct)) * originalDurationMs));
-    };
-
-    const applyPointer = (clientX) => {
-      const sourceMs = pointerToWindowMs(clientX);
-
-      if (edge === 'start') {
-        onUpdateLinkedVideoDraftTiming(item.id, {
-          sourceStartMs: clamp(sourceMs, 0, Math.max(0, originalEndMs - minWindowMs), originalStartMs),
-          sourceEndMs: originalEndMs,
-          useEntireSource: false,
-        });
-        return;
-      }
-
-      onUpdateLinkedVideoDraftTiming(item.id, {
-        sourceStartMs: originalStartMs,
-        sourceEndMs: clamp(sourceMs, originalStartMs + minWindowMs, originalStartMs + (6 * 60 * 60 * 1000), originalEndMs),
-        useEntireSource: false,
-      });
-    };
-
-    const handleMove = (moveEvent) => {
-      applyPointer(moveEvent.clientX);
-      moveEvent.preventDefault();
-    };
-
-    const handleEnd = () => {
-      window.removeEventListener('pointermove', handleMove);
-      window.removeEventListener('pointerup', handleEnd);
-      window.removeEventListener('pointercancel', handleEnd);
-    };
-
-    window.addEventListener('pointermove', handleMove);
-    window.addEventListener('pointerup', handleEnd, { once: true });
-    window.addEventListener('pointercancel', handleEnd, { once: true });
-
-    try {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    } catch (_error) {
-      // Pointer capture is best effort.
-    }
-
-    applyPointer(event.clientX);
-  };
-
-  const commitTimelineItemMove = (activeKey, targetIndex) => {
-    if (!activeKey || typeof onReorderTimelineItems !== 'function') {
-      return;
-    }
-
-    const currentKeys = normalizeTimelineItemOrderKeys(
-      timelineVisualItemKeys,
-      createTimelineItemKeys(clips, linkedVideoDrafts),
-    );
-    const currentIndex = currentKeys.findIndex((key) => key === activeKey);
-
-    if (currentIndex < 0) {
-      return;
-    }
-
-    const withoutMoving = currentKeys.filter((key) => key !== activeKey);
-    const boundedTargetIndex = clamp(Number(targetIndex), 0, withoutMoving.length, withoutMoving.length);
-    const nextKeys = [
-      ...withoutMoving.slice(0, boundedTargetIndex),
-      activeKey,
-      ...withoutMoving.slice(boundedTargetIndex),
-    ];
-
-    if (timelineOrderSignature(nextKeys) !== timelineOrderSignature(currentKeys)) {
-      onReorderTimelineItems(nextKeys, {
-        selectClipId: isLocalTimelineItemKey(activeKey) ? idFromTimelineItemKey(activeKey) : selectedClipId,
-      });
-    }
-  };
-
-  const beginPreviewTimelineItemMoveDrag = (event, activeKey, selectForDrag = null) => {
-    if (!activeKey || isRecording || typeof onReorderTimelineItems !== 'function') {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    setPreviewDrawer('');
-    setTrimEditorClipId('');
-    setTimelineTool('select');
-    setTimelineSelection(null);
-    onTimelineHoverChange?.(true);
-    selectForDrag?.();
-
-    try {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    } catch (_error) {
-      // Pointer capture is best effort in the WebView.
-    }
-
-    const readTargetIndex = (clientX) => {
-      const rail = previewTimelineRailRef.current;
-
-      if (!rail) {
-        return timelineVisualItemKeys.findIndex((key) => key === activeKey);
-      }
-
-      const nodes = Array.from(rail.querySelectorAll('[data-make-timeline-item-key]'))
-        .filter((node) => node?.dataset?.makeTimelineItemKey !== activeKey)
-        .sort((a, b) => {
-          const aRect = a.getBoundingClientRect();
-          const bRect = b.getBoundingClientRect();
-
-          return aRect.left - bRect.left;
-        });
-
-      for (let index = 0; index < nodes.length; index += 1) {
-        const rect = nodes[index].getBoundingClientRect();
-        const centerX = rect.left + (rect.width / 2);
-
-        if (clientX < centerX) {
-          return index;
-        }
-      }
-
-      return nodes.length;
-    };
-
-    const setDragFromPointer = (clientX) => {
-      const targetIndex = readTargetIndex(clientX);
-      const withoutMoving = timelineVisualItemKeys.filter((key) => key !== activeKey);
-      const beforeKey = withoutMoving[targetIndex] || '';
-
-      setPreviewClipMoveDrag({
-        activeKey,
-        activeClipId: isLocalTimelineItemKey(activeKey) ? idFromTimelineItemKey(activeKey) : '',
-        activeLinkedVideoId: isLinkedVideoTimelineItemKey(activeKey) ? idFromTimelineItemKey(activeKey) : '',
-        beforeKey,
-        beforeClipId: isLocalTimelineItemKey(beforeKey) ? idFromTimelineItemKey(beforeKey) : '',
-        beforeLinkedVideoId: isLinkedVideoTimelineItemKey(beforeKey) ? idFromTimelineItemKey(beforeKey) : '',
-        afterLast: !beforeKey,
-        targetIndex,
-      });
-    };
-
-    const handleMove = (moveEvent) => {
-      setDragFromPointer(moveEvent.clientX);
-      moveEvent.preventDefault();
-    };
-
-    const handleEnd = (endEvent) => {
-      const targetIndex = readTargetIndex(endEvent.clientX);
-
-      window.removeEventListener('pointermove', handleMove);
-      window.removeEventListener('pointerup', handleEnd);
-      window.removeEventListener('pointercancel', handleCancel);
-      document.body.classList.remove('make-timeline-is-moving');
-      setPreviewClipMoveDrag(null);
-      commitTimelineItemMove(activeKey, targetIndex);
-      endEvent.preventDefault();
-    };
-
-    const handleCancel = () => {
-      window.removeEventListener('pointermove', handleMove);
-      window.removeEventListener('pointerup', handleEnd);
-      window.removeEventListener('pointercancel', handleCancel);
-      document.body.classList.remove('make-timeline-is-moving');
-      setPreviewClipMoveDrag(null);
-    };
-
-    document.body.classList.add('make-timeline-is-moving');
-    setDragFromPointer(event.clientX);
-    window.addEventListener('pointermove', handleMove);
-    window.addEventListener('pointerup', handleEnd, { once: true });
-    window.addEventListener('pointercancel', handleCancel, { once: true });
-  };
-
-  const beginPreviewClipMoveDrag = (event, clip) => {
-    beginPreviewTimelineItemMoveDrag(
-      event,
-      makeLocalTimelineItemKey(clip?.id),
-      () => onSelectClip?.(clip?.id),
-    );
-  };
-
-  const beginLinkedVideoMoveDrag = (event, item) => {
-    beginPreviewTimelineItemMoveDrag(
-      event,
-      makeLinkedVideoTimelineItemKey(item?.id),
-      () => {
-        setSelectedLinkedVideoId(item?.id || '');
-        setLinkedVideoPreviewId('');
-      },
-    );
-  };
-
-  const beginAudioTrackOffsetDrag = (event, track) => {
-    if (!track?.id || isRecording || typeof onUpdateAudioTrackTiming !== 'function') {
-      return;
-    }
-
-    const rail = event.currentTarget
-      ?.closest('.make-preview-audio-track-list-timeline')
-      || event.currentTarget
-        ?.closest('.make-preview-audio-timeline-rail')
-      || event.currentTarget
-        ?.closest('.make-preview-audio-track')
-        ?.querySelector('.make-preview-audio-timeline-rail');
-
-    if (!rail) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    try {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    } catch (_error) {
-      // Pointer capture is best effort in the WebView.
-    }
-
-    const startX = event.clientX;
-    const startOffsetMs = Math.max(0, Number(track.offsetMs || 0));
-    const totalMs = Math.max(1, Number(audioLaneVisualDurationMs || totalTimelineDurationMs || 0));
-    const trackDurationMs = Math.max(0, Number(track.effectiveDurationMs || track.durationMs || 0));
-    const maxOffsetMs = Math.max(0, totalMs - Math.min(totalMs, trackDurationMs));
-
-    const offsetFromClientX = (clientX) => {
-      const rect = rail.getBoundingClientRect();
-      const deltaPct = rect.width > 0 ? (clientX - startX) / rect.width : 0;
-      const nextOffsetMs = startOffsetMs + (deltaPct * totalMs);
-
-      return Math.round(clamp(nextOffsetMs, 0, maxOffsetMs, 0) / 250) * 250;
-    };
-
-    const handleMove = (moveEvent) => {
-      setAudioMoveDrag(track.id);
-      onUpdateAudioTrackTiming(track.id, { offsetMs: offsetFromClientX(moveEvent.clientX) });
-      moveEvent.preventDefault();
-    };
-
-    const handleEnd = (endEvent) => {
-      window.removeEventListener('pointermove', handleMove);
-      window.removeEventListener('pointerup', handleEnd);
-      window.removeEventListener('pointercancel', handleCancel);
-      document.body.classList.remove('make-audio-is-moving');
-      setAudioMoveDrag(null);
-      onUpdateAudioTrackTiming(track.id, { offsetMs: offsetFromClientX(endEvent.clientX) });
-      endEvent.preventDefault();
-    };
-
-    const handleCancel = () => {
-      window.removeEventListener('pointermove', handleMove);
-      window.removeEventListener('pointerup', handleEnd);
-      window.removeEventListener('pointercancel', handleCancel);
-      document.body.classList.remove('make-audio-is-moving');
-      setAudioMoveDrag(null);
-    };
-
-    document.body.classList.add('make-audio-is-moving');
-    setAudioMoveDrag(track.id);
-    window.addEventListener('pointermove', handleMove);
-    window.addEventListener('pointerup', handleEnd, { once: true });
-    window.addEventListener('pointercancel', handleCancel, { once: true });
   };
 
   const setTimelineZoomBounded = (nextValue) => {
@@ -5169,7 +3981,7 @@ function MakePreviewStudioChrome({
 
   return (
     <div
-      className={`make-preview-chrome ${activeDrawer ? 'has-open-drawer' : ''} ${isRecording ? 'is-recording' : ''} ${sequenceActive ? 'is-sequence-active' : ''} ${timelinePreviewActive ? 'has-timeline-preview' : ''} ${timelineLoopPlaying ? 'is-range-looping' : ''} ${trimEditorActive ? 'is-trimming-clip' : ''} ${cursorToolActive ? 'is-timeline-cursor' : ''} ${previewClipMoveDrag ? 'is-moving-timeline-item' : ''}`}
+      className={`make-preview-chrome ${activeDrawer ? 'has-open-drawer' : ''} ${isRecording ? 'is-recording' : ''} ${sequenceActive ? 'is-sequence-active' : ''} ${timelinePreviewActive ? 'has-timeline-preview' : ''} ${timelineLoopPlaying ? 'is-range-looping' : ''} ${trimEditorActive ? 'is-trimming-clip' : ''} ${cursorToolActive ? 'is-timeline-cursor' : ''}`}
       style={{ '--make-timeline-zoom': timelineZoom }}
       aria-label="Preview controls. These controls are not recorded into the canvas."
     >
@@ -5327,7 +4139,9 @@ function MakePreviewStudioChrome({
                   : timelineSelection
                     ? 'I cursor placed · Split is ready'
                     : 'I cursor · click to split, drag to delete'
-                : timelineSummaryLabel}
+                : hasClips
+                  ? `${clips.length} clip${clips.length === 1 ? '' : 's'} · ${formatDurationMs(totalDurationMs)} · ${Math.round(timelineZoom * 100)}%`
+                  : 'No clips yet'}
           </strong>
 
           <div className="make-preview-mini-actions" aria-label="Preview sequence actions">
@@ -5359,7 +4173,7 @@ function MakePreviewStudioChrome({
               {trimEditorActive ? 'Done trim' : 'Edit clip'}
             </button>
             <button type="button" onClick={() => setTimelineZoomBounded((current) => current - 0.25)} disabled={timelineZoom <= 1} title="Zoom timeline out" aria-label="Zoom timeline out">−</button>
-            <button type="button" onClick={() => setTimelineZoomBounded((current) => current + 0.25)} disabled={!timelineHasItems || timelineZoom >= 6} title="Zoom timeline in" aria-label="Zoom timeline in">+</button>
+            <button type="button" onClick={() => setTimelineZoomBounded((current) => current + 0.25)} disabled={!hasClips || timelineZoom >= 6} title="Zoom timeline in" aria-label="Zoom timeline in">+</button>
             <button
               type="button"
               onClick={handleTimelinePlayClick}
@@ -5373,15 +4187,9 @@ function MakePreviewStudioChrome({
         </div>
 
         <div className="make-preview-mini-scroll" aria-label="Scrollable timeline">
-          <div
-            ref={previewTimelineRailRef}
-            className={`make-preview-mini-rail ${previewClipMoveDrag ? 'is-reordering' : ''}`}
-            role="list"
-            aria-label="Make timeline clips and linked video references"
-          >
-          {timelineHasItems ? (
-            <>
-            {hasClips ? clips.map((clip, index) => {
+          <div className="make-preview-mini-rail" role="list" aria-label="Recorded clips">
+          {hasClips ? (
+            clips.map((clip, index) => {
               const active = clip.id === selectedClipId || (!selectedClipId && selectedClip?.id === clip.id);
               const previewingLoop = timelineLoopPlaying && timelinePreviewClip?.id === clip.id;
               const playing = (sequenceActive && sequenceClip?.id === clip.id) || previewingLoop;
@@ -5415,17 +4223,13 @@ function MakePreviewStudioChrome({
               const cursorPct = hasCursorSelection
                 ? sourceMsToVisiblePct(clip, Number(timelineSelection?.focusMs || timelineSelectionStartMs))
                 : 0;
-              const flexGrow = Math.max(0.42, visibleDurationMs / Math.max(1, timelineVisualTotalDurationMs));
-              const localTimelineKey = makeLocalTimelineItemKey(clip.id);
+              const flexGrow = Math.max(0.42, visibleDurationMs / Math.max(1, visibleTotalDurationMs));
 
               return (
                 <div
-                  className={`make-preview-mini-clip ${active ? 'is-active' : ''} ${playing ? 'is-playing' : ''} ${trimming ? 'is-trimming' : ''} ${trimmed ? 'is-trimmed' : ''} ${cursorToolActive ? 'is-cursor-tool' : ''} ${hasCursorSelection ? 'has-cursor-selection' : ''} ${hasCursorSelection && timelineSelection?.mode !== 'range' ? 'has-insert-marker' : ''} ${hasCursorSelection && timelineSelection?.mode === 'range' ? 'has-range-selection' : ''} ${previewClipMoveDrag?.activeKey === localTimelineKey || previewClipMoveDrag?.activeClipId === clip.id ? 'is-moving' : ''}`}
+                  className={`make-preview-mini-clip ${active ? 'is-active' : ''} ${playing ? 'is-playing' : ''} ${trimming ? 'is-trimming' : ''} ${trimmed ? 'is-trimmed' : ''} ${cursorToolActive ? 'is-cursor-tool' : ''} ${hasCursorSelection ? 'has-cursor-selection' : ''} ${hasCursorSelection && timelineSelection?.mode !== 'range' ? 'has-insert-marker' : ''} ${hasCursorSelection && timelineSelection?.mode === 'range' ? 'has-range-selection' : ''}`}
                   key={clip.id}
-                  data-make-local-clip-id={clip.id}
-                  data-make-timeline-item-key={localTimelineKey}
                   style={{
-                    order: timelineVisualOrderForKey(localTimelineKey),
                     flexGrow,
                     '--make-visible-duration-ms': visibleDurationMs,
                     '--make-timeline-cursor-pct': hasCursorSelection ? `${cursorPct}%` : undefined,
@@ -5435,9 +4239,6 @@ function MakePreviewStudioChrome({
                   role="listitem"
                   title={`${index + 1}. ${clip.name || 'clip'} · ${formatDurationMs(durationMs)}${trimmed ? ` kept from ${formatDurationMs(rawDurationMs)}` : ''}`}
                 >
-                  {(previewClipMoveDrag?.beforeKey === localTimelineKey || previewClipMoveDrag?.beforeClipId === clip.id) && (
-                    <span className="make-preview-mini-drop-marker" aria-hidden="true" />
-                  )}
                   <span
                     className="make-preview-mini-clip-trim-fill"
                     style={{ left: `${trimStartPct}%`, right: `${rightTrimPct}%` }}
@@ -5495,17 +4296,6 @@ function MakePreviewStudioChrome({
                   )}
 
                   <button
-                    className="make-preview-mini-move-handle"
-                    type="button"
-                    aria-label={`Move ${clip.name || `clip ${index + 1}`} on the timeline`}
-                    title="Drag to move this clip on the timeline"
-                    disabled={isRecording}
-                    onPointerDown={(event) => beginPreviewClipMoveDrag(event, clip)}
-                  >
-                    MOVE
-                  </button>
-
-                  <button
                     className="make-preview-mini-clip-main"
                     type="button"
                     onClick={() => {
@@ -5558,135 +4348,7 @@ function MakePreviewStudioChrome({
                   )}
                 </div>
               );
-            }) : null}
-
-            {previewClipMoveDrag?.afterLast && timelineVisualItemKeys.length > 0 && (
-              <span
-                className="make-preview-mini-drop-marker is-after-last"
-                style={{ order: 10_000 }}
-                aria-hidden="true"
-              />
-            )}
-
-            {linkedVideoDrafts.map((item, index) => {
-              const sourceStartMs = Number(item?.sourceStartMs || 0);
-              const sourceEndMs = Number(item?.sourceEndMs || 0);
-              const linkedDurationMs = Math.max(
-                1,
-                Number(item?.timelineDurationMs || 0)
-                  || (sourceEndMs > sourceStartMs ? sourceEndMs - sourceStartMs : 0)
-                  || 30_000,
-              );
-              const active = selectedLinkedVideoId === item.id || linkedVideoPreviewId === item.id;
-              const flexGrow = Math.max(
-                0.42,
-                linkedDurationMs / Math.max(1, timelineVisualTotalDurationMs),
-              );
-              const statusLabel = item.rightsStatusLabel || 'Rights not checked';
-              const linkedTimelineKey = makeLinkedVideoTimelineItemKey(item.id);
-
-              return (
-                <div
-                  className={`make-preview-mini-clip make-preview-linked-video-clip is-linked-video ${active ? 'is-active' : ''} ${item.previewStatus === 'ready' || item.previewObjectUrl ? 'has-linked-preview-proxy' : ''} ${previewClipMoveDrag?.activeKey === linkedTimelineKey || previewClipMoveDrag?.activeLinkedVideoId === item.id ? 'is-moving' : ''}`}
-                  key={item.id || item.url || `linked-video-${index}`}
-                  data-make-timeline-item-key={linkedTimelineKey}
-                  data-make-linked-video-id={item.id}
-                  style={{
-                    order: timelineVisualOrderForKey(linkedTimelineKey),
-                    flexGrow,
-                    '--make-visible-duration-ms': linkedDurationMs,
-                  }}
-                  role="listitem"
-                  title={`${item.displayName || `Linked video ${index + 1}`} · ${item.rangeLabel || 'Source window not set'} · ${statusLabel}`}
-                >
-                  {(previewClipMoveDrag?.beforeKey === linkedTimelineKey || previewClipMoveDrag?.beforeLinkedVideoId === item.id) && (
-                    <span className="make-preview-mini-drop-marker" aria-hidden="true" />
-                  )}
-                  <span aria-hidden="true">🔗</span>
-
-                  <button
-                    className="make-preview-mini-move-handle make-preview-linked-video-move"
-                    type="button"
-                    aria-label={`Move ${item.displayName || `linked video ${index + 1}`} on the timeline`}
-                    title="Drag to move this linked video on the timeline"
-                    disabled={isRecording}
-                    onPointerDown={(event) => beginLinkedVideoMoveDrag(event, item)}
-                  >
-                    MOVE
-                  </button>
-
-                  <button
-                    className="make-preview-mini-clip-main"
-                    type="button"
-                    onClick={() => {
-                      resetTimelineCursorSelection();
-                      setTrimEditorClipId('');
-                      setTimelineTool('select');
-                      setSelectedLinkedVideoId(item.id);
-                      setPlaybackStatus('Linked source selected. Use the Pay / preview button on the linked clip to get a quote and load preview bytes.');
-                    }}
-                    title={`Select ${item.displayName || `Linked video ${index + 1}`}`}
-                  >
-                    <strong>{item.displayName || `Linked video ${index + 1}`}</strong>
-                    <small>
-                      {formatDurationMs(linkedDurationMs)} · {item.rangeLabel || 'Source window'} · preview proxy
-                    </small>
-                  </button>
-
-                  <button
-                    className="make-preview-mini-clip-edit make-preview-linked-video-open"
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setSelectedLinkedVideoId(item.id);
-                      setLinkedVideoPreviewId(item.id);
-                    }}
-                    disabled={isRecording}
-                    title="Open payment, paid preview, and gateway proof for this linked source"
-                  >
-                    Pay / preview
-                  </button>
-
-                  <button
-                    className="make-preview-linked-video-remove"
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-
-                      if (linkedVideoPreviewId === item.id) {
-                        setLinkedVideoPreviewId('');
-                      }
-
-                      onRemoveLinkedVideoDraft?.(item.id);
-                    }}
-                    disabled={isRecording}
-                    title="Remove linked video reference"
-                    aria-label={`Remove ${item.displayName || 'linked video reference'}`}
-                  >
-                    ×
-                  </button>
-
-                  <em>{statusLabel}</em>
-                  <button
-                    className="make-preview-linked-video-trim-handle is-start"
-                    type="button"
-                    onPointerDown={(event) => beginLinkedVideoTrimDrag(event, item, 'start')}
-                    disabled={isRecording}
-                    title="Drag to trim the linked source start"
-                    aria-label="Trim linked video start"
-                  />
-                  <button
-                    className="make-preview-linked-video-trim-handle is-end"
-                    type="button"
-                    onPointerDown={(event) => beginLinkedVideoTrimDrag(event, item, 'end')}
-                    disabled={isRecording}
-                    title="Drag to trim the linked source end"
-                    aria-label="Trim linked video end"
-                  />
-                </div>
-              );
-            })}
-            </>
+            })
           ) : (
             <div className="make-preview-mini-empty">
               <span />
@@ -5717,37 +4379,56 @@ function MakePreviewStudioChrome({
           </div>
         </div>
 
-        {hasLinkedVideoDrafts && linkedVideoPreviewItem && (
-          <div
-            className="make-linked-video-strip make-linked-video-payment-inspector"
-            aria-label="Selected linked video payment preview"
-          >
+        {hasLinkedVideoDrafts && (
+          <div className="make-linked-video-strip" aria-label="Linked video reuse drafts">
             <div className="make-linked-video-strip-head">
-              <span>Linked source payment</span>
-              <strong>{linkedVideoPreviewItem.displayName || 'Linked video reference'}</strong>
-              <button
-                className="make-linked-video-inspector-close"
-                type="button"
-                onClick={() => setLinkedVideoPreviewId('')}
-                aria-label="Close linked video payment inspector"
-              >
-                Close
-              </button>
+              <span>Reuse links</span>
+              <strong>{linkedVideoDrafts.length} unverified video reference{linkedVideoDrafts.length === 1 ? '' : 's'}</strong>
+            </div>
+            <div className="make-linked-video-items">
+              {linkedVideoDrafts.map((item) => (
+                <div className={`make-linked-video-chip ${linkedVideoPreviewId === item.id ? 'is-previewing' : ''}`} key={item.id}>
+                  <span aria-hidden="true">🔗</span>
+                  <div>
+                    <strong>{item.displayName || 'Linked video'}</strong>
+                    <small>{item.url}</small>
+                    <small className="make-linked-video-range">
+                      {item.rangeLabel || 'Source window not set'}
+                    </small>
+                  </div>
+                  <em>{item.rightsStatusLabel || 'Rights not checked'}</em>
+                  <button
+                    className="make-linked-video-preview-button"
+                    type="button"
+                    aria-pressed={linkedVideoPreviewId === item.id}
+                    aria-label={`Preview ${item.displayName || 'linked video'}`}
+                    onClick={() => setLinkedVideoPreviewId(item.id)}
+                  >
+                    ▶
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${item.displayName || 'linked video'}`}
+                    onClick={() => {
+                      if (linkedVideoPreviewId === item.id) {
+                        setLinkedVideoPreviewId('');
+                      }
+                      onRemoveLinkedVideoDraft?.(item.id);
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
             </div>
 
-            <div className="make-linked-video-payment-note">
-              <strong>Preview/view payment only.</strong>
-              <span>
-                Get a quote and pay here to load source preview bytes into Make. This still does not grant reuse, export, ownership, mint, or payout split rights.
-              </span>
-            </div>
-
-            <LinkedVideoDraftPreview
-              item={linkedVideoPreviewItem}
-              app={app}
-              onClose={() => setLinkedVideoPreviewId('')}
-            onPreviewReady={(preview) => onLinkedVideoPreviewReady?.(linkedVideoPreviewItem.id, preview)}
-            />
+            {linkedVideoPreviewItem && (
+              <LinkedVideoDraftPreview
+                item={linkedVideoPreviewItem}
+                app={app}
+                onClose={() => setLinkedVideoPreviewId('')}
+              />
+            )}
           </div>
         )}
 
@@ -5785,34 +4466,13 @@ function MakePreviewStudioChrome({
           </div>
 
           {hasAudioTracks ? (
-            <>
-            <div
-              className="make-preview-audio-track-list make-preview-audio-track-list-timeline"
-              aria-label="Audio timeline clips"
-            >
+            <div className="make-preview-audio-track-list">
               {preparedAudioTracks.map((track) => {
-                const plate = getAudioTrackTimelinePlate(track, audioLaneVisualDurationMs);
-                const maxOffsetMs = Math.max(0, Number(audioLaneVisualDurationMs || totalTimelineDurationMs || 0));
-                const audioDurationMs = Math.max(0, Number(track.durationMs || 0));
-                const audioTrimStartMs = clamp(Number(track.trimStartMs || 0), 0, audioDurationMs, 0);
-                const audioTrimEndMs = clamp(Number(track.trimEndMs || audioDurationMs), audioTrimStartMs, audioDurationMs || audioTrimStartMs, audioDurationMs || audioTrimStartMs);
-                const audioEffectiveLengthMs = Math.max(0, audioTrimEndMs - audioTrimStartMs);
-                const audioCanTrim = track.kind !== 'linked_audio' && audioDurationMs > 1000;
+                const plate = getAudioTrackTimelinePlate(track, totalTimelineDurationMs);
+                const maxOffsetMs = Math.max(0, Number(totalTimelineDurationMs || 0));
 
                 return (
-                  <div
-                    className={`make-preview-audio-track ${track.kind === 'linked_audio' ? 'is-linked' : 'is-local'} ${track.muted ? 'is-muted' : ''} ${audioMoveDrag === track.id ? 'is-moving' : ''} ${selectedAudioTrack?.id === track.id ? 'is-selected' : ''}`}
-                    key={track.id}
-                    role="group"
-                    tabIndex={0}
-                    aria-label={`Audio timeline clip ${track.name || track.displayName || 'audio clip'}`}
-                    onPointerDown={() => setSelectedAudioTrackId(track.id)}
-                    onFocus={() => setSelectedAudioTrackId(track.id)}
-                    style={{
-                      '--make-audio-left-pct': `${plate.leftPct}%`,
-                      '--make-audio-width-pct': `${plate.widthPct}%`,
-                    }}
-                  >
+                  <div className={`make-preview-audio-track ${track.kind === 'linked_audio' ? 'is-linked' : 'is-local'} ${track.muted ? 'is-muted' : ''}`} key={track.id}>
                     {track.kind !== 'linked_audio' && track.objectUrl ? (
                       <audio
                         ref={(node) => setAudioPreviewNode(track.id, node)}
@@ -5831,25 +4491,14 @@ function MakePreviewStudioChrome({
                           ? `${track.url} · unverified`
                           : `${formatDurationMs(track.effectiveDurationMs || track.durationMs || 0)} · starts ${formatTimelineClockMs(track.offsetMs || 0)} · local only`}
                       </small>
-                      <div className="make-preview-audio-timeline-rail">
+                      <div className="make-preview-audio-timeline-rail" aria-hidden="true">
                         <span
                           className="make-preview-audio-timeline-plate"
                           style={{
                             left: `${plate.leftPct}%`,
                             width: `${plate.widthPct}%`,
                           }}
-                        >
-                          <button
-                            className="make-preview-audio-move-handle"
-                            type="button"
-                            disabled={isRecording}
-                            onPointerDown={(event) => beginAudioTrackOffsetDrag(event, track)}
-                            title="Drag to move this audio clip on the timeline"
-                            aria-label={`Move ${track.name || track.displayName || 'audio clip'} on the audio timeline`}
-                          >
-                            MOVE
-                          </button>
-                        </span>
+                        />
                       </div>
                     </div>
 
@@ -5880,22 +4529,6 @@ function MakePreviewStudioChrome({
                         +1s
                       </button>
                     </div>
-
-                    {audioCanTrim ? (
-                      <label className="make-preview-audio-trim-length">
-                        <span>Length {formatTimelineClockMs(audioEffectiveLengthMs)}</span>
-                        <input
-                          type="range"
-                          min="500"
-                          max={Math.max(500, audioDurationMs - audioTrimStartMs)}
-                          step="500"
-                          value={Math.max(500, Math.round(audioEffectiveLengthMs))}
-                          onChange={(event) => onUpdateAudioTrackTiming?.(track.id, {
-                            trimEndMs: Math.min(audioDurationMs, audioTrimStartMs + Number(event.target.value)),
-                          })}
-                        />
-                      </label>
-                    ) : null}
 
                     <label className="make-preview-audio-volume">
                       <span>Vol</span>
@@ -5930,106 +4563,6 @@ function MakePreviewStudioChrome({
                 );
               })}
             </div>
-
-            {selectedAudioTrack ? (() => {
-              const track = selectedAudioTrack;
-              const maxOffsetMs = Math.max(0, Number(audioLaneVisualDurationMs || totalTimelineDurationMs || 0));
-              const audioDurationMs = Math.max(0, Number(track.durationMs || 0));
-              const audioTrimStartMs = clamp(Number(track.trimStartMs || 0), 0, audioDurationMs, 0);
-              const audioTrimEndMs = clamp(
-                Number(track.trimEndMs || audioDurationMs),
-                audioTrimStartMs,
-                audioDurationMs || audioTrimStartMs,
-                audioDurationMs || audioTrimStartMs,
-              );
-              const audioEffectiveLengthMs = Math.max(0, audioTrimEndMs - audioTrimStartMs);
-              const audioCanTrim = track.kind !== 'linked_audio' && audioDurationMs > 1000;
-
-              return (
-                <div
-                  className={`make-preview-audio-controls-panel ${track.kind === 'linked_audio' ? 'is-linked' : 'is-local'}`}
-                  aria-label={`Audio controls for ${track.name || track.displayName || 'selected audio clip'}`}
-                >
-                  <div className="make-preview-audio-controls-title">
-                    <span aria-hidden="true">🎧</span>
-                    <strong>{track.name || track.displayName || 'Audio clip'}</strong>
-                    <small>
-                      {track.kind === 'linked_audio'
-                        ? 'linked reference'
-                        : `${formatTimelineClockMs(audioEffectiveLengthMs)} selected`}
-                    </small>
-                  </div>
-
-                  <label className="make-preview-audio-control make-preview-audio-control-start">
-                    <span>Start {formatTimelineClockMs(track.offsetMs || 0)}</span>
-                    <input
-                      type="range"
-                      min="0"
-                      max={maxOffsetMs}
-                      step="250"
-                      value={Math.min(maxOffsetMs, Math.round(Number(track.offsetMs || 0)))}
-                      onChange={(event) => onUpdateAudioTrackTiming?.(track.id, {
-                        offsetMs: Number(event.target.value),
-                      })}
-                    />
-                  </label>
-
-                  {audioCanTrim ? (
-                    <label className="make-preview-audio-control make-preview-audio-control-length">
-                      <span>Length {formatTimelineClockMs(audioEffectiveLengthMs)}</span>
-                      <input
-                        type="range"
-                        min="500"
-                        max={Math.max(500, audioDurationMs - audioTrimStartMs)}
-                        step="500"
-                        value={Math.max(500, Math.round(audioEffectiveLengthMs))}
-                        onChange={(event) => onUpdateAudioTrackTiming?.(track.id, {
-                          trimEndMs: Math.min(audioDurationMs, audioTrimStartMs + Number(event.target.value)),
-                        })}
-                      />
-                    </label>
-                  ) : (
-                    <div className="make-preview-audio-control make-preview-audio-control-note">
-                      <span>Length</span>
-                      <strong>{track.kind === 'linked_audio' ? 'Draft reference only' : 'Too short to trim'}</strong>
-                    </div>
-                  )}
-
-                  <label className="make-preview-audio-control make-preview-audio-control-volume">
-                    <span>Volume</span>
-                    <input
-                      type="range"
-                      min="0"
-                      max="150"
-                      step="5"
-                      value={Math.round(Number(track.volumePct ?? 100))}
-                      onChange={(event) => onUpdateAudioTrackTiming?.(track.id, {
-                        volumePct: Number(event.target.value),
-                      })}
-                    />
-                    <strong>{Math.round(Number(track.volumePct ?? 100))}%</strong>
-                  </label>
-
-                  <button
-                    className="make-preview-audio-controls-button"
-                    type="button"
-                    onClick={() => onUpdateAudioTrackTiming?.(track.id, { muted: !track.muted })}
-                  >
-                    {track.muted ? 'Unmute' : 'Mute'}
-                  </button>
-
-                  <button
-                    className="make-preview-audio-controls-button is-danger"
-                    type="button"
-                    onClick={() => onRemoveAudioTrack?.(track.id)}
-                    aria-label={`Remove ${track.name || track.displayName || 'audio clip'}`}
-                  >
-                    Remove
-                  </button>
-                </div>
-              );
-            })() : null}
-            </>
           ) : (
             <div className="make-preview-audio-empty">
               <span />
@@ -7682,12 +6215,10 @@ function MakeSequenceReviewCard({
 }
 
 function MakeHandoffCard({
-  audioTracks = [],
   canExportSequence,
   clips,
   exportedSourceReady,
   exportState,
-  linkedVideoDrafts = [],
   onCopyPlan,
   onDownload,
   onExportSequence,
@@ -7700,41 +6231,6 @@ function MakeHandoffCard({
   const exportBusy = exportState?.status === 'exporting';
   const exportReady = exportedSourceReady;
   const sourceHandle = exportState?.result?.source?.sourceHandle || '';
-  const localAudioTracks = audioTracks.filter((track) => track.kind !== 'linked_audio' && track.objectUrl && !track.muted);
-  const linkedAudioTracks = audioTracks.filter((track) => track.kind === 'linked_audio');
-  const linkedVideoCount = linkedVideoDrafts.length;
-  const linkedAudioCount = linkedAudioTracks.length;
-  const hasReferenceOnlyLinkedMedia = linkedVideoCount > 0 || linkedAudioCount > 0;
-  const exportScopeFacts = [
-    {
-      key: 'clips',
-      label: 'Local clips',
-      value: String(clips.length),
-      help: clips.length ? 'Rendered into the local MP4.' : 'Record or add local clips first.',
-      tone: clips.length ? 'good' : 'neutral',
-    },
-    {
-      key: 'audio',
-      label: 'Local audio',
-      value: String(localAudioTracks.length),
-      help: localAudioTracks.length ? 'Mixed by Rust/FFmpeg during export.' : 'No exportable local audio lane.',
-      tone: localAudioTracks.length ? 'good' : 'neutral',
-    },
-    {
-      key: 'linked-video',
-      label: 'Linked video',
-      value: String(linkedVideoCount),
-      help: linkedVideoCount ? 'Previewable after pay, but not export permission.' : 'No linked video references.',
-      tone: linkedVideoCount ? 'warn' : 'neutral',
-    },
-    {
-      key: 'linked-audio',
-      label: 'Linked audio',
-      value: String(linkedAudioCount),
-      help: linkedAudioCount ? 'Draft reference only until reuse policy exists.' : 'No linked audio references.',
-      tone: linkedAudioCount ? 'warn' : 'neutral',
-    },
-  ];
 
   return (
     <Card eyebrow="Finish" title="Export approved sequence, then publish through video" className="make-handoff-card">
@@ -7744,9 +6240,7 @@ function MakeHandoffCard({
             {exportReady
               ? 'MP4 source ready for Video'
               : sequenceApproved
-                ? hasReferenceOnlyLinkedMedia
-                  ? 'Approved local sequence ready; linked media stays reference-only'
-                  : 'Approved sequence ready to export'
+                ? 'Approved sequence ready to export'
                 : hasClips
                   ? 'Approve the sequence first'
                   : 'Record clips first'}
@@ -7754,61 +6248,12 @@ function MakeHandoffCard({
           <p>
             Make exports one local MP4 and registers it as a redacted source handle. The Video page
             still owns prepare, ROC confirmation, backend receipts, b3 CIDs, manifests, and crab URLs.
-            {hasReferenceOnlyLinkedMedia
-              ? ' Linked crab:// media is preserved in the plan as provenance/reuse intent, but it is not rendered into this MP4 until backend reuse rights and payout policy are verified.'
-              : ''}
           </p>
-        </div>
-
-        <div className="make-export-boundary-panel" aria-label="Make export scope and rights facts">
-          <div className="make-export-boundary-head">
-            <div>
-              <span>Export facts</span>
-              <strong>{hasReferenceOnlyLinkedMedia ? 'Local export with reference-only linked media' : 'Local export scope'}</strong>
-            </div>
-            <Badge tone={hasReferenceOnlyLinkedMedia ? 'warning' : 'success'} uppercase={false}>
-              {hasReferenceOnlyLinkedMedia ? 'reuse not verified' : 'local-only'}
-            </Badge>
-          </div>
-
-          <div className="make-export-boundary-grid">
-            {exportScopeFacts.map((fact) => (
-              <div className={`make-export-boundary-fact is-${fact.tone}`} key={fact.key}>
-                <span>{fact.label}</span>
-                <strong>{fact.value}</strong>
-                <small>{fact.help}</small>
-              </div>
-            ))}
-          </div>
-
-          {hasReferenceOnlyLinkedMedia && (
-            <div className="make-export-linked-warning" role="note">
-              <strong>Paid preview is not reuse permission.</strong>
-              <span>
-                Linked source previews prove view access only. They do not grant remix, export, ownership,
-                payout-split, or mint rights. This export will include local clips and local audio only.
-              </span>
-            </div>
-          )}
-
-          {linkedVideoDrafts.length > 0 && (
-            <div className="make-export-linked-list" aria-label="Reference-only linked video sources">
-              {linkedVideoDrafts.slice(0, 4).map((item) => (
-                <span key={item.id || item.url} title={item.url}>
-                  {item.displayName || 'Linked video'} · {item.rangeLabel || 'source range'} · reference-only
-                </span>
-              ))}
-              {linkedVideoDrafts.length > 4 && <em>+{linkedVideoDrafts.length - 4} more</em>}
-            </div>
-          )}
         </div>
 
         <div className="make-handoff-steps" aria-label="Make to video handoff steps">
           {[
             sequenceApproved ? 'Full local sequence approved' : 'Play the full sequence and approve it',
-            hasReferenceOnlyLinkedMedia
-              ? 'Keep linked crab:// media as reference-only plan facts'
-              : 'No linked-media reuse rights needed for this local export',
             exportReady ? 'Approved sequence exported as one MP4' : 'Export approved sequence as one MP4',
             exportReady ? 'Fresh local source handle registered' : 'Register MP4 as a local source handle',
             'Open crab://video and prepare renditions',
@@ -7816,11 +6261,7 @@ function MakeHandoffCard({
           ].map((step, index) => (
             <div
               className={`make-handoff-step ${
-                (index === 0 && sequenceApproved) ||
-                (index === 1 && (sequenceApproved || !hasReferenceOnlyLinkedMedia)) ||
-                (index > 1 && index < 4 && exportReady)
-                  ? 'is-complete'
-                  : ''
+                (index === 0 && sequenceApproved) || (index > 0 && index < 3 && exportReady) ? 'is-complete' : ''
               }`}
               key={step}
             >
@@ -8001,7 +6442,6 @@ function drawPreviewLoop({
   cameraVideo,
   screenVideo,
   backgroundVideo,
-  backgroundImageUrl = '',
   draft,
   inputState,
   outputPreset,
@@ -8021,7 +6461,6 @@ function drawPreviewLoop({
       cameraVideo,
       screenVideo,
       backgroundVideo,
-      backgroundImageUrl,
       draft,
       inputState,
       outputPreset,

@@ -8,15 +8,15 @@
 //! RO:TEST — cargo check; manual crab://video → choose native source → build plan → start prepare job.
 
 use crate::media::{
-    append_make_export_audio_chunk, append_make_export_chunk, begin_make_export_session,
-    cancel_video_prepare_job, clear_make_export_session, clear_video_source_registration,
-    finish_make_export_session, get_make_export_status, get_registered_video_source_for_job,
-    get_video_prepare_job_status, get_video_source_registration, plan_video_renditions_from_probe,
-    probe_video_from_local_facts, register_video_source_from_path, start_video_prepare_job,
-    MakeExportAppendAudioChunkInput, MakeExportAppendChunkInput, MakeExportBeginInput,
-    MakeExportFinishInput, MakeExportStatus, VideoJobStatus, VideoPrepareBundleInput,
-    VideoProbeInput, VideoProbeSummary, VideoRegisterSourceInput, VideoRenditionPlanInput,
-    VideoRenditionPlanResponse, VideoSourceClearResponse, VideoSourceRegistration,
+    append_make_export_chunk, begin_make_export_session, cancel_video_prepare_job,
+    clear_make_export_session, clear_video_source_registration, finish_make_export_session,
+    get_make_export_status, get_registered_video_source_for_job, get_video_prepare_job_status,
+    get_video_source_registration, plan_video_renditions_from_probe, probe_video_from_local_facts,
+    register_video_source_from_path, start_video_prepare_job, MakeExportAppendChunkInput,
+    MakeExportBeginInput, MakeExportFinishInput, MakeExportStatus, VideoJobStatus,
+    VideoPrepareBundleInput, VideoProbeInput, VideoProbeSummary, VideoRegisterSourceInput,
+    VideoRenditionPlanInput, VideoRenditionPlanResponse, VideoSourceClearResponse,
+    VideoSourceRegistration,
 };
 use crate::state::AppState;
 use serde::{Deserialize, Serialize};
@@ -344,14 +344,6 @@ pub fn media_make_export_append_chunk(
     input: MakeExportAppendChunkInput,
 ) -> Result<MakeExportStatus, String> {
     append_make_export_chunk(&state.make_exports, input)
-}
-
-#[tauri::command]
-pub fn media_make_export_append_audio_chunk(
-    state: State<'_, AppState>,
-    input: MakeExportAppendAudioChunkInput,
-) -> Result<MakeExportStatus, String> {
-    append_make_export_audio_chunk(&state.make_exports, input)
 }
 
 #[tauri::command]
