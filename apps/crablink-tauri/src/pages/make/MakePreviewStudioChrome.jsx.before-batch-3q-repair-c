@@ -1,0 +1,1880 @@
+/**
+ * RO:WHAT — Preview studio chrome for the crab://make route.
+ * RO:WHY — App Integration; Concerns: DX/SEC/RES; keeps the route shell smaller while preserving local creator-studio UX.
+ * RO:INTERACTS — MakePage.jsx, make timeline/audio/sequence models, linked video preview, cutout/preset/mode cards.
+ * RO:INVARIANTS — display/user intent only; no fake CIDs; no fake receipts; no wallet mutation; no paid unlock from cache.
+ * RO:METRICS — none.
+ * RO:CONFIG — local draft settings and timeline editor state only.
+ * RO:SECURITY — no private keys, capabilities, balances, receipts, or backend truth are created here.
+ * RO:TEST — npm run build; manual crab://make preview/timeline/audio/linked-video smoke.
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import MakeLinkedMediaComposerPopover from './MakeLinkedMediaComposerPopover.jsx';
+import MakeLinkedVideoPaymentInspector from './MakeLinkedVideoPaymentInspector.jsx';
+import MakePreviewAudioLane from './MakePreviewAudioLane.jsx';
+import MakePreviewDrawer from './MakePreviewDrawer.jsx';
+import MakePreviewRecordControls from './MakePreviewRecordControls.jsx';
+import MakePreviewTimelineMarker from './MakePreviewTimelineMarker.jsx';
+import MakePreviewMiniTimelineHeader from './MakePreviewMiniTimelineHeader.jsx';
+import MakePreviewLinkedVideoTimelineClip from './MakePreviewLinkedVideoTimelineClip.jsx';
+import {
+  makeOverlayClipDurationMs,
+  makeOverlayClipLookLabel,
+} from './MakePreviewOverlayWidgets.jsx';
+import {
+  createTimelineItemKeys,
+  idFromTimelineItemKey,
+  isLinkedVideoTimelineItemKey,
+  isLocalTimelineItemKey,
+  makeLinkedVideoTimelineItemKey,
+  makeLocalTimelineItemKey,
+  normalizeTimelineItemOrderKeys,
+  timelineOrderSignature,
+} from './makePageConstants.js';
+import {
+  getClipTrimEndMs,
+  getClipTrimStartMs,
+  timelineEffectCssFilter,
+} from './makeTimelineModel.js';
+import {
+  activeAudioTimeForTimelineMs,
+  prepareAudioTracksForTimeline,
+} from './makeAudioTimelineModel.js';
+import { formatDurationMs } from './makeDraftModel.js';
+import {
+  clamp,
+  formatTimelinePreciseTimeMs,
+  getTimelineAbsolutePositionMs,
+  getTimelineClipVisibleDurationMs,
+  snapTimelineFrameMs,
+  sourceMsToVisiblePct,
+  sourceRangeToVisiblePlate,
+} from './makeSequenceModel.js';
+
+export default function MakePreviewStudioChrome({
+  app,
+  backgroundImageUrl,
+  backgroundVideoUrl,
+  canRecord,
+  clips,
+  countdown,
+  draft,
+  inputReady,
+  inputState,
+  isCountingDown,
+  isRecording,
+  onApplyPreset,
+  onAddTimelineClip,
+  onAddLinkedVideoDraft,
+  onRemoveLinkedVideoDraft,
+  onReorderClips,
+  timelineItemOrder = [],
+  onReorderTimelineItems,
+  onUpdateLinkedVideoDraftTiming,
+  onLinkedVideoPreviewReady,
+  audioTracks = [],
+  linkedVideoDrafts = [],
+  onRequestAddAudioTrack,
+  onAddLinkedAudioDraft,
+  onRemoveAudioTrack,
+  onUpdateAudioTrackVolume,
+  onUpdateAudioTrackTiming,
+  totalTimelineDurationMs = 0,
+  audioPreviewRefs,
+  onChooseBackgroundImage,
+  onChooseBackgroundVideo,
+  onClearBackgroundMedia,
+  onCloseDrawer,
+  onModeChange,
+  onOpenVideo,
+  onPauseSequence,
+  onPlaySequence,
+  onRestartSequence,
+  onApproveSequence,
+  onSelectClip,
+  onStartInputs,
+  onStartRecording,
+  onStopInputs,
+  onStopRecording,
+  onUpdateDraft,
+  onUpdateSelectedTimeline,
+  onUpdateClipTimeline,
+  onCaptureTimelineHistory,
+  onSplitTimelineAt,
+  onDeleteTimelineRange,
+  onTimelineUndo,
+  onTimelineRedo,
+  timelineCanUndo = false,
+  timelineCanRedo = false,
+  outputPreset,
+  previewDrawer,
+  recorderState,
+  recordingElapsedMs,
+  sequenceState,
+  selectedClip,
+  selectedClipId,
+  selectedMode,
+  subjectEditAvailable = false,
+  subjectEditMode = false,
+  onToggleSubjectEdit,
+  onTimelineHoverChange,
+  setPreviewDrawer,
+  totalDurationMs,
+}) {
+  const timelinePreviewVideoRef = useRef(null);
+  const [trimEditorClipId, setTrimEditorClipId] = useState('');
+  const [timelineTool, setTimelineTool] = useState('select');
+  const [timelineZoom, setTimelineZoom] = useState(1);
+  const [timelineSelection, setTimelineSelection] = useState(null);
+  const [timelinePreview, setTimelinePreview] = useState(null);
+  const [linkedMediaComposer, setLinkedMediaComposer] = useState(null);
+  const [linkedVideoPreviewId, setLinkedVideoPreviewId] = useState('');
+  const [selectedLinkedVideoId, setSelectedLinkedVideoId] = useState('');
+  const previewTimelineRailRef = useRef(null);
+  const [previewClipMoveDrag, setPreviewClipMoveDrag] = useState(null);
+  const [audioMoveDrag, setAudioMoveDrag] = useState(null);
+  const [audioTrimDrag, setAudioTrimDrag] = useState(null);
+  const [selectedAudioTrackId, setSelectedAudioTrackId] = useState('');
+  const [selectedTimelineMediaKind, setSelectedTimelineMediaKind] = useState('video');
+  const audioAutoSpreadSignatureRef = useRef('');
+
+  const hasClips = clips.length > 0;
+  const activeDrawer = previewDrawer === 'effects' || previewDrawer === 'settings' || previewDrawer === 'modes';
+  const sequenceStatus = sequenceState?.status || 'idle';
+  const sequenceActive = hasClips && ['playing', 'paused', 'reviewed', 'approved'].includes(sequenceStatus);
+  const sequencePlaying = sequenceStatus === 'playing';
+  const sequenceCanApprove = hasClips && sequenceStatus === 'reviewed' && !isRecording;
+  const sequenceCurrentIndex = Math.max(0, Number(sequenceState?.currentIndex || 0));
+  const sequenceClip = clips[sequenceCurrentIndex] || clips[0] || null;
+  const visibleTotalDurationMs = clips.reduce((sum, clip) => sum + Math.max(1, makeOverlayClipDurationMs(clip)), 0);
+  const selectedClipDurationMs = selectedClip ? makeOverlayClipDurationMs(selectedClip) : 0;
+  const canApplyTimelineEffect = Boolean(selectedClip && typeof onUpdateSelectedTimeline === 'function');
+  const sourceModeLocked = inputReady || isRecording || isCountingDown;
+  const selectedModeLabel = selectedMode?.shortLabel || selectedMode?.label || 'Mode';
+  const editedClip = clips.find((clip) => clip.id === trimEditorClipId) || null;
+  const editTargetClipId = selectedClip?.id || sequenceClip?.id || clips[0]?.id || '';
+  const trimEditorActive = Boolean(editedClip);
+  const cursorToolActive = timelineTool === 'cursor';
+  const timelineSelectionClip = timelineSelection?.clipId
+    ? clips.find((clip) => clip.id === timelineSelection.clipId) || null
+    : null;
+  const timelineSelectionStartMs = timelineSelection ? Math.min(timelineSelection.startMs, timelineSelection.endMs) : 0;
+  const timelineSelectionEndMs = timelineSelection ? Math.max(timelineSelection.startMs, timelineSelection.endMs) : 0;
+  const timelineSelectionRangeMs = Math.max(0, timelineSelectionEndMs - timelineSelectionStartMs);
+  const canSplitTimelineSelection = Boolean(cursorToolActive && timelineSelectionClip && timelineSelection?.mode !== 'range');
+  const canDeleteTimelineSelection = Boolean(cursorToolActive && timelineSelectionClip && timelineSelectionRangeMs >= 80);
+  const timelinePreviewClip = timelinePreview?.clipId
+    ? clips.find((clip) => clip.id === timelinePreview.clipId) || null
+    : null;
+  const timelinePreviewActive = Boolean(timelinePreviewClip && timelinePreview?.visible);
+  const timelineLoopPlaying = timelinePreviewActive && timelinePreview?.status === 'looping';
+  const timelineRangeLoopAvailable = Boolean(cursorToolActive && timelineSelectionClip && timelineSelection?.mode === 'range' && timelineSelectionRangeMs >= 80);
+  const hasLinkedVideoDrafts = linkedVideoDrafts.length > 0;
+  const linkedVideoTimelineDurationMs = useMemo(
+    () => linkedVideoDrafts.reduce((sum, item) => {
+      const explicitDuration = Number(item?.timelineDurationMs || 0);
+      const sourceStartMs = Number(item?.sourceStartMs || 0);
+      const sourceEndMs = Number(item?.sourceEndMs || 0);
+      const rangedDuration = sourceEndMs > sourceStartMs ? sourceEndMs - sourceStartMs : 0;
+
+      return sum + Math.max(1, explicitDuration || rangedDuration || 30_000);
+    }, 0),
+    [linkedVideoDrafts],
+  );
+  const timelineHasItems = hasClips || hasLinkedVideoDrafts;
+  const timelineVisualTotalDurationMs = Math.max(
+    1,
+    visibleTotalDurationMs + linkedVideoTimelineDurationMs,
+  );
+  const timelineSummaryLabel = timelineHasItems
+    ? [
+        hasClips ? `${clips.length} local clip${clips.length === 1 ? '' : 's'}` : '',
+        hasLinkedVideoDrafts
+          ? `${linkedVideoDrafts.length} linked video ref${linkedVideoDrafts.length === 1 ? '' : 's'}`
+          : '',
+        hasClips ? formatDurationMs(totalDurationMs) : '',
+        `${Math.round(timelineZoom * 100)}%`,
+      ].filter(Boolean).join(' · ')
+    : 'No clips yet';
+  const timelineVisualItemKeys = useMemo(
+    () => normalizeTimelineItemOrderKeys(
+      timelineItemOrder,
+      createTimelineItemKeys(clips, linkedVideoDrafts),
+    ),
+    [clips, linkedVideoDrafts, timelineItemOrder],
+  );
+  const timelineVisualOrderMap = useMemo(
+    () => new Map(timelineVisualItemKeys.map((key, index) => [key, index])),
+    [timelineVisualItemKeys],
+  );
+  const timelineVisualOrderForKey = (key) => (
+    timelineVisualOrderMap.has(key) ? timelineVisualOrderMap.get(key) * 4 : 10_000
+  );
+  const linkedVideoPreviewItem = useMemo(() => {
+    if (!linkedVideoDrafts.length) {
+      return null;
+    }
+
+    return linkedVideoDrafts.find((item) => item.id === linkedVideoPreviewId) || null;
+  }, [linkedVideoDrafts, linkedVideoPreviewId]);
+
+  useEffect(() => {
+    if (!linkedVideoPreviewId) {
+      return;
+    }
+
+    if (!linkedVideoDrafts.some((item) => item.id === linkedVideoPreviewId)) {
+      setLinkedVideoPreviewId('');
+    }
+  }, [linkedVideoDrafts, linkedVideoPreviewId]);
+
+  const audioLaneRawEndMs = (audioTracks || []).reduce((max, track) => {
+    const startMs = Math.max(0, Number(track?.offsetMs || 0));
+    const rawDurationMs = Math.max(0, Number(track?.durationMs || 0));
+    const trimStartMs = Math.max(0, Number(track?.trimStartMs || 0));
+    const trimEndMs = Math.max(trimStartMs, Number(track?.trimEndMs || rawDurationMs || 1000));
+    const effectiveMs = Math.max(500, Number(track?.effectiveDurationMs || 0) || (trimEndMs - trimStartMs) || rawDurationMs || 1000);
+
+    return Math.max(max, startMs + effectiveMs);
+  }, 0);
+  const audioLaneVisualDurationMs = Math.max(
+    1,
+    Number(totalTimelineDurationMs || 0),
+    audioLaneRawEndMs,
+  );
+  const preparedAudioTracks = prepareAudioTracksForTimeline(audioTracks, audioLaneVisualDurationMs);
+  const hasAudioTracks = preparedAudioTracks.length > 0;
+  const selectedAudioTrack = useMemo(
+    () => preparedAudioTracks.find((track) => track.id === selectedAudioTrackId) || preparedAudioTracks[0] || null,
+    [preparedAudioTracks, selectedAudioTrackId],
+  );
+  const audioEditActive = selectedTimelineMediaKind === 'audio' && Boolean(selectedAudioTrack);
+  const editTimelineButtonDisabled = isRecording || cursorToolActive || (
+    audioEditActive ? !selectedAudioTrack?.id : !editTargetClipId
+  );
+  const editTimelineButtonTitle = audioEditActive
+    ? 'Edit selected audio clip using the start, length, and volume controls below the audio lane'
+    : (trimEditorActive ? 'Done trimming selected clip' : 'Trim selected clip by dragging the clip edges');
+  const editTimelineButtonLabel = audioEditActive
+    ? 'Edit audio'
+    : (trimEditorActive ? 'Done trim' : 'Edit clip');
+
+  useEffect(() => {
+    if (!preparedAudioTracks.length) {
+      if (selectedAudioTrackId) {
+        setSelectedAudioTrackId('');
+      }
+
+      if (selectedTimelineMediaKind === 'audio') {
+        setSelectedTimelineMediaKind('video');
+      }
+
+      return;
+    }
+
+    if (!preparedAudioTracks.some((track) => track.id === selectedAudioTrackId)) {
+      setSelectedAudioTrackId(preparedAudioTracks[0]?.id || '');
+    }
+  }, [preparedAudioTracks, selectedAudioTrackId, selectedTimelineMediaKind]);
+
+  const audioLaneSpreadSignature = preparedAudioTracks
+    .map((track) => [
+      track.id,
+      Math.round(Number(track.offsetMs || 0)),
+      Math.round(Number(track.effectiveDurationMs || track.durationMs || 0)),
+    ].join(':'))
+    .join('|');
+
+  useEffect(() => {
+    if (
+      preparedAudioTracks.length < 2 ||
+      typeof onUpdateAudioTrackTiming !== 'function' ||
+      !preparedAudioTracks.every((track) => Math.abs(Number(track.offsetMs || 0)) < 10)
+    ) {
+      return;
+    }
+
+    if (audioAutoSpreadSignatureRef.current === audioLaneSpreadSignature) {
+      return;
+    }
+
+    audioAutoSpreadSignatureRef.current = audioLaneSpreadSignature;
+
+    let cursorMs = 0;
+
+    for (const [index, track] of preparedAudioTracks.entries()) {
+      const effectiveMs = Math.max(500, Number(track.effectiveDurationMs || track.durationMs || 1000));
+
+      if (index > 0) {
+        onUpdateAudioTrackTiming(track.id, { offsetMs: cursorMs });
+      }
+
+      cursorMs += effectiveMs;
+    }
+  }, [audioLaneSpreadSignature, onUpdateAudioTrackTiming, preparedAudioTracks.length]);
+
+  const openLinkedMediaComposer = (kind) => {
+    setLinkedMediaComposer({
+      kind,
+      url: '',
+      sourceStartText: '0:00',
+      sourceEndText: kind === 'video' ? '0:30' : '',
+      useEntireSource: kind !== 'video',
+    });
+  };
+
+  const closeLinkedMediaComposer = () => {
+    setLinkedMediaComposer(null);
+  };
+
+  const setAudioPreviewNode = (trackId, node) => {
+    if (!audioPreviewRefs?.current || !trackId) {
+      return;
+    }
+
+    if (node) {
+      audioPreviewRefs.current.set(trackId, node);
+      return;
+    }
+
+    audioPreviewRefs.current.delete(trackId);
+  };
+
+  const updateLinkedMediaComposerUrl = (url) => {
+    setLinkedMediaComposer((current) => current
+      ? {
+          ...current,
+          url,
+        }
+      : current);
+  };
+
+  const updateLinkedMediaComposerField = (patch) => {
+    setLinkedMediaComposer((current) => current
+      ? {
+          ...current,
+          ...patch,
+        }
+      : current);
+  };
+
+  const submitLinkedMediaComposer = () => {
+    const rawUrl = String(linkedMediaComposer?.url || linkedMediaComposer?.value || '').trim();
+
+    if (!rawUrl) {
+      return;
+    }
+
+    const saved = linkedMediaComposer?.kind === 'audio'
+      ? onAddLinkedAudioDraft?.(rawUrl)
+      : onAddLinkedVideoDraft?.(rawUrl, {
+          sourceStartText: linkedMediaComposer?.sourceStartText || '0:00',
+          sourceEndText: linkedMediaComposer?.sourceEndText || '0:30',
+          useEntireSource: Boolean(linkedMediaComposer?.useEntireSource),
+        });
+
+    if (saved !== false) {
+      if (linkedMediaComposer?.kind === 'video') {
+        const savedId = typeof saved === 'object' && saved ? saved.id : '';
+        if (savedId) {
+          setSelectedLinkedVideoId(savedId);
+          setLinkedVideoPreviewId(savedId);
+        }
+      }
+
+      closeLinkedMediaComposer();
+    }
+  };
+
+  const handleLinkedMediaComposerSubmit = (event) => {
+    event?.preventDefault?.();
+    submitLinkedMediaComposer();
+  };
+
+  useEffect(() => {
+    if (trimEditorClipId && !clips.some((clip) => clip.id === trimEditorClipId)) {
+      setTrimEditorClipId('');
+    }
+  }, [clips, trimEditorClipId]);
+
+  useEffect(() => {
+    const refs = audioPreviewRefs?.current;
+
+    if (!refs) {
+      return;
+    }
+
+    const timelineMs = Number(sequenceState.totalElapsedMs || 0);
+    const shouldPlay = sequenceState.status === 'playing';
+
+    const activeAudioCandidate = shouldPlay
+      ? [...preparedAudioTracks]
+          .sort((a, b) => {
+            const offsetDelta = Number(a?.offsetMs || 0) - Number(b?.offsetMs || 0);
+
+            if (offsetDelta !== 0) {
+              return offsetDelta;
+            }
+
+            return String(a?.id || '').localeCompare(String(b?.id || ''));
+          })
+          .map((track) => ({
+            track,
+            active: activeAudioTimeForTimelineMs(track, timelineMs),
+          }))
+          .find((candidate) => Boolean(candidate.active))
+      : null;
+    const activeAudioTrackId = activeAudioCandidate?.track?.id || '';
+
+    for (const track of preparedAudioTracks) {
+      const audio = refs.get(track.id);
+
+      if (!audio) {
+        continue;
+      }
+
+      const active = track.id === activeAudioTrackId ? activeAudioCandidate.active : null;
+
+      if (!active) {
+        try {
+          audio.pause();
+        } catch (_error) {
+          // Local audio preview cleanup is best effort.
+        }
+        continue;
+      }
+
+      audio.volume = Math.max(0, Math.min(1, Number(active.volume || 0)));
+      audio.muted = Boolean(track.muted);
+      audio.playbackRate = 1;
+
+      if (Math.abs(Number(audio.currentTime || 0) - active.trackTimeSeconds) > 0.42) {
+        try {
+          audio.currentTime = active.trackTimeSeconds;
+        } catch (_error) {
+          // Best-effort seek.
+        }
+      }
+
+      if (audio.paused) {
+        const playResult = audio.play?.();
+
+        if (playResult && typeof playResult.catch === 'function') {
+          playResult.catch(() => {
+            // Browsers may require a user gesture. The Play button is a gesture in normal use.
+          });
+        }
+      }
+    }
+
+    for (const [trackId, audio] of refs.entries()) {
+      if (!preparedAudioTracks.some((track) => track.id === trackId)) {
+        try {
+          audio.pause();
+        } catch (_error) {
+          // Best-effort cleanup.
+        }
+      }
+    }
+  }, [audioPreviewRefs, preparedAudioTracks, sequenceState.status, sequenceState.totalElapsedMs]); // sync local audio preview
+
+  useEffect(() => {
+    if (timelineSelection?.clipId && !clips.some((clip) => clip.id === timelineSelection.clipId)) {
+      setTimelineSelection(null);
+      setTimelinePreview(null);
+    }
+  }, [clips, timelineSelection]);
+
+  useEffect(() => {
+    if (timelinePreview?.clipId && !clips.some((clip) => clip.id === timelinePreview.clipId)) {
+      setTimelinePreview(null);
+    }
+  }, [clips, timelinePreview]);
+
+  useEffect(() => {
+    if (isRecording || inputState.status === 'starting') {
+      setTimelineSelection(null);
+      setTimelinePreview(null);
+    }
+  }, [inputState.status, isRecording]);
+
+  const getTimelinePreviewProgressPct = (clip, sourceMs) => {
+    const trimStartMs = getClipTrimStartMs(clip);
+    const trimEndMs = getClipTrimEndMs(clip);
+    const visibleMs = Math.max(1, trimEndMs - trimStartMs);
+
+    return clamp(((Number(sourceMs || trimStartMs) - trimStartMs) / visibleMs) * 100, 0, 100, 0);
+  };
+
+  const seekTimelinePreviewVideo = useCallback(async (targetMs, { play = false } = {}) => {
+    const video = timelinePreviewVideoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    try {
+      await waitForSequenceVideoReady(video);
+      await settleSequenceVideoSeek(video, Math.max(0, Number(targetMs || 0)) / 1000);
+
+      if (play) {
+        const playResult = video.play?.();
+
+        if (playResult && typeof playResult.then === 'function') {
+          await playResult;
+        }
+      }
+    } catch (_error) {
+      // Local marker/range preview is best-effort. Timeline editing should keep working.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!timelinePreviewActive || !timelinePreviewClip) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    const targetMs = timelinePreview.status === 'looping'
+      ? Number(timelinePreview.startMs || getClipTrimStartMs(timelinePreviewClip))
+      : Number(timelinePreview.focusMs || timelinePreview.startMs || getClipTrimStartMs(timelinePreviewClip));
+
+    window.requestAnimationFrame(() => {
+      if (!cancelled) {
+        seekTimelinePreviewVideo(targetMs, { play: timelinePreview.status === 'looping' });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    seekTimelinePreviewVideo,
+    timelinePreview?.clipId,
+    timelinePreview?.updatedAt,
+    timelinePreview?.status,
+    timelinePreviewActive,
+    timelinePreviewClip,
+    timelinePreviewClip?.objectUrl,
+  ]);
+
+  const recordDisabled =
+    inputState.status === 'starting' ||
+    (inputReady && !isRecording && !canRecord) ||
+    (isCountingDown && countdown <= 0);
+
+  const recordLabel = isRecording
+    ? `Stop ${formatDurationMs(recordingElapsedMs)}`
+    : isCountingDown
+      ? `${countdown}`
+      : inputReady
+        ? 'Record'
+        : inputState.status === 'starting'
+          ? 'Starting'
+          : 'Start';
+
+  const recordTitle = isRecording
+    ? 'Stop recording'
+    : inputReady
+      ? 'Record a clip'
+      : 'Start preview';
+
+  const handleRecordClick = () => {
+    if (recordDisabled) {
+      return;
+    }
+
+    if (isRecording) {
+      onStopRecording();
+      return;
+    }
+
+    if (!inputReady) {
+      onStartInputs();
+      return;
+    }
+
+    onStartRecording();
+  };
+
+  const toggleDrawer = (drawer) => {
+    setPreviewDrawer((current) => (current === drawer ? '' : drawer));
+    setTrimEditorClipId('');
+    setTimelineTool('select');
+    setTimelineSelection(null);
+  };
+
+  const toggleTrimEditor = (clipId = editTargetClipId) => {
+    if (!clipId || isRecording) {
+      return;
+    }
+
+    onSelectClip(clipId);
+    setTimelineTool('select');
+    setTimelineSelection(null);
+    onTimelineHoverChange?.(true);
+    setTrimEditorClipId((current) => (current === clipId ? '' : clipId));
+  };
+
+  const beginPreviewTrimDrag = (event, clip, edge) => {
+    if (!clip?.id || isRecording || typeof onUpdateClipTimeline !== 'function') {
+      return;
+    }
+
+    const shell = event.currentTarget.closest('.make-preview-mini-clip');
+    const rect = shell?.getBoundingClientRect?.();
+
+    if (!rect || rect.width <= 0 || clip.durationMs <= 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    onSelectClip(clip.id);
+    setPreviewDrawer('');
+    setTrimEditorClipId('');
+    setTimelineTool('select');
+    setTimelineSelection(null);
+    setTrimEditorClipId(clip.id);
+    onCaptureTimelineHistory?.();
+    onTimelineHoverChange?.(true);
+
+    const durationMs = Math.max(1, Number(clip.durationMs || 0));
+    const minClipMs = 350;
+    const originalStartMs = getClipTrimStartMs(clip);
+    const originalEndMs = getClipTrimEndMs(clip);
+    const originalVisibleMs = Math.max(minClipMs, originalEndMs - originalStartMs);
+
+    const pointerToSourceMs = (clientX) => {
+      const pct = (Number(clientX || rect.left) - rect.left) / Math.max(1, rect.width);
+      return Math.round(originalStartMs + (pct * originalVisibleMs));
+    };
+
+    const applyPointer = (clientX) => {
+      const sourceMs = pointerToSourceMs(clientX);
+
+      if (edge === 'start') {
+        onUpdateClipTimeline(clip.id, {
+          trimStartMs: clamp(sourceMs, 0, Math.max(0, originalEndMs - minClipMs), 0),
+        });
+        return;
+      }
+
+      onUpdateClipTimeline(clip.id, {
+        trimEndMs: clamp(sourceMs, Math.min(durationMs, originalStartMs + minClipMs), durationMs, durationMs),
+      });
+    };
+
+    const handleMove = (moveEvent) => {
+      applyPointer(moveEvent.clientX);
+      moveEvent.preventDefault();
+    };
+
+    const handleEnd = () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('pointercancel', handleEnd);
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleEnd, { once: true });
+    window.addEventListener('pointercancel', handleEnd, { once: true });
+
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch (_error) {
+      // Pointer capture is best effort.
+    }
+
+    applyPointer(event.clientX);
+  };
+
+  const beginLinkedVideoTrimDrag = (event, item, edge) => {
+    if (!item?.id || isRecording || typeof onUpdateLinkedVideoDraftTiming !== 'function') {
+      return;
+    }
+
+    const shell = event.currentTarget.closest('.make-preview-linked-video-clip');
+    const rect = shell?.getBoundingClientRect?.();
+
+    if (!rect || rect.width <= 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    setPreviewDrawer('');
+    setTimelineTool('select');
+    setTimelineSelection(null);
+    onTimelineHoverChange?.(true);
+
+    const minWindowMs = 1_000;
+    const originalStartMs = Math.max(0, Number(item.sourceStartMs || 0));
+    const originalEndMs = Math.max(originalStartMs + minWindowMs, Number(item.sourceEndMs || originalStartMs + 30_000));
+    const originalDurationMs = Math.max(minWindowMs, originalEndMs - originalStartMs);
+
+    const pointerToWindowMs = (clientX) => {
+      const pct = (Number(clientX || rect.left) - rect.left) / Math.max(1, rect.width);
+      return Math.round(originalStartMs + (Math.max(0, Math.min(1, pct)) * originalDurationMs));
+    };
+
+    const applyPointer = (clientX) => {
+      const sourceMs = pointerToWindowMs(clientX);
+
+      if (edge === 'start') {
+        onUpdateLinkedVideoDraftTiming(item.id, {
+          sourceStartMs: clamp(sourceMs, 0, Math.max(0, originalEndMs - minWindowMs), originalStartMs),
+          sourceEndMs: originalEndMs,
+          useEntireSource: false,
+        });
+        return;
+      }
+
+      onUpdateLinkedVideoDraftTiming(item.id, {
+        sourceStartMs: originalStartMs,
+        sourceEndMs: clamp(sourceMs, originalStartMs + minWindowMs, originalStartMs + (6 * 60 * 60 * 1000), originalEndMs),
+        useEntireSource: false,
+      });
+    };
+
+    const handleMove = (moveEvent) => {
+      applyPointer(moveEvent.clientX);
+      moveEvent.preventDefault();
+    };
+
+    const handleEnd = () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('pointercancel', handleEnd);
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleEnd, { once: true });
+    window.addEventListener('pointercancel', handleEnd, { once: true });
+
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch (_error) {
+      // Pointer capture is best effort.
+    }
+
+    applyPointer(event.clientX);
+  };
+
+  const commitTimelineItemMove = (activeKey, targetIndex) => {
+    if (!activeKey || typeof onReorderTimelineItems !== 'function') {
+      return;
+    }
+
+    const currentKeys = normalizeTimelineItemOrderKeys(
+      timelineVisualItemKeys,
+      createTimelineItemKeys(clips, linkedVideoDrafts),
+    );
+    const currentIndex = currentKeys.findIndex((key) => key === activeKey);
+
+    if (currentIndex < 0) {
+      return;
+    }
+
+    const withoutMoving = currentKeys.filter((key) => key !== activeKey);
+    const boundedTargetIndex = clamp(Number(targetIndex), 0, withoutMoving.length, withoutMoving.length);
+    const nextKeys = [
+      ...withoutMoving.slice(0, boundedTargetIndex),
+      activeKey,
+      ...withoutMoving.slice(boundedTargetIndex),
+    ];
+
+    if (timelineOrderSignature(nextKeys) !== timelineOrderSignature(currentKeys)) {
+      onReorderTimelineItems(nextKeys, {
+        selectClipId: isLocalTimelineItemKey(activeKey) ? idFromTimelineItemKey(activeKey) : selectedClipId,
+      });
+    }
+  };
+
+  const beginPreviewTimelineItemMoveDrag = (event, activeKey, selectForDrag = null) => {
+    if (!activeKey || isRecording || typeof onReorderTimelineItems !== 'function') {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    setPreviewDrawer('');
+    setTrimEditorClipId('');
+    setTimelineTool('select');
+    setTimelineSelection(null);
+    onTimelineHoverChange?.(true);
+    selectForDrag?.();
+
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch (_error) {
+      // Pointer capture is best effort in the WebView.
+    }
+
+    const readTargetIndex = (clientX) => {
+      const rail = previewTimelineRailRef.current;
+
+      if (!rail) {
+        return timelineVisualItemKeys.findIndex((key) => key === activeKey);
+      }
+
+      const nodes = Array.from(rail.querySelectorAll('[data-make-timeline-item-key]'))
+        .filter((node) => node?.dataset?.makeTimelineItemKey !== activeKey)
+        .sort((a, b) => {
+          const aRect = a.getBoundingClientRect();
+          const bRect = b.getBoundingClientRect();
+
+          return aRect.left - bRect.left;
+        });
+
+      for (let index = 0; index < nodes.length; index += 1) {
+        const rect = nodes[index].getBoundingClientRect();
+        const centerX = rect.left + (rect.width / 2);
+
+        if (clientX < centerX) {
+          return index;
+        }
+      }
+
+      return nodes.length;
+    };
+
+    const setDragFromPointer = (clientX) => {
+      const targetIndex = readTargetIndex(clientX);
+      const withoutMoving = timelineVisualItemKeys.filter((key) => key !== activeKey);
+      const beforeKey = withoutMoving[targetIndex] || '';
+
+      setPreviewClipMoveDrag({
+        activeKey,
+        activeClipId: isLocalTimelineItemKey(activeKey) ? idFromTimelineItemKey(activeKey) : '',
+        activeLinkedVideoId: isLinkedVideoTimelineItemKey(activeKey) ? idFromTimelineItemKey(activeKey) : '',
+        beforeKey,
+        beforeClipId: isLocalTimelineItemKey(beforeKey) ? idFromTimelineItemKey(beforeKey) : '',
+        beforeLinkedVideoId: isLinkedVideoTimelineItemKey(beforeKey) ? idFromTimelineItemKey(beforeKey) : '',
+        afterLast: !beforeKey,
+        targetIndex,
+      });
+    };
+
+    const handleMove = (moveEvent) => {
+      setDragFromPointer(moveEvent.clientX);
+      moveEvent.preventDefault();
+    };
+
+    const handleEnd = (endEvent) => {
+      const targetIndex = readTargetIndex(endEvent.clientX);
+
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('pointercancel', handleCancel);
+      document.body.classList.remove('make-timeline-is-moving');
+      setPreviewClipMoveDrag(null);
+      commitTimelineItemMove(activeKey, targetIndex);
+      endEvent.preventDefault();
+    };
+
+    const handleCancel = () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('pointercancel', handleCancel);
+      document.body.classList.remove('make-timeline-is-moving');
+      setPreviewClipMoveDrag(null);
+    };
+
+    document.body.classList.add('make-timeline-is-moving');
+    setDragFromPointer(event.clientX);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleEnd, { once: true });
+    window.addEventListener('pointercancel', handleCancel, { once: true });
+  };
+
+  const beginPreviewClipMoveDrag = (event, clip) => {
+    beginPreviewTimelineItemMoveDrag(
+      event,
+      makeLocalTimelineItemKey(clip?.id),
+      () => onSelectClip?.(clip?.id),
+    );
+  };
+
+  const beginLinkedVideoMoveDrag = (event, item) => {
+    beginPreviewTimelineItemMoveDrag(
+      event,
+      makeLinkedVideoTimelineItemKey(item?.id),
+      () => {
+        setSelectedLinkedVideoId(item?.id || '');
+        setLinkedVideoPreviewId('');
+      },
+    );
+  };
+
+  const beginAudioTrackOffsetDrag = (event, track) => {
+    if (!track?.id || isRecording || typeof onUpdateAudioTrackTiming !== 'function') {
+      return;
+    }
+
+    setSelectedTimelineMediaKind('audio');
+    setSelectedAudioTrackId(track.id);
+    setTrimEditorClipId('');
+    setTimelineTool('select');
+    resetTimelineCursorSelection();
+
+    const rail = event.currentTarget
+      ?.closest('.make-preview-audio-track-list-timeline')
+      || event.currentTarget
+        ?.closest('.make-preview-audio-timeline-rail')
+      || event.currentTarget
+        ?.closest('.make-preview-audio-track')
+        ?.querySelector('.make-preview-audio-timeline-rail');
+
+    if (!rail) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch (_error) {
+      // Pointer capture is best effort in the WebView.
+    }
+
+    const startX = event.clientX;
+    const dragStartAudioTracks = preparedAudioTracks.map((item) => ({ ...item }));
+    const startOffsetMs = Math.max(0, Number(track.offsetMs || 0));
+    const totalMs = Math.max(1, Number(audioLaneVisualDurationMs || totalTimelineDurationMs || 0));
+    const trackDurationMs = Math.max(500, Number(track.effectiveDurationMs || track.durationMs || 1000));
+    const maxOffsetMs = Math.max(60_000, totalMs + trackDurationMs, startOffsetMs + trackDurationMs) - trackDurationMs;
+
+    const offsetFromClientX = (clientX) => {
+      const rect = rail.getBoundingClientRect();
+      const deltaPct = rect.width > 0 ? (clientX - startX) / rect.width : 0;
+      const nextOffsetMs = startOffsetMs + (deltaPct * totalMs);
+
+      return Math.round(clamp(nextOffsetMs, 0, maxOffsetMs, 0) / 250) * 250;
+    };
+
+    const handleMove = (moveEvent) => {
+      setAudioMoveDrag(track.id);
+      onUpdateAudioTrackTiming(track.id, { offsetMs: offsetFromClientX(moveEvent.clientX) }, { history: false });
+      moveEvent.preventDefault();
+    };
+
+    const handleEnd = (endEvent) => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('pointercancel', handleCancel);
+      document.body.classList.remove('make-audio-is-moving');
+      setAudioMoveDrag(null);
+      onUpdateAudioTrackTiming(track.id, { offsetMs: offsetFromClientX(endEvent.clientX) }, { history: true, resolveOverlap: true, beforeAudioTracks: dragStartAudioTracks });
+      endEvent.preventDefault();
+    };
+
+    const handleCancel = () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('pointercancel', handleCancel);
+      document.body.classList.remove('make-audio-is-moving');
+      setAudioMoveDrag(null);
+    };
+
+    document.body.classList.add('make-audio-is-moving');
+    setAudioMoveDrag(track.id);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleEnd, { once: true });
+    window.addEventListener('pointercancel', handleCancel, { once: true });
+  };
+
+  const beginAudioTrackTrimDrag = (event, track, edge) => {
+    if (!track?.id || isRecording || typeof onUpdateAudioTrackTiming !== 'function') {
+      return;
+    }
+
+    const shell = event.currentTarget.closest('.make-preview-audio-track');
+    const rect = shell?.getBoundingClientRect?.();
+    const durationMs = Math.max(0, Number(track.durationMs || 0));
+
+    if (!rect || rect.width <= 0 || durationMs <= 100) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch (_error) {
+      // Pointer capture is best effort in the WebView.
+    }
+
+    setSelectedTimelineMediaKind('audio');
+    setSelectedAudioTrackId(track.id);
+    setTrimEditorClipId('');
+    setTimelineTool('select');
+    resetTimelineCursorSelection();
+
+    const startX = Number(event.clientX || 0);
+    const dragStartAudioTracks = preparedAudioTracks.map((item) => ({ ...item }));
+    const startTrimStartMs = clamp(Number(track.trimStartMs || 0), 0, durationMs, 0);
+    const startTrimEndMs = clamp(Number(track.trimEndMs || durationMs), startTrimStartMs + 100, durationMs, durationMs);
+    const pxToMs = durationMs / Math.max(1, rect.width);
+
+    const nextPatchForClientX = (clientX) => {
+      const deltaMs = Math.round(((Number(clientX || startX) - startX) * pxToMs) / 250) * 250;
+
+      if (edge === 'start') {
+        return {
+          trimStartMs: clamp(startTrimStartMs + deltaMs, 0, Math.max(0, startTrimEndMs - 100), startTrimStartMs),
+        };
+      }
+
+      return {
+        trimEndMs: clamp(startTrimEndMs + deltaMs, Math.min(durationMs, startTrimStartMs + 100), durationMs, startTrimEndMs),
+      };
+    };
+
+    const handleMove = (moveEvent) => {
+      setAudioTrimDrag(`${track.id}:${edge}`);
+      onUpdateAudioTrackTiming(track.id, nextPatchForClientX(moveEvent.clientX), { history: false });
+      moveEvent.preventDefault();
+    };
+
+    const handleEnd = (endEvent) => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('pointercancel', handleCancel);
+      setAudioTrimDrag(null);
+      onUpdateAudioTrackTiming(track.id, nextPatchForClientX(endEvent.clientX), { history: true, beforeAudioTracks: dragStartAudioTracks });
+      endEvent.preventDefault();
+    };
+
+    const handleCancel = () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('pointercancel', handleCancel);
+      setAudioTrimDrag(null);
+    };
+
+    setAudioTrimDrag(`${track.id}:${edge}`);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleEnd, { once: true });
+    window.addEventListener('pointercancel', handleCancel, { once: true });
+  };
+
+
+  const setTimelineZoomBounded = (nextValue) => {
+    setTimelineZoom((current) => clamp(Number(typeof nextValue === 'function' ? nextValue(current) : nextValue), 1, 6, 1));
+  };
+
+  const stopTimelinePreview = () => {
+    const video = timelinePreviewVideoRef.current;
+
+    try {
+      video?.pause?.();
+    } catch (_error) {
+      // Best-effort local preview cleanup.
+    }
+
+    setTimelinePreview(null);
+  };
+
+  const resetTimelineCursorSelection = () => {
+    setTimelineSelection(null);
+    stopTimelinePreview();
+  };
+
+  const previewTimelineSelection = (selection) => {
+    if (!selection?.clipId) {
+      stopTimelinePreview();
+      return;
+    }
+
+    const clip = clips.find((item) => item.id === selection.clipId) || null;
+
+    if (!clip) {
+      stopTimelinePreview();
+      return;
+    }
+
+    const trimStartMs = getClipTrimStartMs(clip);
+    const trimEndMs = getClipTrimEndMs(clip);
+    const startMs = clamp(Number(selection.startMs ?? selection.focusMs ?? trimStartMs), trimStartMs, trimEndMs, trimStartMs);
+    const endMs = clamp(Number(selection.endMs ?? selection.focusMs ?? startMs), trimStartMs, trimEndMs, trimEndMs);
+    const focusMs = clamp(Number(selection.focusMs ?? startMs), trimStartMs, trimEndMs, startMs);
+
+    const video = timelinePreviewVideoRef.current;
+    try {
+      video?.pause?.();
+    } catch (_error) {
+      // Best-effort local preview cleanup.
+    }
+
+    setTimelinePreview({
+      visible: true,
+      status: 'frame',
+      clipId: clip.id,
+      mode: selection.mode || 'point',
+      focusMs,
+      startMs: Math.min(startMs, endMs),
+      endMs: Math.max(startMs, endMs),
+      progressPct: getTimelinePreviewProgressPct(clip, focusMs),
+      updatedAt: Date.now(),
+    });
+  };
+
+  const commitTimelineSelection = (selection) => {
+    setTimelineSelection(selection);
+    previewTimelineSelection(selection);
+  };
+
+  const beginTimelineCursorDrag = (event, clip) => {
+    if (!cursorToolActive || !clip?.id || isRecording || trimEditorActive) {
+      return;
+    }
+
+    if (Number.isFinite(event.button) && event.button !== 0) {
+      return;
+    }
+
+    const captureEl = event.currentTarget;
+    const shell = captureEl.closest('.make-preview-mini-clip');
+    const rect = shell?.getBoundingClientRect?.();
+    const trimStartMs = getClipTrimStartMs(clip);
+    const trimEndMs = getClipTrimEndMs(clip);
+    const visibleDurationMs = Math.max(1, trimEndMs - trimStartMs);
+
+    if (!rect || rect.width <= 0 || trimEndMs <= trimStartMs) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    onSelectClip(clip.id);
+    setPreviewDrawer('');
+    setTrimEditorClipId('');
+    onTimelineHoverChange?.(true);
+
+    const dragMinPx = 4;
+    const rangeMinMs = 80;
+    const anchorClientX = Number(event.clientX || rect.left);
+
+    const pointerToVisiblePct = (clientX) => (
+      clamp(((Number(clientX || rect.left) - rect.left) / Math.max(1, rect.width)) * 100, 0, 100, 0)
+    );
+
+    const pctToMs = (pct) => (
+      clamp(snapTimelineFrameMs(trimStartMs + ((clamp(pct, 0, 100, 0) / 100) * visibleDurationMs)), trimStartMs, trimEndMs, trimStartMs)
+    );
+
+    const commitSelection = (selection) => {
+      if (typeof commitTimelineSelection === 'function') {
+        commitTimelineSelection(selection);
+        return;
+      }
+
+      setTimelineSelection(selection);
+    };
+
+    const anchorPct = pointerToVisiblePct(anchorClientX);
+    const anchorMs = pctToMs(anchorPct);
+
+    const applySelection = (clientX, forceRange = false) => {
+      const focusPct = pointerToVisiblePct(clientX);
+      const focusMs = pctToMs(focusPct);
+      const draggedPx = Math.abs(Number(clientX || anchorClientX) - anchorClientX);
+
+      let startPct = Math.min(anchorPct, focusPct);
+      let endPct = Math.max(anchorPct, focusPct);
+      let startMs = Math.min(anchorMs, focusMs);
+      let endMs = Math.max(anchorMs, focusMs);
+      let rangeMs = Math.max(0, endMs - startMs);
+      let visualWidthPct = Math.max(0, endPct - startPct);
+
+      const shouldBeRange = forceRange || draggedPx >= dragMinPx || rangeMs >= rangeMinMs || visualWidthPct >= 0.75;
+
+      if (shouldBeRange && rangeMs > 0 && rangeMs < rangeMinMs) {
+        if (focusMs >= anchorMs) {
+          endMs = clamp(startMs + rangeMinMs, trimStartMs, trimEndMs, trimEndMs);
+        } else {
+          startMs = clamp(endMs - rangeMinMs, trimStartMs, trimEndMs, trimStartMs);
+        }
+
+        startPct = sourceMsToVisiblePct(clip, startMs);
+        endPct = sourceMsToVisiblePct(clip, endMs);
+        rangeMs = Math.max(0, endMs - startMs);
+        visualWidthPct = Math.max(0, endPct - startPct);
+      }
+
+      if (shouldBeRange && visualWidthPct > 0 && visualWidthPct < 1.4) {
+        if (focusPct >= anchorPct) {
+          endPct = clamp(startPct + 1.4, 0, 100, 100);
+        } else {
+          startPct = clamp(endPct - 1.4, 0, 100, 0);
+        }
+
+        visualWidthPct = Math.max(0, endPct - startPct);
+      }
+
+      commitSelection({
+        clipId: clip.id,
+        anchorMs,
+        focusMs,
+        startMs,
+        endMs,
+        rangeMs,
+        anchorPct,
+        focusPct,
+        startPct,
+        endPct,
+        visualLeftPct: startPct,
+        visualWidthPct,
+        mode: shouldBeRange && rangeMs >= rangeMinMs ? 'range' : 'point',
+      });
+    };
+
+    const handleMove = (moveEvent) => {
+      applySelection(moveEvent.clientX, Math.abs(Number(moveEvent.clientX || anchorClientX) - anchorClientX) >= dragMinPx);
+      moveEvent.preventDefault();
+      moveEvent.stopPropagation();
+    };
+
+    const handleEnd = (endEvent) => {
+      const finalClientX = Number.isFinite(endEvent?.clientX) ? endEvent.clientX : anchorClientX;
+      applySelection(finalClientX, Math.abs(finalClientX - anchorClientX) >= dragMinPx);
+
+      captureEl.removeEventListener('pointermove', handleMove);
+      captureEl.removeEventListener('pointerup', handleEnd);
+      captureEl.removeEventListener('pointercancel', handleEnd);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('pointercancel', handleEnd);
+      document.removeEventListener('pointermove', handleMove);
+      document.removeEventListener('pointerup', handleEnd);
+      document.removeEventListener('pointercancel', handleEnd);
+    };
+
+    captureEl.addEventListener('pointermove', handleMove, { passive: false });
+    captureEl.addEventListener('pointerup', handleEnd, { once: true });
+    captureEl.addEventListener('pointercancel', handleEnd, { once: true });
+    window.addEventListener('pointermove', handleMove, { passive: false });
+    window.addEventListener('pointerup', handleEnd, { once: true });
+    window.addEventListener('pointercancel', handleEnd, { once: true });
+    document.addEventListener('pointermove', handleMove, { passive: false });
+    document.addEventListener('pointerup', handleEnd, { once: true });
+    document.addEventListener('pointercancel', handleEnd, { once: true });
+
+    try {
+      captureEl.setPointerCapture(event.pointerId);
+    } catch (_error) {
+      // Pointer capture is best effort. Window/document listeners still cover the drag.
+    }
+
+    applySelection(anchorClientX, false);
+  };
+
+  const splitAtTimelineSelection = () => {
+    if (!canSplitTimelineSelection || !timelineSelection) {
+      return;
+    }
+
+    onSplitTimelineAt?.({
+      clipId: timelineSelection.clipId,
+      atMs: timelineSelection.focusMs,
+    });
+    setTimelineSelection(null);
+    stopTimelinePreview();
+  };
+
+  const deleteSelectedTimelineRange = () => {
+    if (!canDeleteTimelineSelection || !timelineSelection) {
+      return;
+    }
+
+    const startMs = timelineSelectionStartMs;
+    const endMs = timelineSelectionEndMs;
+
+    onDeleteTimelineRange?.({
+      clipId: timelineSelection.clipId,
+      startMs,
+      endMs,
+    });
+
+    setTimelineSelection(null);
+    stopTimelinePreview();
+  };
+
+  const playTimelineRangeLoop = () => {
+    if (!timelineRangeLoopAvailable || !timelineSelectionClip || !timelineSelection) {
+      return false;
+    }
+
+    if (sequencePlaying) {
+      onPauseSequence?.();
+    }
+
+    const startMs = clamp(timelineSelectionStartMs, getClipTrimStartMs(timelineSelectionClip), getClipTrimEndMs(timelineSelectionClip), getClipTrimStartMs(timelineSelectionClip));
+    const endMs = clamp(timelineSelectionEndMs, startMs, getClipTrimEndMs(timelineSelectionClip), getClipTrimEndMs(timelineSelectionClip));
+
+    if (endMs - startMs < 80) {
+      return false;
+    }
+
+    setTimelinePreview({
+      visible: true,
+      status: 'looping',
+      clipId: timelineSelectionClip.id,
+      mode: 'range',
+      focusMs: startMs,
+      startMs,
+      endMs,
+      progressPct: getTimelinePreviewProgressPct(timelineSelectionClip, startMs),
+      updatedAt: Date.now(),
+    });
+
+    window.requestAnimationFrame(() => {
+      seekTimelinePreviewVideo(startMs, { play: true });
+    });
+
+    return true;
+  };
+
+  const pauseTimelineRangeLoop = () => {
+    const video = timelinePreviewVideoRef.current;
+
+    try {
+      video?.pause?.();
+    } catch (_error) {
+      // Best-effort local preview cleanup.
+    }
+
+    setTimelinePreview((current) => current
+      ? {
+          ...current,
+          status: 'frame',
+          focusMs: Number.isFinite(video?.currentTime) ? Math.round(video.currentTime * 1000) : current.focusMs,
+          updatedAt: Date.now(),
+        }
+      : current);
+  };
+
+  const handleTimelinePlayClick = () => {
+    if (timelineLoopPlaying) {
+      pauseTimelineRangeLoop();
+      return;
+    }
+
+    if (sequencePlaying) {
+      onPauseSequence?.();
+      return;
+    }
+
+    if (timelineRangeLoopAvailable && playTimelineRangeLoop()) {
+      return;
+    }
+
+    stopTimelinePreview();
+    onPlaySequence?.();
+  };
+
+  const handleTimelinePreviewTimeUpdate = (event) => {
+    const video = event.currentTarget;
+
+    if (!timelinePreviewClip || !timelinePreviewActive || !video) {
+      return;
+    }
+
+    const sourceMs = Number.isFinite(video.currentTime)
+      ? Math.round(video.currentTime * 1000)
+      : Number(timelinePreview?.focusMs || getClipTrimStartMs(timelinePreviewClip));
+
+    if (timelinePreview?.status === 'looping') {
+      const startMs = clamp(Number(timelinePreview.startMs || getClipTrimStartMs(timelinePreviewClip)), getClipTrimStartMs(timelinePreviewClip), getClipTrimEndMs(timelinePreviewClip), getClipTrimStartMs(timelinePreviewClip));
+      const endMs = clamp(Number(timelinePreview.endMs || getClipTrimEndMs(timelinePreviewClip)), startMs, getClipTrimEndMs(timelinePreviewClip), getClipTrimEndMs(timelinePreviewClip));
+
+      if (sourceMs + 34 >= endMs) {
+        setTimelinePreview((current) => current
+          ? {
+              ...current,
+              focusMs: startMs,
+              progressPct: getTimelinePreviewProgressPct(timelinePreviewClip, startMs),
+              updatedAt: Date.now(),
+            }
+          : current);
+
+        seekTimelinePreviewVideo(startMs, { play: true });
+        return;
+      }
+    }
+
+    setTimelinePreview((current) => current
+      ? {
+          ...current,
+          focusMs: sourceMs,
+          progressPct: getTimelinePreviewProgressPct(timelinePreviewClip, sourceMs),
+        }
+      : current);
+  };
+
+  const timelinePlayDisabled = !hasClips || isRecording || trimEditorActive || (cursorToolActive && !timelineRangeLoopAvailable);
+  const timelinePlayTitle = timelineLoopPlaying
+    ? 'Pause selected range loop'
+    : timelineRangeLoopAvailable
+      ? 'Play only the highlighted range as a loop'
+      : sequencePlaying
+        ? 'Pause sequence playback'
+        : 'Play timeline sequence';
+
+  const drawerEyebrow = previewDrawer === 'effects' ? 'Effects' : previewDrawer === 'modes' ? 'Modes' : 'Settings';
+  const drawerTitle = previewDrawer === 'effects'
+    ? 'Look and clip style'
+    : previewDrawer === 'modes'
+      ? 'Video mode switcher'
+      : 'Studio setup';
+
+  return (
+    <div
+      className={`make-preview-chrome ${activeDrawer ? 'has-open-drawer' : ''} ${isRecording ? 'is-recording' : ''} ${sequenceActive ? 'is-sequence-active' : ''} ${timelinePreviewActive ? 'has-timeline-preview' : ''} ${timelineLoopPlaying ? 'is-range-looping' : ''} ${trimEditorActive ? 'is-trimming-clip' : ''} ${cursorToolActive ? 'is-timeline-cursor' : ''} ${previewClipMoveDrag ? 'is-moving-timeline-item' : ''}`}
+      style={{ '--make-timeline-zoom': timelineZoom }}
+      aria-label="Preview controls. These controls are not recorded into the canvas."
+    >
+      <MakePreviewRecordControls
+        inputReady={inputReady}
+        isCountingDown={isCountingDown}
+        isRecording={isRecording}
+        onRecordClick={handleRecordClick}
+        onToggleDrawer={toggleDrawer}
+        onToggleSubjectEdit={onToggleSubjectEdit}
+        previewDrawer={previewDrawer}
+        recordDisabled={recordDisabled}
+        recordLabel={recordLabel}
+        recordTitle={recordTitle}
+        selectedMode={selectedMode}
+        selectedModeLabel={selectedModeLabel}
+        subjectEditAvailable={subjectEditAvailable}
+        subjectEditMode={subjectEditMode}
+        trimEditorActive={trimEditorActive}
+      />
+
+      <MakePreviewTimelineMarker
+        clips={clips}
+        onSeekTimelinePreviewVideo={seekTimelinePreviewVideo}
+        onTimelinePreviewTimeUpdate={handleTimelinePreviewTimeUpdate}
+        timelineLoopPlaying={timelineLoopPlaying}
+        timelinePreview={timelinePreview}
+        timelinePreviewActive={timelinePreviewActive}
+        timelinePreviewClip={timelinePreviewClip}
+        timelinePreviewVideoRef={timelinePreviewVideoRef}
+      />
+
+      <div
+        className="make-preview-mini-timeline"
+        aria-label="Preview timeline overlay"
+        onPointerEnter={() => onTimelineHoverChange?.(true)}
+        onPointerLeave={() => onTimelineHoverChange?.(false)}
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
+        onFocus={() => onTimelineHoverChange?.(true)}
+        onBlur={() => onTimelineHoverChange?.(false)}
+      >
+        <MakePreviewMiniTimelineHeader
+          audioEditActive={audioEditActive}
+          canDeleteTimelineSelection={canDeleteTimelineSelection}
+          canSplitTimelineSelection={canSplitTimelineSelection}
+          cursorToolActive={cursorToolActive}
+          editTimelineButtonDisabled={editTimelineButtonDisabled}
+          editTimelineButtonLabel={editTimelineButtonLabel}
+          editTimelineButtonTitle={editTimelineButtonTitle}
+          editedClip={editedClip}
+          hasClips={hasClips}
+          isRecording={isRecording}
+          onApproveSequence={onApproveSequence}
+          onDeleteSelectedTimelineRange={deleteSelectedTimelineRange}
+          onEditTimeline={() => {
+            if (audioEditActive) {
+              setSelectedTimelineMediaKind('audio');
+              setSelectedAudioTrackId(selectedAudioTrack?.id || '');
+              setTrimEditorClipId('');
+              setTimelineTool('select');
+              resetTimelineCursorSelection();
+              return;
+            }
+
+            setSelectedTimelineMediaKind('video');
+            toggleTrimEditor(editTargetClipId);
+          }}
+          onPlayTimeline={handleTimelinePlayClick}
+          onSplitAtTimelineSelection={splitAtTimelineSelection}
+          onTimelineRedo={onTimelineRedo}
+          onTimelineUndo={onTimelineUndo}
+          onTimelineZoomIn={() => setTimelineZoomBounded((current) => current + 0.25)}
+          onTimelineZoomOut={() => setTimelineZoomBounded((current) => current - 0.25)}
+          onToggleCursorTool={() => {
+            setPreviewDrawer('');
+            setTrimEditorClipId('');
+            setTimelineTool((current) => (current === 'cursor' ? 'select' : 'cursor'));
+            resetTimelineCursorSelection();
+          }}
+          sequenceCanApprove={sequenceCanApprove}
+          sequencePlaying={sequencePlaying}
+          timelineCanRedo={timelineCanRedo}
+          timelineCanUndo={timelineCanUndo}
+          timelineHasItems={timelineHasItems}
+          timelineLoopPlaying={timelineLoopPlaying}
+          timelinePlayDisabled={timelinePlayDisabled}
+          timelinePlayTitle={timelinePlayTitle}
+          timelineSelection={timelineSelection}
+          timelineSelectionRangeMs={timelineSelectionRangeMs}
+          timelineSummaryLabel={timelineSummaryLabel}
+          timelineZoom={timelineZoom}
+          trimEditorActive={trimEditorActive}
+        />
+
+        <div className="make-preview-mini-scroll" aria-label="Scrollable timeline">
+          <div
+            ref={previewTimelineRailRef}
+            className={`make-preview-mini-rail ${previewClipMoveDrag ? 'is-reordering' : ''}`}
+            role="list"
+            aria-label="Make timeline clips and linked video references"
+          >
+          {timelineHasItems ? (
+            <>
+            {hasClips ? clips.map((clip, index) => {
+              const active = clip.id === selectedClipId || (!selectedClipId && selectedClip?.id === clip.id);
+              const previewingLoop = timelineLoopPlaying && timelinePreviewClip?.id === clip.id;
+              const playing = (sequenceActive && sequenceClip?.id === clip.id) || previewingLoop;
+              const played = !previewingLoop && (sequenceStatus === 'reviewed' || sequenceStatus === 'approved' || (sequenceActive && index < sequenceCurrentIndex));
+              const trimming = trimEditorClipId === clip.id;
+              const durationMs = makeOverlayClipDurationMs(clip);
+              const rawDurationMs = Math.max(0, Number(clip.durationMs || 0));
+              const trimStartMs = getClipTrimStartMs(clip);
+              const trimEndMs = getClipTrimEndMs(clip);
+              const visibleDurationMs = Math.max(1, getTimelineClipVisibleDurationMs(clip));
+              const trimmed = rawDurationMs > 0 && visibleDurationMs + 8 < rawDurationMs;
+              const trimStartPct = 0;
+              const trimEndPct = 100;
+              const rightTrimPct = 0;
+              const playProgressPct = played
+                ? 100
+                : previewingLoop
+                  ? clamp(Number(timelinePreview?.progressPct || 0), 0, 100, 0)
+                  : playing
+                    ? clamp(Number(sequenceState?.currentClipProgressPct || 0), 0, 100, 0)
+                    : 0;
+              const playheadPct = clamp(playProgressPct, 0, 100, 0);
+              const playRightPct = Math.max(0, 100 - playheadPct);
+              const hasCursorSelection = timelineSelection?.clipId === clip.id;
+              const selectionPlate = hasCursorSelection
+                ? sourceRangeToVisiblePlate(clip, timelineSelectionStartMs, timelineSelectionEndMs)
+                : { leftPct: 0, rightPct: 0, widthPct: 0 };
+              const selectionStartPct = selectionPlate.leftPct;
+              const selectionEndPct = selectionPlate.rightPct;
+              const selectionRightPct = Math.max(0, 100 - selectionEndPct);
+              const cursorPct = hasCursorSelection
+                ? sourceMsToVisiblePct(clip, Number(timelineSelection?.focusMs || timelineSelectionStartMs))
+                : 0;
+              const flexGrow = Math.max(0.42, visibleDurationMs / Math.max(1, timelineVisualTotalDurationMs));
+              const localTimelineKey = makeLocalTimelineItemKey(clip.id);
+
+              return (
+                <div
+                  className={`make-preview-mini-clip ${active ? 'is-active' : ''} ${playing ? 'is-playing' : ''} ${trimming ? 'is-trimming' : ''} ${trimmed ? 'is-trimmed' : ''} ${cursorToolActive ? 'is-cursor-tool' : ''} ${hasCursorSelection ? 'has-cursor-selection' : ''} ${hasCursorSelection && timelineSelection?.mode !== 'range' ? 'has-insert-marker' : ''} ${hasCursorSelection && timelineSelection?.mode === 'range' ? 'has-range-selection' : ''} ${previewClipMoveDrag?.activeKey === localTimelineKey || previewClipMoveDrag?.activeClipId === clip.id ? 'is-moving' : ''}`}
+                  key={clip.id}
+                  data-make-local-clip-id={clip.id}
+                  data-make-timeline-item-key={localTimelineKey}
+                  style={{
+                    order: timelineVisualOrderForKey(localTimelineKey),
+                    flexGrow,
+                    '--make-visible-duration-ms': visibleDurationMs,
+                    '--make-timeline-cursor-pct': hasCursorSelection ? `${cursorPct}%` : undefined,
+                    '--make-timeline-range-left': hasCursorSelection && timelineSelection?.mode === 'range' ? `${selectionStartPct}%` : undefined,
+                    '--make-timeline-range-right': hasCursorSelection && timelineSelection?.mode === 'range' ? `${selectionRightPct}%` : undefined,
+                  }}
+                  role="listitem"
+                  title={`${index + 1}. ${clip.name || 'clip'} · ${formatDurationMs(durationMs)}${trimmed ? ` kept from ${formatDurationMs(rawDurationMs)}` : ''}`}
+                >
+                  {(previewClipMoveDrag?.beforeKey === localTimelineKey || previewClipMoveDrag?.beforeClipId === clip.id) && (
+                    <span className="make-preview-mini-drop-marker" aria-hidden="true" />
+                  )}
+                  <span
+                    className="make-preview-mini-clip-trim-fill"
+                    style={{ left: `${trimStartPct}%`, right: `${rightTrimPct}%` }}
+                    aria-hidden="true"
+                  />
+                  <span
+                    className="make-preview-mini-clip-play-fill"
+                    style={{ left: `${trimStartPct}%`, right: `${playRightPct}%` }}
+                    aria-hidden="true"
+                  />
+                  {hasCursorSelection && timelineSelection?.mode === 'range' && (
+                    <span
+                      className="make-preview-timeline-range-plate"
+                      style={{
+                        left: `${Number.isFinite(Number(timelineSelection?.visualLeftPct)) ? Number(timelineSelection.visualLeftPct) : selectionStartPct}%`,
+                        width: `${Math.max(
+                          1.4,
+                          Number.isFinite(Number(timelineSelection?.visualWidthPct))
+                            ? Number(timelineSelection.visualWidthPct)
+                            : selectionEndPct - selectionStartPct,
+                        )}%`,
+                      }}
+                      aria-hidden="true"
+                    />
+                  )}
+                  {hasCursorSelection && timelineSelection?.mode !== 'range' && (
+                    <>
+                      <span
+                        className="make-preview-timeline-insert"
+                        style={{ left: `${cursorPct}%` }}
+                        aria-hidden="true"
+                      />
+                      <span
+                        key={`${clip.id}-${Math.round(Number(timelineSelection?.focusMs || timelineSelectionStartMs || 0))}`}
+                        className="make-preview-timeline-time-badge"
+                        style={{ left: `${cursorPct}%` }}
+                        aria-hidden="true"
+                      >
+                        {formatTimelinePreciseTimeMs(getTimelineAbsolutePositionMs(
+                          clips,
+                          clip.id,
+                          Number(timelineSelection?.focusMs || timelineSelectionStartMs || 0),
+                        ))}
+                      </span>
+                    </>
+                  )}
+                  {cursorToolActive && !trimming && (
+                    <button
+                      className="make-preview-timeline-cursor-capture"
+                      type="button"
+                      aria-label={`Place I cursor or drag-select ${clip.name || `clip ${index + 1}`}`}
+                      title="I cursor: click to place split point, drag to highlight range"
+                      onPointerDown={(event) => beginTimelineCursorDrag(event, clip)}
+                    />
+                  )}
+
+                  <button
+                    className="make-preview-mini-move-handle"
+                    type="button"
+                    aria-label={`Move ${clip.name || `clip ${index + 1}`} on the timeline`}
+                    title="Drag to move this clip on the timeline"
+                    disabled={isRecording}
+                    onPointerDown={(event) => beginPreviewClipMoveDrag(event, clip)}
+                  >
+                    MOVE
+                  </button>
+
+                  <button
+                    className="make-preview-mini-clip-main"
+                    type="button"
+                    onClick={() => {
+                      if (cursorToolActive) {
+                        return;
+                      }
+                      setSelectedTimelineMediaKind('video');
+                      resetTimelineCursorSelection();
+                      onSelectClip(clip.id);
+                    }}
+                    title={`Select ${clip.name || `Clip ${index + 1}`}`}
+                  >
+                    <span>{index + 1}</span>
+                    <strong>{clip.name || `Clip ${index + 1}`}</strong>
+                    <small>{formatDurationMs(durationMs)}{trimmed ? ` kept · ${formatDurationMs(rawDurationMs)} raw` : ''} · {makeOverlayClipLookLabel(clip)}</small>
+                  </button>
+
+                  <button
+                    className={`make-preview-mini-clip-edit ${trimming ? 'is-active' : ''}`}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setSelectedTimelineMediaKind('video');
+                      toggleTrimEditor(clip.id);
+                    }}
+                    disabled={isRecording}
+                    title={trimming ? 'Done trimming' : `Trim ${clip.name || `Clip ${index + 1}`}`}
+                  >
+                    {trimming ? 'Done' : 'Edit'}
+                  </button>
+
+                  {trimming && (
+                    <>
+                      <button
+                        className="make-preview-trim-handle is-start"
+                        style={{ left: '0.04rem' }}
+                        type="button"
+                        aria-label={`Trim start of ${clip.name || `clip ${index + 1}`}`}
+                        title="Drag to cut the beginning"
+                        onPointerDown={(event) => beginPreviewTrimDrag(event, clip, 'start')}
+                      />
+                      <button
+                        className="make-preview-trim-handle is-end"
+                        style={{ right: '0.04rem' }}
+                        type="button"
+                        aria-label={`Trim end of ${clip.name || `clip ${index + 1}`}`}
+                        title="Drag to cut the ending"
+                        onPointerDown={(event) => beginPreviewTrimDrag(event, clip, 'end')}
+                      />
+                      <span className="make-preview-trim-hint">Drag edges</span>
+                    </>
+                  )}
+                </div>
+              );
+            }) : null}
+
+            {previewClipMoveDrag?.afterLast && timelineVisualItemKeys.length > 0 && (
+              <span
+                className="make-preview-mini-drop-marker is-after-last"
+                style={{ order: 10_000 }}
+                aria-hidden="true"
+              />
+            )}
+
+            {linkedVideoDrafts.map((item, index) => (
+              <MakePreviewLinkedVideoTimelineClip
+                beginLinkedVideoMoveDrag={beginLinkedVideoMoveDrag}
+                beginLinkedVideoTrimDrag={beginLinkedVideoTrimDrag}
+                index={index}
+                isRecording={isRecording}
+                item={item}
+                key={item.id || item.url || `linked-video-${index}`}
+                linkedVideoPreviewId={linkedVideoPreviewId}
+                onOpenPreview={(linkedVideoId) => {
+                  setSelectedLinkedVideoId(linkedVideoId);
+                  setLinkedVideoPreviewId(linkedVideoId);
+                }}
+                onRemove={(linkedVideoId) => {
+                  if (linkedVideoPreviewId === linkedVideoId) {
+                    setLinkedVideoPreviewId('');
+                  }
+
+                  onRemoveLinkedVideoDraft?.(linkedVideoId);
+                }}
+                onSelect={(linkedVideoId) => {
+                  resetTimelineCursorSelection();
+                  setTrimEditorClipId('');
+                  setTimelineTool('select');
+                  setSelectedLinkedVideoId(linkedVideoId);
+                  setPlaybackStatus('Linked source selected. Use the Pay / preview button on the linked clip to get a quote and load preview bytes.');
+                }}
+                previewClipMoveDrag={previewClipMoveDrag}
+                selectedLinkedVideoId={selectedLinkedVideoId}
+                timelineVisualOrderForKey={timelineVisualOrderForKey}
+                timelineVisualTotalDurationMs={timelineVisualTotalDurationMs}
+              />
+            ))}
+            </>
+          ) : (
+            <div className="make-preview-mini-empty">
+              <span />
+              <strong>Record your first segment</strong>
+              <small>Clips appear here while you stay in the preview.</small>
+            </div>
+          )}
+            <button
+              className="make-preview-mini-add-clip"
+              type="button"
+              onClick={onAddTimelineClip}
+              disabled={isRecording}
+              title="Add a local video to the Make timeline"
+              aria-label="Add a local video to the Make timeline"
+            >
+              <span aria-hidden="true">+</span>
+            </button>
+            <button
+              className="make-preview-mini-link-clip"
+              type="button"
+              onClick={() => openLinkedMediaComposer('video')}
+              disabled={isRecording}
+              title="Paste a crab:// video reuse link"
+              aria-label="Paste a crab:// video reuse link"
+            >
+              <span aria-hidden="true">🔗</span>
+            </button>
+          </div>
+        </div>
+
+        <MakeLinkedVideoPaymentInspector
+          app={app}
+          hasLinkedVideoDrafts={hasLinkedVideoDrafts}
+          linkedVideoPreviewItem={linkedVideoPreviewItem}
+          onClose={() => setLinkedVideoPreviewId('')}
+          onPreviewReady={(preview) => {
+            if (linkedVideoPreviewItem?.id) {
+              onLinkedVideoPreviewReady?.(linkedVideoPreviewItem.id, preview);
+            }
+          }}
+        />
+
+        <MakePreviewAudioLane
+          audioLaneVisualDurationMs={audioLaneVisualDurationMs}
+          audioMoveDrag={audioMoveDrag}
+          audioTracks={audioTracks}
+          audioTrimDrag={audioTrimDrag}
+          beginAudioTrackOffsetDrag={beginAudioTrackOffsetDrag}
+          beginAudioTrackTrimDrag={beginAudioTrackTrimDrag}
+          hasAudioTracks={hasAudioTracks}
+          isRecording={isRecording}
+          onOpenLinkedAudioComposer={() => openLinkedMediaComposer('audio')}
+          onRemoveAudioTrack={onRemoveAudioTrack}
+          onRequestAddAudioTrack={onRequestAddAudioTrack}
+          onSelectAudioTrack={(trackId) => {
+            setSelectedTimelineMediaKind('audio');
+            setSelectedAudioTrackId(trackId);
+            setTrimEditorClipId('');
+            setTimelineTool('select');
+          }}
+          onUpdateAudioTrackTiming={onUpdateAudioTrackTiming}
+          onUpdateAudioTrackVolume={onUpdateAudioTrackVolume}
+          preparedAudioTracks={preparedAudioTracks}
+          selectedAudioTrack={selectedAudioTrack}
+          setAudioPreviewNode={setAudioPreviewNode}
+          totalTimelineDurationMs={totalTimelineDurationMs}
+        />
+
+      <MakeLinkedMediaComposerPopover
+        closeLinkedMediaComposer={closeLinkedMediaComposer}
+        handleLinkedMediaComposerSubmit={handleLinkedMediaComposerSubmit}
+        linkedMediaComposer={linkedMediaComposer}
+        updateLinkedMediaComposerField={updateLinkedMediaComposerField}
+      />
+      <MakePreviewDrawer
+        activeDrawer={activeDrawer}
+        backgroundImageUrl={backgroundImageUrl}
+        backgroundVideoUrl={backgroundVideoUrl}
+        canApplyTimelineEffect={canApplyTimelineEffect}
+        draft={draft}
+        drawerEyebrow={drawerEyebrow}
+        drawerTitle={drawerTitle}
+        hasClips={hasClips}
+        inputReady={inputReady}
+        inputState={inputState}
+        isCountingDown={isCountingDown}
+        isRecording={isRecording}
+        onApplyPreset={onApplyPreset}
+        onChooseBackgroundImage={onChooseBackgroundImage}
+        onChooseBackgroundVideo={onChooseBackgroundVideo}
+        onClearBackgroundMedia={onClearBackgroundMedia}
+        onCloseDrawer={onCloseDrawer}
+        onModeChange={onModeChange}
+        onOpenVideo={onOpenVideo}
+        onStartInputs={onStartInputs}
+        onStopInputs={onStopInputs}
+        onUpdateDraft={onUpdateDraft}
+        onUpdateSelectedTimeline={onUpdateSelectedTimeline}
+        outputPreset={outputPreset}
+        previewDrawer={previewDrawer}
+        recorderState={recorderState}
+        selectedClip={selectedClip}
+        selectedClipDurationMs={selectedClipDurationMs}
+        selectedMode={selectedMode}
+        selectedModeLabel={selectedModeLabel}
+        sourceModeLocked={sourceModeLocked}
+      />
+    </div>
+  );
+}
+
+/* Make Studio timeline editor phase 1 helpers end. */
