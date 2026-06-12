@@ -4,7 +4,5 @@
   "private": true,
   "description": "CrabLink platform adapter contracts for Chrome, Tauri, and tests.",
   "type": "module",
-  "main": "src/index.js",
-  "license": "MIT OR Apache-2.0",
-  "author": "Stevan White"
+  "main": "src/index.js"
 }

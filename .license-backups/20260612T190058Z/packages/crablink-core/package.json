@@ -4,7 +4,5 @@
   "private": true,
   "description": "Platform-neutral CrabLink React core migration target.",
   "type": "module",
-  "main": "src/index.js",
-  "license": "MIT OR Apache-2.0",
-  "author": "Stevan White"
+  "main": "src/index.js"
 }

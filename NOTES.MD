@@ -5116,3 +5116,902 @@ That is the correct first move.
 
 
 ### END NOTE - JUNE 9 2026 - 16:35 CST
+
+
+### BEGIN NOTE - JUNE 10 2026 - 13:20 CST
+
+
+I based these notes on the new `QUICKCHAIN_REVIEW_BUNDLE.MD`, which contains both the updated `QUICKCHAIN.MD` and the full `QUICKCHAIN_QC0A_COMBINED.MD` package. That bundle now says QC-0A-R1 is the active Phase 0 safety/preflight reference, while Phase 1 root-producing implementation is still blocked until locked vectors exist. 
+
+The most useful next-session attachments are also listed inside the notes, but the key idea is: **attach the QuickChain review bundle plus a fresh focused `ron-proto` bundle**, not the entire universe unless needed. The current Rust codebundle is useful for repo shape, but it is large and generated as Rust-only source, so a focused crate bundle will be more efficient. 
+
+# QuickChain Carryover Notes — Next Session
+
+## 0. Files/docs to attach to the next session
+
+Attach these first, in this order:
+
+```text
+1. QUICKCHAIN_REVIEW_BUNDLE.MD
+```
+
+This is the master QuickChain blueprint. It contains both:
+
+```text
+QUICKCHAIN.MD
+QUICKCHAIN_QC0A_COMBINED.MD
+```
+
+It is the authoritative QuickChain reference going forward.
+
+Attach this next if we are writing code:
+
+```text
+2. Fresh focused ron-proto bundle
+```
+
+Best form:
+
+```text
+workspace Cargo.toml
+crates/ron-proto/Cargo.toml
+crates/ron-proto/src/lib.rs
+crates/ron-proto/src/id/content_id.rs
+crates/ron-proto/src/econ/mod.rs
+crates/ron-proto/src/error/*
+crates/ron-proto/tests/*
+any existing crates/ron-proto/src/quickchain/* if present
+any existing crates/ron-proto/tests/quickchain* if present
+```
+
+Reason: the next safe implementation slice should touch only `ron-proto` if possible.
+
+Attach these only if the next session needs them:
+
+```text
+3. CODECHECK.MD
+4. CODECOMMENTS.MD
+5. CODEBUNDLE_RS.md
+```
+
+`CODECHECK.MD` and `CODECOMMENTS.MD` matter if we are generating full files with RO headers. `CODEBUNDLE_RS.md` is useful as a broader Rust repo reference, but it is large. Prefer the focused `ron-proto` bundle for speed.
+
+Do not attach CrabLink Tauri code unless the next session explicitly works on UI/display. QuickChain’s next safe slice is backend DTO/preflight work, not Tauri UI.
+
+Do not attach full Tauri app bundle for the next QuickChain session unless the goal changes to display-only QuickChain readiness/status in CrabLink. That is not the next recommended step.
+
+Optional but helpful terminal output to attach:
+
+```text
+cargo test -p ron-proto --all-targets
+cargo clippy -p ron-proto --all-targets -- -D warnings
+cargo fmt --check -p ron-proto
+```
+
+Also useful:
+
+```text
+find crates/ron-proto/src -maxdepth 3 -type f | sort
+find crates/ron-proto/tests -maxdepth 2 -type f | sort
+```
+
+---
+
+## 1. Current QuickChain status
+
+QuickChain docs are now complete enough for Phase 0 reference use.
+
+The current master file is:
+
+```text
+QUICKCHAIN_REVIEW_BUNDLE.MD
+```
+
+It contains:
+
+```text
+QUICKCHAIN.MD
+QUICKCHAIN_QC0A_COMBINED.MD
+```
+
+The bundle has been reviewed and is ready to serve as the active QuickChain safety foundation.
+
+Current accepted status:
+
+```text
+QC-0A-R1 docs: complete for active preflight reference
+Threat model: complete enough for current phase
+Canonicalization posture: defined
+State tree candidate: selected for Phase 1 candidate
+Concurrent holds model: tightened
+Closed-hold compaction rule: defined
+Test vector format: defined
+No-go checklist: defined
+Phase 1 root-producing implementation: still blocked
+```
+
+The important distinction:
+
+```text
+Docs foundation complete: yes
+QuickChain implementation authorized: no
+Root-producing code authorized: no
+Validator/checkpoint/pruning/anchor code authorized: no
+DTO-only scaffolding may be allowed: yes, if kept strict and safe
+```
+
+---
+
+## 2. Master doctrine to preserve
+
+QuickChain is future settlement infrastructure, not current runtime.
+
+The doctrine remains:
+
+```text
+determinism before distribution
+DTOs before roots
+roots before validators
+proofs before pruning
+internal ROC before external anchors
+```
+
+Active mission still comes first:
+
+```text
+prove ROC as a fully internal token/accounting/value plane
+```
+
+The value loop remains:
+
+```text
+ron-proto econ DTOs
+→ ron-ledger durable replayable truth
+→ svc-wallet issue/transfer/burn/hold/capture/release/receipt
+→ svc-storage/svc-gateway/omnigate paid enforcement
+→ ron-accounting snapshots
+→ svc-rewarder payout planning
+→ wallet/ledger committed receipts
+```
+
+QuickChain must not skip ahead of this.
+
+---
+
+## 3. Hard forbidden scope for the next session
+
+Do not write:
+
+```text
+root-producing code
+state_root code
+receipt_root code
+hold_root code
+checkpoint_hash code
+validator code
+signature/quorum code
+fork choice code
+pruning code
+DA/challenge/archive runtime
+external anchor code
+bridge code
+ROX code
+Solana code
+staking/liquidity/exchange-facing code
+gateway ledger mutation
+omnigate ledger mutation
+rewarder direct ledger mutation
+CrabLink chain authority
+```
+
+Do not create fake vectors.
+
+Do not create placeholder hashes.
+
+Do not write code that hashes live ledger state.
+
+Do not introduce public settlement semantics.
+
+Do not create any code path that treats QuickChain as active runtime.
+
+---
+
+## 4. What is allowed next
+
+The next safe implementation slice is:
+
+```text
+ron-proto::quickchain DTO scaffolding only
+```
+
+Allowed scope:
+
+```text
+strict DTO shapes
+schema constants
+domain separator constants
+validation helpers
+serde deny_unknown_fields
+integer minor-unit string validation
+b3 lowercase validation
+event-class enum validation
+operation_id/idempotency_key/hold_id shape validation
+vector status enum
+test-vector metadata DTOs
+unit tests for rejection behavior
+```
+
+Still forbidden inside this DTO-only slice:
+
+```text
+no hashing function that produces real roots
+no state tree construction
+no receipt root
+no checkpoint root
+no ledger replay
+no service calls
+no sockets
+no async tasks
+no persistence
+no wallet mutation
+no ledger mutation
+no validator signatures
+no external anchors
+```
+
+This keeps us inside `ron-proto` and avoids scope creep.
+
+---
+
+## 5. Recommended next-session crate focus
+
+Work on only one crate first:
+
+```text
+crates/ron-proto
+```
+
+Only after `ron-proto` is clean should we consider a second crate.
+
+Possible second crate later:
+
+```text
+ron-ledger
+```
+
+But `ron-ledger` should not be touched until DTOs and locked byte vectors are stable enough to justify integration planning. For the next session, prefer `ron-proto` only.
+
+Reason:
+
+```text
+ron-proto = DTOs and validation
+ron-ledger = economic truth and future replay/root work
+```
+
+Starting in `ron-ledger` too early risks accidentally creating implementation authority before vectors are locked.
+
+---
+
+## 6. Recommended next-session goal
+
+The next session should aim for:
+
+```text
+QC-0B / DTO-only QuickChain preflight slice
+```
+
+Suggested outcome:
+
+```text
+crates/ron-proto/src/quickchain/ exists
+QuickChain DTOs compile
+validation helpers compile
+unknown fields reject
+invalid b3 rejects
+invalid money strings reject
+invalid event classes reject
+invalid operation_id/idempotency_key/hold_id shapes reject
+tests pass
+clippy passes
+no root/hash/checkpoint code exists
+```
+
+This is the safest next move after docs.
+
+---
+
+## 7. Suggested file plan for the next patch
+
+Possible files to create or update:
+
+```text
+crates/ron-proto/src/quickchain/mod.rs
+crates/ron-proto/src/quickchain/domain.rs
+crates/ron-proto/src/quickchain/ids.rs
+crates/ron-proto/src/quickchain/money.rs
+crates/ron-proto/src/quickchain/event_class.rs
+crates/ron-proto/src/quickchain/vector.rs
+crates/ron-proto/src/quickchain/operation.rs
+crates/ron-proto/src/quickchain/hold.rs
+crates/ron-proto/src/lib.rs
+```
+
+Possible tests:
+
+```text
+crates/ron-proto/tests/quickchain_domain.rs
+crates/ron-proto/tests/quickchain_ids.rs
+crates/ron-proto/tests/quickchain_money.rs
+crates/ron-proto/tests/quickchain_event_class.rs
+crates/ron-proto/tests/quickchain_vector_dto.rs
+crates/ron-proto/tests/quickchain_unknown_fields.rs
+```
+
+However, the next assistant should inspect the current `ron-proto` layout first. If some of these files already exist, update them instead of duplicating.
+
+---
+
+## 8. DTOs to prioritize first
+
+Prioritize small, low-risk DTOs and helpers first.
+
+### 8.1 Domain separator constants
+
+Required current domains:
+
+```text
+quickchain.receipt.v1
+quickchain.account-state.v1
+quickchain.hold-state.v1
+quickchain.receipt-root.v1
+quickchain.state-root.v1
+quickchain.accounting-root.v1
+quickchain.reward-root.v1
+quickchain.checkpoint.v1
+```
+
+Reserved supporting domains:
+
+```text
+quickchain.chain-params.v1
+quickchain.validator-set.v1
+quickchain.policy.v1
+quickchain.data-availability-root.v1
+quickchain.receipt-batch.v1
+quickchain.accounting-window.v1
+quickchain.reward-manifest.v1
+quickchain.challenge-evidence.v1
+quickchain.anchor-payload.v1
+```
+
+Important: constants only. No hashing implementation.
+
+### 8.2 Money validation
+
+Implement validation for integer minor-unit strings.
+
+Allowed examples:
+
+```text
+"0"
+"1"
+"1000000"
+```
+
+Rejected examples:
+
+```text
+""
+"01"
+"+1"
+"-1"
+"1.0"
+"1_000"
+"1 ROC"
+```
+
+Also reject numeric JSON values if represented in DTOs where strings are required.
+
+### 8.3 b3 validation
+
+Accept only:
+
+```text
+b3:<64 lowercase hex>
+```
+
+Reject:
+
+```text
+bare hash
+uppercase hex
+too short
+too long
+wrong prefix
+non-hex characters
+```
+
+Use existing `ContentId` helper if appropriate and already available in `ron-proto`.
+
+### 8.4 Event class enum
+
+Closed enum values:
+
+```text
+economic_receipt
+metering
+proof_eligible
+ad_budgeted
+analytics_only
+```
+
+Unknown values must reject.
+
+No ambiguous event class.
+
+### 8.5 Vector status enum
+
+Allowed statuses:
+
+```text
+sketch
+locked_bytes
+locked_hash
+```
+
+Rules:
+
+```text
+sketch:
+  human-readable only; cannot drive root/hash tests
+
+locked_bytes:
+  canonical_payload_utf8 and canonical_payload_hex required
+
+locked_hash:
+  preimage_hex and expected_b3 required
+```
+
+Do not compute expected hashes yet unless the session explicitly moves into locked vector generation and the bundle allows it. For now, validation only.
+
+### 8.6 Operation/idempotency/hold IDs
+
+Candidate shape from docs:
+
+```text
+operation_id: op_<32 lowercase hex>
+hold_id: hold_<32 lowercase hex>
+idempotency_key: visible ASCII, max 128 bytes, no secrets
+```
+
+Validation only.
+
+No authority.
+
+No persistence.
+
+No uniqueness DB.
+
+No replay engine.
+
+---
+
+## 9. Tests to require in the next session
+
+Run at minimum:
+
+```text
+cargo fmt -p ron-proto
+cargo test -p ron-proto --all-targets
+cargo clippy -p ron-proto --all-targets -- -D warnings
+```
+
+If workspace impact seems small:
+
+```text
+cargo check --workspace
+```
+
+But to stay efficient, start with `ron-proto` only.
+
+Expected test categories:
+
+```text
+unknown fields rejected
+invalid money rejected
+valid money accepted
+invalid b3 rejected
+valid b3 accepted
+unknown event class rejected
+valid event class roundtrips
+invalid operation_id rejected
+valid operation_id accepted
+invalid hold_id rejected
+valid hold_id accepted
+idempotency_key bounds enforced
+vector status validation works
+locked_bytes requires canonical payload fields
+locked_hash requires preimage_hex and expected_b3
+```
+
+---
+
+## 10. Important implementation style
+
+Use full paste-ready files or terminal scripts.
+
+Do not use:
+
+```text
+git apply
+unified diffs
+patch blocks requiring git patch mechanics
+```
+
+Preferred patch style:
+
+```text
+cat > path <<'EOF'
+...
+EOF
+```
+
+or full file replacements.
+
+Preserve RO headers.
+
+Use safe Rust.
+
+No unsafe.
+
+No secrets.
+
+No hidden authority.
+
+Keep functions small.
+
+Keep modules focused.
+
+---
+
+## 11. Suggested exact next-session prompt
+
+Use this prompt to start the next session:
+
+```text
+We are continuing QuickChain. Please read QUICKCHAIN_REVIEW_BUNDLE.MD first. It is the master QuickChain blueprint and contains QUICKCHAIN.MD + QUICKCHAIN_QC0A_COMBINED.MD. QC-0A-R1 docs are complete enough for preflight reference, but Phase 1 root-producing code is still forbidden.
+
+Goal for this session: implement the first DTO-only QuickChain slice in crates/ron-proto, touching only ron-proto if possible. No roots, no checkpoints, no validators, no pruning, no anchors, no live ledger hashing, no service calls, no sockets, no ledger mutation.
+
+Please inspect the attached focused ron-proto bundle and provide full paste-ready files or direct terminal scripts. Include tests. Required gates:
+cargo fmt -p ron-proto
+cargo test -p ron-proto --all-targets
+cargo clippy -p ron-proto --all-targets -- -D warnings
+```
+
+---
+
+## 12. Recommended first patch contents
+
+The first patch should probably include:
+
+```text
+1. quickchain module skeleton
+2. domain separator constants
+3. schema constants
+4. money string validator
+5. b3 validator or wrapper using existing ContentId
+6. event class enum
+7. vector status enum
+8. operation_id/hold_id/idempotency validators
+9. strict serde tests
+```
+
+Avoid implementing:
+
+```text
+AccountStateV1 root logic
+HoldStateV1 root logic
+Receipt hash logic
+State tree logic
+Checkpoint DTO with hash semantics
+Validator signatures
+External anchor payloads
+```
+
+A DTO struct is allowed only if it is clearly inert and not wired into any service as authority.
+
+---
+
+## 13. Suggested sequencing across sessions
+
+### Session 1 — DTO-only `ron-proto`
+
+Target:
+
+```text
+ron-proto::quickchain compiles
+strict validation helpers exist
+tests green
+```
+
+Crates touched:
+
+```text
+ron-proto only
+```
+
+### Session 2 — Locked byte vector planning
+
+Target:
+
+```text
+docs/quickchain/vectors/ sketch files or locked_bytes draft plan
+possibly ron-proto tests for canonical JSON bytes
+no locked_hash unless exact bytes are settled
+```
+
+Crates touched:
+
+```text
+ron-proto only
+docs/quickchain only
+```
+
+### Session 3 — Independent vector verifier planning
+
+Target:
+
+```text
+small verifier test harness design
+still no live ledger roots
+```
+
+Crates touched:
+
+```text
+ron-proto only
+possibly a tiny test helper under ron-proto/tests
+```
+
+### Session 4 — Only after vectors mature
+
+Target:
+
+```text
+discuss whether ron-ledger should receive inert export/replay interfaces
+```
+
+Crates touched:
+
+```text
+ron-ledger maybe
+ron-proto maybe
+```
+
+Do not touch `ron-ledger` until DTO tests and vector format are stable.
+
+---
+
+## 14. Things to watch carefully
+
+### 14.1 Do not accidentally create consensus fields
+
+Avoid fields that look authoritative but are not frozen.
+
+Examples to avoid too early:
+
+```text
+validator_signature
+checkpoint_height authority
+finalized flag
+anchor txid
+root hash outputs
+committee quorum fields
+```
+
+### 14.2 Do not allow unknown fields
+
+All root-adjacent DTOs should use:
+
+```rust
+#[serde(deny_unknown_fields)]
+```
+
+This is critical.
+
+### 14.3 Do not use floats
+
+All money must be strings.
+
+No `f64`.
+
+No decimal floats.
+
+No `serde_json::Number` for money.
+
+### 14.4 Do not use maps casually
+
+Root-producing future payloads should avoid unordered maps.
+
+If maps are needed, they must be converted into explicitly sorted arrays later.
+
+### 14.5 Do not create fake hashes
+
+Use examples only as examples, not golden values.
+
+If a test uses `b3:111...`, it must only validate shape, not claim cryptographic truth.
+
+No placeholder hash should be called a golden vector.
+
+### 14.6 Do not wire QuickChain into services
+
+No service should consume QuickChain DTOs as authority yet.
+
+No gateway/omnigate/wallet/ledger/accounting/rewarder mutation path should be added.
+
+---
+
+## 15. Current architecture reminders
+
+RustyOnions boundaries:
+
+```text
+ron-proto = DTOs
+ron-ledger = economic truth
+svc-wallet = mutation front-door
+ron-accounting = snapshots, not balance truth
+svc-rewarder = payout planning, not mutation
+svc-storage = bytes by b3
+svc-index = lookup/pointers
+svc-gateway = public route boundary
+omnigate = product hydration
+ron-policy = declarative policy
+```
+
+CrabLink boundary:
+
+```text
+CrabLink Tauri is a client.
+React owns display/user intent only.
+Tauri Rust mediates native privilege.
+CrabLink must not mutate ledger truth or invent balances/receipts.
+```
+
+QuickChain boundary:
+
+```text
+QuickChain is future settlement spine.
+QC-0A-R1 is preflight reference.
+DTO-only work is allowed.
+Root-producing work is blocked.
+```
+
+---
+
+## 16. Current mental model for QuickChain
+
+QuickChain is not “add blockchain now.”
+
+QuickChain is:
+
+```text
+future verifiable ROC settlement spine
+receipt-first
+epoch-settled
+state-root verified
+validator-executable later
+bot-aware
+proof-prunable only later
+external-anchorable only later
+```
+
+Its first practical job is not to launch a public chain.
+
+Its first practical job is to make ROC truth:
+
+```text
+strictly typed
+canonically encoded
+replayable
+vector-tested
+hard to fake
+hard to mutate outside wallet/ledger
+hard to confuse with raw engagement metrics
+```
+
+---
+
+## 17. Definition of success for the next session
+
+The next session is successful if:
+
+```text
+1. QUICKCHAIN_REVIEW_BUNDLE.MD was read first.
+2. Only ron-proto was touched unless absolutely necessary.
+3. QuickChain DTO-only scaffolding exists or is improved.
+4. Validation helpers are strict.
+5. Unknown fields reject.
+6. Money strings reject invalid forms.
+7. b3 values reject invalid forms.
+8. event_class rejects unknown values.
+9. operation_id/hold_id/idempotency_key shapes are checked.
+10. Tests are included.
+11. cargo fmt/test/clippy for ron-proto are green or errors are clearly documented.
+12. No roots/checkpoints/validators/pruning/anchors/settlement code was introduced.
+```
+
+---
+
+## 18. Things not to spend time on next session
+
+Do not spend the next session on:
+
+```text
+CrabLink UI
+Tauri readiness page
+external settlement
+Solana/ROX
+validator design
+Merkle implementation
+checkpoint implementation
+ledger integration
+rewarder integration
+carrier/archive reward logic
+pruning
+DA
+public bridge
+```
+
+Those are future.
+
+The efficient path is:
+
+```text
+1 crate: ron-proto
+1 mission: strict QuickChain DTO/preflight scaffolding
+1 outcome: tests green
+```
+
+---
+
+## 19. Final carryover summary
+
+We finished the QuickChain docs phase for now.
+
+The current master artifact is:
+
+```text
+QUICKCHAIN_REVIEW_BUNDLE.MD
+```
+
+It should be attached to every future QuickChain session.
+
+The next safe step is not blockchain implementation.
+
+The next safe step is:
+
+```text
+strict ron-proto::quickchain DTO scaffolding + validation tests
+```
+
+Keep the work small, boring, testable, and confined to `ron-proto`.
+
+No roots until vectors.
+
+No validators until roots.
+
+No pruning until proofs and DA/challenge/archive fallback.
+
+No external anchors until internal ROC is proven.
+
+No raw engagement payouts ever as protocol truth.
+
+That is how QuickChain stays serious.
+
+
+
+### END NOTE - JUNE 10 2026 - 13:20 CST
+
+
+
