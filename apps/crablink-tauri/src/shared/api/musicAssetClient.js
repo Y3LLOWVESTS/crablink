@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { callTauri } from '../../platform/tauriPlatform.js';
 
 /**
  * RO:WHAT — Music asset API client for explicit paid crab://music minting.
@@ -377,7 +377,7 @@ function normalizeMusicBlob(value, contentType = '') {
 async function uploadMusicWithTauriCommand({ blob, headers, idempotencyKey }) {
   const bodyBytes = Array.from(new Uint8Array(await blob.arrayBuffer()));
 
-  const response = await invoke('upload_music_asset_gateway', {
+  const response = await callTauri('upload_music_asset_gateway', {
     request: {
       headers,
       bodyBytes,

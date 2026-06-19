@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { callTauri } from './platform/tauriPlatform.js';
 
 const DEFAULT_CRAB_URL = "crab://home";
 
@@ -32,8 +32,8 @@ export default function App() {
     setError("");
     try {
       const [loadedSettings, loadedDiagnostics] = await Promise.all([
-        invoke("read_settings"),
-        invoke("app_diagnostics")
+        callTauri("read_settings"),
+        callTauri("app_diagnostics")
       ]);
       setSettings(loadedSettings);
       setDiagnostics(loadedDiagnostics);
@@ -48,7 +48,7 @@ export default function App() {
     setError("");
     setGatewayProbe(null);
     try {
-      setGatewayProbe(await invoke("health_check_gateway"));
+      setGatewayProbe(await callTauri("health_check_gateway"));
     } catch (err) {
       setError(String(err));
     } finally {
@@ -66,9 +66,9 @@ export default function App() {
         gateway_url: gatewayUrl,
         last_crab_url: crabUrl
       };
-      await invoke("write_settings", { settings: updated });
+      await callTauri("write_settings", { settings: updated });
       setSettings(updated);
-      setResolveProbe(await invoke("resolve_crab_url_gateway", { crabUrl }));
+      setResolveProbe(await callTauri("resolve_crab_url_gateway", { crabUrl }));
     } catch (err) {
       setError(String(err));
     } finally {
@@ -83,7 +83,7 @@ export default function App() {
     };
     setSettings(updated);
     try {
-      await invoke("write_settings", { settings: updated });
+      await callTauri("write_settings", { settings: updated });
     } catch (err) {
       setError(String(err));
     }

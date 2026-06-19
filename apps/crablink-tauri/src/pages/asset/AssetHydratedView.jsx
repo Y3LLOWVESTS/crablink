@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { callTauri } from '../../platform/tauriPlatform.js';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
@@ -2652,7 +2652,7 @@ async function fetchPaidImageBytes({ route, summary = {}, assetClient }) {
       throw new Error('No canonical /o/b3:<hash> image route was available for the Tauri byte bridge.');
     }
 
-    const response = await invoke('fetch_asset_bytes_gateway', {
+    const response = await callTauri('fetch_asset_bytes_gateway', {
       request: {
         route: objectRoute,
         accept: imageAcceptHeader(summary?.contentType),
@@ -3087,7 +3087,7 @@ async function fetchPaidVideoBytes({ route, summary = {}, assetClient }) {
       throw new Error('No canonical /o/b3:<hash> video route was available for the Tauri byte bridge.');
     }
 
-    const response = await invoke('fetch_asset_bytes_gateway', {
+    const response = await callTauri('fetch_asset_bytes_gateway', {
       request: {
         route: objectRoute,
         accept: videoAcceptHeader(summary?.contentType),

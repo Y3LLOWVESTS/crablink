@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { callTauri } from '../../platform/tauriPlatform.js';
 
 /**
  * RO:WHAT — Podcast asset API client for explicit paid crab://podcast minting.
@@ -457,7 +457,7 @@ function normalizePodcastBlob(value, contentType = '') {
 async function uploadPodcastWithTauriCommand({ blob, headers, idempotencyKey }) {
   const bodyBytes = Array.from(new Uint8Array(await blob.arrayBuffer()));
 
-  const response = await invoke('upload_podcast_asset_gateway', {
+  const response = await callTauri('upload_podcast_asset_gateway', {
     request: {
       headers,
       bodyBytes,

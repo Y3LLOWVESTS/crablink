@@ -22,5 +22,8 @@ if [[ ! -d node_modules ]]; then
   npm install
 fi
 
+npm run check:quickchain-boundary
+npm run check:quickchain-paid-cache-boundary
+npm run check:quickchain-readiness-boundary
 npm run build
 npm run check:rust:mac-media

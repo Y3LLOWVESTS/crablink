@@ -6015,3 +6015,1773 @@ That is how QuickChain stays serious.
 
 
 
+### BEGIN NOTE - JUNE 18 2026 - 19:20 CST
+
+Absolutely. Here are repo-ready notes you can drop into the CrabLink repo.
+
+The current codebundle confirms this was generated from `/Users/mymac/Desktop/crablink`, includes the Tauri app, Tauri Rust command bridge, Tauri docs, platform/core packages, and selected scripts, and shows the repo as dirty with **416 text files** in the bundle.  The underlying Tauri IDB boundary is also clear: CrabLink displays backend-derived truth, `svc-gateway` is the public route boundary, `svc-wallet` is the mutation front-door, and `ron-ledger` is durable truth. 
+
+Paste this into something like:
+
+```text
+docs/tauri/QUICKCHAIN_PHASE0_NOTES.md
+```
+
+or into your CrabLink repo notes file.
+
+# CrabLink Tauri QuickChain Phase-0 / QC-0A Notes
+
+RO:WHAT — Documents the CrabLink Tauri QuickChain Phase-0 / QC-0A client-boundary work, what changed, why it changed, what is now guarded, and what remains deferred.
+
+RO:WHY — CrabLink Tauri is the primary client/product surface for crab:// links, paid access, b3 assets, RON Passports, receipts, creator pages, and future facets. During QuickChain Phase-0, the client must become safer and more explicit without becoming chain authority, wallet authority, ledger authority, settlement authority, bridge authority, or paid-cache authority.
+
+RO:INTERACTS — CrabLink Tauri React app, Tauri Rust command bridge, TypeScript/JavaScript adapters, route registry, QuickChain readiness page, local catalog, recent receipt display cache, paid asset viewers, `svc-gateway`, `omnigate`, `svc-wallet`, `ron-ledger`, `svc-storage`, `svc-index`, `ron-accounting`, `svc-rewarder`.
+
+RO:INVARIANTS — CrabLink Tauri is display/user-intent only. Backend services own truth. `svc-wallet` remains the economic mutation front-door. `ron-ledger` remains durable balance truth. Receipt cache is display-only. Offline cache cannot unlock paid content alone. QuickChain remains future settlement/proof infrastructure, not active CrabLink runtime.
+
+RO:SECURITY — No roots, checkpoints, validators, settlement, bridge, ROX, Solana, staking, liquidity, external settlement, fake balances, fake receipts, silent spend, cache-backed paid unlock, direct ledger mutation, direct wallet mutation, raw spend authority in React/TypeScript, shell/eval/run/native escape hatches, or local cache becoming entitlement truth.
+
+RO:TEST — `scripts/dev-quickchain-tauri-park.sh`, `scripts/check-tauri.sh`, `npm run check`, `npm run check:quickchain-boundary`, `npm run check:quickchain-paid-cache-boundary`, `npm run check:quickchain-readiness-boundary`, `npm run build`, `npm run check:rust:mac-media`.
+
+---
+
+## 1. Summary
+
+This QuickChain Phase-0 / QC-0A CrabLink pass hardened the Tauri client boundary.
+
+The purpose was not to implement QuickChain runtime behavior.
+
+The purpose was to prove that CrabLink Tauri can safely participate in the future QuickChain/ROC value-plane as a client without becoming the value-plane itself.
+
+The work added automated checks and documentation around three major client risks:
+
+```text
+1. Tauri bridge / command authority drift.
+2. Paid receipt/cache/offline-cache authority drift.
+3. QuickChain readiness page becoming fake chain authority.
+```
+
+The result is that CrabLink Tauri can now show QuickChain readiness, paid receipt state, and local proof memory while preserving the correct authority split:
+
+```text
+React:
+  display, forms, route rendering, user intent
+
+TypeScript/JavaScript adapters:
+  typed calls, gateway requests, UI-safe DTO plumbing
+
+Tauri Rust:
+  native privilege boundary, bounded commands, media/file helpers
+
+svc-gateway:
+  public service boundary
+
+omnigate:
+  hydration/enforcement surface
+
+svc-wallet:
+  economic mutation front-door
+
+ron-ledger:
+  durable balance truth
+
+local receipt/cache/catalog:
+  display and convenience only
+```
+
+The client remains a client.
+
+---
+
+## 2. High-level status
+
+Current CrabLink Tauri QuickChain Phase-0 status:
+
+```text
+CrabLink Tauri QC-0A boundary automation: GREEN
+CrabLink Tauri paid/cache boundary: GREEN
+CrabLink Tauri readiness page boundary: GREEN
+CrabLink Tauri Vite build: GREEN
+CrabLink Tauri Rust macOS media check: GREEN
+CrabLink Tauri Phase-0 client-boundary slice: parkable
+Estimated CrabLink Tauri slice completion: ~94-97%
+Best estimate: ~96%
+```
+
+This percentage applies only to the CrabLink Tauri QC-0A client-boundary slice.
+
+It does not mean full QuickChain is 96%.
+
+Full QuickChain still needs later work in `ron-proto`, `ron-ledger`, service roots/proofs, checkpoint/root logic, validators/committee phases, DA/archive/challenge posture, pruning safety, and eventually external anchoring if explicitly approved later.
+
+---
+
+## 3. What changed
+
+### 3.1 Added `docs/tauri/QUICKCHAIN_CLIENT_BOUNDARY.md`
+
+This doc defines the top-level QuickChain client boundary for CrabLink Tauri.
+
+It records that:
+
+```text
+CrabLink Tauri is not QuickChain authority.
+Local receipt caches are display-only.
+Offline cache cannot unlock paid content alone.
+```
+
+The doc exists to prevent CrabLink from drifting into forbidden roles such as:
+
+```text
+QuickChain runtime
+root producer
+checkpoint producer
+validator
+settlement authority
+bridge authority
+ROX integration
+Solana integration
+staking
+liquidity
+external settlement
+wallet truth
+ledger truth
+receipt truth
+paid unlock authority
+```
+
+Why this matters:
+
+CrabLink needs to expose future QuickChain readiness and ROC receipt status to users, but the client must never become a root producer, validator, bridge, or economic authority. The backend value-plane remains authoritative.
+
+---
+
+### 3.2 Added `scripts/check-quickchain-client-boundary.mjs`
+
+This script scans the CrabLink Tauri source tree for boundary drift.
+
+It checks for:
+
+```text
+direct Tauri invoke usage outside known/allowed files
+forbidden Tauri command names
+shell/plugin-shell creep
+raw/native/shell/execute/eval/run-style authority naming
+QuickChain root/checkpoint/validator/settlement command names
+ROX/Solana/bridge/staking/liquidity command names
+ledger/wallet mutation command names
+suspicious localStorage/sessionStorage authority keys
+Rust command names that imply forbidden authority
+process spawning outside bounded media modules
+required QuickChain client-boundary doc phrases
+```
+
+The scanner is intentionally conservative.
+
+Its role is not to prove full correctness. Its role is to catch obvious authority creep before it becomes normal app structure.
+
+Important allowed posture:
+
+```text
+Tauri can still expose small, typed, allowlisted commands.
+Media modules may still use bounded FFmpeg/process helpers where already expected.
+Gateway-first adapters are allowed.
+Display-only readiness and receipt views are allowed.
+```
+
+Forbidden posture:
+
+```text
+Tauri command names that imply QuickChain authority.
+Raw shell/native/eval/execute/run escape hatches.
+Client-side wallet or ledger mutation.
+Client-side roots/checkpoints/validators.
+Bridge/ROX/Solana/staking/liquidity behavior.
+```
+
+---
+
+### 3.3 Added `docs/tauri/QUICKCHAIN_PAID_CACHE_BOUNDARY.md`
+
+This doc defines the paid-access, receipt-cache, and offline-cache boundary.
+
+It states the correct paid flow:
+
+```text
+prepare / quote
+→ explicit user confirmation
+→ backend wallet path
+→ backend receipt/access response
+→ backend storage/gateway/omnigate paid enforcement
+→ unlock/render
+→ display-only receipt cache
+→ balance refresh from backend
+```
+
+It explicitly forbids local/cache-only unlock logic such as:
+
+```text
+local UI says paid=true
+local cache says paid=true
+receipt-shaped JSON exists in localStorage
+recent receipt cache contains an item
+offline cache has bytes
+manifest says paid=true
+index pointer exists
+policy allow decision exists
+therefore unlock paid content
+```
+
+Key invariant:
+
+```text
+Receipt display cache is display-only.
+Cached receipt cannot unlock paid content.
+Offline cache cannot create receipt, balance, or entitlement truth.
+```
+
+Why this matters:
+
+CrabLink has local receipt panels, local catalog display, offline/public cache concepts, asset viewers, and paid content flows. These are useful UX features, but they must never become wallet truth, receipt truth, entitlement truth, or paid access truth.
+
+---
+
+### 3.4 Added `scripts/check-quickchain-paid-cache-boundary.mjs`
+
+This script scans the Tauri app source for paid/cache authority drift.
+
+It checks for:
+
+```text
+cache-only paid unlock naming
+receipt-cache entitlement naming
+local/session storage keys that look like paid/wallet/ledger/access truth
+balance-from-cache naming
+receipt-from-cache fabrication naming
+allow_paid_unlock_from_cache=true style flags
+paid offline entitlement shortcuts
+fakeReceipt / fakeBalance style helpers
+cache/localStorage/sessionStorage authorizing paid access
+receipt cache becoming finality/wallet/ledger/balance/entitlement truth
+offline/cache paths spending, publishing, mutating wallet/ledger/index, creating receipts, or setting balances
+```
+
+It also requires the receipt cache file to retain display-only language.
+
+The intended allowed state is:
+
+```text
+recentReceipts can display recent backend-returned receipts.
+localCatalog can show local proof memory.
+offline cache can help render verified public/cached objects.
+```
+
+The forbidden state is:
+
+```text
+recentReceipts cannot unlock paid content.
+localCatalog cannot create entitlement.
+offline cache cannot spend.
+offline cache cannot publish.
+offline cache cannot mutate wallet.
+offline cache cannot mutate ledger.
+offline cache cannot mutate index.
+offline cache cannot create receipt.
+offline cache cannot set balance.
+```
+
+Why this matters:
+
+This preserves the core ROC rule:
+
+```text
+backend receipt/access response unlocks paid content,
+not local cache shape.
+```
+
+---
+
+### 3.5 Added `docs/tauri/QUICKCHAIN_READINESS_BOUNDARY.md`
+
+This doc defines the boundary for the `crab://quickchain` readiness dashboard.
+
+It records that the readiness page is allowed to show:
+
+```text
+local proof memory
+local receipt counts
+backend-derived receipt summaries
+missing prerequisite gates
+locked/future milestones
+manual test commands
+truth-boundary notes
+developer JSON previews
+```
+
+But the page must remain display-only.
+
+It must not:
+
+```text
+produce QuickChain roots
+produce checkpoint hashes
+produce state roots
+produce receipt roots
+produce accounting roots
+produce reward roots
+claim finality
+claim settlement
+claim validator status
+mutate wallets
+mutate ledgers
+unlock paid content
+authorize spend
+derive balances
+fabricate receipts
+fabricate replay proof
+fabricate accounting proof
+fabricate reward proof
+```
+
+Allowed local sources for display:
+
+```text
+readLocalCatalog
+subscribeLocalCatalog
+readRecentReceipts
+subscribeRecentReceipts
+```
+
+These sources are display memory only.
+
+They are not proof of:
+
+```text
+wallet truth
+ledger truth
+balance truth
+entitlement truth
+finality
+settlement
+```
+
+Why this matters:
+
+The QuickChain readiness page is useful because it makes progress and missing gates visible. However, readiness UX can easily become misleading if it starts showing fake proofs, fake roots, fake finality, or fake economic status. This doc locks the page as a display dashboard only.
+
+---
+
+### 3.6 Added `scripts/check-quickchain-readiness-boundary.mjs`
+
+This script scans the QuickChain readiness page and its supporting doc/CSS expectations.
+
+It checks that the readiness page retains key phrases and allowed posture:
+
+```text
+CrabLink QuickChain readiness dashboard
+display-only
+no chain logic
+no ROX/Solana
+no wallet mutation
+no fake replay/accounting/reward proofs
+readLocalCatalog
+subscribeLocalCatalog
+readRecentReceipts
+subscribeRecentReceipts
+```
+
+It blocks:
+
+```text
+direct Tauri invoke from readiness page
+callTauri calls from readiness page
+localStorage/sessionStorage writes from readiness page
+paid/wallet execution client imports
+root/checkpoint producer naming
+validator/bridge/ROX/Solana/staking/liquidity client naming
+mutateWallet / mutateLedger / authorizeSpend helpers
+unlockPaidFromCache helpers
+deriveBalanceFromCache helpers
+fabricateReceipt / fakeReceipt / fakeBalance helpers
+local truth/finality/entitlement authority claims
+```
+
+Why this matters:
+
+The readiness page should help the developer and user understand QuickChain progress, not become a fake chain console.
+
+---
+
+### 3.7 Updated `apps/crablink-tauri/package.json`
+
+The Tauri app `check` script was expanded to include the QuickChain boundary gates before build and Rust check.
+
+The intended check chain is:
+
+```text
+npm run check:quickchain-boundary
+npm run check:quickchain-paid-cache-boundary
+npm run check:quickchain-readiness-boundary
+npm run build
+npm run check:rust:mac-media
+```
+
+New/expected scripts:
+
+```text
+check:quickchain-boundary
+check:quickchain-paid-cache-boundary
+check:quickchain-readiness-boundary
+check:rust:mac-media
+park:quickchain
+```
+
+Why this matters:
+
+QuickChain client-boundary regressions now fail before the app build is considered green.
+
+This makes the safety doctrine executable.
+
+---
+
+### 3.8 Updated `scripts/check-tauri.sh`
+
+The root Tauri check script was updated so the standard Tauri verification path runs:
+
+```text
+npm run check:quickchain-boundary
+npm run check:quickchain-paid-cache-boundary
+npm run check:quickchain-readiness-boundary
+npm run build
+npm run check:rust:mac-media
+```
+
+Why this matters:
+
+Developers do not need to remember each individual QuickChain scanner. The normal Tauri check path now includes the relevant client-boundary gates.
+
+---
+
+### 3.9 Added `docs/tauri/QUICKCHAIN_PHASE0_STATUS.md`
+
+This doc records final CrabLink Tauri QC-0A status.
+
+It states that the slice is parkable when:
+
+```text
+scripts/dev-quickchain-tauri-park.sh
+```
+
+passes.
+
+It records the current status estimate:
+
+```text
+CrabLink Tauri QuickChain Phase-0 client boundary: 94-97%
+Best current estimate: 96%
+```
+
+It also documents that this estimate applies only to the CrabLink Tauri slice, not full QuickChain.
+
+The doc explicitly says full QuickChain remains future work because these are not implemented here:
+
+```text
+canonical roots
+locked vectors
+state proofs
+validators
+DA/archive/challenge
+pruning
+public anchors
+external settlement
+```
+
+Why this matters:
+
+This prevents future readers from mistaking “CrabLink client boundary is parked” for “QuickChain is implemented.”
+
+---
+
+### 3.10 Added `scripts/dev-quickchain-tauri-park.sh`
+
+This is the final parking gate for the CrabLink Tauri QC-0A slice.
+
+It verifies:
+
+```text
+required docs exist
+required scanners exist
+check-tauri.sh exists
+package.json exists
+required boundary phrases exist
+check-tauri wiring includes QuickChain gates
+package script wiring includes QuickChain gates
+shell scripts pass bash -n
+Node scanner scripts pass node --check
+QuickChain client-boundary scanner passes
+QuickChain paid/cache scanner passes
+QuickChain readiness scanner passes
+Vite production build passes
+Tauri Rust macOS media check passes
+final anti-scope sanity checks pass
+```
+
+Expected final marker:
+
+```text
+== CrabLink Tauri QuickChain Phase-0 parking gate passed ==
+```
+
+Why this matters:
+
+It provides one command that proves the CrabLink Tauri QuickChain Phase-0 client-boundary slice is safe to leave parked.
+
+---
+
+## 4. Terminal proof from this session
+
+The following checks were run and passed from the CrabLink repo:
+
+```text
+node scripts/check-quickchain-readiness-boundary.mjs
+scripts/check-tauri.sh
+```
+
+Observed successful output included:
+
+```text
+QuickChain readiness boundary check passed.
+
+QuickChain client-boundary check passed.
+Scanned 318 CrabLink Tauri source files.
+
+QuickChain paid/cache boundary check passed.
+Scanned 318 CrabLink Tauri source files.
+
+QuickChain readiness boundary check passed.
+
+vite build passed.
+313 modules transformed.
+
+cargo check --manifest-path src-tauri/Cargo.toml passed.
+Finished dev profile.
+```
+
+This proves the current boundary scanners, frontend build, and Tauri Rust check are green.
+
+---
+
+## 5. What is now protected
+
+### 5.1 Tauri command bridge drift
+
+Protected against:
+
+```text
+raw invoke sprawl
+forbidden Tauri command names
+shell/eval/run/native command creep
+QuickChain command authority names
+ledger/wallet mutation command names
+bridge/ROX/Solana/staking/liquidity names
+```
+
+Allowed:
+
+```text
+small typed commands
+gateway-first calls
+bounded media commands
+diagnostics/status/health
+display-only readiness paths
+```
+
+---
+
+### 5.2 Paid/cache drift
+
+Protected against:
+
+```text
+cache-only paid unlock
+cached receipt entitlement
+localStorage paid truth
+sessionStorage paid truth
+fake receipts
+fake balances
+cache-created receipts
+cache-derived balance
+offline paid entitlement shortcuts
+```
+
+Allowed:
+
+```text
+display-only recent receipts
+display-only local catalog
+verified public offline cache
+backend-derived receipt display
+explicit paid action UX
+```
+
+---
+
+### 5.3 QuickChain readiness drift
+
+Protected against:
+
+```text
+readiness page producing roots
+readiness page producing checkpoints
+readiness page claiming settlement
+readiness page claiming validator status
+readiness page mutating wallet/ledger
+readiness page faking replay/accounting/reward proofs
+readiness page direct Tauri invoke
+readiness page paid/wallet execution client imports
+```
+
+Allowed:
+
+```text
+readiness dashboard
+missing gate display
+locked future milestone display
+local proof memory display
+backend receipt summary display
+developer JSON preview
+manual test command display
+```
+
+---
+
+### 5.4 Build/check path drift
+
+Protected by:
+
+```text
+npm run check
+scripts/check-tauri.sh
+scripts/dev-quickchain-tauri-park.sh
+```
+
+These now ensure boundary checks are not optional side tasks.
+
+---
+
+## 6. What did not change
+
+No QuickChain runtime was added.
+
+No root-producing code was added.
+
+No checkpoint-producing code was added.
+
+No validator code was added.
+
+No bridge code was added.
+
+No ROX code was added.
+
+No Solana code was added.
+
+No staking code was added.
+
+No liquidity code was added.
+
+No external settlement code was added.
+
+No wallet mutation was moved into CrabLink.
+
+No ledger mutation was moved into CrabLink.
+
+No paid content unlock was moved into local cache.
+
+No receipt cache was promoted into entitlement truth.
+
+No local catalog was promoted into ownership truth.
+
+No offline cache was promoted into paid access truth.
+
+No client-side fake balance or fake receipt path was added.
+
+This was intentionally a guardrail and documentation pass, not a feature-expansion pass.
+
+---
+
+## 7. Why this was the correct CrabLink work for QuickChain Phase-0
+
+CrabLink Tauri is the user-facing client. That makes it high-risk for accidental authority creep.
+
+Without this pass, future development could accidentally blur the boundaries:
+
+```text
+readiness UI could start looking like chain finality
+receipt cache could start acting like entitlement
+offline cache could start acting like paid unlock
+Tauri commands could grow raw native authority
+React state could drift into wallet/balance truth
+```
+
+The goal of this pass was to prevent those mistakes before later QuickChain phases add more formal roots/proofs.
+
+This follows the doctrine:
+
+```text
+backend owns truth
+CrabLink displays truth
+Tauri mediates native privilege
+QuickChain is future settlement/proof infrastructure
+ROC remains internal first
+no external settlement creep
+```
+
+---
+
+## 8. Updated operational commands
+
+### Standard CrabLink Tauri check
+
+```bash
+scripts/check-tauri.sh
+```
+
+This should run the QuickChain boundary checks, Vite build, and Tauri Rust check.
+
+### Individual QuickChain boundary checks
+
+```bash
+node scripts/check-quickchain-client-boundary.mjs
+node scripts/check-quickchain-paid-cache-boundary.mjs
+node scripts/check-quickchain-readiness-boundary.mjs
+```
+
+### App package check
+
+```bash
+cd apps/crablink-tauri
+npm run check
+```
+
+### Final parking gate
+
+```bash
+scripts/dev-quickchain-tauri-park.sh
+```
+
+### Regenerate codebundle
+
+```bash
+scripts/make_codebundle.sh
+```
+
+---
+
+## 9. Current completion estimate
+
+For this CrabLink Tauri slice:
+
+```text
+CrabLink Tauri QC-0A client-boundary work: ~94-97%
+Best estimate: 96%
+```
+
+Reason:
+
+```text
+core boundary docs added
+core boundary scanners added
+package check flow wired
+check-tauri wired
+readiness page guarded
+paid/cache boundary guarded
+client command boundary guarded
+Vite build green
+Tauri Rust check green
+parking gate added
+```
+
+Remaining small items:
+
+```text
+run final parking gate after latest patch
+regenerate codebundle after parking gate
+drop these notes into repo
+carry forward notes for next QuickChain phase
+```
+
+---
+
+## 10. Relationship to full QuickChain completion
+
+This CrabLink pass moves the overall QuickChain project forward because it locks the client boundary.
+
+However, it does not complete full QuickChain.
+
+After the next full crate-pair phase, estimated status would be:
+
+```text
+QC-1A Prep phase: 100%
+internal ROC / QuickChain functional beta path: ~75-82%
+full QuickChain project: ~55-65%
+best full QuickChain estimate after next phase: ~60%
+```
+
+The next crate-pair phase should focus on backend determinism and service-boundary preservation, not client authority.
+
+---
+
+## 11. Next crate-pair order after CrabLink parks
+
+Recommended next-phase order:
+
+```text
+0. ron-proto + ron-ledger
+1. svc-wallet + ron-accounting
+2. svc-rewarder + svc-storage
+3. svc-gateway + omnigate
+4. svc-index + ron-policy
+5. CrabLink Tauri + client adapters
+```
+
+CrabLink Tauri should move to the end of the next phase as a final smoke/client-boundary verification target.
+
+It should not be the first coding target again unless a regression is found.
+
+---
+
+## 12. Next technical focus
+
+The next phase should be called:
+
+```text
+QC-1A Prep: Canonical Inputs + Ledger Replay + Service Boundary Preservation
+```
+
+It should not be called:
+
+```text
+Phase 1 chain runtime
+validator phase
+settlement phase
+bridge phase
+```
+
+The next safe backend focus is:
+
+```text
+ron-proto:
+  canonical DTO hardening
+  unknown-field rejection
+  b3 lowercase validation
+  integer minor-unit validation
+  operation/event-class DTO checks
+
+ron-ledger:
+  deterministic replay hardening
+  account sequence invariants
+  idempotency invariants
+  hold lifecycle invariants
+  snapshot input preparation
+```
+
+Still forbidden:
+
+```text
+fake roots
+placeholder hashes
+validators
+settlement
+bridge
+external anchors
+ROX
+Solana
+staking
+liquidity
+```
+
+---
+
+## 13. Important future regression checklist
+
+Before approving future CrabLink Tauri work, verify:
+
+```text
+[ ] Does npm run check pass?
+[ ] Does scripts/check-tauri.sh pass?
+[ ] Does scripts/dev-quickchain-tauri-park.sh pass?
+[ ] Does the app still call gateway-first paths?
+[ ] Does React avoid wallet/ledger truth?
+[ ] Does Tauri avoid hidden service logic?
+[ ] Are receipts display-only unless backend-derived?
+[ ] Can cached receipts unlock paid content? Must be no.
+[ ] Can offline cache unlock paid content alone? Must be no.
+[ ] Can localCatalog become ownership truth? Must be no.
+[ ] Can recentReceipts become entitlement truth? Must be no.
+[ ] Are there new direct invoke call sites? If yes, are they intentionally allowlisted?
+[ ] Are there shell/eval/run/native/raw command names? Must be no.
+[ ] Are there QuickChain root/checkpoint/validator command names? Must be no.
+[ ] Are there ROX/Solana/bridge/staking/liquidity references in active runtime? Must be no.
+[ ] Does crab://quickchain remain display-only?
+[ ] Does the app avoid fake balances and fake receipts?
+[ ] Does paid access still require backend receipt/access response?
+```
+
+---
+
+## 14. Explicit anti-scope retained
+
+CrabLink Tauri must not implement any of the following in this phase:
+
+```text
+QuickChain runtime
+root producer
+checkpoint producer
+validator
+committee node
+settlement authority
+bridge authority
+external anchor authority
+ROX runtime
+Solana runtime
+staking
+liquidity
+exchange-facing logic
+client-side wallet authority
+client-side ledger truth
+client-side receipt minting
+client-side balance truth
+client-side paid unlock from cache
+offline paid entitlement
+cache-backed paid access
+silent spend
+fake receipt
+fake balance
+```
+
+---
+
+## 15. Final plain-English summary
+
+This CrabLink Tauri QuickChain Phase-0 pass made the client safer.
+
+It did not make CrabLink into QuickChain.
+
+It made CrabLink prove that it knows it is only the client.
+
+The app can display readiness, receipts, local catalog state, and paid-access status, but it cannot create economic truth.
+
+The local cache can help display things, but it cannot unlock paid content.
+
+The receipt cache can help users review receipts, but it cannot authorize anything.
+
+The readiness page can show progress, but it cannot create roots, checkpoints, validators, settlement, or finality.
+
+The Tauri command bridge can run typed native commands, but it cannot become a shell/eval/raw/native authority surface.
+
+The backend remains the source of truth.
+
+This slice is now ready to park after `scripts/dev-quickchain-tauri-park.sh` passes.
+
+
+### END NOTE - JUNE 18 2026 - 19:20 CST
+
+
+
+### BEGIN NOTE - JUNE 19 2026 - 17:45 CST
+
+The green result matches the intended CrabLink Tauri QC-0A target: client-boundary hardening, not QuickChain runtime implementation. The prior carryover defined this pass as display-only, gateway-first, backend-truth-derived, typed, redacted, bounded, non-authoritative, non-mutating, non-settlement, non-validator, and non-bridge.  The Tauri IDB also says the app is the client, the services/wallet/ledger/gateway keep their separate authority, and the boundaries must not blur. 
+
+Here are the paste-ready CrabLink notes:
+
+### BEGIN NOTE - JUNE 19 2026 - CrabLink Tauri QuickChain QC-0A Client-Boundary Pass
+
+# CrabLink Tauri / QuickChain Phase-0 Notes
+
+## Session focus
+
+```text
+CrabLink Tauri + client adapters
+```
+
+## Phase
+
+```text
+QuickChain QC-0A / Phase-0 safety-preflight and boundary-hardening
+```
+
+## Status
+
+```text
+GREEN AND PARKED
+```
+
+The CrabLink Tauri QuickChain QC-0A client-boundary slice has passed the parking gate:
+
+```bash
+scripts/dev-quickchain-tauri-park.sh
+```
+
+Latest successful terminal output proved:
+
+```text
+QuickChain client-boundary check passed.
+QuickChain paid/cache boundary check passed.
+QuickChain readiness boundary check passed.
+Vite production build passed.
+Tauri Rust mac-media cargo check passed.
+== CrabLink Tauri QuickChain Phase-0 parking gate passed ==
+```
+
+This means the current CrabLink Tauri client-boundary slice is now parkable.
+
+---
+
+# 1. What this pass was supposed to prove
+
+This pass was not intended to add QuickChain runtime behavior.
+
+It was intended to prove that CrabLink Tauri remains:
+
+```text
+display-only
+gateway-first
+backend-truth-derived
+typed
+redacted
+bounded
+non-authoritative
+non-mutating
+non-settlement
+non-validator
+non-bridge
+```
+
+The pass specifically guarded against CrabLink Tauri becoming:
+
+```text
+wallet authority
+ledger authority
+receipt authority
+balance authority
+paid-unlock authority
+QuickChain root authority
+checkpoint authority
+validator authority
+settlement authority
+bridge authority
+staking/liquidity authority
+ROX/Solana/external-settlement authority
+```
+
+The correct boundary remains:
+
+```text
+React:
+  display and user intent only
+
+TypeScript/platform adapters:
+  typed calls, request shaping, command allowlist, error redaction, client orchestration
+
+Tauri Rust:
+  native privilege bridge, bounded command handlers, gateway calls, media/file/cache helpers
+
+RustyOnions backend:
+  paid truth, wallet truth, ledger truth, policy truth, storage/index truth, receipt truth
+```
+
+---
+
+# 2. Important files changed or hardened
+
+## 2.1 Central Tauri invoke adapter
+
+Added or hardened:
+
+```text
+apps/crablink-tauri/src/platform/tauriPlatform.js
+```
+
+Purpose:
+
+```text
+central typed Tauri invoke adapter
+```
+
+This file now owns the frontend-side Tauri command boundary:
+
+```text
+ALLOWED_TAURI_COMMANDS
+isAllowedTauriCommand()
+callTauri()
+normalizeCommandName()
+redactForDisplay()
+```
+
+Key protections:
+
+```text
+React/product code should call callTauri(), not raw invoke().
+Tauri command names are allowlisted.
+Forbidden command names are rejected.
+Errors are redacted before display.
+Command strings are normalized before use.
+```
+
+Forbidden command/name patterns include:
+
+```text
+raw_*
+run
+execute
+eval
+shell
+native
+quickchain_root
+quickchain_state
+quickchain_receipt
+quickchain_checkpoint
+quickchain_validator
+quickchain_settle
+quickchain_settlement
+checkpoint
+validator
+settle
+settlement
+bridge
+staking
+liquidity
+rox
+solana
+mint
+issue
+transfer
+burn
+hold
+capture
+release
+unlock_paid_from_cache
+```
+
+Important nuance:
+
+Some product flows may indirectly reach backend wallet/payment paths through approved gateway/backend APIs after explicit user confirmation. That is allowed.
+
+What is forbidden is client-side ownership of wallet, ledger, receipt, balance, paid unlock, root, checkpoint, validator, bridge, or settlement authority.
+
+---
+
+## 2.2 Raw invoke replacement
+
+Updated scattered frontend raw Tauri invoke use to route through:
+
+```text
+callTauri()
+```
+
+Affected areas included app/platform/shared API/media/product paths such as:
+
+```text
+apps/crablink-tauri/src/App.jsx
+apps/crablink-tauri/src/TauriScaffoldApp.jsx
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/pages/asset/AssetPaidAudioPlayer.jsx
+apps/crablink-tauri/src/shared/api/assetClient.js
+apps/crablink-tauri/src/shared/api/gatewayClient.js
+apps/crablink-tauri/src/pages/make/makeLinkedVideoPreviewFetch.js
+apps/crablink-tauri/src/shared/api/musicAssetClient.js
+apps/crablink-tauri/src/shared/api/podcastAssetClient.js
+apps/crablink-tauri/src/shared/api/videoAssetClient.js
+```
+
+The desired pattern is now:
+
+```text
+React component
+→ shared API / adapter function
+→ platform abstraction
+→ allowlisted Tauri command or gateway client
+→ backend-derived result
+→ display-only state
+```
+
+This prevents UI files from accumulating direct native privilege calls.
+
+---
+
+## 2.3 QuickChain readiness page label hardening
+
+Updated:
+
+```text
+apps/crablink-tauri/src/pages/quickchain/QuickchainReadinessPage.jsx
+```
+
+The readiness label was made explicit:
+
+```text
+QC-0A preflight readiness
+```
+
+Reason:
+
+A percentage/status shown in the QuickChain UI must be understood as project-readiness / preflight status, not live chain state.
+
+Acceptable meaning:
+
+```text
+boundary checks
+future Phase-1 readiness posture
+docs/client-preflight progress
+non-authority status
+```
+
+Forbidden implied meaning:
+
+```text
+chain live
+settled
+finalized
+validator online
+checkpoint produced
+root produced
+bridge active
+external anchor active
+balance finalized
+receipt finalized
+```
+
+---
+
+# 3. New or hardened scripts
+
+## 3.1 Client boundary scanner
+
+Added:
+
+```text
+scripts/check-quickchain-client-boundary.mjs
+```
+
+Purpose:
+
+```text
+Proves React/TS/Tauri command surfaces do not drift into QuickChain, wallet, ledger, settlement, or arbitrary native authority.
+```
+
+The scanner verifies:
+
+```text
+required QuickChain boundary docs exist
+frontend command allowlist exists
+registered Tauri commands match frontend allowlist
+forbidden command names are absent
+raw Tauri invoke imports are blocked outside the platform adapter
+window.__TAURI__.invoke-style raw access is blocked
+local/session storage does not store wallet secret / private key / seed phrase / spend authority / current balance / paid entitlement truth
+```
+
+This is a structural guardrail against the client becoming authority.
+
+---
+
+## 3.2 Paid/cache boundary scanner
+
+Added:
+
+```text
+scripts/check-quickchain-paid-cache-boundary.mjs
+```
+
+Purpose:
+
+```text
+Proves local receipt/cache helpers remain display-only and cannot unlock paid content by themselves.
+```
+
+The scanner verifies the intended paid path:
+
+```text
+quote / prepare
+→ explicit user confirmation
+→ backend wallet path
+→ backend receipt/access response
+→ backend paid enforcement
+→ unlock/render
+→ display-only receipt cache
+→ balance refresh from backend
+```
+
+It guards against forbidden shortcuts such as:
+
+```text
+local UI says paid=true
+local cache says paid=true
+receipt-shaped JSON exists in local storage
+recent receipt cache contains an item
+offline cache has bytes
+manifest says paid=true
+index pointer exists
+policy allow decision exists
+therefore unlock paid content
+```
+
+The important boundary is:
+
+```text
+receipt cache = display-only
+offline cache = convenience/rendering only
+backend wallet/ledger/gateway/omnigate = paid truth
+```
+
+---
+
+## 3.3 Readiness boundary scanner
+
+Added:
+
+```text
+scripts/check-quickchain-readiness-boundary.mjs
+```
+
+Purpose:
+
+```text
+Keeps crab://quickchain / QuickchainReadinessPage as display-only project readiness, not fake chain state.
+```
+
+The scanner verifies that the readiness page and docs stay explicit about:
+
+```text
+display-only status
+no chain logic
+no ROX/Solana
+no wallet mutation
+no fake replay/accounting/reward proofs
+QC-0A preflight readiness
+```
+
+It blocks readiness-page drift into:
+
+```text
+Tauri invoke
+gateway/wallet mutation helpers
+live chain/finality/validator/bridge claims
+fake chain height
+fake checkpoint/root/receipt/account-root status
+```
+
+---
+
+## 3.4 Parking gate
+
+Added:
+
+```text
+scripts/dev-quickchain-tauri-park.sh
+```
+
+Purpose:
+
+```text
+Single parking command for the CrabLink Tauri QuickChain QC-0A client-boundary pass.
+```
+
+The script delegates through:
+
+```text
+scripts/check-tauri.sh
+```
+
+The purpose is to avoid duplicate exhaustive runs.
+
+Important workflow rule:
+
+```text
+Do not run the individual QuickChain checks and then also run the park script unless files changed between runs.
+```
+
+The park script already runs the delegated check path.
+
+---
+
+# 4. Existing package/check path now proven
+
+The Tauri app package scripts proved:
+
+```text
+npm run check:quickchain-boundary
+npm run check:quickchain-paid-cache-boundary
+npm run check:quickchain-readiness-boundary
+npm run build
+npm run check:rust:mac-media
+```
+
+The top-level parking command proved:
+
+```text
+scripts/dev-quickchain-tauri-park.sh
+```
+
+The final green marker was:
+
+```text
+== CrabLink Tauri QuickChain Phase-0 parking gate passed ==
+```
+
+---
+
+# 5. What is now protected
+
+## 5.1 React boundary
+
+React remains:
+
+```text
+display
+route rendering
+user intent collection
+confirmation UI
+backend-derived status display
+backend-derived receipt display
+backend-derived balance display
+```
+
+React must not become:
+
+```text
+wallet truth
+ledger truth
+balance truth
+receipt truth
+paid entitlement truth
+QuickChain runtime truth
+root/checkpoint/validator/finality truth
+native command authority
+```
+
+## 5.2 TypeScript/platform adapter boundary
+
+TypeScript/platform adapters remain:
+
+```text
+typed request wrappers
+gateway/client orchestration
+display-safe normalization
+redacted error handling
+Tauri command allowlist enforcement
+```
+
+They must not become:
+
+```text
+secret storage
+private key storage
+spend authority
+receipt fabricators
+balance fabricators
+paid unlock fabricators
+QuickChain state machines
+root/checkpoint producers
+validator or bridge logic
+```
+
+## 5.3 Tauri Rust bridge boundary
+
+Tauri Rust commands remain:
+
+```text
+small
+typed
+allowlisted
+bounded
+redacted
+source-labeled
+policy-aware
+feature-gated
+testable
+```
+
+They must not become:
+
+```text
+arbitrary shell/native executor
+wallet mutation authority
+ledger mutation authority
+QuickChain root/checkpoint/validator authority
+settlement/bridge/staking/liquidity authority
+cache-only paid unlock authority
+```
+
+## 5.4 Paid/cache boundary
+
+Receipt display cache remains:
+
+```text
+display-only
+backend-derived
+review/history convenience
+not entitlement
+not balance truth
+not receipt truth
+not ledger truth
+not wallet truth
+not finality
+```
+
+Offline cache remains:
+
+```text
+verified rendering convenience
+b3 integrity helper
+not paid access truth
+not receipt truth
+not balance truth
+not wallet/ledger mutation authority
+not live name truth
+```
+
+## 5.5 QuickChain readiness UI boundary
+
+QuickChain UI remains:
+
+```text
+docs/status/readiness display
+QC-0A preflight status
+future-facing labels
+non-runtime boundary explanation
+```
+
+It does not claim:
+
+```text
+live chain
+settlement
+finality
+validators
+checkpoints
+roots
+bridge
+ROX
+Solana
+external anchor
+paid access
+wallet balance truth
+receipt truth
+```
+
+---
+
+# 6. What this pass does not prove
+
+This pass does not prove or implement:
+
+```text
+QuickChain runtime
+canonical root production
+account state roots
+receipt roots
+hold roots
+epoch roots
+checkpoint production
+validator execution
+committee replication
+distributed consensus
+challenge windows
+DA/archive fallback
+pruning safety
+carrier/archive network
+external anchors
+public bridge
+ROX
+Solana
+staking
+liquidity
+external settlement
+offline paid entitlement
+cache-backed paid access
+client-side wallet authority
+client-side ledger authority
+```
+
+All of the above remain forbidden for CrabLink Tauri in this phase.
+
+---
+
+# 7. Current completion estimate
+
+For the narrow CrabLink Tauri QuickChain QC-0A client-boundary slice:
+
+```text
+CrabLink Tauri QuickChain Phase-0 client boundary: approximately 96-98%
+```
+
+This is not a full QuickChain completion estimate.
+
+Full QuickChain remains future work because the following remain deferred:
+
+```text
+locked vectors
+canonical bytes
+canonical hashes
+root engines
+receipt/state/hold/epoch roots
+proof formats
+validator-executable deterministic state machine
+committee replication
+DA/archive/challenge
+pruning
+anchors
+public bridge
+external settlement
+```
+
+This slice is green because it proves the client does not become that machinery.
+
+---
+
+# 8. Remaining CrabLink Tauri QuickChain follow-ups
+
+The current pass is parkable, but future hardening could add:
+
+```text
+Tauri Rust-side command registration boundary tests
+src-tauri/capabilities/default.json scanner
+Rust command error redaction unit tests
+gateway-first adapter tests
+local/offline b3 verification non-unlock tests
+receipt display cache shape tests
+dev/prod localhost-mode distinction tests
+route registry QuickChain non-authority tests
+docs check for QuickChain anti-scope drift
+```
+
+Do not add runtime chain behavior.
+
+Do not add root/checkpoint/validator/settlement code.
+
+Do not add ROX/Solana/external settlement.
+
+---
+
+# 9. Low-disk workflow note
+
+The user is low on disk.
+
+Avoid duplicate exhaustive runs.
+
+Preferred workflow for CrabLink Tauri QuickChain after this point:
+
+```text
+focused edit
+→ focused scanner if needed
+→ scripts/dev-quickchain-tauri-park.sh once
+→ regenerate CODEBUNDLE_TAURI_APP.md only after green
+```
+
+Do not run:
+
+```text
+individual scanner checks
++ scripts/check-tauri.sh
++ scripts/dev-quickchain-tauri-park.sh
+```
+
+unless there was a file change between them.
+
+The park script already delegates through the full check path.
+
+---
+
+# 10. Recommended command after notes
+
+After adding these notes, regenerate the CrabLink Tauri codebundle only if the repo notes/code changed and a fresh bundle is needed for the next session:
+
+```bash
+scripts/make_codebundle.sh
+```
+
+If no code changed after the green parking gate, do not rerun the full parking gate just to create notes.
+
+---
+
+# 11. Next target recommendation
+
+Since the CrabLink Tauri QC-0A client-boundary pass is green and parked, the next QuickChain work should move to one of the following:
+
+```text
+Option A:
+  Write carryover notes for the next session and close this pass.
+
+Option B:
+  Begin the next QuickChain phase planning pass:
+    - consolidate phase status
+    - identify remaining QC-0A gaps
+    - prepare transition criteria toward locked vectors / canonical bytes work
+    - keep CrabLink client non-authoritative
+
+Option C:
+  Do one small additional CrabLink Tauri hardening patch:
+    - Rust command/capabilities scanner
+    - route registry scanner
+    - gateway-first adapter scanner
+```
+
+Recommended next step:
+
+```text
+Write comprehensive carryover notes next.
+```
+
+Reason:
+
+```text
+The current slice is already green and parked.
+More code now risks widening scope.
+The next session needs a clean handoff that preserves the client non-authority boundary.
+```
+
+---
+
+# 12. Final session verdict
+
+CrabLink Tauri now has a green QC-0A client-boundary safety gate.
+
+This is a strong result because it closes the major product-layer risk after the backend crate-pair passes:
+
+```text
+backend owns truth
+wallet/ledger own economic mutation
+gateway/omnigate/storage/index/policy do not invent paid truth
+CrabLink Tauri displays/requests/refreshes backend-derived truth only
+QuickChain remains future settlement infrastructure
+no client chain authority exists
+```
+
+CrabLink Tauri must continue to obey:
+
+```text
+no fake balances
+no fake receipts
+no fake finality
+no silent spend
+no cache-only paid unlock
+no client wallet authority
+no client ledger authority
+no root production
+no checkpoint production
+no validators
+no bridge
+no ROX
+no Solana
+no staking
+no liquidity
+no external settlement
+```
+
+### END NOTE - JUNE 19 2026 - CrabLink Tauri QuickChain QC-0A Client-Boundary Pass
+
+This is ready to append to the CrabLink notes.
+
+
+### END NOTE - JUNE 19 2026 - 17:45 CST

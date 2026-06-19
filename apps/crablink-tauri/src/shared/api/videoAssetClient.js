@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { callTauri } from '../../platform/tauriPlatform.js';
 
 /**
  * RO:WHAT — Video asset API client for explicit paid crab://video minting.
@@ -520,7 +520,7 @@ function normalizeVideoBlob(value, contentType = '') {
 }
 
 async function hashStagedWithTauriCommand({ stagedHandle, assetKind, contentType, role, maxBytes }) {
-  const response = await invoke('hash_staged_asset_bytes', {
+  const response = await callTauri('hash_staged_asset_bytes', {
     request: {
       stagedHandle,
       expectedAssetKind: assetKind,
@@ -553,7 +553,7 @@ async function hashStagedWithTauriCommand({ stagedHandle, assetKind, contentType
 async function uploadVideoWithTauriCommand({ blob, headers, idempotencyKey }) {
   const bodyBytes = Array.from(new Uint8Array(await blob.arrayBuffer()));
 
-  const response = await invoke('upload_video_asset_gateway', {
+  const response = await callTauri('upload_video_asset_gateway', {
     request: {
       headers,
       bodyBytes,
@@ -569,7 +569,7 @@ async function uploadStagedWithTauriCommand({ stagedHandle, assetKind, contentTy
     ? 'upload_staged_image_asset_gateway'
     : 'upload_staged_video_asset_gateway';
 
-  const response = await invoke(command, {
+  const response = await callTauri(command, {
     request: {
       headers,
       stagedHandle,

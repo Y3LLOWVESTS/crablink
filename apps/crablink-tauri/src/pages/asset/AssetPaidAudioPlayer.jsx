@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { callTauri } from '../../platform/tauriPlatform.js';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
 import TruthBoundary from '../../shared/components/TruthBoundary.jsx';
@@ -316,7 +316,7 @@ export default function AssetPaidAudioPlayer({
 
 async function fetchPaidAudioBytes({ route, summary, assetClient, audioKindName }) {
   if (canUseTauriInvoke()) {
-    const response = await invoke('fetch_asset_bytes_gateway', {
+    const response = await callTauri('fetch_asset_bytes_gateway', {
       request: {
         route,
         accept: audioAcceptHeader(summary?.contentType, summary?.kind),

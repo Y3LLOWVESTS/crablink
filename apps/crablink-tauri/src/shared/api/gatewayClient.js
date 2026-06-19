@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { callTauri } from '../../platform/tauriPlatform.js';
 
 /**
  * RO:WHAT — Gateway-only client for the React CrabLink route shell inside Tauri.
@@ -47,7 +47,7 @@ export class GatewayClient {
   async getHealth() {
     if (canUseTauriInvoke()) {
       try {
-        const data = await invoke('health_check_gateway');
+        const data = await callTauri('health_check_gateway');
 
         return wrapCommandResponse({
           route: '/healthz',
@@ -72,7 +72,7 @@ export class GatewayClient {
   async getReady() {
     if (canUseTauriInvoke()) {
       try {
-        const data = await invoke('ready_check_gateway');
+        const data = await callTauri('ready_check_gateway');
 
         return wrapCommandResponse({
           route: '/readyz',
@@ -97,7 +97,7 @@ export class GatewayClient {
   async getIdentityMe() {
     if (canUseTauriInvoke()) {
       try {
-        const data = await invoke('identity_me_gateway', {
+        const data = await callTauri('identity_me_gateway', {
           passportSubject: this.passportSubject,
           walletAccount: this.walletAccount,
         });
@@ -136,7 +136,7 @@ export class GatewayClient {
 
     if (canUseTauriInvoke()) {
       try {
-        const data = await invoke('wallet_balance_gateway', {
+        const data = await callTauri('wallet_balance_gateway', {
           account: walletAccount,
         });
 
@@ -276,7 +276,7 @@ export class GatewayClient {
     const commandBody = toGatewayCommandBody(options.body);
 
     try {
-      const response = await invoke('gateway_request', {
+      const response = await callTauri('gateway_request', {
         request: {
           method: options.method || 'GET',
           path: route,

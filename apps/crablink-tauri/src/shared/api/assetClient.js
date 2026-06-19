@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { callTauri } from '../../platform/tauriPlatform.js';
 
 /**
  * RO:WHAT — Asset API client for React CrabLink typed b3/crab asset views and explicit image publishing.
@@ -28,7 +28,7 @@ export async function hashImageAssetBytes({ file, blob, bytes, contentType = '',
   const imageBlob = normalizeImageBlob(file || blob || bytes, contentType || file?.type || blob?.type || 'image/png');
   const bodyBytes = await blobToBodyBytes(imageBlob);
 
-  const response = await invoke('hash_image_asset_bytes', {
+  const response = await callTauri('hash_image_asset_bytes', {
     request: {
       bodyBytes,
       contentType: contentType || imageBlob.type || 'image/png',
@@ -839,7 +839,7 @@ async function blobToBodyBytes(blob) {
 async function uploadImageWithTauriCommand({ blob, headers, idempotencyKey }) {
   const bodyBytes = await blobToBodyBytes(blob);
 
-  const response = await invoke('upload_image_asset_gateway', {
+  const response = await callTauri('upload_image_asset_gateway', {
     request: {
       headers,
       bodyBytes,

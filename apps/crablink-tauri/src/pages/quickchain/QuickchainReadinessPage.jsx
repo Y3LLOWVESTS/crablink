@@ -194,7 +194,7 @@ export default function QuickchainReadinessPage({ app }) {
 
       <section className="quickchain-progress-grid" aria-label="QuickChain readiness progress">
         <ProgressCard
-          label="Readiness"
+          label="QC-0A preflight readiness"
           value={`${progress.percent}%`}
           detail={`${progress.proven} proven · ${progress.partial} partial · ${progress.missing} missing · ${progress.locked} locked`}
           tone={progress.percent >= 70 ? 'success' : progress.percent >= 40 ? 'warning' : 'neutral'}

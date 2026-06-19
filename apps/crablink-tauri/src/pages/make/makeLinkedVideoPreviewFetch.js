@@ -9,7 +9,7 @@
  * RO:TEST — npm run build; manual linked-video paid preview smoke.
  */
 
-import { invoke } from '@tauri-apps/api/core';
+import { callTauri } from '../../platform/tauriPlatform.js';
 
 import { formatBytes } from './makeDraftModel.js';
 import {
@@ -115,7 +115,7 @@ export async function fetchLinkedVideoPreviewBlobViaTauri({
 
   for (const routeCandidate of routes) {
     try {
-      const response = await invoke('fetch_asset_bytes_gateway', {
+      const response = await callTauri('fetch_asset_bytes_gateway', {
         request: {
           route: routeCandidate.route,
           accept: linkedVideoPreviewAcceptHeader(),
