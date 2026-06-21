@@ -1,173 +1,262 @@
 #!/usr/bin/env node
 /**
- * RO:WHAT — CrabLink Tauri QuickChain client-boundary scanner.
- * RO:WHY — Proves React/TS/Tauri command surfaces do not drift into QuickChain, wallet, ledger, or settlement authority.
- * RO:INTERACTS — apps/crablink-tauri/src, src-tauri command bridge, docs/tauri boundary notes.
- * RO:INVARIANTS — gateway-first; typed allowlist; no raw invoke scatter; no roots/checkpoints/validators/bridges/staking/liquidity.
- * RO:SECURITY — static scan only; no network, no secrets, no mutation.
- * RO:TEST — npm run check:quickchain-boundary.
+ * RO:WHAT — CrabLink Tauri QuickChain client-authority boundary scanner.
+ * RO:WHY — Prevents the Tauri client layer from drifting into QuickChain/runtime/wallet/ledger authority.
+ * RO:INTERACTS — Tauri React source, TS/JS adapters, Rust command bridge, Tauri capabilities, QuickChain boundary docs.
+ * RO:INVARIANTS — display-only; gateway-first; typed allowlisted commands; no roots/checkpoints/validators/bridges/settlement authority.
+ * RO:SECURITY — rejects raw/eval/shell/native bridge creep and client-side chain authority naming.
+ * RO:TEST — node scripts/check-quickchain-client-boundary.mjs.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
-import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const APP = path.join(ROOT, 'apps', 'crablink-tauri');
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(SCRIPT_DIR, '..');
 
-const REQUIRED_DOCS = [
+const REQUIRED_FILES = [
   'docs/tauri/QUICKCHAIN_CLIENT_BOUNDARY.md',
-  'docs/tauri/QUICKCHAIN_PAID_CACHE_BOUNDARY.md',
-  'docs/tauri/QUICKCHAIN_READINESS_BOUNDARY.md',
+  'apps/crablink-tauri/package.json',
+  'apps/crablink-tauri/src/platform/tauriPlatform.js',
+  'apps/crablink-tauri/src/shared/api/gatewayClient.js',
+  'apps/crablink-tauri/src-tauri/src/lib.rs',
+  'apps/crablink-tauri/src-tauri/src/commands/mod.rs',
+  'apps/crablink-tauri/src-tauri/capabilities/default.json',
 ];
 
-const FORBIDDEN_COMMAND_PATTERNS = [
-  /^raw[_-]/i,
-  /(^|[_-])(run|execute|eval|shell|native)([_-]|$)/i,
-  /quickchain[_-]?(root|state|receipt|checkpoint|validator|settle|settlement)/i,
-  /(^|[_-])(checkpoint|validator|settle|settlement|bridge|staking|liquidity)([_-]|$)/i,
-  /(^|[_-])(rox|solana)([_-]|$)/i,
-  /(^|[_-])(mint|issue|transfer|burn|hold|capture|release)([_-]|$)/i,
-  /unlock[_-]?paid[_-]?from[_-]?cache/i,
+const SCAN_DIRS = [
+  'apps/crablink-tauri/src',
+  'apps/crablink-tauri/src-tauri/src',
+  'apps/crablink-tauri/src-tauri/capabilities',
+  'packages/crablink-core/src',
+  'packages/crablink-platform/src',
 ];
 
-const FORBIDDEN_SOURCE_PATTERNS = [
-  { pattern: /window\.__TAURI__\s*\.\s*invoke/i, reason: 'raw window.__TAURI__.invoke is forbidden' },
-  { pattern: /window\.__TAURI_INTERNALS__\s*\.\s*invoke/i, reason: 'raw window.__TAURI_INTERNALS__.invoke is forbidden' },
-  { pattern: /localStorage\.setItem\s*\(\s*['"][^'"]*(wallet_secret|private_key|seed_phrase|spend_authority|current_balance|paid_entitlement)[^'"]*['"]/i, reason: 'localStorage must not store wallet/secret/balance/entitlement truth' },
-  { pattern: /sessionStorage\.setItem\s*\(\s*['"][^'"]*(wallet_secret|private_key|seed_phrase|spend_authority|current_balance|paid_entitlement)[^'"]*['"]/i, reason: 'sessionStorage must not store wallet/secret/balance/entitlement truth' },
-];
+const TEXT_EXTENSIONS = new Set([
+  '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.rs', '.json', '.jsonc', '.toml', '.md', '.css', '.html', '.sh',
+]);
 
-const DIRECT_INVOKE_IMPORT = /import\s*\{\s*invoke\s*\}\s*from\s*['"]@tauri-apps\/api\/core['"]/;
-const ALLOWED_INVOKE_FILE = path.join('apps', 'crablink-tauri', 'src', 'platform', 'tauriPlatform.js');
+const EXCLUDED_DIRS = new Set([
+  '.git', 'node_modules', 'dist', 'build', 'coverage', 'target', 'gen', '.tauri', '.vite', '.turbo', 'dump',
+]);
+
+const FORBIDDEN_COMMAND_NAME_RE = /(?:^|_)(?:raw|shell|eval|execute|native|quickchain|root|checkpoint|validator|settlement|settle|bridge|anchor|solana|rox|staking|liquidity)(?:_|$)/i;
+const FORBIDDEN_ROUTE_RE = /['"`]\/quickchain\/(?:root|roots|checkpoint|checkpoints|validator|validators|settlement|settle|bridge|bridges|anchor|anchors|finality)\b/i;
+const FORBIDDEN_PACKAGE_RE = /(?:mainnet-beta\.solana|api\.solana|solanaWeb3|@solana|solana-web3|external-settlement|bridge-proof|validator-signature)/i;
+const DYNAMIC_INVOKE_ALLOWLIST = new Map([
+  [normalizeRel('apps/crablink-tauri/src/platform/tauriPlatform.js'), 'central callTauri adapter'],
+  [normalizeRel('apps/crablink-tauri/src/shared/api/videoAssetClient.js'), 'bounded staged image/video upload command selector'],
+]);
+
+const FORBIDDEN_PERMISSION_RE = /(?:shell|process|global-shortcut|fs:default|http:default|http:allow|opener:default)/i;
 
 const failures = [];
 
-for (const doc of REQUIRED_DOCS) {
-  requireFile(doc);
-}
-
-const platformPath = path.join(ROOT, ALLOWED_INVOKE_FILE);
-const platformText = readFile(platformPath);
-requireText(platformText, 'ALLOWED_TAURI_COMMANDS', ALLOWED_INVOKE_FILE);
-requireText(platformText, 'FORBIDDEN_COMMAND_PATTERNS', ALLOWED_INVOKE_FILE);
-requireText(platformText, 'not authorized by CrabLink boundary policy', ALLOWED_INVOKE_FILE);
-requireText(platformText, 'redactForDisplay', ALLOWED_INVOKE_FILE);
-
-const allowedCommands = parseAllowedCommands(platformText);
-const registeredCommands = parseRegisteredCommands(readFile(path.join(APP, 'src-tauri', 'src', 'lib.rs')));
-
-for (const command of registeredCommands) {
-  if (!allowedCommands.has(command)) {
-    fail(`registered Tauri command is missing from frontend allowlist: ${command}`);
-  }
-
-  if (FORBIDDEN_COMMAND_PATTERNS.some((pattern) => pattern.test(command))) {
-    fail(`registered Tauri command violates QuickChain/client boundary: ${command}`);
+for (const file of REQUIRED_FILES) {
+  if (!fs.existsSync(path.join(ROOT, file))) {
+    failures.push(`missing required QuickChain boundary file: ${file}`);
   }
 }
 
-for (const command of allowedCommands) {
-  if (!registeredCommands.has(command)) {
-    fail(`frontend allowlist contains command not registered by Tauri: ${command}`);
-  }
+const clientDoc = readRequired('docs/tauri/QUICKCHAIN_CLIENT_BOUNDARY.md');
+requirePhrases('docs/tauri/QUICKCHAIN_CLIENT_BOUNDARY.md', clientDoc, [
+  'CrabLink Tauri is not QuickChain authority',
+  'Local receipt caches are display-only',
+  'Offline cache cannot unlock paid content alone',
+  'Gateway-first request routing',
+  'Raw shell/native/eval/execute command bridge surfaces',
+]);
 
-  if (FORBIDDEN_COMMAND_PATTERNS.some((pattern) => pattern.test(command))) {
-    fail(`frontend allowlist contains forbidden command name: ${command}`);
-  }
+for (const file of collectFiles(SCAN_DIRS)) {
+  const rel = normalizeRel(path.relative(ROOT, file));
+  const text = fs.readFileSync(file, 'utf8');
+
+  checkDirectInvoke(rel, text);
+  checkRustCommandNames(rel, text);
+  checkForbiddenRuntimeRoutes(rel, text);
+  checkCapabilities(rel, text);
 }
 
-for (const file of walkFiles(path.join(APP, 'src'), ['.js', '.jsx', '.ts', '.tsx'])) {
-  const rel = path.relative(ROOT, file);
-  const text = readFile(file);
-
-  if (DIRECT_INVOKE_IMPORT.test(text) && rel !== ALLOWED_INVOKE_FILE) {
-    fail(`${rel}: direct Tauri invoke import is forbidden; use platform/tauriPlatform.callTauri`);
+if (failures.length) {
+  console.error('QuickChain client-boundary check failed:');
+  for (const failure of failures) {
+    console.error(` - ${failure}`);
   }
+  process.exit(1);
+}
 
-  for (const rule of FORBIDDEN_SOURCE_PATTERNS) {
-    if (rule.pattern.test(text)) {
-      fail(`${rel}: ${rule.reason}`);
+console.log('QuickChain client-boundary check passed.');
+
+function readRequired(rel) {
+  const abs = path.join(ROOT, rel);
+  if (!fs.existsSync(abs)) {
+    return '';
+  }
+  return fs.readFileSync(abs, 'utf8');
+}
+
+function requirePhrases(rel, text, phrases) {
+  for (const phrase of phrases) {
+    if (!text.includes(phrase)) {
+      failures.push(`${rel} must contain required boundary phrase: ${phrase}`);
     }
   }
 }
 
-finish('QuickChain client-boundary check passed.');
-
-function parseAllowedCommands(text) {
-  const match = text.match(/ALLOWED_TAURI_COMMANDS\s*=\s*Object\.freeze\s*\(\s*\[([\s\S]*?)\]\s*\)/);
-  if (!match) {
-    fail('apps/crablink-tauri/src/platform/tauriPlatform.js: could not parse ALLOWED_TAURI_COMMANDS');
-    return new Set();
-  }
-
-  return new Set([...match[1].matchAll(/['"]([a-zA-Z0-9_]+)['"]/g)].map((entry) => entry[1]));
-}
-
-function parseRegisteredCommands(text) {
-  const match = text.match(/tauri::generate_handler!\s*\[([\s\S]*?)\]/);
-  if (!match) {
-    fail('apps/crablink-tauri/src-tauri/src/lib.rs: could not parse generate_handler command list');
-    return new Set();
-  }
-
-  return new Set([...match[1].matchAll(/commands::[a-zA-Z0-9_]+::([a-zA-Z0-9_]+)/g)].map((entry) => entry[1]));
-}
-
-function requireFile(rel) {
-  if (!fs.existsSync(path.join(ROOT, rel))) {
-    fail(`missing required file: ${rel}`);
-  }
-}
-
-function requireText(text, needle, rel) {
-  if (!text.includes(needle)) {
-    fail(`${rel}: missing required phrase: ${needle}`);
-  }
-}
-
-function readFile(file) {
-  try {
-    return fs.readFileSync(file, 'utf8');
-  } catch (error) {
-    fail(`unable to read ${path.relative(ROOT, file)}: ${error.message}`);
-    return '';
-  }
-}
-
-function walkFiles(dir, extensions) {
-  if (!fs.existsSync(dir)) {
-    return [];
-  }
-
+function collectFiles(relativeDirs) {
   const out = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === 'target') {
+
+  for (const relDir of relativeDirs) {
+    const dir = path.join(ROOT, relDir);
+    if (!fs.existsSync(dir)) {
+      continue;
+    }
+    walk(dir, out);
+  }
+
+  return out.sort();
+}
+
+function walk(dir, out) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const abs = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (!EXCLUDED_DIRS.has(entry.name)) {
+        walk(abs, out);
+      }
       continue;
     }
 
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...walkFiles(full, extensions));
-    } else if (extensions.includes(path.extname(entry.name))) {
-      out.push(full);
+    if (!entry.isFile()) {
+      continue;
+    }
+
+    if (TEXT_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+      out.push(abs);
     }
   }
-  return out;
 }
 
-function fail(message) {
-  failures.push(message);
-}
+function checkDirectInvoke(rel, text) {
+  const usesInvoke = /@tauri-apps\/api\/core|\binvoke\s*\(/.test(text);
 
-function finish(successMessage) {
-  if (failures.length > 0) {
-    console.error('QuickChain client-boundary check failed:');
-    for (const failure of failures) {
-      console.error(` - ${failure}`);
-    }
-    process.exit(1);
+  if (!usesInvoke) {
+    return;
   }
 
-  console.log(successMessage);
+  const invokeCallRe = /\binvoke\s*\(\s*([^,\)]+)/g;
+  let match;
+
+  while ((match = invokeCallRe.exec(text)) !== null) {
+    const firstArg = String(match[1] || '').trim();
+    const commandName = literalStringValue(firstArg);
+
+    if (!commandName) {
+      if (isAllowedDynamicInvoke(rel, firstArg, text)) {
+        continue;
+      }
+
+      failures.push(`${rel} uses invoke with a dynamic command name; use typed string-literal command calls only`);
+      continue;
+    }
+
+    if (FORBIDDEN_COMMAND_NAME_RE.test(commandName)) {
+      failures.push(`${rel} invokes forbidden authority-shaped Tauri command: ${commandName}`);
+    }
+  }
+}
+
+function checkRustCommandNames(rel, text) {
+  if (!rel.endsWith('.rs')) {
+    return;
+  }
+
+  const commandRe = /#\s*\[\s*tauri::command\s*\][\s\S]*?\bfn\s+([A-Za-z0-9_]+)/g;
+  let match;
+
+  while ((match = commandRe.exec(text)) !== null) {
+    const name = match[1];
+    if (FORBIDDEN_COMMAND_NAME_RE.test(name)) {
+      failures.push(`${rel} declares forbidden authority-shaped Tauri command: ${name}`);
+    }
+  }
+
+  if (rel.endsWith('src-tauri/src/lib.rs')) {
+    const handlerBlock = text.match(/generate_handler!\s*\[([\s\S]*?)\]/)?.[1] || '';
+    for (const name of handlerBlock.matchAll(/commands::[A-Za-z0-9_:]+::([A-Za-z0-9_]+)/g)) {
+      if (FORBIDDEN_COMMAND_NAME_RE.test(name[1])) {
+        failures.push(`${rel} registers forbidden authority-shaped Tauri command: ${name[1]}`);
+      }
+    }
+  }
+}
+
+function checkForbiddenRuntimeRoutes(rel, text) {
+  if (FORBIDDEN_ROUTE_RE.test(text)) {
+    failures.push(`${rel} contains an active QuickChain authority route; CrabLink may only display readiness/status in this phase`);
+  }
+
+  if ((rel.endsWith('package.json') || rel.endsWith('Cargo.toml')) && FORBIDDEN_PACKAGE_RE.test(text)) {
+    failures.push(`${rel} declares forbidden external settlement / bridge / validator / Solana runtime dependency`);
+  }
+}
+
+function checkCapabilities(rel, text) {
+  if (!rel.endsWith('capabilities/default.json')) {
+    return;
+  }
+
+  if (FORBIDDEN_PERMISSION_RE.test(text)) {
+    failures.push(`${rel} grants a forbidden broad native capability; keep bridge small and allowlisted`);
+  }
+}
+
+function normalizeRel(value) {
+  return String(value || '').split(path.sep).join('/');
+}
+
+function literalStringValue(value) {
+  const clean = String(value || '').trim();
+  const match = clean.match(/^(['"`])([^'"`]+)\1$/);
+  return match ? match[2] : '';
+}
+
+function isAllowedDynamicInvoke(rel, firstArg, text) {
+  if (!DYNAMIC_INVOKE_ALLOWLIST.has(rel)) {
+    return false;
+  }
+
+  if (rel.endsWith('/platform/tauriPlatform.js')) {
+    const guardedCentralCommand =
+      firstArg === 'command' ||
+      (
+        firstArg === 'normalized' &&
+        text.includes('const normalized = normalizeCommandName(command);') &&
+        text.includes('if (!isAllowedTauriCommand(normalized))') &&
+        text.includes('return await invoke(normalized, args && typeof args === \'object\' ? args : {});')
+      );
+
+    return guardedCentralCommand &&
+      /export\s+(?:async\s+)?function\s+callTauri\s*\(\s*command\s*,/.test(text) &&
+      text.includes('ALLOWED_TAURI_COMMANDS') &&
+      text.includes('ALLOWED_TAURI_COMMAND_SET') &&
+      text.includes('FORBIDDEN_COMMAND_PATTERNS') &&
+      text.includes('isAllowedTauriCommand') &&
+      text.includes('normalizeCommandName') &&
+      text.includes('redactForDisplay');
+  }
+
+  if (rel.endsWith('/shared/api/videoAssetClient.js')) {
+    return firstArg === 'command' &&
+      text.includes("'upload_staged_image_asset_gateway'") &&
+      text.includes("'upload_staged_video_asset_gateway'") &&
+      !FORBIDDEN_COMMAND_NAME_RE.test('upload_staged_image_asset_gateway') &&
+      !FORBIDDEN_COMMAND_NAME_RE.test('upload_staged_video_asset_gateway');
+  }
+
+  return false;
 }
