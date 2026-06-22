@@ -11,12 +11,13 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "check": "npm run check:quickchain-boundary && npm run check:quickchain-paid-cache-boundary && npm run check:quickchain-readiness-boundary && npm run build && npm run check:rust:mac-media",
+    "check": "npm run check:quickchain-boundary && npm run check:quickchain-paid-cache-boundary && npm run check:quickchain-readiness-boundary && npm run check:quickchain-phase1-interlock && npm run build && npm run check:rust:mac-media",
     "check:quickchain-boundary": "node ../../scripts/check-quickchain-client-boundary.mjs",
-    "tauri:dev:mac-media": "tauri dev --config src-tauri/tauri.macos.dev-media.conf.json",
-    "check:rust:mac-media": "TAURI_CONFIG=\"$(cat src-tauri/tauri.macos.dev-media.conf.json)\" cargo check --manifest-path src-tauri/Cargo.toml",
     "check:quickchain-paid-cache-boundary": "node ../../scripts/check-quickchain-paid-cache-boundary.mjs",
     "check:quickchain-readiness-boundary": "node ../../scripts/check-quickchain-readiness-boundary.mjs",
+    "check:quickchain-phase1-interlock": "node ../../scripts/check-quickchain-phase1-client-interlock.mjs",
+    "tauri:dev:mac-media": "tauri dev --config src-tauri/tauri.macos.dev-media.conf.json",
+    "check:rust:mac-media": "TAURI_CONFIG=\"$(cat src-tauri/tauri.macos.dev-media.conf.json)\" cargo check --manifest-path src-tauri/Cargo.toml",
     "park:quickchain": "../../scripts/dev-quickchain-tauri-park.sh"
   },
   "dependencies": {

@@ -181,8 +181,7 @@ export function buildPassportView({
   const ledgerBacked =
     walletBody.ledger_backed === true ||
     walletBody.ledgerBacked === true ||
-    walletBody.source === 'ledger' ||
-    settings.rocLedgerBacked === true;
+    walletBody.source === 'ledger';
 
   const httpFallback = Boolean(storage.isDevFallback);
   const storageLabel = storage.backend || (httpFallback ? 'fallback' : 'unknown');
@@ -252,7 +251,7 @@ export function buildPassportView({
           : httpFallback
             ? 'HTTP preview fallback'
             : 'Local label / unavailable',
-    walletSourceLabel: walletBody.source || (wallet ? 'Gateway response' : settings.rocBalanceSource || 'No gateway wallet response yet'),
+    walletSourceLabel: walletBody.source || (wallet ? 'Gateway response' : settings.rocBalanceSource ? `${settings.rocBalanceSource} (stored display hint)` : 'No gateway wallet response yet'),
     storageLabel,
     gatewayLabel: settings.gatewayUrl || 'Default local gateway',
     extensionOriginLabel,

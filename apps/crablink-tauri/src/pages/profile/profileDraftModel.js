@@ -348,12 +348,11 @@ export function getRocTruth(app = {}) {
   const ledgerBacked = Boolean(
     walletData?.ledger_backed ||
       walletData?.ledgerBacked ||
-      settings.rocLedgerBacked,
+      walletData?.source === 'ledger',
   );
   const source =
     walletData?.source ||
-    settings.rocBalanceSource ||
-    (balanceFromWallet ? 'gateway wallet response' : balanceFromSettings ? 'stored display hint' : 'not loaded');
+    (walletData ? 'gateway wallet response' : settings.rocBalanceSource ? `${settings.rocBalanceSource} (stored display hint)` : balanceFromSettings ? 'stored display hint' : 'not loaded');
 
   return {
     display: balanceFromWallet || balanceFromSettings || 'not loaded',

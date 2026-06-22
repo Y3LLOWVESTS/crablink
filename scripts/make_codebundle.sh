@@ -222,6 +222,7 @@ selected_scripts() {
     "$ROOT/scripts/check-quickchain-client-boundary.mjs" \
     "$ROOT/scripts/check-quickchain-paid-cache-boundary.mjs" \
     "$ROOT/scripts/check-quickchain-readiness-boundary.mjs" \
+    "$ROOT/scripts/check-quickchain-phase1-client-interlock.mjs" \
     "$ROOT/scripts/dev-quickchain-tauri-park.sh" \
     "$ROOT/scripts/smoke-tauri-local-gateway.sh" \
     "$ROOT/scripts/migrate_chrome_react_to_tauri.sh" \
@@ -413,6 +414,7 @@ binary_count="$(binary_files | count_stream)"
   echo "scripts/check-quickchain-client-boundary.mjs"
   echo "scripts/check-quickchain-paid-cache-boundary.mjs"
   echo "scripts/check-quickchain-readiness-boundary.mjs"
+  echo "scripts/check-quickchain-phase1-client-interlock.mjs"
   echo "scripts/dev-quickchain-tauri-park.sh"
   echo "scripts/smoke-tauri-local-gateway.sh"
   echo "scripts/scaffold_crablink_tauri.sh"

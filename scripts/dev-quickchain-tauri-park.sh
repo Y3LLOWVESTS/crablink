@@ -17,4 +17,4 @@ fi
 cd "$ROOT"
 scripts/check-tauri.sh
 
-echo "== CrabLink Tauri QuickChain Phase-0 parking gate passed =="
+echo "== CrabLink Tauri QuickChain Phase 1 Round 1 foundation parking gate passed =="

@@ -4,7 +4,7 @@
  * RO:INTERACTS — appContext settings/walletState/refreshWallet, TopBar, future wallet display routes.
  * RO:INVARIANTS — no fake balances; no local ledger truth; no silent spend; click only refreshes read-only balance.
  * RO:METRICS — refreshWallet inherits gateway x-correlation-id behavior.
- * RO:CONFIG — walletAccount, rocBalanceDisplay, rocLedgerBacked, rocBalanceSource.
+ * RO:CONFIG — walletAccount, rocBalanceDisplay, rocBalanceSource.
  * RO:SECURITY — no spend authority stored or displayed.
  * RO:TEST — manual wallet chip smoke in extension and Vite contexts.
  */
@@ -97,8 +97,7 @@ function buildBalanceView({ settings = {}, storage = {}, wallet = null, state = 
   const ledgerBacked =
     walletBody.ledger_backed === true ||
     walletBody.ledgerBacked === true ||
-    walletBody.source === 'ledger' ||
-    settings.rocLedgerBacked === true;
+    walletBody.source === 'ledger';
 
   if (!walletAccount && !display && !checking && !error) {
     return {

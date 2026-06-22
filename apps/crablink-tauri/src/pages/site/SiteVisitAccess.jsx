@@ -2,11 +2,11 @@
  * RO:WHAT — Paid site_visit gate for named CrabLink sites.
  * RO:WHY — NEXT_LEVEL creator-economy proof: quote/pay before rendering paid creator sites.
  * RO:INTERACTS — siteVisitClient, SiteRender, GatewayClient, BalanceChip refresh events, recentReceipts, localCatalog.
- * RO:INVARIANTS — no silent spend; no fake receipt; render unlock follows backend quote/pay truth only.
+ * RO:INVARIANTS — no silent spend; no fake receipt; render unlock follows the live backend quote/pay response only.
  * RO:METRICS — displays gateway correlation IDs and returned receipt identifiers.
- * RO:CONFIG — uses current app settings wallet/passport and session/local display receipt memory.
+ * RO:CONFIG — uses current app settings wallet/passport and local display receipt memory.
  * RO:SECURITY — pay button requires explicit user click; no local balance edits; no fake unlock.
- * RO:TEST — Visitor B opens crab://ron7, quotes 10 ROC, pays through gateway, refreshes, and stays unlocked from receipt.
+ * RO:TEST — Visitor B opens crab://ron7, quotes 10 ROC, pays through gateway, and unlocks only from the live backend receipt response.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -19,7 +19,6 @@ import { createSiteVisitClient } from '../../shared/api/siteVisitClient.js';
 import { writeLocalCatalogEntry } from '../../shared/catalog/localCatalog.js';
 import { writeRecentReceipt } from '../../shared/receipts/recentReceipts.js';
 
-const SESSION_PREFIX = 'crablink.site_visit.receipt.v1';
 
 const FREE_ACCESS = Object.freeze({
   requiresPayment: false,
@@ -74,18 +73,6 @@ export default function SiteVisitAccess({
     ],
   );
 
-  const receiptKey = useMemo(
-    () => sessionReceiptKey({ summary, target, policy }),
-    [
-      summary.rootDocumentCid,
-      summary.manifestCid,
-      target.siteName,
-      policy.payerAccount,
-      policy.recipientAccount,
-      policy.visitorPassport,
-    ],
-  );
-
   const accessKey = useMemo(
     () =>
       [
@@ -116,25 +103,12 @@ export default function SiteVisitAccess({
   const quoteSeqRef = useRef(0);
   const activeQuoteKeyRef = useRef('');
 
-  const [state, setState] = useState(() => {
-    const cached = readSessionReceipt(receiptKey);
-
-    if (policy.requiresPayment && cached?.payment?.summary?.receiptHash) {
-      return {
-        status: 'paid',
-        quote: cached.quote || null,
-        payment: cached.payment,
-        error: null,
-      };
-    }
-
-    return {
-      status: policy.requiresPayment ? 'idle' : 'free',
-      quote: null,
-      payment: null,
-      error: null,
-    };
-  });
+  const [state, setState] = useState(() => ({
+    status: policy.requiresPayment ? 'idle' : 'free',
+    quote: null,
+    payment: null,
+    error: null,
+  }));
 
   useEffect(() => {
     onAccessChangeRef.current = onAccessChange;
@@ -168,28 +142,6 @@ export default function SiteVisitAccess({
       return;
     }
 
-    const cached = readSessionReceipt(receiptKey);
-
-    if (cached?.payment?.summary?.receiptHash || cached?.payment?.summary?.txid) {
-      const access = {
-        requiresPayment: true,
-        canRender: true,
-        status: 'paid',
-        quote: cached.quote || null,
-        payment: cached.payment,
-        error: null,
-      };
-
-      setState({
-        status: 'paid',
-        quote: cached.quote || null,
-        payment: cached.payment,
-        error: null,
-      });
-      emitAccessChange(access);
-      return;
-    }
-
     setState({
       status: 'idle',
       quote: null,
@@ -197,7 +149,7 @@ export default function SiteVisitAccess({
       error: null,
     });
     emitAccessChange(PENDING_ACCESS);
-  }, [accessKey, policy.requiresPayment, receiptKey, emitAccessChange]);
+  }, [accessKey, policy.requiresPayment, emitAccessChange]);
 
   useEffect(() => {
     if (!policy.requiresPayment || !visitClient?.ready || state.status !== 'idle') {
@@ -305,27 +257,6 @@ export default function SiteVisitAccess({
       return;
     }
 
-    const cached = readSessionReceipt(receiptKey);
-    if (cached?.payment?.summary?.receiptHash || cached?.payment?.summary?.txid) {
-      const access = {
-        requiresPayment: true,
-        canRender: true,
-        status: 'paid',
-        quote: cached.quote || state.quote,
-        payment: cached.payment,
-        error: null,
-      };
-
-      setState({
-        status: 'paid',
-        quote: cached.quote || state.quote,
-        payment: cached.payment,
-        error: null,
-      });
-      emitAccessChange(access);
-      return;
-    }
-
     setState((current) => ({
       ...current,
       status: 'paying',
@@ -370,16 +301,6 @@ export default function SiteVisitAccess({
         error: null,
       };
 
-      writeSessionReceipt(receiptKey, {
-        quote: state.quote,
-        payment,
-        target,
-        policy,
-        summary: pickSessionSummary(summary),
-        persistedReceipt,
-        storedAt: new Date().toISOString(),
-      });
-
       setState({
         status: 'paid',
         quote: state.quote,
@@ -389,28 +310,6 @@ export default function SiteVisitAccess({
       emitAccessChange(access);
       notifyBalanceRefresh(app, payment, persistedReceipt);
     } catch (error) {
-      const cachedAfterError = readSessionReceipt(receiptKey);
-
-      if (cachedAfterError?.payment?.summary?.receiptHash || cachedAfterError?.payment?.summary?.txid) {
-        const access = {
-          requiresPayment: true,
-          canRender: true,
-          status: 'paid',
-          quote: cachedAfterError.quote || state.quote,
-          payment: cachedAfterError.payment,
-          error: null,
-        };
-
-        setState({
-          status: 'paid',
-          quote: cachedAfterError.quote || state.quote,
-          payment: cachedAfterError.payment,
-          error: null,
-        });
-        emitAccessChange(access);
-        return;
-      }
-
       const access = {
         requiresPayment: true,
         canRender: false,
@@ -443,11 +342,6 @@ export default function SiteVisitAccess({
       ...PENDING_ACCESS,
       status: 'idle',
     });
-  }
-
-  function clearSessionReceipt() {
-    removeSessionReceipt(receiptKey);
-    retryQuote();
   }
 
   if (!policy.requiresPayment) {
@@ -557,7 +451,6 @@ export default function SiteVisitAccess({
   const recipient = paymentSummary?.recipientAccount || quoteSummary?.recipientAccount || policy.recipientAccount || 'not returned';
   const payer = paymentSummary?.payerAccount || quoteSummary?.payerAccount || policy.payerAccount || 'not configured';
   const receiptProof = summarizeReceiptProof(paymentSummary);
-  const paidFromSession = state.status === 'paid' && Boolean(readSessionReceipt(receiptKey)?.payment);
 
   return (
     <Card
@@ -581,9 +474,8 @@ export default function SiteVisitAccess({
 
       {state.status === 'paid' && (
         <p>
-          Backend payment confirmed. The preview is unlocked from the returned receipt. CrabLink did not edit local
-          balances or fabricate a payout.
-          {paidFromSession ? ' This receipt is remembered for this browser session and recent receipt drawer display.' : ''}
+          Backend payment confirmed. The preview is unlocked from the live returned receipt in this component state.
+          CrabLink did not edit local balances, fabricate a payout, or use cached receipts as entitlement truth.
         </p>
       )}
 
@@ -612,14 +504,6 @@ export default function SiteVisitAccess({
         </div>
       )}
 
-      {state.status === 'paid' && (
-        <div className="site-visit-actions">
-          <Button variant="ghost" onClick={clearSessionReceipt}>
-            Clear session receipt
-          </Button>
-        </div>
-      )}
-
       {state.status === 'paying' && (
         <div className="site-visit-actions">
           <Button variant="primary" disabled>
@@ -638,7 +522,7 @@ export default function SiteVisitAccess({
             site_receipt: state.payment?.summary?.siteReceipt || null,
             quote_response: state.quote?.response || null,
             payment_response: state.payment?.response || null,
-            receipt_session_key: receiptKey,
+            truth_boundary: 'This proof is display-only and came from the live backend pay response in the current component state.',
           }}
         />
       )}
@@ -903,82 +787,6 @@ function compactIdem(value) {
   const hash = fnv1aHex(raw);
   const prefix = raw.slice(0, 44).replace(/[-:.]+$/g, '') || 'crablink-site-visit';
   return `${prefix}:${hash}`.slice(0, 64);
-}
-
-function sessionReceiptKey({ summary, target, policy }) {
-  return compactSessionKey(
-    [
-      SESSION_PREFIX,
-      target.siteName,
-      policy.payerAccount,
-      policy.recipientAccount,
-      policy.visitorPassport,
-      summary.rootDocumentCid || summary.manifestCid || '',
-    ]
-      .filter(Boolean)
-      .join('|'),
-  );
-}
-
-function compactSessionKey(value) {
-  const raw = cleanString(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9_.:|-]+/g, '-');
-
-  if (raw.length <= 180) {
-    return raw;
-  }
-
-  return `${SESSION_PREFIX}:${fnv1aHex(raw)}`;
-}
-
-function readSessionReceipt(key) {
-  try {
-    if (!key || typeof sessionStorage === 'undefined') {
-      return null;
-    }
-
-    const raw = sessionStorage.getItem(key);
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw);
-    const payment = parsed?.payment || null;
-    const summary = payment?.summary || null;
-
-    if (!summary?.receiptHash && !summary?.txid) {
-      return null;
-    }
-
-    return parsed;
-  } catch (_error) {
-    return null;
-  }
-}
-
-function writeSessionReceipt(key, value) {
-  try {
-    if (!key || typeof sessionStorage === 'undefined') {
-      return;
-    }
-
-    sessionStorage.setItem(key, JSON.stringify(value || null));
-  } catch (_error) {
-    // Session receipt memory is a UI refresh helper only. Backend receipt remains the truth.
-  }
-}
-
-function removeSessionReceipt(key) {
-  try {
-    if (!key || typeof sessionStorage === 'undefined') {
-      return;
-    }
-
-    sessionStorage.removeItem(key);
-  } catch (_error) {
-    // Ignore UI cache cleanup errors.
-  }
 }
 
 function pickSessionSummary(summary = {}) {

@@ -25,5 +25,6 @@ fi
 npm run check:quickchain-boundary
 npm run check:quickchain-paid-cache-boundary
 npm run check:quickchain-readiness-boundary
+npm run check:quickchain-phase1-interlock
 npm run build
 npm run check:rust:mac-media

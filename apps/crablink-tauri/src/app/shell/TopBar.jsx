@@ -327,7 +327,7 @@ function SettingsSummary({
     ['Username status', settings.usernameStatus || 'unknown'],
     ['Wallet account', settings.walletAccount || 'Not configured'],
     ['ROC display', settings.rocBalanceDisplay || settings.rocBalanceMinorUnits || 'Unavailable'],
-    ['Ledger backed', settings.rocLedgerBacked === true ? 'Yes' : 'No / unavailable'],
+    ['ROC cache boundary', 'Stored display hint only; refresh wallet for backend ledger status'],
     ['Page zoom', formatZoomPercent(modalZoomScale)],
     ['Storage backend', storage.backend || 'unknown'],
     ['Chrome local storage', storage.chromeLocal ? 'Available' : 'Unavailable'],
