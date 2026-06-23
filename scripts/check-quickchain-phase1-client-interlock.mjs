@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * RO:WHAT — CrabLink Tauri QC-1A client interlock scanner.
- * RO:WHY — Completes the Phase 1 Round 1 client pass by rejecting cache-only paid unlocks, local verified-balance claims, and client QuickChain authority.
+ * RO:WHAT — CrabLink Tauri Phase 1 Round 2 final client-boundary scanner.
+ * RO:WHY — Parks the final Round 2 client pair by rejecting cache-only paid unlocks, local verified-balance claims, and client QuickChain authority.
  * RO:INTERACTS — Tauri React paid gates, wallet/profile shell, gateway/wallet/content clients, Tauri command adapter, QuickChain interlock docs.
- * RO:INVARIANTS — backend response unlocks paid content; cached receipts/catalog entries are display-only; wallet verification is backend-derived; no roots/checkpoints/validators/settlement.
+ * RO:INVARIANTS — backend response unlocks paid content; cached receipts/catalog entries are display-only; wallet verification is backend-derived; no roots/proofs/checkpoints/validators/settlement.
  * RO:SECURITY — rejects fake receipts, fake balances, silent spend, cache-only entitlement, direct wallet/ledger mutation, ROX/Solana/bridge/staking/liquidity authority.
  * RO:TEST — node scripts/check-quickchain-phase1-client-interlock.mjs.
  */
@@ -39,11 +39,16 @@ const REQUIRED_FILES = [
 ];
 
 const REQUIRED_DOC_PHRASES = [
-  'Phase 1 Round 1 / QC-1A foundation',
+  'Phase 1 Round 2 final downstream/client boundary pass',
+  'backend/service crate-pair sweep is parked',
+  'CrabLink Tauri + client adapters are the final Phase 1 Round 2 pair',
   'backend receipt/access response unlocks paid content',
   'cached receipts/catalog entries are display-only',
   'Wallet and balance UI may display cached labels',
+  'Display-only receipt cache is not paid unlock authority.',
+  'Verified b3 proves bytes, not paid entitlement.',
   'QuickChain readiness is display-only',
+  'QuickChain readiness UI is informational, not authority.',
   'CrabLink Tauri is display and user intent only',
 ];
 
@@ -51,7 +56,7 @@ const failures = [];
 
 for (const file of REQUIRED_FILES) {
   if (!exists(file)) {
-    failures.push(`missing required Phase 1 client interlock file: ${file}`);
+    failures.push(`missing required Phase 1 Round 2 client interlock file: ${file}`);
   }
 }
 
@@ -63,19 +68,21 @@ checkParkMarker();
 checkSiteVisitGate();
 checkAssetContentGate();
 checkBalanceVerification();
+checkDisplayCacheBoundaries();
 checkQuickchainReadiness();
 checkTauriCommandBoundary();
 checkGatewayFirstClients();
+checkNoDirectAuthorityCalls();
 
 if (failures.length) {
-  console.error('QuickChain Phase 1 client interlock check failed:');
+  console.error('QuickChain Phase 1 Round 2 client interlock check failed:');
   for (const failure of failures) {
     console.error(` - ${failure}`);
   }
   process.exit(1);
 }
 
-console.log('QuickChain Phase 1 client interlock check passed.');
+console.log('QuickChain Phase 1 Round 2 client interlock check passed.');
 
 function checkPackageScripts() {
   const pkg = readRequired('apps/crablink-tauri/package.json');
@@ -95,8 +102,13 @@ function checkParkMarker() {
   const park = readRequired('scripts/dev-quickchain-tauri-park.sh');
 
   requireIncludes('scripts/dev-quickchain-tauri-park.sh', park, [
-    'Phase 1 Round 1 foundation parking gate',
+    'Phase 1 Round 2 final client parking gate',
     'scripts/check-tauri.sh',
+  ]);
+
+  rejectIncludes('scripts/dev-quickchain-tauri-park.sh', park, [
+    'Phase 1 Round 1 foundation parking gate',
+    'Phase-0 parking gate passed',
   ]);
 }
 
@@ -109,7 +121,7 @@ function checkSiteVisitGate() {
     'cached receipts as entitlement truth',
     'visitClient.pay(',
     '{ confirmed: true }',
-    'source: \'site_visit_payment_success\'',
+    "source: 'site_visit_payment_success'",
     'This is a local display copy of backend-returned receipt metadata',
   ]);
 
@@ -182,6 +194,30 @@ function checkBalanceVerification() {
   ]);
 }
 
+function checkDisplayCacheBoundaries() {
+  const receiptRel = 'apps/crablink-tauri/src/shared/receipts/recentReceipts.js';
+  const catalogRel = 'apps/crablink-tauri/src/shared/catalog/localCatalog.js';
+  const receipts = readRequired(receiptRel);
+  const catalog = readRequired(catalogRel);
+
+  requireIncludes(receiptRel, receipts, [
+    'Read-only recent receipt collector',
+    'display-only',
+    'Backend wallet and ledger remain authoritative',
+  ]);
+
+  requireIncludes(catalogRel, catalog, [
+    'Local display-only CrabLink catalog collector',
+    'local-only display cache',
+    'not a backend public catalogue, ownership index, or proof of publication',
+  ]);
+
+  const combined = `${receipts}\n${catalog}`;
+  if (/(?:canView|canRender|authorized|entitled)\s*:\s*true/.test(combined)) {
+    failures.push('local catalog/recent receipt caches must not export authorization-shaped true flags');
+  }
+}
+
 function checkQuickchainReadiness() {
   const rel = 'apps/crablink-tauri/src/pages/quickchain/QuickchainReadinessPage.jsx';
   const text = readRequired(rel);
@@ -204,7 +240,7 @@ function checkQuickchainReadiness() {
     failures.push(`${rel} must not call gateway/Tauri/fetch APIs`);
   }
 
-  if (/\/quickchain\/(?:root|checkpoint|validator|settlement|bridge|anchor|finality)/i.test(text)) {
+  if (/\/quickchain\/(?:root|proof|checkpoint|validator|settlement|bridge|anchor|finality)/i.test(text)) {
     failures.push(`${rel} must not reference active QuickChain authority routes`);
   }
 }
@@ -221,9 +257,23 @@ function checkTauriCommandBoundary() {
     'unlock[_-]?paid[_-]?from[_-]?cache',
   ]);
 
-  const forbiddenAllowedCommand = /['"`](?:quickchain[_-]?(?:root|checkpoint|validator|settlement)|produce[_-]?(?:root|checkpoint)|validator[_-]?signature|settlement[_-]?proof|bridge[_-]?proof|unlock[_-]?paid[_-]?from[_-]?cache|direct[_-]?(?:wallet|ledger)[_-]?mutate)['"`]/i;
-  if (forbiddenAllowedCommand.test(text)) {
-    failures.push(`${rel} allowlist contains a forbidden authority-shaped command`);
+  const allowedList = extractAllowedCommandList(text);
+  for (const command of allowedList) {
+    if (forbiddenAuthorityCommand(command)) {
+      failures.push(`${rel} allowlist contains forbidden authority-shaped command: ${command}`);
+    }
+  }
+
+  const rustCommandFiles = collectFiles('apps/crablink-tauri/src-tauri/src', new Set(['.rs']));
+  for (const file of rustCommandFiles) {
+    const relPath = normalizeRel(path.relative(ROOT, file));
+    const body = fs.readFileSync(file, 'utf8');
+    const commandNames = [...body.matchAll(/#\s*\[\s*tauri::command\s*\][\s\S]{0,320}?pub\s+(?:async\s+)?fn\s+([a-zA-Z0-9_]+)/g)].map((match) => match[1]);
+    for (const command of commandNames) {
+      if (forbiddenAuthorityCommand(command)) {
+        failures.push(`${relPath} exposes forbidden Tauri authority command: ${command}`);
+      }
+    }
   }
 }
 
@@ -234,8 +284,8 @@ function checkGatewayFirstClients() {
   const siteVisitClient = readRequired('apps/crablink-tauri/src/shared/api/siteVisitClient.js');
 
   requireIncludes('apps/crablink-tauri/src/shared/api/gatewayClient.js', gatewayClient, [
-    'baseUrl = \'http://127.0.0.1:8090\'',
-    'callTauri(\'gateway_request\'',
+    "baseUrl = 'http://127.0.0.1:8090'",
+    "callTauri('gateway_request'",
     'sanitizeHeaders',
     'cleanError',
   ]);
@@ -264,9 +314,46 @@ function checkGatewayFirstClients() {
     failures.push('gateway/client API files must not hard-code direct non-gateway localhost service URLs');
   }
 
-  if (/\/quickchain\/(?:root|checkpoint|validator|settlement|bridge|anchor|finality)/i.test(combined)) {
+  if (/\/quickchain\/(?:root|proof|checkpoint|validator|settlement|bridge|anchor|finality)/i.test(combined)) {
     failures.push('gateway/client API files must not expose active QuickChain authority routes');
   }
+}
+
+function checkNoDirectAuthorityCalls() {
+  const runtimeFiles = [
+    ...collectFiles('apps/crablink-tauri/src', new Set(['.js', '.jsx', '.ts', '.tsx'])),
+    ...collectFiles('packages/crablink-platform/src', new Set(['.js', '.ts'])),
+    ...collectFiles('packages/crablink-core/src', new Set(['.js', '.ts'])),
+  ];
+
+  const directInvokeImport = /import\s*\{[^}]*\binvoke\b[^}]*\}\s*from\s+['"]@tauri-apps\/api\/core['"]|\binvoke\s*\(/;
+  const authorityRouteCall = /(?:fetch|request|callTauri|invoke)\s*\([\s\S]{0,160}['"][^'"]*(?:quickchain\/(?:root|proof|checkpoint|validator|settlement|bridge|anchor|finality)|direct[_-]?(?:wallet|ledger)[_-]?mutate|unlock[_-]?paid[_-]?from[_-]?cache)/i;
+
+  for (const file of runtimeFiles) {
+    const rel = normalizeRel(path.relative(ROOT, file));
+    const text = fs.readFileSync(file, 'utf8');
+
+    if (rel !== 'apps/crablink-tauri/src/platform/tauriPlatform.js' && directInvokeImport.test(text)) {
+      failures.push(`${rel} must not import/call raw Tauri invoke; use platform/tauriPlatform.js`);
+    }
+
+    if (authorityRouteCall.test(text)) {
+      failures.push(`${rel} appears to call a forbidden QuickChain/client authority route or command`);
+    }
+  }
+}
+
+function forbiddenAuthorityCommand(command) {
+  return /(?:quickchain[_-]?(?:root|proof|checkpoint|validator|settle|settlement|finality)|produce[_-]?(?:root|proof|checkpoint)|validator[_-]?signature|settlement[_-]?proof|bridge[_-]?(?:proof|anchor)|unlock[_-]?paid[_-]?from[_-]?cache|direct[_-]?(?:wallet|ledger)[_-]?mutate|(?:^|[_-])(?:rox|solana|staking|liquidity)(?:[_-]|$))/i.test(String(command || ''));
+}
+
+function extractAllowedCommandList(text) {
+  const match = text.match(/ALLOWED_TAURI_COMMANDS\s*=\s*Object\.freeze\s*\(\s*\[([\s\S]*?)\]\s*\)/);
+  if (!match) {
+    return [];
+  }
+
+  return [...match[1].matchAll(/['"]([^'"]+)['"]/g)].map((item) => item[1]);
 }
 
 function exists(rel) {
@@ -285,7 +372,7 @@ function readRequired(rel) {
 function requirePhrases(rel, text, phrases) {
   for (const phrase of phrases) {
     if (!text.includes(phrase)) {
-      failures.push(`${rel} must contain required interlock phrase: ${phrase}`);
+      failures.push(`${rel} must contain required Round 2 interlock phrase: ${phrase}`);
     }
   }
 }
@@ -301,7 +388,41 @@ function requireIncludes(rel, text, snippets) {
 function rejectIncludes(rel, text, snippets) {
   for (const snippet of snippets) {
     if (text.includes(snippet)) {
-      failures.push(`${rel} must not include cache-authority marker: ${snippet}`);
+      failures.push(`${rel} must not include forbidden/cache-authority marker: ${snippet}`);
     }
   }
+}
+
+function collectFiles(relDir, extensions) {
+  const dir = path.join(ROOT, relDir);
+  const out = [];
+
+  if (!fs.existsSync(dir)) {
+    return out;
+  }
+
+  walk(dir, out, extensions);
+  return out.sort();
+}
+
+function walk(dir, out, extensions) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === 'target') {
+      continue;
+    }
+
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walk(abs, out, extensions);
+      continue;
+    }
+
+    if (entry.isFile() && extensions.has(path.extname(entry.name).toLowerCase())) {
+      out.push(abs);
+    }
+  }
+}
+
+function normalizeRel(value) {
+  return String(value || '').split(path.sep).join('/');
 }

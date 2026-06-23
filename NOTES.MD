@@ -8774,3 +8774,389 @@ The next QuickChain work should be Phase 1 Round 2, centered on deterministic ro
 
 
 ### END NOTE - JUNE 22 2026 - 15:00 CST
+
+
+### BEGIN NOTE - JUNE 23 2026 - 16:15 CST
+
+These notes line up with the buildplan’s fixed crate-pair order and non-authority rules for CrabLink Tauri/client adapters. The buildplan explicitly keeps CrabLink as display/user-confirmation only and forbids client authority over balances, roots, finality, or settlement truth.  The prior carryover also says this pair is the final Phase 1 Round 2 pair before the separate final Phase 1 audit. 
+
+### BEGIN NOTE - JUNE 23 2026 - QUICKCHAIN PHASE 1 ROUND 2 - CRABLINK TAURI + CLIENT ADAPTERS
+
+# CrabLink Tauri + Client Adapters — QuickChain Phase 1 Round 2 Notes
+
+Project: RustyOnions / CrabLink
+Repo: crablink
+Focus: CrabLink Tauri + client adapters
+Phase: QuickChain Phase 1 — single-authority deterministic roots/proofs
+Round: Phase 1 Round 2 — final downstream/client boundary pass
+Status: GREEN / PARKED
+
+## 0. One-Sentence Result
+
+CrabLink Tauri + client adapters are now **GREEN / PARKED for QuickChain Phase 1 Round 2 client boundary**, proving the client remains display/user-intent only and does not become wallet, ledger, root, proof, checkpoint, validator, finality, settlement, bridge, or paid-cache authority.
+
+## 1. Final Parking Marker
+
+The final park command completed successfully:
+
+```bash
+scripts/dev-quickchain-tauri-park.sh
+```
+
+Final marker:
+
+```text
+== CrabLink Tauri QuickChain Phase 1 Round 2 final client parking gate passed ==
+```
+
+## 2. Commands / Gates Proven Green
+
+The park script ran and passed the full focused CrabLink Tauri gate:
+
+```text
+npm run check:quickchain-boundary
+npm run check:quickchain-paid-cache-boundary
+npm run check:quickchain-readiness-boundary
+npm run check:quickchain-phase1-interlock
+npm run build
+npm run check:rust:mac-media
+```
+
+Observed successful markers:
+
+```text
+QuickChain client-boundary check passed.
+QuickChain paid/cache boundary check passed.
+QuickChain readiness boundary check passed.
+QuickChain Phase 1 Round 2 client interlock check passed.
+vite build completed successfully.
+Tauri Rust mac-media cargo check completed successfully.
+== CrabLink Tauri QuickChain Phase 1 Round 2 final client parking gate passed ==
+```
+
+Vite build summary:
+
+```text
+vite v5.4.21 building for production...
+✓ 313 modules transformed.
+✓ built in 4.93s
+```
+
+Tauri Rust check summary:
+
+```text
+Checking crablink-tauri v0.1.0
+Finished dev profile target(s) in 4.00s
+```
+
+## 3. Patch Summary
+
+This session added and wired the final Phase 1 Round 2 CrabLink client interlock.
+
+New / updated boundary document:
+
+```text
+docs/tauri/QUICKCHAIN_PHASE1_CLIENT_INTERLOCK.md
+```
+
+New / updated scanner:
+
+```text
+scripts/check-quickchain-phase1-client-interlock.mjs
+```
+
+Updated app package script:
+
+```text
+apps/crablink-tauri/package.json
+```
+
+Expected script now exists:
+
+```text
+check:quickchain-phase1-interlock
+```
+
+Updated park/check wiring:
+
+```text
+scripts/check-tauri.sh
+scripts/dev-quickchain-tauri-park.sh
+```
+
+The parking marker was relabeled from the older Phase 1 Round 1 / QC-1A wording to the correct current label:
+
+```text
+CrabLink Tauri QuickChain Phase 1 Round 2 final client parking gate passed
+```
+
+## 4. What the New Interlock Proves
+
+The new interlock proves the final downstream/client boundary for Phase 1 Round 2:
+
+```text
+CrabLink Tauri remains display/user-intent only.
+React does not own wallet truth.
+React does not own ledger truth.
+React does not own QuickChain authority.
+TypeScript adapters remain the boundary path.
+Tauri Rust commands remain allowlisted and bounded.
+Paid access requires backend-derived receipt/access response.
+Receipt cache remains display-only.
+Local catalog remains display-only.
+QuickChain readiness UI remains informational only.
+Wallet balance verification must come from gateway wallet response.
+No client-side roots.
+No client-side proofs.
+No client-side checkpoints.
+No client-side validators.
+No client-side finality.
+No client-side settlement.
+No cache-only paid unlock.
+No fake balances.
+No fake receipts.
+No silent spend.
+No direct wallet mutation.
+No direct ledger mutation.
+No ROX runtime.
+No Solana runtime.
+No bridge/staking/liquidity/exchange-facing creep.
+```
+
+## 5. Files / Surfaces Covered by the New Scanner
+
+The new scanner requires and inspects:
+
+```text
+docs/tauri/QUICKCHAIN_PHASE1_CLIENT_INTERLOCK.md
+apps/crablink-tauri/package.json
+scripts/check-tauri.sh
+scripts/dev-quickchain-tauri-park.sh
+
+apps/crablink-tauri/src/platform/tauriPlatform.js
+apps/crablink-tauri/src/shared/api/gatewayClient.js
+apps/crablink-tauri/src/shared/api/walletClient.js
+apps/crablink-tauri/src/shared/api/contentViewClient.js
+apps/crablink-tauri/src/shared/api/siteVisitClient.js
+
+apps/crablink-tauri/src/pages/asset/AssetContentViewAccess.jsx
+apps/crablink-tauri/src/pages/site/SiteVisitAccess.jsx
+apps/crablink-tauri/src/pages/quickchain/QuickchainReadinessPage.jsx
+
+apps/crablink-tauri/src/app/shell/BalanceChip.jsx
+apps/crablink-tauri/src/app/shell/PassportSummary.jsx
+apps/crablink-tauri/src/app/shell/TopBar.jsx
+
+apps/crablink-tauri/src/pages/profile/profileDraftModel.js
+apps/crablink-tauri/src/shared/receipts/recentReceipts.js
+apps/crablink-tauri/src/shared/catalog/localCatalog.js
+```
+
+It also recursively checks relevant JS/TS/JSX/TSX runtime files for raw Tauri invoke bypasses and forbidden authority-shaped route/command calls.
+
+## 6. Important Boundary Assertions Now Locked
+
+### Paid access
+
+Correct paid flow remains:
+
+```text
+prepare / quote
+→ explicit user confirmation
+→ backend wallet path
+→ backend ledger truth
+→ backend receipt / authorization
+→ unlock/render
+→ display-only receipt cache
+→ balance refresh from backend
+```
+
+Forbidden shortcuts remain blocked:
+
+```text
+client cache says paid → unlock
+local receipt summary says paid → unlock
+React state says paid → unlock
+TS adapter says paid → unlock
+Tauri local state says paid → unlock
+policy allow says paid → unlock
+index pointer says paid → unlock
+b3 exists → unlock
+manifest exists → unlock
+site route exists → unlock
+```
+
+Important locked phrase:
+
+```text
+Display-only receipt cache is not paid unlock authority.
+```
+
+### Wallet and balance
+
+Wallet and balance UI may show display labels or cached hints, but verified/ledger-backed status must come from gateway wallet response.
+
+Important locked rule:
+
+```text
+Stored display hints must not be treated as verified balance or ledger truth.
+```
+
+### Offline / b3 cache
+
+Offline cache may verify bytes, but byte integrity is not economic entitlement.
+
+Important locked phrase:
+
+```text
+Verified b3 proves bytes, not paid entitlement.
+```
+
+### QuickChain readiness UI
+
+QuickChain readiness/status UI is display-only and informational.
+
+Important locked phrase:
+
+```text
+QuickChain readiness UI is informational, not authority.
+```
+
+## 7. What Was Not Added
+
+This pass intentionally did **not** add:
+
+```text
+root production
+proof production
+checkpoint production
+validator logic
+validator signatures
+settlement logic
+finality logic
+bridge logic
+anchor logic
+ROX runtime
+Solana runtime
+staking
+liquidity
+exchange-facing logic
+wallet mutation from client
+ledger mutation from client
+cache-only paid unlock
+fake receipt generation
+fake balance generation
+silent spend
+```
+
+This was a boundary and parking pass, not a new feature pass.
+
+## 8. Current Phase 1 Round 2 Pair Status
+
+The Phase 1 Round 2 sequence is now parked across all planned crate/client pairs:
+
+```text
+1. ron-proto + ron-ledger              ✅ complete / parked
+2. svc-wallet + ron-accounting         ✅ complete / parked
+3. svc-rewarder + svc-storage          ✅ complete / parked
+4. svc-gateway + omnigate              ✅ complete / parked
+5. svc-index + ron-policy              ✅ complete / parked
+6. CrabLink Tauri + client adapters    ✅ complete / parked
+```
+
+Correct current label:
+
+```text
+QuickChain Phase 1 Round 2: complete / parked
+```
+
+Do not yet use this label until the final audit passes:
+
+```text
+Full QuickChain Phase 1 complete
+```
+
+## 9. Why Full Phase 1 Should Wait for Final Audit
+
+Even though all Round 2 crate/client pairs are now parked, full Phase 1 should still receive one final cross-stack audit.
+
+The final audit should confirm:
+
+```text
+canonical bytes are locked where required
+real reproducible BLAKE3-256 hashes only
+deterministic root/proof material remains core-only
+downstream crates remain non-authority
+CrabLink remains display/user-intent only
+no external settlement scope entered
+no fake balances
+no fake receipts
+no fake finality
+all park gates remain green
+phase docs match QUICKCHAIN_BUILDPLAN.MD
+```
+
+Only after that audit is green should the project say:
+
+```text
+QuickChain Phase 1 is complete.
+```
+
+## 10. Recommended Next Step
+
+Next session should be:
+
+```text
+Final QuickChain Phase 1 audit
+```
+
+Recommended attachments for the final audit session:
+
+```text
+QUICKCHAIN_REVIEW_BUNDLE.MD
+QUICKCHAIN_BUILDPLAN.MD
+CODEBUNDLE_RS.md
+CODEBUNDLE_TAURI_APP.md
+COMBINED_IDB.MD
+ALLNOTES.MD or latest crate notes
+latest terminal output showing CrabLink Tauri parked
+these CrabLink notes
+```
+
+If disk is tight, prefer a focused final audit script/check over rerunning every exhaustive crate-local park script.
+
+## 11. Low-Disk / Low-Duplicate Reminder
+
+Do not run duplicate exhaustive gates unless debugging a real failure.
+
+Preferred workflow after this CrabLink park:
+
+```text
+1. Save these notes.
+2. Regenerate CODEBUNDLE_TAURI_APP.md if needed.
+3. Move to final Phase 1 audit.
+4. Avoid rerunning the same Tauri park gate unless a file changes.
+```
+
+Do not run broad backend workspace clippy/build from the CrabLink repo.
+
+Do not run Chrome extension checks unless explicitly needed.
+
+## 12. Final Status Label
+
+Use this status label going forward:
+
+```text
+CrabLink Tauri + client adapters: GREEN / PARKED for QuickChain Phase 1 Round 2 client boundary
+```
+
+Short version for carryover:
+
+```text
+We completed the CrabLink Tauri + client adapters QuickChain Phase 1 Round 2 client-boundary pass. A new Phase 1 Round 2 client interlock doc/scanner was added and wired into the Tauri park script. The full Tauri park gate passed: client boundary, paid/cache boundary, readiness boundary, Phase 1 Round 2 interlock, Vite build, and Tauri Rust mac-media cargo check. CrabLink remains display/user-intent only; React does not own wallet/ledger truth; TS adapters preserve the boundary; Tauri Rust remains typed/redacted/bounded/allowlisted; paid access requires backend receipt/access response; receipt/local catalog caches remain display-only; QuickChain readiness remains informational only. No roots, proofs, checkpoints, validators, settlement, bridge, ROX, Solana, staking, liquidity, wallet mutation, ledger mutation, fake balances, fake receipts, silent spend, or cache-only paid unlock were introduced. All Phase 1 Round 2 crate/client pairs are now parked. Next step is the final QuickChain Phase 1 audit before declaring Phase 1 complete.
+```
+
+### END NOTE - JUNE 23 2026 - QUICKCHAIN PHASE 1 ROUND 2 - CRABLINK TAURI + CLIENT ADAPTERS
+
+
+### END NOTE - JUNE 23 2026 - 16:15 CST
