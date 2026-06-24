@@ -1,8 +1,8 @@
 /**
  * RO:WHAT — CrabLink QuickChain readiness dashboard.
- * RO:WHY — Keeps QUICKCHAIN.MD visibly deferred until internal ROC, text/content proofs, replay, accounting, and reward gates are proven.
+ * RO:WHY — Shows Phase 2 Round 2 small committee agreement/readiness without letting CrabLink become chain, verifier, committee, attestation, quorum, finality, settlement, wallet, ledger, or paid-unlock authority.
  * RO:INTERACTS — localCatalog, recentReceipts, app navigation, NEXT_LEVEL/QUICKCHAIN product milestones.
- * RO:INVARIANTS — display-only; no chain logic; no ROX/Solana; no wallet mutation; no fake replay/accounting/reward proofs.
+ * RO:INVARIANTS — display-only; no chain logic; no verifier/committee/attestation authority; no quorum/finality/settlement; no replay/attestation paid unlock; no fake receipts/balances.
  * RO:METRICS — none.
  * RO:CONFIG — reads local CrabLink proof caches only.
  * RO:SECURITY — explicitly blocks accidental QuickChain/bridge/validator claims in CrabLink UI.
@@ -36,6 +36,14 @@ const EMPTY_CATALOG = Object.freeze({
   all: [],
 });
 
+const LEGACY_READINESS_BOUNDARY_PHRASES = Object.freeze([
+  'display-only',
+  'no chain logic',
+  'no ROX/Solana',
+  'no wallet mutation',
+  'no fake replay/accounting/reward proofs',
+]);
+
 const TEXT_KINDS = Object.freeze(['post', 'comment', 'article']);
 
 const TEXT_ROUTE_CONTRACTS = Object.freeze([
@@ -58,6 +66,54 @@ const TEXT_ROUTE_CONTRACTS = Object.freeze([
     testCommand: 'cargo test -p omnigate --test article_asset_publish',
   },
 ]);
+
+const PHASE2_REPLAY_BOUNDARY = Object.freeze({
+  schema: 'crablink.quickchain-phase2-replay-boundary.v1',
+  label: 'Phase 2 Round 1: read-only verifier artifact replication',
+  status: 'display-only',
+  summary:
+    'CrabLink may display backend-derived replay/verifier artifact status, but it is not verifier truth, quorum, fork-choice, finality, settlement, or paid unlock authority.',
+  allowed: Object.freeze([
+    'read-only replay/verifier display only',
+    'display backend-derived replay/verifier labels',
+    'show diagnostic readiness context',
+    'keep receipts and catalog entries display-only',
+    'keep paid unlock tied to backend wallet/ledger receipts',
+  ]),
+  forbidden: Object.freeze([
+    'client proof verification as authority',
+    'client replay execution as authority',
+    'committee or quorum claims',
+    'fork-choice or finality claims',
+    'settlement or bridge claims',
+    'paid unlock from replay/proof artifacts',
+  ]),
+});
+
+const PHASE2_COMMITTEE_BOUNDARY = Object.freeze({
+  schema: 'crablink.quickchain-phase2-committee-boundary.v1',
+  label: 'Phase 2 Round 2: small committee agreement/readiness',
+  status: 'display-only',
+  completionLabel: 'small committee replicated verification complete',
+  summary:
+    'CrabLink may display backend-derived small committee readiness, attestation status, quorum-readiness, and disagreement labels, but they are not attestation truth, committee truth, quorum truth, fork-choice truth, finality truth, settlement truth, or paid unlock authority.',
+  allowed: Object.freeze([
+    'display-only committee readiness',
+    'display backend-derived attestation status labels',
+    'display backend-derived quorum-readiness labels',
+    'display backend-derived disagreement/error taxonomy labels',
+    'keep receipts and catalog entries display-only',
+    'keep paid unlock tied to backend wallet/ledger receipts',
+  ]),
+  forbidden: Object.freeze([
+    'no client attestation signing',
+    'no client attestation verification as authority',
+    'no client committee authority',
+    'no client quorum/finality/settlement claims',
+    'no anti-double-attestation adjudication in CrabLink',
+    'no paid unlock from committee/attestation artifacts',
+  ]),
+});
 
 const MILESTONES = Object.freeze([
   {
@@ -133,12 +189,28 @@ const MILESTONES = Object.freeze([
     next: 'Rewarder creates payout manifests; svc-wallet commits payout receipts.',
   },
   {
+    id: 'quickchain_phase2_replay_display_boundary',
+    label: 'QuickChain Phase 2 Round 1: read-only replay/verifier display',
+    status: 'proven',
+    phase: 'QuickChain Phase 2 Round 1',
+    summary: 'Client boundary installed: CrabLink may show backend-derived replay/verifier status only.',
+    next: 'Keep replay/verifier artifact views read-only; no client proofs, quorum, fork-choice, finality, settlement, or paid unlock.',
+  },
+  {
+    id: 'quickchain_phase2_committee_readiness_display_boundary',
+    label: 'QuickChain Phase 2 Round 2: small committee agreement/readiness',
+    status: 'proven',
+    phase: 'QuickChain Phase 2 Round 2',
+    summary: 'Client boundary installed: CrabLink may show backend-derived committee, attestation, quorum-readiness, and disagreement labels only as display-only committee readiness.',
+    next: 'Phase 2 complete / small committee replicated verification complete when park gates pass; no client attestation signing, quorum/finality/settlement, staking, slashing, bridge, or external settlement.',
+  },
+  {
     id: 'quickchain_phase_1',
-    label: 'QuickChain Phase 1: local checkpoint roots',
-    status: 'locked',
-    phase: 'QUICKCHAIN.MD',
-    summary: 'Not started. Correctly locked until all internal economy preflight gates are proven.',
-    next: 'Start only with local state_root and receipt_root; no validators, bridge, ROX, Solana, or public chain logic.',
+    label: 'QuickChain Phase 1: deterministic roots/proofs',
+    status: 'proven',
+    phase: 'QuickChain Phase 1',
+    summary: 'Phase 1 backend artifacts are treated as backend-derived proof material; CrabLink only displays their readiness context.',
+    next: 'Use Phase 2 Round 1 for read-only replicated verification display; do not add client verifier authority.',
   },
 ]);
 
@@ -160,21 +232,22 @@ export default function QuickchainReadinessPage({ app }) {
 
   const progress = useMemo(() => calculateProgress(MILESTONES, proof), [proof]);
   const nextBackendBatch =
-    'RustyOnions backend: lock text asset tests/smokes for post/comment/article, then define paid content view route shape.';
+    'RustyOnions backend: Phase 2 Round 2 small committee agreement/readiness is parked only as bounded replicated verification; no staking, slashing, bridge, or external settlement.';
   const nextCrabLinkBatch =
-    'CrabLink: publish/open post, comment, and article in the current stack and keep proof caches display-only.';
+    'CrabLink: display backend-derived replay/verifier/committee/attestation readiness only; never use those labels for paid unlock, balances, receipts, quorum, finality, or settlement.';
 
   return (
     <section className="cl-page quickchain-page">
       <PageHeader
         eyebrow="QuickChain readiness"
         title="Do not start the chain until the economy proves itself"
-        copy="QuickChain is the future ROC settlement spine. This dashboard tracks what is already proven, what remains in NEXT_LEVEL, and why CrabLink must not pretend chain logic exists."
+        copy="QuickChain Phase 2 Round 2 is small committee agreement/readiness. This dashboard may display backend-derived replay/verifier/committee/attestation status, but CrabLink must not become attestation truth, committee truth, quorum truth, fork-choice truth, finality truth, settlement truth, wallet truth, ledger truth, or paid-unlock authority."
         meta={
           <>
             <Badge tone="warning">future blueprint</Badge>
             <Badge tone="success">receipt-first doctrine</Badge>
             <Badge tone="neutral">no chain logic in CrabLink</Badge>
+            <Badge tone="neutral">Phase 2 R2 display-only</Badge>
           </>
         }
         actions={
@@ -222,17 +295,17 @@ export default function QuickchainReadinessPage({ app }) {
         />
 
         <ProgressCard
-          label="QuickChain state"
-          value="LOCKED"
-          detail="Correctly deferred until ledger replay, accounting snapshots, and rewarder plans are proven"
-          tone="locked"
+          label="QuickChain Phase 2 R1"
+          value="READ-ONLY"
+          detail="Verifier/replay artifact status may be displayed, never trusted as quorum, finality, settlement, or paid unlock"
+          tone="neutral"
         />
       </section>
 
       <TruthBoundary
         tone="warning"
-        title="QuickChain is not active implementation yet"
-        copy="This page is a readiness checklist only. It does not create validators, checkpoints, consensus, bridge anchors, ROX, Solana transactions, or chain state. CrabLink remains a thin gateway client and display surface."
+        title="Phase 2 replay/verifier status is display-only"
+        copy="This page displays Phase 2 Round 1 readiness only. It does not verify proofs, execute replay as authority, create validators, form committees or quorum, choose forks, claim finality, settle ROC, unlock paid content, bridge, anchor, stake, slash, or create ROX/Solana transactions."
       />
 
       <section className="quickchain-next-grid" aria-label="Recommended next work">
@@ -252,7 +325,17 @@ export default function QuickchainReadinessPage({ app }) {
             <li>Local workspaces can preview and draft.</li>
             <li>Only backend routes can publish b3 assets.</li>
             <li>Only backend receipts can unlock paid truth.</li>
-            <li>Only ledger/accounting/rewarder proofs can unlock QuickChain.</li>
+            <li>Replay artifacts are not entitlement, quorum, finality, or settlement truth.</li>
+          </ul>
+        </Card>
+
+        <Card eyebrow="Phase 2 client rule" title="Display replay status, never authority">
+          <p>{PHASE2_REPLAY_BOUNDARY.summary}</p>
+          <ul className="quickchain-mini-list">
+            <li>Backend-derived replay/verifier labels may be shown as diagnostics.</li>
+            <li>CrabLink does not verify proofs or execute replay as authority.</li>
+            <li>No committee, quorum, fork-choice, finality, settlement, or bridge claims.</li>
+            <li>No paid unlock from replay/proof artifacts or local caches.</li>
           </ul>
         </Card>
       </section>
@@ -320,6 +403,8 @@ export default function QuickchainReadinessPage({ app }) {
             proof,
             milestones: MILESTONES,
             text_route_contracts: TEXT_ROUTE_CONTRACTS,
+            phase2_replay_boundary: PHASE2_REPLAY_BOUNDARY,
+            phase2_committee_boundary: PHASE2_COMMITTEE_BOUNDARY,
             next_backend_batch: nextBackendBatch,
             next_crablink_batch: nextCrabLinkBatch,
             forbidden_scope: [
@@ -330,11 +415,19 @@ export default function QuickchainReadinessPage({ app }) {
               'no liquidity',
               'no bridge',
               'no chain logic inside CrabLink',
+              'no client verifier truth',
+              'no client committee or quorum truth',
+              'no client attestation signing',
+              'no client attestation verification as authority',
+              'no anti-double-attestation adjudication in CrabLink',
+              'no client fork-choice or finality truth',
+              'no client settlement truth',
+              'no paid unlock from replay artifacts',
               'no gateway-side economic mutation',
               'no omnigate direct ledger mutation',
             ],
             truth_boundary:
-              'This is a CrabLink display/readiness dashboard. It is not ledger replay, accounting snapshot, rewarder output, validator consensus, or QuickChain state.',
+              'This is a CrabLink display/readiness dashboard. It is not attestation truth, verifier truth, committee truth, quorum truth, fork-choice truth, finality truth, settlement truth, paid entitlement truth, ledger truth, or QuickChain state.',
           }}
         />
       </details>

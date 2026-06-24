@@ -2,7 +2,7 @@
  * RO:WHAT — Central typed Tauri invoke adapter for CrabLink.
  * RO:WHY — React and product clients must not call raw native privilege directly.
  * RO:INTERACTS — @tauri-apps/api/core, shared/api/*, Tauri Rust command allowlist.
- * RO:INVARIANTS — allowlisted commands only; no shell/eval/raw/native/QuickChain authority commands.
+ * RO:INVARIANTS — allowlisted commands only; no shell/eval/raw/native/QuickChain/verifier/committee/attestation/quorum/finality authority commands.
  * RO:SECURITY — command names are validated before invoke; thrown errors are redacted before display.
  * RO:TEST — npm run check:quickchain-boundary.
  */
@@ -55,8 +55,8 @@ const ALLOWED_TAURI_COMMAND_SET = new Set(ALLOWED_TAURI_COMMANDS);
 const FORBIDDEN_COMMAND_PATTERNS = Object.freeze([
   /^raw[_-]/i,
   /(^|[_-])(run|execute|eval|shell|native)([_-]|$)/i,
-  /quickchain[_-]?(root|state|receipt|checkpoint|validator|settle|settlement)/i,
-  /(^|[_-])(checkpoint|validator|settle|settlement|bridge|staking|liquidity)([_-]|$)/i,
+  /quickchain[_-]?(root|state|receipt|checkpoint|proof|replay|verifier|validator|committee|attestation|attestations|quorum|fork[_-]?choice|finality|settle|settlement|anchor|bridge)/i,
+  /(^|[_-])(checkpoint|proof|replay|verifier|validator|committee|attestation|attestations|quorum|fork[_-]?choice|finality|settle|settlement|anchor|bridge|staking|slashing|liquidity)([_-]|$)/i,
   /(^|[_-])(rox|solana)([_-]|$)/i,
   /(^|[_-])(mint|issue|transfer|burn|hold|capture|release)([_-]|$)/i,
   /unlock[_-]?paid[_-]?from[_-]?cache/i,

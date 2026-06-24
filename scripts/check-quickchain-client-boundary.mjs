@@ -3,7 +3,7 @@
  * RO:WHAT — CrabLink Tauri QuickChain client-authority boundary scanner.
  * RO:WHY — Prevents the Tauri client layer from drifting into QuickChain/runtime/wallet/ledger authority.
  * RO:INTERACTS — Tauri React source, TS/JS adapters, Rust command bridge, Tauri capabilities, QuickChain boundary docs.
- * RO:INVARIANTS — display-only; gateway-first; typed allowlisted commands; no roots/checkpoints/validators/bridges/settlement authority.
+ * RO:INVARIANTS — display-only; gateway-first; typed allowlisted commands; no roots/checkpoints/verifiers/validators/committee/attestation/quorum/bridges/finality/settlement authority.
  * RO:SECURITY — rejects raw/eval/shell/native bridge creep and client-side chain authority naming.
  * RO:TEST — node scripts/check-quickchain-client-boundary.mjs.
  */
@@ -41,9 +41,9 @@ const EXCLUDED_DIRS = new Set([
   '.git', 'node_modules', 'dist', 'build', 'coverage', 'target', 'gen', '.tauri', '.vite', '.turbo', 'dump',
 ]);
 
-const FORBIDDEN_COMMAND_NAME_RE = /(?:^|_)(?:raw|shell|eval|execute|native|quickchain|root|checkpoint|validator|settlement|settle|bridge|anchor|solana|rox|staking|liquidity)(?:_|$)/i;
-const FORBIDDEN_ROUTE_RE = /['"`]\/quickchain\/(?:root|roots|checkpoint|checkpoints|validator|validators|settlement|settle|bridge|bridges|anchor|anchors|finality)\b/i;
-const FORBIDDEN_PACKAGE_RE = /(?:mainnet-beta\.solana|api\.solana|solanaWeb3|@solana|solana-web3|external-settlement|bridge-proof|validator-signature)/i;
+const FORBIDDEN_COMMAND_NAME_RE = /(?:^|_)(?:raw|shell|eval|execute|native|quickchain|root|proof|replay|checkpoint|verifier|validator|committee|attestation|attestations|quorum|fork[_-]?choice|finality|settlement|settle|bridge|anchor|solana|rox|staking|slashing|liquidity)(?:_|$)/i;
+const FORBIDDEN_ROUTE_RE = /['"`]\/quickchain\/(?:root|roots|proof|proofs|replay|replays|checkpoint|checkpoints|verifier|verifiers|validator|validators|committee|committees|attestation|attestations|quorum|finality|settlement|settle|bridge|bridges|anchor|anchors)\b/i;
+const FORBIDDEN_PACKAGE_RE = /(?:mainnet-beta\.solana|api\.solana|solanaWeb3|@solana|solana-web3|external-settlement|bridge-proof|validator-signature|attestation-signer|committee-signer|quorum-finality)/i;
 const DYNAMIC_INVOKE_ALLOWLIST = new Map([
   [normalizeRel('apps/crablink-tauri/src/platform/tauriPlatform.js'), 'central callTauri adapter'],
   [normalizeRel('apps/crablink-tauri/src/shared/api/videoAssetClient.js'), 'bounded staged image/video upload command selector'],
