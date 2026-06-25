@@ -225,6 +225,8 @@ selected_scripts() {
     "$ROOT/scripts/check-quickchain-phase1-client-interlock.mjs" \
     "$ROOT/scripts/check-quickchain-phase2-client-replay-boundary.mjs" \
     "$ROOT/scripts/check-quickchain-phase2-committee-boundary.mjs" \
+    "$ROOT/scripts/check-quickchain-phase3-client-validator-boundary.mjs" \
+    "$ROOT/scripts/check-quickchain-phase3-client-lifecycle-boundary.mjs" \
     "$ROOT/scripts/dev-quickchain-tauri-park.sh" \
     "$ROOT/scripts/smoke-tauri-local-gateway.sh" \
     "$ROOT/scripts/migrate_chrome_react_to_tauri.sh" \

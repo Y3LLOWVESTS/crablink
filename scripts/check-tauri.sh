@@ -19,5 +19,7 @@ npm run check:quickchain-readiness-boundary
 npm run check:quickchain-phase1-interlock
 npm run check:quickchain-phase2-replay-boundary
 npm run check:quickchain-phase2-committee-boundary
+npm run check:quickchain-phase3-validator-boundary
+npm run check:quickchain-phase3-lifecycle-boundary
 npm run build
 npm run check:rust:mac-media

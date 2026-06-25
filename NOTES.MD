@@ -10247,3 +10247,1024 @@ Phase 3 should remain bounded and must not introduce bonded economics, staking, 
 
 
 ### END NOTE - JUNE 24 2026 - 02:45 CST
+
+
+### BEGIN NOTE - JUNE 24 2026 - 17:20 CST
+
+Here are the CrabLink notes for the completed QuickChain Phase 3 Round 1 pass.
+
+### BEGIN NOTE - JUNE 24 2026 - QUICKCHAIN PHASE 3 ROUND 1 - CrabLink Tauri + client adapters
+
+# QuickChain Phase 3 Round 1 Notes — CrabLink Tauri + client adapters
+
+## 0. Status
+
+CrabLink Tauri + client adapters are **GREEN / PARKED** for **QuickChain Phase 3 Round 1**.
+
+This completes the final crate/client pair for Phase 3 Round 1.
+
+Safe completion label:
+
+QuickChain Phase 3 Round 1 complete.
+
+Passport-gated validator identity/registry boundary foundation is complete.
+
+No bonded economics, staking, slashing, bridge, public validator economy, or external settlement has been introduced.
+
+Important distinction:
+
+Phase 3 as a whole is **not complete**.
+Phase 3 **Round 1** is complete.
+
+This round only establishes the validator/passport identity and registry boundary foundation. It does not authorize public validators, staking, slashing, bonded economics, bridge behavior, public settlement, or external-chain integration.
+
+---
+
+## 1. What this CrabLink pass accomplished
+
+This pass hardened CrabLink Tauri and client adapters so they can safely acknowledge QuickChain Phase 3 Round 1 readiness without becoming authority.
+
+CrabLink may now display backend-derived Phase 3 readiness language such as:
+
+* validator-readiness-display
+* backend-derived validator/readiness status
+* passport-required labels
+* registry-checked labels
+* governance-review labels
+* revoked/expired validator labels
+
+But CrabLink still does **not** become:
+
+* validator authority
+* passport registry authority
+* validator capability authority
+* validator-set authority
+* quorum authority
+* fork-choice authority
+* finality authority
+* settlement authority
+* wallet authority
+* ledger authority
+* paid unlock authority
+* staking authority
+* slashing authority
+* bonding authority
+* bridge authority
+* external-chain authority
+
+This preserves the Tauri-first CrabLink doctrine:
+
+React displays and collects user intent.
+Tauri Rust mediates native privilege.
+Backend services own truth.
+svc-wallet mutates ROC.
+ron-ledger remains economic truth.
+CrabLink never invents balances, receipts, settlement, validator authority, or paid entitlement.
+
+---
+
+## 2. Files changed or added
+
+### Added
+
+* docs/tauri/QUICKCHAIN_PHASE3_CLIENT_VALIDATOR_BOUNDARY.md
+* scripts/check-quickchain-phase3-client-validator-boundary.mjs
+
+### Updated
+
+* apps/crablink-tauri/package.json
+* scripts/check-tauri.sh
+* scripts/dev-quickchain-tauri-park.sh
+* apps/crablink-tauri/src/platform/tauriPlatform.js
+* apps/crablink-tauri/src/pages/quickchain/QuickchainReadinessPage.jsx
+
+---
+
+## 3. New Phase 3 client boundary document
+
+Added:
+
+docs/tauri/QUICKCHAIN_PHASE3_CLIENT_VALIDATOR_BOUNDARY.md
+
+Purpose:
+
+Defines the CrabLink/Tauri-side Phase 3 Round 1 boundary for validator/passport readiness display.
+
+It explicitly states that CrabLink may display backend-derived validator/readiness status only as display information. It must not become validator truth, passport registry truth, capability truth, validator-set truth, quorum truth, finality truth, settlement truth, payment truth, wallet truth, ledger truth, or paid entitlement truth.
+
+Key safe phrases added:
+
+* QuickChain Phase 3 Round 1 — validator identity + registry gating
+* passport-gated validator identity/registry boundary foundation
+* validator-readiness-display
+* backend-derived validator/readiness status
+* no client-side validator authority
+* no passport registry authority
+* no validator capability authority
+* no validator-set authority
+* no staking/slashing/bonding
+
+The document also locks safe completion language:
+
+QuickChain Phase 3 Round 1 complete.
+
+Passport-gated validator identity/registry boundary foundation is complete.
+
+No bonded economics, staking, slashing, bridge, public validator economy, or external settlement has been introduced.
+
+---
+
+## 4. New scanner
+
+Added:
+
+scripts/check-quickchain-phase3-client-validator-boundary.mjs
+
+Purpose:
+
+Static boundary scanner for Phase 3 Round 1 CrabLink client safety.
+
+It verifies that CrabLink does not accidentally drift into validator/passport/settlement authority.
+
+The scanner checks:
+
+* required Phase 3 boundary doc exists
+* QuickchainReadinessPage includes display-only Phase 3 language
+* package.json exposes the new check script
+* check-tauri.sh runs Phase 3 after Phase 2 committee and before build
+* dev-quickchain-tauri-park.sh includes Phase 3 completion markers
+* tauriPlatform forbidden command patterns include Phase 3 validator/passport authority drift
+* QuickchainReadinessPage does not import active adapters
+* QuickchainReadinessPage does not invoke/fetch/call backend authority paths
+* client API files do not expose QuickChain validator/root/proof/finality/settlement/bridge/staking/slashing authority routes
+* display caches do not export authorization-shaped truth flags
+* no paid unlock is tied to validator/passport/committee/proof material
+
+The scanner passed.
+
+Observed terminal output:
+
+QuickChain Phase 3 validator boundary check passed.
+
+---
+
+## 5. package.json wiring
+
+Updated:
+
+apps/crablink-tauri/package.json
+
+Added script:
+
+check:quickchain-phase3-validator-boundary
+
+The full app check flow now includes the Phase 3 validator boundary after Phase 2 committee boundary and before build.
+
+This preserves the existing layered client safety sequence:
+
+1. QuickChain client boundary
+2. paid/cache boundary
+3. readiness boundary
+4. Phase 1 client interlock
+5. Phase 2 replay boundary
+6. Phase 2 committee boundary
+7. Phase 3 validator boundary
+8. Vite build
+9. Tauri Rust mac-media cargo check
+
+---
+
+## 6. check-tauri.sh wiring
+
+Updated:
+
+scripts/check-tauri.sh
+
+The script now runs:
+
+npm run check:quickchain-phase3-validator-boundary
+
+after:
+
+npm run check:quickchain-phase2-committee-boundary
+
+and before:
+
+npm run build
+
+This keeps the low-disk CrabLink gate efficient while still making Phase 3 safety part of the standard Tauri check path.
+
+---
+
+## 7. Tauri platform command hardening
+
+Updated:
+
+apps/crablink-tauri/src/platform/tauriPlatform.js
+
+The Tauri platform command boundary was hardened to reject Phase 3 authority-shaped command drift.
+
+The forbidden patterns now explicitly guard against command names or routes shaped like:
+
+* passport registry authority
+* validator registry authority
+* validator capability authority
+* validator admission
+* validator registration
+* validator authorization
+* validator grant
+* validator issuance
+* validator revocation
+* validator rotation
+* validator set authority
+* staking
+* slashing
+* bridge
+* settlement
+* finality
+* quorum
+* root/proof/checkpoint/replay authority
+
+This is important because CrabLink may eventually display validator/passport readiness, but no Tauri command may quietly become a local validator-management or settlement authority path.
+
+The allowed Tauri command list remains bounded to app diagnostics, settings, gateway, identity display, wallet display, upload/media/stream, and existing safe bridge functions.
+
+No QuickChain validator, proof, replay, committee, quorum, finality, bridge, staking, slashing, or settlement authority commands were added.
+
+---
+
+## 8. QuickchainReadinessPage update
+
+Updated:
+
+apps/crablink-tauri/src/pages/quickchain/QuickchainReadinessPage.jsx
+
+The page now includes Phase 3 Round 1 readiness language.
+
+Added display-only boundary object:
+
+PHASE3_VALIDATOR_BOUNDARY
+
+Purpose:
+
+Represent the validator/passport readiness display boundary in local UI state only.
+
+Key fields:
+
+* schema: crablink.quickchain-phase3-validator-boundary.v1
+* label: Phase 3 Round 1: passport-gated validator identity/registry boundary
+* status: display-only
+* completionLabel: passport-gated validator identity/registry boundary foundation
+
+The page now explains that backend-derived validator/readiness labels may be displayed but are not:
+
+* validator truth
+* passport registry truth
+* validator capability truth
+* validator-set truth
+* quorum truth
+* fork-choice truth
+* finality truth
+* settlement truth
+* wallet truth
+* ledger truth
+* paid unlock authority
+
+The page now includes a Phase 3 progress card:
+
+QuickChain Phase 3 R1
+DISPLAY
+Validator/passport-registry readiness may be displayed only as backend-derived status, never trusted as validator-set, capability, finality, settlement, or paid unlock.
+
+The page remains display-only. It does not import active gateway, wallet, receipt, settings, or Tauri adapters. It does not fetch, invoke, or call backend APIs.
+
+---
+
+## 9. Park script update
+
+Updated:
+
+scripts/dev-quickchain-tauri-park.sh
+
+The park script now preserves legacy Phase 1 and Phase 2 scanner compatibility markers while adding Phase 3 Round 1 final parking markers.
+
+Preserved legacy markers:
+
+* Phase 1 Round 2 final client parking gate
+* Phase 2 Round 2 final client parking gate
+* Phase 2 complete
+* small committee replicated verification complete
+
+Added active Phase 3 markers:
+
+* Phase 3 Round 1 final client parking gate
+* QuickChain Phase 3 Round 1 complete
+* passport-gated validator identity/registry boundary foundation
+
+Observed terminal output:
+
+== CrabLink Tauri QuickChain Phase 2 Round 2 committee readiness client parking gate passed ==
+== Phase 2 complete ==
+== small committee replicated verification complete ==
+== CrabLink Tauri QuickChain Phase 3 Round 1 validator/passport client parking gate passed ==
+== QuickChain Phase 3 Round 1 complete ==
+== passport-gated validator identity/registry boundary foundation complete ==
+== no bonded economics, staking, slashing, bridge, public validator economy, or external settlement introduced ==
+
+---
+
+## 10. Tests and gates run
+
+The following focused checks passed:
+
+* node scripts/check-quickchain-readiness-boundary.mjs
+* node scripts/check-quickchain-phase1-client-interlock.mjs
+* node scripts/check-quickchain-phase2-client-replay-boundary.mjs
+* node scripts/check-quickchain-phase2-committee-boundary.mjs
+* node scripts/check-quickchain-phase3-client-validator-boundary.mjs
+
+The full park script passed:
+
+* bash scripts/dev-quickchain-tauri-park.sh
+
+The park script ran the full CrabLink Tauri check stack:
+
+* QuickChain client-boundary check passed.
+* QuickChain paid/cache boundary check passed.
+* QuickChain readiness boundary check passed.
+* QuickChain Phase 1 Round 2 client interlock check passed.
+* QuickChain Phase 2 replay boundary check passed.
+* QuickChain Phase 2 committee boundary check passed.
+* QuickChain Phase 3 validator boundary check passed.
+* Vite production build passed.
+* Tauri Rust mac-media cargo check passed.
+
+Observed build result:
+
+vite v5.4.21 building for production
+313 modules transformed
+built in 4.87s
+
+Observed Rust result:
+
+crablink-tauri cargo check finished successfully.
+
+---
+
+## 11. What this proves
+
+This proves CrabLink is properly parked for Phase 3 Round 1 as the final client/display layer.
+
+CrabLink can now show Phase 3 validator/passport readiness state in a safe, display-only form.
+
+It does not own or infer validator authority.
+
+It does not own passport registry authority.
+
+It does not own validator capability authority.
+
+It does not own validator-set authority.
+
+It does not own quorum, finality, or settlement truth.
+
+It does not unlock paid content from validator status, registry status, local caches, proofs, attestations, or committee status.
+
+It does not mutate wallets or ledger state.
+
+It does not introduce staking, slashing, bonding, bridge, ROX, Solana, liquidity, exchange-facing logic, or external settlement.
+
+---
+
+## 12. Full Phase 3 Round 1 completion state
+
+The full QuickChain Phase 3 Round 1 crate-pair order is now green:
+
+1. ron-proto + ron-ledger — GREEN / PARKED
+2. svc-wallet + ron-accounting — GREEN / PARKED
+3. svc-rewarder + svc-storage — GREEN / PARKED
+4. svc-gateway + omnigate — GREEN / PARKED
+5. svc-index + ron-policy — GREEN / PARKED
+6. CrabLink Tauri + client adapters — GREEN / PARKED
+
+This means QuickChain Phase 3 Round 1 is complete across the full stack.
+
+---
+
+## 13. Safe wording for project status
+
+Use:
+
+QuickChain Phase 3 Round 1 is complete.
+
+Passport-gated validator identity/registry boundary foundation is complete.
+
+The full Round 1 pass is green across ron-proto, ron-ledger, svc-wallet, ron-accounting, svc-rewarder, svc-storage, svc-gateway, omnigate, svc-index, ron-policy, and CrabLink Tauri/client adapters.
+
+CrabLink remains display/user-intent only.
+
+No bonded economics, staking, slashing, public validator economy, bridge, ROX, Solana, liquidity, exchange-facing logic, or external settlement has been introduced.
+
+Do not use:
+
+* QuickChain Phase 3 is complete
+* public validator network live
+* staking is live
+* slashing is live
+* bonded validators are live
+* public settlement is live
+* bridge-ready
+* external settlement ready
+* ROX/Solana integrated
+* CrabLink validates the chain
+* CrabLink owns validator state
+* CrabLink verifies finality
+* CrabLink unlocks paid content from validator state
+
+---
+
+## 14. Next likely work: Phase 3 Round 2
+
+Phase 3 Round 2 should continue from the beginning of the fixed crate-pair order unless the buildplan explicitly says otherwise:
+
+1. ron-proto + ron-ledger
+2. svc-wallet + ron-accounting
+3. svc-rewarder + svc-storage
+4. svc-gateway + omnigate
+5. svc-index + ron-policy
+6. CrabLink Tauri + client adapters
+
+Round 2 should harden validator/passport operation semantics while staying inside the allowed Phase 3 scope.
+
+Likely allowed Round 2 themes:
+
+* validator registry DTO refinement
+* validator lifecycle status DTOs
+* rotation/revocation display and replay semantics
+* evidence DTOs for equivocation or conflicting claims
+* degraded validator/readiness states
+* challenge/evidence shaping
+* registry snapshot determinism
+* backend-derived display of validator readiness
+* stronger no-authority tests across service/client boundaries
+
+Still forbidden:
+
+* staking
+* slashing
+* bonding
+* public validator economy
+* public bridge
+* ROX
+* Solana
+* liquidity
+* exchange-facing logic
+* external settlement
+* client-side validator authority
+* gateway/omnigate ledger mutation
+* rewarder ledger mutation
+* index/policy as settlement truth
+* cache as paid unlock truth
+* root-producing code without canonical bytes and golden vectors
+* pruning before DA/challenge/archive fallback
+
+---
+
+## 15. Final verdict
+
+CrabLink Tauri + client adapters are complete for QuickChain Phase 3 Round 1.
+
+The client boundary is stronger after this pass.
+
+The architecture remains correct:
+
+backend owns truth
+svc-wallet mutates ROC
+ron-ledger remains economic truth
+CrabLink displays/user-confirms
+Tauri Rust mediates native privilege
+React owns no authority
+validator/passport readiness is display-only
+no fake balances
+no fake receipts
+no silent spend
+no external settlement creep
+
+### END NOTE - JUNE 24 2026 - QUICKCHAIN PHASE 3 ROUND 1 - CrabLink Tauri + client adapters
+
+
+### END NOTE - JUNE 24 2026 - 17:20 CST
+
+
+### BEGIN NOTE - JUNE 25 2026 - 01:55 CST
+
+Here are the **paste-ready CrabLink Tauri notes** for the completed QuickChain Phase 3 Round 2 client pass.
+
+### BEGIN NOTE - JUNE 25 2026 - QUICKCHAIN PHASE 3 ROUND 2 - CrabLink Tauri + Client Adapters
+
+# CrabLink Tauri + Client Adapters Notes — QuickChain Phase 3 Round 2
+
+## 0. Status
+
+CrabLink Tauri + client adapters are now parked for:
+
+```text
+QuickChain Phase 3 Round 2
+validator operation / lifecycle hardening
+```
+
+Final safe status:
+
+```text
+CrabLink Tauri + client adapters are 100% COMPLETE / PARKED for QuickChain Phase 3.
+QuickChain Phase 3 is complete under the safe label:
+passport-gated validator set complete.
+```
+
+Do not use stronger labels such as:
+
+```text
+QuickChain complete
+chain live
+public validator network live
+staking live
+slashing live
+bridge live
+ROX live
+Solana live
+external settlement live
+exchange ready
+```
+
+Those remain future/deferred.
+
+---
+
+## 1. Terminal proof
+
+The final park command completed successfully:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+bash scripts/dev-quickchain-tauri-park.sh
+```
+
+The run proved:
+
+```text
+QuickChain client-boundary check passed.
+QuickChain paid/cache boundary check passed.
+QuickChain readiness boundary check passed.
+QuickChain Phase 1 Round 2 client interlock check passed.
+QuickChain Phase 2 replay boundary check passed.
+QuickChain Phase 2 committee boundary check passed.
+QuickChain Phase 3 validator boundary check passed.
+QuickChain Phase 3 lifecycle boundary check passed.
+vite build passed.
+Tauri Rust cargo check passed.
+```
+
+Build details:
+
+```text
+vite v5.4.21 building for production...
+313 modules transformed.
+✓ built in 4.64s
+```
+
+Rust check details:
+
+```text
+TAURI_CONFIG="$(cat src-tauri/tauri.macos.dev-media.conf.json)" cargo check --manifest-path src-tauri/Cargo.toml
+Finished dev profile target(s)
+```
+
+Final park script labels printed:
+
+```text
+== CrabLink Tauri QuickChain Phase 3 Round 2 validator lifecycle client parking gate passed ==
+== validator operation/lifecycle hardening client boundary complete ==
+== QuickChain Phase 3 complete ==
+== passport-gated validator set complete ==
+== no bonded economics, staking, slashing, bridge, public validator economy, ROX/Solana, or external settlement introduced ==
+```
+
+---
+
+## 2. Files added or hardened
+
+### Added
+
+```text
+docs/tauri/QUICKCHAIN_PHASE3_CLIENT_VALIDATOR_BOUNDARY.md
+docs/tauri/QUICKCHAIN_PHASE3_CLIENT_LIFECYCLE_BOUNDARY.md
+scripts/check-quickchain-phase3-client-validator-boundary.mjs
+scripts/check-quickchain-phase3-client-lifecycle-boundary.mjs
+```
+
+### Updated
+
+```text
+apps/crablink-tauri/package.json
+apps/crablink-tauri/src/platform/tauriPlatform.js
+apps/crablink-tauri/src/pages/quickchain/QuickchainReadinessPage.jsx
+scripts/check-tauri.sh
+scripts/dev-quickchain-tauri-park.sh
+scripts/make_codebundle.sh
+```
+
+---
+
+## 3. What the Phase 3 CrabLink pass proves
+
+CrabLink can now safely display Phase 3 QuickChain readiness/lifecycle information without becoming authority.
+
+Allowed client behavior:
+
+```text
+display backend-derived validator readiness
+display backend-derived passport/registry readiness context
+display backend-derived validator lifecycle context
+display backend-derived governance review context
+display backend-derived replay challenge context
+display backend-derived downtime/degraded/revoked/expired/evidence context
+display local catalog and recent receipts as display-only evidence
+route explicit user intent through typed adapters
+keep paid unlock tied to backend wallet/ledger receipts
+```
+
+Forbidden client behavior remains blocked:
+
+```text
+client-side validator authority
+client-side validator admission
+client-side validator revocation
+client-side validator rotation
+client-side validator lifecycle mutation
+client-side validator downtime authority
+client-side equivocation evidence authority
+client-side replay challenge authority
+client-side governance parameter-update authority
+client-side passport registry authority
+client-side validator capability authority
+client-side validator-set authority
+client-side quorum/finality/settlement authority
+client-side wallet or ledger truth
+cache-only paid unlock
+validator/passport/lifecycle-based paid unlock
+fake receipts
+fake balances
+silent spend
+staking
+slashing
+bonding
+validator rewards
+public validator economy
+bridge
+ROX
+Solana
+liquidity
+exchange-facing logic
+external settlement
+```
+
+---
+
+## 4. Boundary documents
+
+### `docs/tauri/QUICKCHAIN_PHASE3_CLIENT_VALIDATOR_BOUNDARY.md`
+
+Purpose:
+
+```text
+Locks Phase 3 Round 1 validator identity / registry display-only boundary.
+```
+
+It states that CrabLink may display backend-derived validator/passport/registry readiness labels, but those labels are not:
+
+```text
+validator truth
+passport registry truth
+validator capability truth
+validator-set truth
+quorum truth
+fork-choice truth
+finality truth
+settlement truth
+payment truth
+paid entitlement truth
+wallet truth
+ledger truth
+```
+
+### `docs/tauri/QUICKCHAIN_PHASE3_CLIENT_LIFECYCLE_BOUNDARY.md`
+
+Purpose:
+
+```text
+Locks Phase 3 Round 2 validator operation / lifecycle display-only boundary.
+```
+
+It states that CrabLink may display backend-derived lifecycle/governance/replay-challenge context, but those labels are not:
+
+```text
+validator lifecycle truth
+passport registry truth
+validator capability truth
+governance truth
+replay challenge truth
+evidence truth
+quorum truth
+finality truth
+settlement truth
+payment truth
+paid entitlement truth
+wallet truth
+ledger truth
+bridge truth
+```
+
+---
+
+## 5. Scanner scripts
+
+### `scripts/check-quickchain-phase3-client-validator-boundary.mjs`
+
+This scanner validates that CrabLink does not introduce validator/passport/registry authority.
+
+It checks:
+
+```text
+required docs exist
+required page references exist
+package scripts exist
+check-tauri ordering is correct
+QuickchainReadinessPage remains display-only
+QuickchainReadinessPage does not import active gateway/wallet/content/site adapters
+QuickchainReadinessPage does not call invoke/fetch/gateway/wallet commands
+tauriPlatform forbidden command patterns include validator/passport/registry/capability/committee/quorum/finality/settlement/bridge/staking/slashing/ROX/Solana
+Tauri allowlist does not include QuickChain authority commands
+client API files do not contain validator/passport authority-shaped routes or functions
+```
+
+### `scripts/check-quickchain-phase3-client-lifecycle-boundary.mjs`
+
+This scanner validates that CrabLink does not introduce validator lifecycle/governance/replay-challenge authority.
+
+It checks:
+
+```text
+required docs exist
+required page references exist
+package scripts exist
+check-tauri ordering is correct
+QuickchainReadinessPage lifecycle boundary closes before MILESTONES
+QuickchainReadinessPage remains display-only
+QuickchainReadinessPage does not import active gateway/wallet/content/site adapters
+QuickchainReadinessPage does not call invoke/fetch/gateway/wallet commands
+tauriPlatform forbidden command patterns include validator lifecycle, downtime, equivocation, replay challenge, governance parameter updates
+Tauri allowlist does not include lifecycle/governance/challenge/finality/settlement commands
+client API files do not contain lifecycle authority-shaped routes or functions
+client files do not unlock from lifecycle/challenge/governance material
+client files do not introduce staking/slashing/bonding/validator rewards/public validator economy/bridge/ROX/Solana/external settlement runtime
+```
+
+---
+
+## 6. QuickchainReadinessPage update
+
+`apps/crablink-tauri/src/pages/quickchain/QuickchainReadinessPage.jsx` now includes:
+
+```text
+Phase 3 Round 1 validator/passport display boundary
+Phase 3 Round 2 lifecycle display boundary
+phase3_validator_boundary in export/copy payload
+phase3_lifecycle_boundary in export/copy payload
+QuickChain Phase 3 R2 progress card
+Phase 3 lifecycle truth boundary warning
+Phase 3 lifecycle rule card
+new milestone:
+  quickchain_phase3_lifecycle_display_boundary
+```
+
+The page remains static/display-only for QuickChain readiness.
+
+It does not import active adapters and does not call Tauri/gateway/wallet commands.
+
+---
+
+## 7. Tauri platform boundary
+
+`apps/crablink-tauri/src/platform/tauriPlatform.js` now rejects authority-shaped Tauri command names for:
+
+```text
+QuickChain roots
+state
+receipts
+checkpoints
+proofs
+replay
+verifiers
+validators
+committees
+attestations
+quorum
+fork choice
+finality
+settlement
+anchors
+bridges
+passport registry
+validator capability
+validator lifecycle
+downtime
+equivocation
+replay challenge
+governance parameter updates
+staking
+slashing
+bonding
+ROX
+Solana
+external settlement
+```
+
+The allowed command list remains free of QuickChain validator/lifecycle/finality/settlement authority commands.
+
+---
+
+## 8. Check ordering
+
+`apps/crablink-tauri/package.json` now includes:
+
+```text
+check:quickchain-phase3-validator-boundary
+check:quickchain-phase3-lifecycle-boundary
+```
+
+`check` runs the gates in order:
+
+```text
+check:quickchain-boundary
+check:quickchain-paid-cache-boundary
+check:quickchain-readiness-boundary
+check:quickchain-phase1-interlock
+check:quickchain-phase2-replay-boundary
+check:quickchain-phase2-committee-boundary
+check:quickchain-phase3-validator-boundary
+check:quickchain-phase3-lifecycle-boundary
+build
+```
+
+`src-tauri` Rust check also remains part of the Tauri park path.
+
+---
+
+## 9. Final park script
+
+`scripts/dev-quickchain-tauri-park.sh` now acts as the low-duplicate final Tauri park runner.
+
+It preserves older compatibility markers for Phase 1 and Phase 2 scanners and adds:
+
+```text
+Phase 3 Round 1 final client parking gate
+Phase 3 Round 2 final client parking gate
+```
+
+It prints the safe final labels only after all checks and build pass.
+
+---
+
+## 10. Important bug fixed during patching
+
+Initial patch caused a JSX syntax splice in:
+
+```text
+apps/crablink-tauri/src/pages/quickchain/QuickchainReadinessPage.jsx
+```
+
+The error was:
+
+```text
+Expected ":" but found "MILESTONES"
+```
+
+Root cause:
+
+```text
+PHASE3_LIFECYCLE_BOUNDARY was inserted without a correct closing `});` before `const MILESTONES`.
+```
+
+Fix applied:
+
+```text
+Added a repair script that ensures PHASE3_LIFECYCLE_BOUNDARY closes before MILESTONES.
+Updated lifecycle scanner to check that closure structurally.
+Fixed an over-escaped scanner regex false failure by replacing it with index/slice/endsWith logic.
+```
+
+Final result:
+
+```text
+Phase 3 lifecycle scanner passed.
+vite build passed.
+Tauri Rust cargo check passed.
+park script passed.
+```
+
+---
+
+## 11. Current QuickChain phase status
+
+Current completed phases:
+
+```text
+Phase 0 complete / parked
+Phase 1 complete / parked
+Phase 2 complete / parked
+Phase 3 complete / parked
+```
+
+Safe Phase 3 completion wording:
+
+```text
+QuickChain Phase 3 complete.
+passport-gated validator set complete.
+```
+
+Meaning of that wording:
+
+```text
+The project has completed the planned Phase 3 boundary/hardening pass across the normal crate-pair order.
+It does not mean QuickChain is live.
+It does not mean public validators exist.
+It does not mean staking/slashing/bonding exist.
+It does not mean bridge/external settlement exists.
+It does not mean ROX/Solana exists.
+```
+
+---
+
+## 12. Commands to rerun later
+
+Focused scanner rerun:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+node scripts/check-quickchain-phase3-client-validator-boundary.mjs
+node scripts/check-quickchain-phase3-client-lifecycle-boundary.mjs
+```
+
+Full Tauri park rerun:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+bash scripts/dev-quickchain-tauri-park.sh
+```
+
+Expected final labels:
+
+```text
+== CrabLink Tauri QuickChain Phase 3 Round 2 validator lifecycle client parking gate passed ==
+== validator operation/lifecycle hardening client boundary complete ==
+== QuickChain Phase 3 complete ==
+== passport-gated validator set complete ==
+== no bonded economics, staking, slashing, bridge, public validator economy, ROX/Solana, or external settlement introduced ==
+```
+
+---
+
+## 13. Next recommended session step
+
+Next session should begin with a comprehensive carryover note and buildplan review before starting the next phase.
+
+Do not automatically jump into:
+
+```text
+ROX
+Solana
+public bridge
+staking
+slashing
+bonding
+external settlement
+liquidity
+exchange-facing logic
+```
+
+without explicit later-phase authorization.
+
+Likely next work should be determined from:
+
+```text
+QUICKCHAIN_BUILDPLAN.MD
+QUICKCHAIN_REVIEW_BUNDLE.MD
+latest carryover notes
+```
+
+The next phase after Phase 3 should remain fortress-style and boundary-first.
+
+### END NOTE - JUNE 25 2026 - QUICKCHAIN PHASE 3 ROUND 2 - CrabLink Tauri + Client Adapters
+
+
+### END NOTE - JUNE 25 2026 - 01:55 CST
