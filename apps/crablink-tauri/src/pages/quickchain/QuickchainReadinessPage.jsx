@@ -1,8 +1,8 @@
 /**
  * RO:WHAT — CrabLink QuickChain readiness dashboard.
- * RO:WHY — Shows Phase 3 Round 1 passport-gated validator readiness without letting CrabLink become validator, passport registry, capability, validator-set, quorum, finality, settlement, wallet, ledger, staking, slashing, bridge, or paid-unlock authority.
+ * RO:WHY — Shows Phase 4 Round 2 bond dispute/challenge simulation readiness without letting CrabLink become validator, bond, dispute, challenge-window, appeal, freeze, slash, staking, liquidity, passport registry, capability, validator-set, quorum, finality, settlement, wallet, ledger, bridge, or paid-unlock authority.
  * RO:INTERACTS — localCatalog, recentReceipts, app navigation, NEXT_LEVEL/QUICKCHAIN product milestones.
- * RO:INVARIANTS — display-only; no chain logic; no verifier/committee/attestation/validator authority; no passport registry authority; no validator capability or validator-set authority; no quorum/finality/settlement; no validator/passport paid unlock; no fake receipts/balances.
+ * RO:INVARIANTS — display-only; no chain logic; no verifier/committee/attestation/validator/bond/dispute/challenge/appeal/freeze/slash/stake/liquidity authority; no passport registry authority; no validator capability or validator-set authority; no quorum/finality/settlement; no validator/passport/bond/dispute paid unlock; no fake receipts/balances.
  * RO:METRICS — none.
  * RO:CONFIG — reads local CrabLink proof caches only.
  * RO:SECURITY — explicitly blocks accidental QuickChain/bridge/validator claims in CrabLink UI.
@@ -174,6 +174,69 @@ const PHASE3_LIFECYCLE_BOUNDARY = Object.freeze({
 
 });
 
+const PHASE4_BOND_BOUNDARY = Object.freeze({
+  schema: 'crablink.quickchain-phase4-bond-boundary.v1',
+  label: 'Phase 4 Round 1: bond DTOs and no-op accounting model',
+  status: 'display-only',
+  completionLabel: 'bond DTOs and no-op accounting model complete',
+  summary:
+    'CrabLink may display backend-derived bond status display, slash evidence display, no-op accounting display, bond review display, and higher-stakes validator risk labels, but this is client-boundary bond display only and not bond truth, slash truth, slashing authority, staking market authority, liquidity authority, wallet truth, ledger truth, finality truth, settlement truth, payment truth, paid entitlement truth, bridge truth, or external settlement truth.',
+  allowed: Object.freeze([
+    'bond status display',
+    'slash evidence display',
+    'no-op accounting display',
+    'bond review display',
+    'backend-derived validator bond/readiness context',
+    'keep receipts and catalog entries display-only',
+    'accepted wallet/ledger receipts remain the only paid unlock authority',
+  ]),
+  forbidden: Object.freeze([
+    'no client-side bond truth',
+    'no client-side slash truth',
+    'no client-side slashing authority',
+    'no staking market authority',
+    'no liquidity authority',
+    'no automatic slashing live',
+    'no public staking market',
+    'no bond/slash/stake/liquidity paid unlock',
+  ]),
+});
+
+const PHASE4_BOND_DISPUTE_BOUNDARY = Object.freeze({
+  schema: 'crablink.quickchain-phase4-bond-dispute-boundary.v1',
+  label: 'Phase 4 Round 2: bond dispute / challenge simulation boundary',
+  status: 'display-only',
+  completionLabel: 'bond dispute and challenge simulation boundary complete',
+  summary:
+    'CrabLink may display backend-derived dispute/challenge/appeal/freeze status, slash evidence validation display, challenge-window display, disputed-bond lifecycle display, and simulation-risk labels, but this is client-boundary dispute readiness only and not dispute truth, challenge-window truth, slash evidence validation truth, appeal authority, freeze authority, irreversible slash authority, slash simulation authority, staking market authority, liquidity authority, wallet truth, ledger truth, finality truth, settlement truth, payment truth, paid entitlement truth, bridge truth, or external settlement truth.',
+  allowed: Object.freeze([
+    'display-only dispute/challenge readiness',
+    'backend-derived dispute/challenge/appeal/freeze status',
+    'dispute status display',
+    'challenge-window display',
+    'slash evidence validation display',
+    'appeal state display',
+    'freeze state display',
+    'disputed-bond lifecycle display',
+    'replayable dispute state display',
+    'keep receipts and catalog entries display-only',
+    'accepted wallet/ledger receipts remain the only paid unlock authority',
+  ]),
+  forbidden: Object.freeze([
+    'no client-side dispute truth',
+    'no client-side challenge-window truth',
+    'no client-side appeal authority',
+    'no client-side freeze authority',
+    'no client-side slash evidence validation authority',
+    'no irreversible slash authority',
+    'no client-side slash simulation authority',
+    'no paid unlock from dispute, challenge, appeal, freeze, bond, slash, or cache status',
+    'no live irreversible slash',
+    'no one-step irreversible slash',
+    'no staking/slashing/bonding public runtime',
+  ]),
+});
+
 const MILESTONES = Object.freeze([
   {
     id: 'internal_roc_closed_loop',
@@ -280,6 +343,22 @@ const MILESTONES = Object.freeze([
     next: 'QuickChain Phase 3 complete / passport-gated validator set complete only after CrabLink remains display/user-intent only; no validator lifecycle, replay challenge, governance parameter-update, finality, settlement, paid-unlock, staking/slashing/bonding, bridge, ROX/Solana, or external settlement authority.',
   },
   {
+    id: 'quickchain_phase4_bond_display_boundary',
+    label: 'QuickChain Phase 4 Round 1: bond/no-op accounting display',
+    status: 'proven',
+    phase: 'QuickChain Phase 4 Round 1',
+    summary: 'Client boundary installed: CrabLink may show backend-derived bond/no-op accounting context only as client-boundary bond display only.',
+    next: 'QuickChain Phase 4 Round 1 complete / bond DTOs and no-op accounting model complete only after CrabLink remains display/user-intent only; no client-side bond truth, slash truth, slashing authority, staking market authority, liquidity authority, paid-unlock authority, bridge, ROX/Solana, or external settlement.',
+  },
+  {
+    id: 'quickchain_phase4_bond_dispute_display_boundary',
+    label: 'QuickChain Phase 4 Round 2: bond dispute/challenge display',
+    status: 'proven',
+    phase: 'QuickChain Phase 4 Round 2',
+    summary: 'Client boundary installed: CrabLink may show backend-derived dispute/challenge/appeal/freeze context only as client-boundary dispute readiness only.',
+    next: 'QuickChain Phase 4 Round 2 complete / bond dispute and challenge simulation boundary complete only after CrabLink remains display/user-intent only; no client-side dispute truth, challenge-window truth, appeal authority, freeze authority, irreversible slash authority, slash simulation authority, paid-unlock authority, bridge, ROX/Solana, or external settlement.',
+  },
+  {
     id: 'quickchain_phase_1',
     label: 'QuickChain Phase 1: deterministic roots/proofs',
     status: 'proven',
@@ -307,22 +386,22 @@ export default function QuickchainReadinessPage({ app }) {
 
   const progress = useMemo(() => calculateProgress(MILESTONES, proof), [proof]);
   const nextBackendBatch =
-    'RustyOnions backend: Phase 3 Round 2 validator operation/lifecycle hardening is parked before CrabLink only as backend-derived lifecycle/readiness context; no staking, slashing, bonding, validator rewards, bridge, public validator economy, ROX/Solana, or external settlement.';
+    'RustyOnions backend: Phase 4 Round 2 slashing/challenge simulation is parked before CrabLink only as backend-derived dispute/challenge/appeal/freeze readiness context; no live irreversible slash, no one-step irreversible slash, no public staking market, no liquidity, no exchange-facing logic, no bridge, no ROX/Solana, and no external settlement.';
   const nextCrabLinkBatch =
-    'CrabLink: display backend-derived replay/verifier/committee/attestation/validator/passport-registry/lifecycle/governance/challenge readiness only; never use those labels for paid unlock, balances, receipts, validator lifecycle truth, validator-set truth, quorum, finality, settlement, or governance authority.';
+    'CrabLink: display backend-derived replay/verifier/committee/attestation/validator/passport-registry/lifecycle/governance/challenge/bond/dispute/appeal/freeze/slash readiness only; never use those labels for paid unlock, balances, receipts, dispute truth, challenge-window truth, appeal authority, freeze authority, slash truth, staking market authority, liquidity authority, validator lifecycle truth, validator-set truth, quorum, finality, settlement, or governance authority.';
 
   return (
     <section className="cl-page quickchain-page">
       <PageHeader
         eyebrow="QuickChain readiness"
         title="Do not start the chain until the economy proves itself"
-        copy="QuickChain Phase 3 Round 2 is validator operation / lifecycle hardening. This dashboard may display backend-derived replay/verifier/committee/attestation/validator/passport-registry/lifecycle/governance/replay challenge readiness status, but CrabLink must not become validator lifecycle truth, passport registry truth, validator capability truth, validator-set truth, governance truth, replay challenge truth, quorum truth, fork-choice truth, finality truth, settlement truth, wallet truth, ledger truth, or paid-unlock authority."
+        copy="QuickChain Phase 4 Round 2 is bond dispute / challenge simulation. This dashboard may display backend-derived replay/verifier/committee/attestation/validator/passport-registry/lifecycle/governance/replay challenge/bond/dispute/appeal/freeze/slash readiness status, but CrabLink must not become dispute truth, challenge-window truth, appeal authority, freeze authority, slash truth, irreversible slash authority, staking market authority, liquidity authority, validator lifecycle truth, passport registry truth, validator capability truth, validator-set truth, governance truth, replay challenge truth, quorum truth, fork-choice truth, finality truth, settlement truth, wallet truth, ledger truth, or paid-unlock authority."
         meta={
           <>
             <Badge tone="warning">future blueprint</Badge>
             <Badge tone="success">receipt-first doctrine</Badge>
             <Badge tone="neutral">no chain logic in CrabLink</Badge>
-            <Badge tone="neutral">Phase 3 R2 lifecycle display-only</Badge>
+            <Badge tone="neutral">Phase 4 R2 dispute display-only</Badge>
           </>
         }
         actions={
@@ -389,6 +468,20 @@ export default function QuickchainReadinessPage({ app }) {
           detail="Lifecycle/governance/challenge labels may be displayed only as backend-derived context, never trusted as lifecycle, finality, settlement, or paid unlock"
           tone="neutral"
         />
+
+        <ProgressCard
+          label="QuickChain Phase 4 R1"
+          value="BOND DISPLAY"
+          detail="Bond/slash/no-op accounting labels may be displayed only as backend-derived context, never trusted as bond truth, slash truth, staking market authority, liquidity authority, settlement, or paid unlock"
+          tone="neutral"
+        />
+
+        <ProgressCard
+          label="QuickChain Phase 4 R2"
+          value="DISPUTE DISPLAY"
+          detail="Dispute/challenge/appeal/freeze labels may be displayed only as backend-derived context, never trusted as dispute truth, challenge-window truth, irreversible slash authority, settlement, or paid unlock"
+          tone="neutral"
+        />
       </section>
 
       <TruthBoundary
@@ -401,6 +494,18 @@ export default function QuickchainReadinessPage({ app }) {
         tone="warning"
         title="Phase 3 lifecycle status is display-only"
         copy="This page displays Phase 3 Round 2 lifecycle readiness only. It does not grant validator lifecycle authority, commit validator rotation, commit validator revocation, mark validator downtime, accept equivocation evidence, accept replay challenge, commit governance parameter updates, settle from replay challenge, unlock from validator lifecycle, or create staking, slashing, bonding, bridge, ROX/Solana, or external settlement runtime."
+      />
+
+      <TruthBoundary
+        tone="warning"
+        title="Phase 4 bond status is display-only"
+        copy="This page displays Phase 4 Round 1 bond/no-op accounting readiness only. It does not open validator bonds, close validator bonds, lock validator bonds, unlock validator bonds, capture validator bonds, release validator bonds, slash validators, execute slashing, commit slash decisions, create staking markets, create liquidity pools, settle bonds, unlock paid content from bond status, or create bridge, ROX/Solana, public staking, liquidity, exchange-facing, or external settlement runtime."
+      />
+
+      <TruthBoundary
+        tone="warning"
+        title="Phase 4 dispute/challenge status is display-only"
+        copy="This page displays Phase 4 Round 2 bond dispute/challenge simulation readiness only. It does not open bond disputes, validate slash evidence as authority, adjudicate disputes, open challenge windows, commit appeal decisions, freeze validator bonds, unfreeze validator bonds, execute irreversible slashing, settle disputed bonds, unlock paid content from dispute/challenge/appeal/freeze status, or create bridge, ROX/Solana, public staking, liquidity, exchange-facing, or external settlement runtime."
       />
 
       <TruthBoundary
@@ -457,6 +562,26 @@ export default function QuickchainReadinessPage({ app }) {
             <li>CrabLink does not grant lifecycle authority, rotate validators, revoke validators, mark downtime, accept equivocation evidence, accept replay challenges, or commit governance parameter updates.</li>
             <li>No validator lifecycle truth, governance truth, replay challenge truth, finality truth, settlement truth, staking/slashing/bonding, validator rewards, bridge, ROX/Solana, or external settlement authority.</li>
             <li>No paid unlock from validator lifecycle, governance, replay challenge, evidence, or local cache status.</li>
+          </ul>
+        </Card>
+
+        <Card eyebrow="Phase 4 bond rule" title="Display bond status, never authority">
+          <p>{PHASE4_BOND_BOUNDARY.summary}</p>
+          <ul className="quickchain-mini-list">
+            <li>Backend-derived bond status display, slash evidence display, no-op accounting display, and bond review display may be shown as diagnostics.</li>
+            <li>CrabLink does not open validator bonds, capture validator bonds, release validator bonds, slash validators, execute slashing, commit slash decisions, create staking markets, create liquidity pools, or settle bonds.</li>
+            <li>No bond truth, slash truth, slashing authority, staking market authority, liquidity authority, finality truth, settlement truth, bridge, ROX/Solana, exchange-facing logic, or external settlement authority.</li>
+            <li>No paid unlock from bond status, slash evidence, no-op accounting reports, validator status, or local cache status.</li>
+          </ul>
+        </Card>
+
+        <Card eyebrow="Phase 4 dispute rule" title="Display dispute status, never authority">
+          <p>{PHASE4_BOND_DISPUTE_BOUNDARY.summary}</p>
+          <ul className="quickchain-mini-list">
+            <li>Backend-derived dispute status display, challenge-window display, slash evidence validation display, appeal state display, freeze state display, and disputed-bond lifecycle display may be shown as diagnostics.</li>
+            <li>CrabLink does not validate slash evidence as authority, adjudicate disputes, commit challenge decisions, commit appeal decisions, freeze validator bonds, execute irreversible slashing, or settle disputed bonds.</li>
+            <li>No dispute truth, challenge-window truth, appeal authority, freeze authority, irreversible slash authority, slash simulation authority, staking market authority, liquidity authority, finality truth, settlement truth, bridge, ROX/Solana, exchange-facing logic, or external settlement authority.</li>
+            <li>No paid unlock from dispute, challenge, appeal, freeze, bond, slash, validator status, or local cache status.</li>
           </ul>
         </Card>
       </section>
@@ -528,6 +653,8 @@ export default function QuickchainReadinessPage({ app }) {
             phase2_committee_boundary: PHASE2_COMMITTEE_BOUNDARY,
             phase3_validator_boundary: PHASE3_VALIDATOR_BOUNDARY,
             phase3_lifecycle_boundary: PHASE3_LIFECYCLE_BOUNDARY,
+            phase4_bond_boundary: PHASE4_BOND_BOUNDARY,
+            phase4_bond_dispute_boundary: PHASE4_BOND_DISPUTE_BOUNDARY,
             next_backend_batch: nextBackendBatch,
             next_crablink_batch: nextCrabLinkBatch,
             forbidden_scope: [
@@ -550,12 +677,19 @@ export default function QuickchainReadinessPage({ app }) {
               'no validator capability authority',
               'no validator-set authority',
               'no staking/slashing/bonding',
+              'no client-side bond truth',
+              'no client-side slash truth',
+              'no staking market authority',
+              'no liquidity authority',
+              'no automatic slashing live',
+              'no public staking market',
+              'no paid unlock from bond status',
               'no paid unlock from replay artifacts',
               'no gateway-side economic mutation',
               'no omnigate direct ledger mutation',
             ],
             truth_boundary:
-              'This is a CrabLink display/readiness dashboard. It is not validator truth, passport registry truth, validator capability truth, validator-set truth, attestation truth, verifier truth, committee truth, quorum truth, fork-choice truth, finality truth, settlement truth, paid entitlement truth, ledger truth, or QuickChain state.',
+              'This is a CrabLink display/readiness dashboard. It is not dispute truth, challenge-window truth, appeal authority, freeze authority, irreversible slash authority, slash simulation authority, bond truth, slash truth, slashing authority, staking market authority, liquidity authority, validator truth, passport registry truth, validator capability truth, validator-set truth, attestation truth, verifier truth, committee truth, quorum truth, fork-choice truth, finality truth, settlement truth, paid entitlement truth, ledger truth, or QuickChain state.',
           }}
         />
       </details>

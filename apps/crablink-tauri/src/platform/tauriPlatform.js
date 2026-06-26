@@ -2,7 +2,7 @@
  * RO:WHAT — Central typed Tauri invoke adapter for CrabLink.
  * RO:WHY — React and product clients must not call raw native privilege directly.
  * RO:INTERACTS — @tauri-apps/api/core, shared/api/*, Tauri Rust command allowlist.
- * RO:INVARIANTS — allowlisted commands only; no shell/eval/raw/native/QuickChain/verifier/committee/attestation/quorum/finality/passport-registry/validator-capability authority commands; no validator lifecycle, downtime, equivocation, replay-challenge, or governance-parameter authority commands.
+ * RO:INVARIANTS — allowlisted commands only; no shell/eval/raw/native/QuickChain/verifier/committee/attestation/quorum/finality/passport-registry/validator-capability authority commands; no validator lifecycle, downtime, equivocation, replay-challenge, governance-parameter, bond, dispute, challenge-window, appeal, freeze, slash, staking-market, or liquidity-pool authority commands.
  * RO:SECURITY — command names are validated before invoke; thrown errors are redacted before display.
  * RO:TEST — npm run check:quickchain-boundary.
  */
@@ -57,6 +57,11 @@ const FORBIDDEN_COMMAND_PATTERNS = Object.freeze([
   /(^|[_-])(run|execute|eval|shell|native)([_-]|$)/i,
   /quickchain[_-]?(root|state|receipt|checkpoint|proof|replay|verifier|validator|committee|attestation|attestations|quorum|fork[_-]?choice|finality|settle|settlement|anchor|bridge)/i,
   /quickchain[_-]?(validator[_-]?lifecycle|lifecycle|downtime|equivocation|evidence|replay[_-]?challenge|governance[_-]?parameter|parameter[_-]?update)/i,
+  /quickchain[_-]?(bond|bond[_-]?intent|validator[_-]?bond|bond[_-]?account|bond[_-]?lifecycle|slash|slashing|slash[_-]?evidence|slash[_-]?decision|stake|staking|staking[_-]?market|liquidity|liquidity[_-]?pool)/i,
+  /quickchain[_-]?(bond[_-]?dispute|dispute|disputed[_-]?bond|challenge|challenge[_-]?window|appeal|appeal[_-]?state|freeze|freeze[_-]?state|slash[_-]?simulation|dispute[_-]?state)/i,
+  /(^|[_-])(open|submit|accept|validate|adjudicate|appeal|freeze|unfreeze|resolve|settle|finalize|execute|commit)[_-]?(bond[_-]?dispute|dispute|disputed[_-]?bond|challenge|challenge[_-]?window|appeal|freeze|slash[_-]?simulation|slash[_-]?evidence|slash[_-]?decision)([_-]|$)/i,
+  /(^|[_-])(dispute|challenge|appeal|freeze)[_-]?(truth|authority|window|state|decision|evidence|slash|slashing)([_-]|$)/i,
+  /(^|[_-])(open|close|lock|unlock|capture|release|slash|execute|commit|grant|create|settle)[_-]?(validator[_-]?bond|bond|bond[_-]?intent|bond[_-]?account|bond[_-]?lifecycle|slash|slashing|slash[_-]?evidence|slash[_-]?decision|stake|staking|staking[_-]?market|liquidity|liquidity[_-]?pool)([_-]|$)/i,
   /(^|[_-])(grant|commit|mark|accept|settle)[_-]?(validator[_-]?lifecycle|validator[_-]?rotation|validator[_-]?revocation|validator[_-]?downtime|equivocation[_-]?evidence|replay[_-]?challenge|governance[_-]?parameter[_-]?update)([_-]|$)/i,
   /(^|[_-])(admit|admission|register|registration|authorize|authorization|grant|issue|revoke|revocation|rotate|rotation)[_-]?(validator|validator[_-]?capability|validator[_-]?set)([_-]|$)/i,
   /(^|[_-])(validator)[_-]?(admit|admission|register|registration|authorize|authorization|grant|issue|revoke|revocation|rotate|rotation|capability|set|passport|registry)([_-]|$)/i,

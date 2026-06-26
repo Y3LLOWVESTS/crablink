@@ -11268,3 +11268,529 @@ The next phase after Phase 3 should remain fortress-style and boundary-first.
 
 
 ### END NOTE - JUNE 25 2026 - 01:55 CST
+
+
+### BEGIN NOTE - JUNE 25 2026 - 23:05 CST
+
+Here are the paste-ready **CrabLink Tauri notes** for QuickChain Phase 4 Round 1.
+
+# CrabLink Tauri Notes — QuickChain Phase 4 Round 1 Client Bond Boundary
+
+Date: June 25/26, 2026
+Repo: crablink
+Area: CrabLink Tauri + client adapters
+Phase: QuickChain Phase 4 Round 1
+Status: COMPLETE / PARKED
+
+## 0. TL;DR
+
+CrabLink Tauri + client adapters are now complete and parked for QuickChain Phase 4 Round 1.
+
+This closes the CrabLink client side of:
+
+* bond DTOs
+* no-op accounting model
+* backend-derived bond status display
+* slash evidence display as diagnostics only
+* no staking market
+* no liquidity
+* no automatic slashing live
+* no exchange-facing logic
+* no ROX/Solana
+* no bridge
+* no external settlement
+
+The client remains display/user-intent only. It does not become bond truth, slash truth, staking authority, liquidity authority, wallet truth, ledger truth, finality truth, settlement truth, paid-unlock truth, bridge authority, or external-chain authority.
+
+## 1. What changed
+
+Added the Phase 4 Round 1 CrabLink client bond boundary.
+
+New doc added:
+
+* docs/tauri/QUICKCHAIN_PHASE4_CLIENT_BOND_BOUNDARY.md
+
+New scanner added:
+
+* scripts/check-quickchain-phase4-client-bond-boundary.mjs
+
+Package/check wiring added:
+
+* apps/crablink-tauri/package.json now includes:
+
+  * check:quickchain-phase4-bond-boundary
+  * check chain runs Phase 4 bond boundary after Phase 3 lifecycle boundary and before build
+
+Tauri check wrapper updated:
+
+* scripts/check-tauri.sh now runs:
+
+  * Phase 3 lifecycle boundary
+  * Phase 4 bond boundary
+  * Vite build
+  * Rust cargo check
+
+Tauri park script updated:
+
+* scripts/dev-quickchain-tauri-park.sh now parks Phase 4 Round 1 and prints safe completion labels:
+
+  * CrabLink Tauri QuickChain Phase 4 Round 1 bond/no-op accounting client parking gate passed
+  * bond DTOs and no-op accounting client boundary complete
+  * QuickChain Phase 4 Round 1 complete
+  * bond DTOs and no-op accounting model complete
+  * no automatic slashing live, no public staking market, no liquidity, no exchange-facing logic, no bridge, no ROX/Solana, or external settlement introduced
+
+Tauri platform command bridge hardened:
+
+* apps/crablink-tauri/src/platform/tauriPlatform.js
+
+Added explicit forbidden command patterns for Phase 4 authority-shaped commands, including:
+
+* bond intent
+* validator bond
+* bond account
+* bond lifecycle
+* slash evidence
+* slash decision
+* staking market
+* liquidity pool
+
+QuickChain readiness UI updated:
+
+* apps/crablink-tauri/src/pages/quickchain/QuickchainReadinessPage.jsx
+
+The page now includes:
+
+* Phase 4 Round 1 bond/no-op accounting wording
+* PHASE4_BOND_BOUNDARY constant
+* Phase 4 bond display milestone
+* Phase 4 bond TruthBoundary
+* Phase 4 progress card
+* Developer JSON field:
+
+  * phase4_bond_boundary
+* explicit forbidden scope entries:
+
+  * no client-side bond truth
+  * no client-side slash truth
+  * no staking market authority
+  * no liquidity authority
+  * no automatic slashing live
+  * no public staking market
+  * no paid unlock from bond status
+
+Display cache comments updated:
+
+* apps/crablink-tauri/src/shared/receipts/recentReceipts.js
+* apps/crablink-tauri/src/shared/catalog/localCatalog.js
+
+These now explicitly state that bond/slash/stake/liquidity labels are display-only and never paid unlock authority.
+
+## 2. Terminal result
+
+The park script ran successfully:
+
+* QuickChain client-boundary check passed
+* QuickChain paid/cache boundary check passed
+* QuickChain readiness boundary check passed
+* QuickChain Phase 1 Round 2 client interlock check passed
+* QuickChain Phase 2 replay boundary check passed
+* QuickChain Phase 2 committee boundary check passed
+* QuickChain Phase 3 validator boundary check passed
+* QuickChain Phase 3 lifecycle boundary check passed
+* QuickChain Phase 4 bond boundary check passed
+* vite build passed
+* cargo check passed for Tauri Rust mac-media config
+
+Vite build result:
+
+* 313 modules transformed
+* production build completed successfully
+
+Rust check result:
+
+* cargo check --manifest-path src-tauri/Cargo.toml completed successfully
+
+Park output confirmed:
+
+* CrabLink Tauri QuickChain Phase 4 Round 1 bond/no-op accounting client parking gate passed
+* bond DTOs and no-op accounting client boundary complete
+* QuickChain Phase 4 Round 1 complete
+* bond DTOs and no-op accounting model complete
+* no automatic slashing live, no public staking market, no liquidity, no exchange-facing logic, no bridge, no ROX/Solana, or external settlement introduced
+
+## 3. Small non-blocking issue
+
+The command:
+
+```
+scripts/make_codebundle.sh
+```
+
+hit:
+
+```
+zsh: permission denied: scripts/make_codebundle.sh
+```
+
+This was not a QuickChain, build, scanner, Vite, or Rust failure.
+
+The workaround succeeded:
+
+```
+bash scripts/make_codebundle.sh
+```
+
+Codebundle was generated successfully:
+
+```
+/Users/mymac/Desktop/crablink/CODEBUNDLE_TAURI_APP.md
+```
+
+Recommended small cleanup:
+
+```
+chmod +x scripts/make_codebundle.sh
+```
+
+## 4. Boundary status
+
+CrabLink may display backend-derived Phase 4 labels only as diagnostics:
+
+* bond status display
+* slash evidence display
+* no-op accounting display
+* bond review display
+* backend-derived validator bond/readiness context
+
+CrabLink must not:
+
+* open validator bonds
+* close validator bonds
+* lock validator bonds
+* unlock validator bonds
+* capture validator bonds
+* release validator bonds
+* slash validators
+* execute slashing
+* commit slash decisions
+* create staking markets
+* create liquidity pools
+* settle bonds
+* unlock paid content from bond status
+* treat slash evidence as ledger mutation authority
+* create any bridge, ROX/Solana, public staking, liquidity, exchange-facing, or external settlement runtime
+
+## 5. Paid unlock rule preserved
+
+Accepted backend wallet/ledger receipts remain the only paid unlock authority.
+
+The following must never unlock paid content:
+
+* local cache status
+* bond status
+* slash evidence
+* no-op accounting labels
+* validator status
+* readiness labels
+* lifecycle labels
+* committee labels
+* attestation labels
+* replay/verifier labels
+
+## 6. CrabLink role preserved
+
+CrabLink Tauri remains:
+
+* client/product layer
+* display surface
+* user-intent surface
+* confirmation surface
+* gateway-first app shell
+* Tauri Rust mediated command bridge
+
+CrabLink Tauri is not:
+
+* ledger
+* wallet
+* accounting truth
+* rewarder
+* storage authority
+* index authority
+* policy authority
+* validator authority
+* bond authority
+* slash authority
+* staking authority
+* liquidity authority
+* bridge authority
+* settlement authority
+* external-chain authority
+
+## 7. Safe completion labels
+
+Safe crate-pair completion label:
+
+```
+CrabLink Tauri + client adapters are COMPLETE / PARKED for QuickChain Phase 4 Round 1.
+```
+
+Safe round completion label:
+
+```
+QuickChain Phase 4 Round 1 complete.
+bond DTOs and no-op accounting model complete.
+```
+
+Unsafe labels to avoid:
+
+```
+QuickChain complete
+chain live
+staking live
+slashing live
+public validator economy live
+public staking market live
+liquidity live
+bridge live
+external settlement live
+ROX/Solana live
+exchange ready
+```
+
+## 8. Current conclusion
+
+CrabLink Tauri + client adapters are green for QuickChain Phase 4 Round 1.
+
+Assuming the prior RustyOnions crate pairs remain green from earlier Phase 4 Round 1 sessions, QuickChain Phase 4 Round 1 is complete across the planned crate-pair sequence.
+
+Next project step should be carryover notes for the next session before beginning QuickChain Phase 4 Round 2.
+
+
+### END NOTE - JUNE 25 2026 - 23:05 CST
+
+
+### BEGIN NOTE - JUNE 26 2026 - 03:40 CST
+
+# CrabLink Tauri + Client Adapters Notes — QuickChain Phase 4 Round 2
+
+## Status
+
+**COMPLETE / PARKED for QuickChain Phase 4 Round 2.**
+
+The final CrabLink park run is green. The log shows the full Tauri/client gate chain passing through Phase 1, Phase 2, Phase 3, Phase 4 Round 1, and **Phase 4 Round 2 bond dispute boundary**, followed by a successful Vite production build and successful Tauri Rust `cargo check`. 
+
+Final status label:
+
+```text
+CrabLink Tauri + client adapters are COMPLETE / PARKED for QuickChain Phase 4 Round 2.
+```
+
+Because all prior backend crate pairs for Phase 4 Round 2 were already green, this also closes:
+
+```text
+QuickChain Phase 4 Round 2 complete.
+bond dispute and challenge simulation boundary complete.
+```
+
+This does **not** mean all of Phase 4 is complete. **Phase 4 Round 3** remains future work.
+
+---
+
+## Final Green Gates Proven
+
+The final park run proved:
+
+```text
+QuickChain client-boundary check passed.
+QuickChain paid/cache boundary check passed.
+QuickChain readiness boundary check passed.
+QuickChain Phase 1 Round 2 client interlock check passed.
+QuickChain Phase 2 replay boundary check passed.
+QuickChain Phase 2 committee boundary check passed.
+QuickChain Phase 3 validator boundary check passed.
+QuickChain Phase 3 lifecycle boundary check passed.
+QuickChain Phase 4 bond boundary check passed.
+QuickChain Phase 4 bond dispute boundary check passed.
+vite build passed.
+Tauri Rust mac-media cargo check passed.
+```
+
+The final output also restored the older parking markers required by Phase 1, Phase 2, and Phase 3 scanners, then emitted the Phase 4 Round 1 and Round 2 completion markers. 
+
+---
+
+## Codebundle Reference
+
+Latest CrabLink codebundle reference:
+
+```text
+CODEBUNDLE_TAURI_APP.md
+Generated: 2026-06-26T08:21:24Z
+Root: /Users/mymac/Desktop/crablink
+Git: 6dd0214 (dirty)
+Text files: 435
+Binary assets omitted: 122
+```
+
+The bundle includes the Tauri app source, Rust command bridge, Tauri docs, platform/core packages, and selected Tauri scripts, including the QuickChain boundary scanners and park/check scripts. 
+
+---
+
+## What Changed / Was Locked
+
+CrabLink now has a Phase 4 Round 2 client-side boundary for **bond dispute / challenge simulation readiness**.
+
+The key additions/updates were:
+
+```text
+docs/tauri/QUICKCHAIN_PHASE4_CLIENT_BOND_DISPUTE_BOUNDARY.md
+scripts/check-quickchain-phase4-client-bond-dispute-boundary.mjs
+apps/crablink-tauri/package.json
+scripts/check-tauri.sh
+scripts/dev-quickchain-tauri-park.sh
+apps/crablink-tauri/src/platform/tauriPlatform.js
+apps/crablink-tauri/src/pages/quickchain/QuickchainReadinessPage.jsx
+```
+
+`package.json` now wires:
+
+```text
+check:quickchain-phase4-bond-dispute-boundary
+```
+
+The main `check` chain now runs Phase 4 Round 2 before build:
+
+```text
+check:quickchain-phase4-bond-boundary
+check:quickchain-phase4-bond-dispute-boundary
+build
+check:rust:mac-media
+```
+
+The new Phase 4 Round 2 doc states that CrabLink may display backend-derived dispute, challenge, appeal, freeze, slash-evidence, disputed-bond lifecycle, replayable dispute-state, and simulation-risk labels, but those labels are diagnostic UI only and not authority. 
+
+---
+
+## Boundary Preserved
+
+CrabLink remains:
+
+```text
+display/user-intent only
+gateway-first
+typed adapter driven
+Tauri-mediated for native privilege
+non-authoritative for QuickChain state
+non-authoritative for wallet/ledger truth
+non-authoritative for paid unlock truth
+```
+
+CrabLink may display:
+
+```text
+backend-derived dispute status
+backend-derived challenge-window status
+backend-derived slash evidence validation display
+backend-derived appeal state
+backend-derived freeze state
+backend-derived disputed-bond lifecycle
+backend-derived replayable dispute state labels
+simulation-risk disclosures
+```
+
+CrabLink must not create or decide:
+
+```text
+dispute truth
+challenge-window truth
+slash evidence validation truth
+appeal authority
+freeze authority
+irreversible slash authority
+slash simulation authority
+bond truth
+wallet truth
+ledger truth
+paid entitlement truth
+settlement truth
+bridge truth
+external-chain truth
+```
+
+---
+
+## Forbidden Scope Still Blocked
+
+The Phase 4 Round 2 CrabLink pass did **not** introduce:
+
+```text
+live irreversible slash
+one-step irreversible slash
+public staking market
+liquidity
+exchange-facing logic
+public bridge
+ROX
+Solana
+external settlement
+fake balances
+fake receipts
+fake finality
+silent spend
+cache-only paid unlock
+client-side dispute truth
+client-side challenge-window truth
+client-side appeal authority
+client-side freeze authority
+client-side slashing authority
+CrabLink chain authority
+```
+
+This is exactly the right posture for Phase 4 Round 2: **simulation/readiness display only, no live enforcement from the client.**
+
+---
+
+## Failure/Fix Trail
+
+The initial Round 2 CrabLink patch had two issues:
+
+1. The new dispute scanner file was missing, so the first attempt could not prove the Phase 4 Round 2 gate.
+2. The park script rewrite dropped older marker strings required by Phase 1, Phase 2, and Phase 3 scanners.
+
+Both were repaired.
+
+The final run confirms the new dispute scanner exists, is wired into the check chain, passes before build, and the older marker expectations are restored. 
+
+---
+
+## Final CrabLink Notes
+
+CrabLink Tauri + client adapters are now parked for Phase 4 Round 2.
+
+The client can safely show Phase 4 Round 2 dispute/challenge readiness material, but it still cannot mutate QuickChain, produce settlement truth, perform slashing, adjudicate disputes, freeze bonds, unlock paid content from cache/dispute/challenge metadata, or bypass backend wallet/ledger receipts.
+
+The completed Phase 4 Round 2 client boundary is consistent with the project doctrine:
+
+```text
+backend owns truth
+CrabLink displays truth
+wallet/ledger own economic mutation
+cache is convenience
+QuickChain remains future settlement infrastructure
+ROC remains internal
+no external settlement creep
+```
+
+## Next
+
+Next QuickChain work should be **Phase 4 Round 3**, starting again at:
+
+```text
+ron-proto + ron-ledger
+```
+
+Round 3 is the controlled live internal-only bond enforcement round. It should stay backend-first and internal-only: no public staking market, no liquidity, no bridge, no ROX/Solana, no external settlement, and no CrabLink-side authority.
+
+
+### END NOTE - JUNE 26 2026 - 03:40 CST

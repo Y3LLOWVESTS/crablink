@@ -2,7 +2,7 @@
  * RO:WHAT — Read-only recent receipt collector for CrabLink browser UI.
  * RO:WHY — Surfaces backend-returned wallet/site/asset receipts without inventing wallet or ledger truth.
  * RO:INTERACTS — SiteVisitAccess, PassportDrawer, RecentReceiptsPanel, LibraryPage, HomePage.
- * RO:INVARIANTS — display-only; no wallet mutation; no fake receipts; backend receipt_hash/txid/ledger_root remain truth.
+ * RO:INVARIANTS — display-only; no wallet mutation; no fake receipts; backend receipt_hash/txid/ledger_root remain truth; bond/slash labels are display-only and never paid unlock authority.
  * RO:METRICS — none.
  * RO:CONFIG — browser local/session storage only.
  * RO:SECURITY — stores public receipt metadata only; no keys, bearer tokens, seed phrases, or spend authority.

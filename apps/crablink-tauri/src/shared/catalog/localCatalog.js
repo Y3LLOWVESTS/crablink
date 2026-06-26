@@ -2,7 +2,7 @@
  * RO:WHAT — Local display-only CrabLink catalog collector.
  * RO:WHY — Powers My Sites / My Assets / Profiles in the passport drawer from local browser evidence.
  * RO:INTERACTS — PassportDrawer, LocalCatalogPanel, recentReceipts, publicProfileCache, SiteResolvedProof, browser storage.
- * RO:INVARIANTS — local-only display cache; no backend catalogue claim; no fake CID; no wallet mutation.
+ * RO:INVARIANTS — local-only display cache; no backend catalogue claim; no fake CID; no wallet mutation; no bond/slash/stake/liquidity authority.
  * RO:METRICS — none.
  * RO:CONFIG — scans localStorage/sessionStorage and known CrabLink display caches.
  * RO:SECURITY — public URLs/receipt metadata only; no secrets, tokens, private alt mappings, or spend authority.
