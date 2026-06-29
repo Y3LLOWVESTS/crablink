@@ -12,7 +12,9 @@
     "tauri:dev": "tauri dev",
     "tauri:dev:mac-media": "tauri dev --config src-tauri/tauri.macos.dev-media.conf.json",
     "tauri:build": "tauri build",
-    "check": "npm run build && cargo check --manifest-path src-tauri/Cargo.toml"
+    "check": "npm run build && cargo check --manifest-path src-tauri/Cargo.toml",
+    "check:quickchain-phase5-anchor-boundary": "npm --prefix apps/crablink-tauri run check:quickchain-phase5-anchor-boundary",
+    "check:quickchain-phase5-external-posture-boundary": "npm --prefix apps/crablink-tauri run check:quickchain-phase5-external-posture-boundary"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

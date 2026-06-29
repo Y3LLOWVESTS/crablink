@@ -1,11 +1,11 @@
 /**
- * RO:WHAT — CrabLink QuickChain readiness dashboard for Phase 5 anchor-only, DA/archive/challenge fallback, and selected external posture display.
- * RO:WHY — Shows Phase 5 Round 1 anchor-only dry-run, Phase 5 Round 2 DA/archive/challenge fallback, and Phase 5 Round 3 selected external posture readiness without letting CrabLink become external posture authority, anchor authority, DA truth, archive restore truth, missing-data challenge truth, pruning authority, finality, settlement, bridge, external-chain ROC truth, wallet, ledger, balance, receipt, or paid-unlock authority.
+ * RO:WHAT — CrabLink QuickChain readiness dashboard for anchor-only dry-run display.
+ * RO:WHY — Shows Phase 5 Round 1 anchor-only dry-run readiness without letting CrabLink become anchor, finality, settlement, bridge, external-chain ROC truth, wallet, ledger, balance, receipt, or paid-unlock authority.
  * RO:INTERACTS — localCatalog, recentReceipts, app navigation, NEXT_LEVEL/QUICKCHAIN product milestones.
- * RO:INVARIANTS — display-only; no chain logic; no external posture authority; no anchor authority; no DA truth; no archive restore truth; no missing-data challenge truth; no pruning authority; no external-chain ROC truth; no finality/settlement/bridge authority; no wallet/ledger truth; no external posture/anchor/DA/archive/challenge/cache paid unlock; no fake receipts/balances.
+ * RO:INVARIANTS — display-only; no chain logic; no anchor authority; no external-chain ROC truth; no finality/settlement/bridge authority; no wallet/ledger truth; no anchor/cache paid unlock; no fake receipts/balances.
  * RO:METRICS — none.
  * RO:CONFIG — reads local CrabLink proof caches only.
- * RO:SECURITY — explicitly blocks accidental QuickChain/bridge/validator/pruning/DA/archive/challenge/external-posture authority claims in CrabLink UI.
+ * RO:SECURITY — explicitly blocks accidental QuickChain/bridge/validator claims in CrabLink UI.
  * RO:TEST — crab://quickchain after paid site_visit/image/site/profile/text/library activity.
  */
 
@@ -372,57 +372,6 @@ const PHASE5_DA_FALLBACK_BOUNDARY = Object.freeze({
   ]),
 });
 
-const PHASE5_EXTERNAL_POSTURE_BOUNDARY = Object.freeze({
-  schema: 'crablink.quickchain-phase5-external-posture-boundary.v1',
-  label: 'Phase 5 Round 3: chosen external integration posture',
-  status: 'display-only',
-  completionLabel: 'selected external integration posture boundary sweep complete',
-  phaseCompletionLabel: 'QuickChain Phase 5 Round 3 complete',
-  finalCompletionLabel: 'QuickChain Phase 5 complete',
-  summary:
-    'CrabLink may display backend-derived external posture evidence/status, selected anchor-only posture labels, evidence-only labels, report/status metadata, reference-only indexed labels, declarative-only policy-gated labels, compact commitment references, b3 artifact references, timestamp labels, and source service labels as display-only external posture metadata. anchor-only is the selected external posture. external integration is evidence/anchoring only. internal wallet/ledger truth remains canonical. External posture evidence does not mutate ROC balances, does not replace wallet/ledger truth, does not unlock paid content, and is not external posture authority, external settlement truth, bridge truth, finality truth, settlement truth, wallet truth, ledger truth, payment truth, paid entitlement truth, receipt truth, balance truth, outside-program ROC truth, or external-chain ROC truth.',
-  allowed: Object.freeze([
-    'selected external posture display',
-    'anchor-only posture display',
-    'evidence-only external integration metadata',
-    'backend-derived external posture evidence/status',
-    'display-only external posture metadata',
-    'reference-only external posture labels',
-    'declarative-only policy-gated labels',
-    'compact commitment reference display',
-    'b3 artifact reference display',
-    'source service label display',
-    'display-only localCatalog and recentReceipts evidence',
-    'accepted wallet/ledger receipts remain the only paid unlock authority',
-  ]),
-  forbidden: Object.freeze([
-    'no external posture authority',
-    'no external posture truth',
-    'no external integration authority',
-    'no external settlement truth',
-    'no external finality truth',
-    'no bridge truth from external posture evidence',
-    'no wallet mutation from external posture evidence',
-    'no ledger mutation from external posture evidence',
-    'no balance from external posture evidence',
-    'no receipt from external posture evidence',
-    'no paid unlock from external posture evidence',
-    'no external-chain ROC truth',
-    'no outside-program ROC truth',
-    'no ROX active runtime',
-    'no Solana active runtime',
-    'no public bridge',
-    'no external settlement',
-    'no external DA runtime',
-    'no external L2 runtime',
-    'no public staking market',
-    'no liquidity',
-    'no exchange-facing logic',
-    'svc-wallet remains the mutation front-door',
-    'ron-ledger remains durable economic truth',
-  ]),
-});
-
 const MILESTONES = Object.freeze([
   {
     id: 'internal_roc_closed_loop',
@@ -580,24 +529,22 @@ export default function QuickchainReadinessPage({ app }) {
 
   const progress = useMemo(() => calculateProgress(MILESTONES, proof), [proof]);
   const nextBackendBatch =
-    'RustyOnions backend: Phase 5 Round 3 has selected the external posture as anchor-only/evidence-only metadata. External integration remains evidence/anchoring only, internal wallet/ledger truth remains canonical, and there is still no external settlement, no public bridge, no ROX/Solana active runtime, no staking, no liquidity, and no exchange-facing logic.';
+    'RustyOnions backend: Phase 5 Round 1 backend/service pairs are parked for anchor-only dry-run evidence/status. Next backend work is Phase 5 Round 2 DA/archive/challenge fallback, still with no external settlement, no bridge, no ROX/Solana active runtime, no staking, no liquidity, and no exchange-facing logic.';
   const nextCrabLinkBatch =
-    'CrabLink: display backend-derived external posture evidence/status, selected anchor-only posture labels, compact commitment references, b3 artifact references, timestamp labels, and source service labels only as display-only external posture metadata; never use external posture evidence for paid unlock, balances, receipts, finality, settlement, bridge truth, external-chain ROC truth, wallet truth, ledger truth, or cache entitlement truth.';
+    'CrabLink: display backend-derived anchor evidence/status, compact commitment references, b3 artifact references, timestamp labels, and source service labels only as display-only anchor metadata; never use anchor evidence for paid unlock, balances, receipts, finality, settlement, bridge truth, external-chain ROC truth, wallet truth, ledger truth, or cache entitlement truth.';
 
   return (
     <section className="cl-page quickchain-page">
       <PageHeader
         eyebrow="QuickChain readiness"
         title="Do not start the chain until the economy proves itself"
-        copy="QuickChain Phase 5 Round 3 selects an anchor-only/evidence-only external posture. This dashboard may display backend-derived external posture evidence/status as read-only metadata, but CrabLink must not become external posture authority, external-chain ROC truth, finality truth, settlement truth, bridge authority, wallet truth, ledger truth, balance truth, receipt truth, or paid-unlock authority."
+        copy="QuickChain Phase 5 Round 1 is anchor-only design and dry-run. This dashboard may display backend-derived anchor evidence/status as read-only metadata, but CrabLink must not become anchor authority, external-chain ROC truth, finality truth, settlement truth, bridge authority, wallet truth, ledger truth, balance truth, receipt truth, or paid-unlock authority."
         meta={
           <>
             <Badge tone="warning">future blueprint</Badge>
             <Badge tone="success">receipt-first doctrine</Badge>
             <Badge tone="neutral">no chain logic in CrabLink</Badge>
             <Badge tone="neutral">Phase 5 R1 anchor display-only</Badge>
-            <Badge tone="neutral">Phase 5 R2 DA fallback display-only</Badge>
-            <Badge tone="neutral">Phase 5 R3 external posture display-only</Badge>
           </>
         }
         actions={
@@ -698,12 +645,6 @@ export default function QuickchainReadinessPage({ app }) {
           detail="DA/archive/challenge evidence/status may be displayed only as backend-derived fallback metadata; pruning remains blocked and evidence is never paid unlock, balance, receipt, finality, settlement, wallet, ledger, outside-DA, or outside-chain truth"
           tone="neutral"
         />
-        <ProgressCard
-          label="QuickChain Phase 5 R3"
-          value="EXTERNAL POSTURE DISPLAY"
-          detail="Selected external posture evidence/status may be displayed only as backend-derived anchor-only metadata; it never becomes paid unlock, balance, receipt, finality, settlement, bridge, wallet, ledger, outside-program, or external-chain truth"
-          tone="neutral"
-        />
 
 
       </section>
@@ -749,12 +690,6 @@ export default function QuickchainReadinessPage({ app }) {
         tone="warning"
         title="Phase 5 DA/archive/challenge fallback is display-only"
         copy="This page displays Phase 5 Round 2 DA/archive/challenge fallback readiness only. It does not create DA truth, create archive restore truth, adjudicate missing-data challenges, approve pruning, trigger pruning, restore archive artifacts as authority, unlock paid content from DA/archive/challenge evidence, mutate wallets from DA/archive/challenge evidence, mutate ledger truth from DA/archive/challenge evidence, create balances from DA/archive/challenge evidence, create receipts from DA/archive/challenge evidence, or create bridge, ROX/Solana, public staking, liquidity, exchange-facing, public validator economy, or external settlement runtime."
-      />
-
-      <TruthBoundary
-        tone="warning"
-        title="Phase 5 selected external posture is display-only"
-        copy="This page displays Phase 5 Round 3 chosen external integration posture readiness only. anchor-only is the selected external posture. external integration is evidence/anchoring only. internal wallet/ledger truth remains canonical. It does not create external posture authority, external settlement truth, external finality truth, bridge truth, outside-program ROC truth, unlock paid content from external posture evidence, mutate wallets from external posture evidence, mutate ledger truth from external posture evidence, create balances from external posture evidence, create receipts from external posture evidence, or create bridge, ROX/Solana, public staking, liquidity, exchange-facing, public validator economy, or external settlement runtime."
       />
 
       <TruthBoundary
@@ -863,16 +798,6 @@ export default function QuickchainReadinessPage({ app }) {
           </ul>
         </Card>
 
-        <Card eyebrow="Phase 5 external posture rule" title="Display selected external posture, never authority">
-          <p>{PHASE5_EXTERNAL_POSTURE_BOUNDARY.summary}</p>
-          <ul className="quickchain-mini-list">
-            <li>Backend-derived selected external posture, anchor-only posture, evidence-only, report/status, reference-only, policy-gated, compact commitment, b3 artifact, timestamp, and source-service labels may be shown as diagnostics.</li>
-            <li>CrabLink does not choose settlement, create external posture truth, settle from external posture, finalize from external posture, bridge from external posture, or unlock paid content from external posture evidence.</li>
-            <li>No external posture authority, external settlement truth, external finality truth, bridge truth, outside-program ROC truth, external-chain ROC truth, wallet truth, ledger truth, balance truth, receipt truth, payment truth, or paid entitlement truth.</li>
-            <li>No paid unlock from external posture evidence, index pointers, policy decisions, gateway headers, omnigate hydration, cache, localStorage, sessionStorage, IndexedDB, or local display memory.</li>
-          </ul>
-        </Card>
-
 
       </section>
 
@@ -948,7 +873,6 @@ export default function QuickchainReadinessPage({ app }) {
             phase4_bond_enforcement_boundary: PHASE4_BOND_ENFORCEMENT_BOUNDARY,
             phase5_anchor_boundary: PHASE5_ANCHOR_BOUNDARY,
             phase5_da_fallback_boundary: PHASE5_DA_FALLBACK_BOUNDARY,
-            phase5_external_posture_boundary: PHASE5_EXTERNAL_POSTURE_BOUNDARY,
             next_backend_batch: nextBackendBatch,
             next_crablink_batch: nextCrabLinkBatch,
             forbidden_scope: [
@@ -987,17 +911,11 @@ export default function QuickchainReadinessPage({ app }) {
               'no wallet mutation from anchor evidence',
               'no ledger mutation from anchor evidence',
               'no paid unlock from anchor evidence',
-              'no external posture authority',
-              'no external settlement truth',
-              'no bridge truth from external posture evidence',
-              'no wallet mutation from external posture evidence',
-              'no ledger mutation from external posture evidence',
-              'no paid unlock from external posture evidence',
               'no gateway-side economic mutation',
               'no omnigate direct ledger mutation',
             ],
             truth_boundary:
-              'This is a CrabLink display/readiness dashboard. It is not external posture authority, external posture truth, external settlement truth, external finality truth, bridge truth from external posture evidence, wallet mutation from external posture evidence, ledger mutation from external posture evidence, balance from external posture evidence, receipt from external posture evidence, paid unlock from external posture evidence, outside-program ROC truth, DA truth, archive restore truth, missing-data challenge truth, pruning authority, outside-DA truth, outside-chain ROC truth, paid unlock from DA/archive/challenge evidence, anchor truth, external-chain ROC truth, finality from anchor evidence, settlement from anchor evidence, bridge truth from anchor evidence, wallet mutation from anchor evidence, ledger mutation from anchor evidence, balance from anchor evidence, receipt from anchor evidence, paid unlock from anchor evidence, dispute truth, challenge-window truth, appeal authority, freeze authority, irreversible slash authority, slash simulation authority, bond truth, slash truth, slashing authority, staking market authority, liquidity authority, validator truth, passport registry truth, validator capability truth, validator-set truth, attestation truth, verifier truth, committee truth, quorum truth, fork-choice truth, finality truth, settlement truth, paid entitlement truth, ledger truth, or QuickChain state.',
+              'This is a CrabLink display/readiness dashboard. It is not DA truth, archive restore truth, missing-data challenge truth, pruning authority, outside-DA truth, outside-chain ROC truth, paid unlock from DA/archive/challenge evidence, anchor truth, external-chain ROC truth, finality from anchor evidence, settlement from anchor evidence, bridge truth from anchor evidence, wallet mutation from anchor evidence, ledger mutation from anchor evidence, balance from anchor evidence, receipt from anchor evidence, paid unlock from anchor evidence, dispute truth, challenge-window truth, appeal authority, freeze authority, irreversible slash authority, slash simulation authority, bond truth, slash truth, slashing authority, staking market authority, liquidity authority, validator truth, passport registry truth, validator capability truth, validator-set truth, attestation truth, verifier truth, committee truth, quorum truth, fork-choice truth, finality truth, settlement truth, paid entitlement truth, ledger truth, or QuickChain state.',
           }}
         />
       </details>

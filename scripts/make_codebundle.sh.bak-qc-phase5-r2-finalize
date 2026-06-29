@@ -232,7 +232,6 @@ selected_scripts() {
     "$ROOT/scripts/check-quickchain-phase4-client-bond-enforcement-boundary.mjs" \
     "$ROOT/scripts/check-quickchain-phase5-client-anchor-boundary.mjs" \
     "$ROOT/scripts/check-quickchain-phase5-client-da-fallback-boundary.mjs" \
-    "$ROOT/scripts/check-quickchain-phase5-client-external-posture-boundary.mjs" \
     "$ROOT/scripts/dev-quickchain-tauri-park.sh" \
     "$ROOT/scripts/smoke-tauri-local-gateway.sh" \
     "$ROOT/scripts/migrate_chrome_react_to_tauri.sh" \
@@ -434,7 +433,6 @@ binary_count="$(binary_files | count_stream)"
   echo "scripts/check-quickchain-phase4-client-bond-enforcement-boundary.mjs"
   echo "scripts/check-quickchain-phase5-client-anchor-boundary.mjs"
   echo "scripts/check-quickchain-phase5-client-da-fallback-boundary.mjs"
-  echo "scripts/check-quickchain-phase5-client-external-posture-boundary.mjs"
   echo "scripts/dev-quickchain-tauri-park.sh"
   echo "scripts/smoke-tauri-local-gateway.sh"
   echo "scripts/scaffold_crablink_tauri.sh"

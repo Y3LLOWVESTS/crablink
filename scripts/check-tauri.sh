@@ -14,5 +14,9 @@ npm run check:quickchain-phase3-validator-boundary
 npm run check:quickchain-phase3-lifecycle-boundary
 npm run check:quickchain-phase4-bond-boundary
 npm run check:quickchain-phase4-bond-dispute-boundary
+npm run check:quickchain-phase4-bond-enforcement-boundary
+npm run check:quickchain-phase5-anchor-boundary
+npm run check:quickchain-phase5-da-fallback-boundary
+npm run check:quickchain-phase5-external-posture-boundary
 npm run build
 npm run check:rust:mac-media
