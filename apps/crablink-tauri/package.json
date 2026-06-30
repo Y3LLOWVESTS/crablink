@@ -41,7 +41,8 @@
     "check:internal-roc-phase4-confirmation-failure-ux": "node ../../scripts/check-internal-roc-phase4-confirmation-failure-ux.mjs",
     "check:internal-roc-explicit-confirmation": "node ../../scripts/check-internal-roc-phase4-confirmation-failure-ux.mjs",
     "check:internal-roc-failure-does-not-unlock": "node ../../scripts/check-internal-roc-phase4-confirmation-failure-ux.mjs",
-    "check:internal-roc-cancel-no-mutation": "node ../../scripts/check-internal-roc-phase4-confirmation-failure-ux.mjs"
+    "check:internal-roc-cancel-no-mutation": "node ../../scripts/check-internal-roc-phase4-confirmation-failure-ux.mjs",
+    "check:internal-roc-beta": "npm run check:internal-roc-paid-content-boundary && npm run check:internal-roc-paid-cache-boundary && npm run check:internal-roc-phase2-replay-visibility && npm run check:internal-roc-phase4-wallet-receipt-ux && npm run check:internal-roc-phase4-confirmation-failure-ux && node ../../scripts/check-internal-roc-beta.mjs && npm run build && npm run check:rust:mac-media"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.34",

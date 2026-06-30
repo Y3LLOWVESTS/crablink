@@ -14035,3 +14035,1148 @@ CrabLink remains display/user intent only.
 
 
 ### END NOTE - JUNE 29 2026 - 17:10 CST
+
+
+
+
+### BEGIN NOTE - JUNE 30 2026 - 14:05 CST
+
+# Internal ROC Beta Phase 6 — Final Wrap-Up / Carry-Over Notes
+
+## 1. Final status
+
+```text id="27cpse"
+Internal ROC Beta Phase 6: COMPLETE / GREEN / PARKED
+```
+
+The terminal review confirms that the live probe suite passed, the CrabLink checker passed, the full reproducible Phase 6 smoke suite completed, and the remaining deferred scopes stayed deferred. The decisive terminal line was:
+
+```text id="7ctev8"
+Internal ROC Beta Phase 6 reproducible smoke suite complete.
+Phase 6 status: COMPLETE / GREEN / PARKED candidate, pending notes/terminal review.
+```
+
+After reviewing the terminal output, that candidate status is promoted to:
+
+```text id="2qmgj3"
+Phase 6 status: COMPLETE / GREEN / PARKED
+```
+
+The same terminal output also explicitly preserved the deferred boundary: ROX, Solana, bridge, staking runtime, liquidity, exchange-facing logic, public validator economy, and external settlement remain deferred. 
+
+---
+
+# 2. Big-picture result
+
+Internal ROC Beta now has an end-to-end proof that the closed internal ROC value loop works without external settlement.
+
+The proven loop is:
+
+```text id="euyayd"
+CrabLink user intent
+→ backend quote / prepare
+→ explicit confirmation
+→ svc-wallet mutation front-door
+→ ron-ledger receipt / balance truth
+→ backend-derived access
+→ CrabLink display-only receipt / balance UX
+→ replay / conservation proof
+→ accounting snapshot remains derivative
+→ rewarder remains non-mutating planning-only
+→ policy remains declarative gate-only
+→ approved payout path remains wallet-only
+```
+
+This is the important milestone: **ROC is now proven as an internal accounting/value plane**, not just a design document.
+
+---
+
+# 3. What Phase 6 proved
+
+## Live stack proof
+
+The live CrabLink/RustyOnions stack proved:
+
+```text id="c84xaj"
+gateway health: ok
+gateway readiness: ready
+omnigate health: ok
+wallet health: ok
+CrabLink Tauri launched
+image mint worked
+paid image view worked
+backend-derived receipt displayed
+ledger-backed balances refreshed
+gateway → omnigate → storage/index route resolution worked
+raw asset bytes fetched correctly
+manifest bytes fetched correctly
+privacy-clean proof existed and passed
+negative paid-flow probes failed closed
+quote tamper probes failed closed after patch
+```
+
+## Reproducible smoke suite proof
+
+The full Phase 6 smoke suite proved:
+
+```text id="65ec77"
+wallet/ledger proof target passed
+replay/conservation proof target passed
+tokenomics/anti-farming proof target passed
+storage/index/gateway/omnigate access proof target passed
+CrabLink Tauri proof target passed
+```
+
+The final terminal output ended with the full reproducible suite complete and the safe deferred-scope line intact. 
+
+---
+
+# 4. Final live image used for proof
+
+The final post-patch live image used for Phase 6 proof:
+
+```text id="a4hwm7"
+crab_url:
+crab://13879a70bf77a3fac6458b23ddece6f3de02763a267c43c162ecc3e0105c456b.image
+
+asset_cid:
+b3:13879a70bf77a3fac6458b23ddece6f3de02763a267c43c162ecc3e0105c456b
+
+manifest_cid:
+b3:86cfd6f845c3c993db664aa6c3b618f39b0dadab2b471bae29d322889dd404e9
+
+asset_kind:
+image
+
+storage size:
+134212 bytes
+
+owner passport:
+passport:main:visitor-b
+
+owner wallet / payout recipient:
+acct_visitor_b
+
+payer / viewer account during final probes:
+acct_dev
+```
+
+Final verified balances during the non-mutating probe suite:
+
+```text id="0pp5wh"
+acct_dev:       3547 ROC, ledger_backed=true, source=svc_wallet.v1
+acct_visitor_b: 1756 ROC, ledger_backed=true, source=svc_wallet.v1
+unfunded probe: 0 ROC
+attacker probe: 0 ROC
+```
+
+---
+
+# 5. Important live probes that passed
+
+## Read-only integrity probe
+
+Permanent script:
+
+```text id="z0l66t"
+scripts/probes/internal-roc-live-readonly.sh
+```
+
+Runner included it through:
+
+```text id="i81rc0"
+scripts/dev-internal-roc-beta-live-probes.sh
+```
+
+It verified:
+
+```text id="k5hgfz"
+gateway health
+gateway readiness
+omnigate health
+wallet health
+ledger-backed payer balance
+ledger-backed creator balance
+crab:// route resolution
+b3 asset identity
+manifest presence
+manifest hydration
+owner/payout routing
+storage availability
+raw asset byte count
+manifest fetchability
+privacy cleanup proof
+warnings empty
+```
+
+Final result:
+
+```text id="h5s89d"
+LIVE READ-ONLY INTEGRITY CHECK PASSED
+```
+
+## Negative content_view probe
+
+Permanent script:
+
+```text id="cjs7pi"
+scripts/probes/internal-roc-live-negative-content-view.sh
+```
+
+It verified rejection of:
+
+```text id="v8jad3"
+old crab://b3/<hash>.image slash form
+uppercase b3 hash
+recipient mismatch quote
+unfunded payment
+fake authority headers
+self-payment
+wrong amount payment
+```
+
+It also verified no balance mutation:
+
+```text id="5irn1y"
+acct_dev unchanged
+acct_visitor_b unchanged
+unfunded account unchanged / 0
+```
+
+Final result:
+
+```text id="7fg2kg"
+NEGATIVE CONTENT_VIEW PROBE PASSED
+```
+
+## Quote tamper probe
+
+Permanent script:
+
+```text id="t8n8cq"
+scripts/probes/internal-roc-live-quote-tamper.sh
+```
+
+It verified that a valid quote cannot be reused with:
+
+```text id="pp9ksq"
+tampered recipient
+tampered quote_hash
+tampered quote_id
+```
+
+Expected and observed results after the patch:
+
+```text id="yiqz0u"
+tampered recipient: HTTP 400 content_view_recipient_mismatch
+tampered quote_hash: HTTP 409 content_view_quote_hash_mismatch
+tampered quote_id: HTTP 409 content_view_quote_id_mismatch
+balances unchanged
+```
+
+Final result:
+
+```text id="wki0qs"
+QUOTE TAMPER PROBE PASSED
+```
+
+## Idempotency probe
+
+Permanent script:
+
+```text id="zv3j3w"
+scripts/probes/internal-roc-live-idempotency.sh
+```
+
+This script is intentionally mutating and requires:
+
+```text id="zkv1ha"
+RUN_MUTATING=1
+```
+
+During the session, the temporary idempotency probe proved:
+
+```text id="l494cn"
+first payment mutated exactly once
+duplicate retry did not double-spend
+second retry returned safe HTTP 409 IDEMPOTENCY_CONFLICT
+balances stayed unchanged after duplicate retry
+```
+
+Important nuance:
+
+```text id="ysv2cw"
+The duplicate retry is value-safe, but not ideal UX.
+Future improvement: make content/view/pay retry bodies deterministic enough to replay the prior receipt instead of returning idempotency conflict.
+Severity: medium UX/retry polish, not a value-integrity failure.
+```
+
+---
+
+# 6. Critical bug found and fixed during Phase 6
+
+## Bug summary
+
+During live quote tamper probing, we found a real hardening bug:
+
+```text id="n7jkau"
+Route:
+omnigate /content/view/pay
+
+Problem:
+pay accepted a tampered quote_hash
+
+Impact:
+The payment still went to the correct creator through svc-wallet,
+but quote_id / quote_hash were not being enforced as payment preconditions.
+
+Severity:
+medium-high hardening bug
+
+Value-integrity impact:
+limited, because amount/recipient/wallet still enforced
+
+Phase 6 closeout impact:
+must fix before closeout
+```
+
+## Why it mattered
+
+The old behavior allowed this:
+
+```text id="o2mbbt"
+valid quote for creator
+→ tamper quote_hash
+→ pay still accepted
+→ wallet transfer executed
+```
+
+Even though money did not go to an attacker, this meant quote hash was not a real binding precondition.
+
+## Fix applied
+
+Patched:
+
+```text id="yayrry"
+crates/omnigate/src/routes/v1/content_view.rs
+crates/omnigate/tests/content_view.rs
+```
+
+The patch made `/content/view/pay` enforce:
+
+```text id="7pyiw5"
+quote_id must match the deterministic current quote
+quote_hash must match the deterministic current quote
+missing quote_id rejects
+missing quote_hash rejects
+tampered quote_id rejects before wallet call
+tampered quote_hash rejects before wallet call
+```
+
+The quote response now also lists required pay fields:
+
+```text id="pyhhlf"
+asset_crab_url
+payer_account
+amount_minor
+recipient_account
+quote_id
+quote_hash
+```
+
+## Regression tests added
+
+New focused tests:
+
+```text id="6b9fs4"
+pay_rejects_tampered_quote_hash_without_wallet_call
+pay_rejects_tampered_quote_id_without_wallet_call
+```
+
+Focused Omnigate tests passed:
+
+```text id="5ezu3u"
+cargo test -p omnigate --test content_view
+5 passed
+
+cargo test -p omnigate --test internal_roc_beta_paid_content_access_boundary
+5 passed
+
+cargo test -p omnigate --test internal_roc_beta_phase4_confirmation_failure_boundary
+2 passed
+```
+
+## Live fix verification
+
+After restarting the stack and minting a fresh image, the same live quote tamper probe passed:
+
+```text id="zq4rl8"
+tampered recipient rejected
+tampered quote_hash rejected
+tampered quote_id rejected
+balances unchanged
+```
+
+This is one of the strongest Phase 6 results: we found a real edge-case bug, fixed it, added regression coverage, restarted the stack, and proved the fix live.
+
+---
+
+# 7. Permanent scripts added / promoted
+
+These scripts were promoted from `/tmp` probes into the RustyOnions repo:
+
+```text id="yfa7sc"
+scripts/probes/internal-roc-live-readonly.sh
+scripts/probes/internal-roc-live-negative-content-view.sh
+scripts/probes/internal-roc-live-quote-tamper.sh
+scripts/probes/internal-roc-live-idempotency.sh
+scripts/dev-internal-roc-beta-live-probes.sh
+```
+
+Purpose:
+
+```text id="q2nlz8"
+Make manual live Phase 6 hardening probes repeatable.
+Keep default runner non-mutating.
+Require RUN_MUTATING=1 for the idempotency spend probe.
+Allow future sessions to re-run live proof against any new crab:// image.
+```
+
+Default non-mutating live runner:
+
+```bash id="fbsr0j"
+cd /Users/mymac/Desktop/RustyOnions
+
+GATEWAY_URL=http://127.0.0.1:8090 \
+OMNIGATE_URL=http://127.0.0.1:9090 \
+WALLET_URL=http://127.0.0.1:8088 \
+CRAB_URL='crab://<64hex>.image' \
+ASSET_HEX='<64hex>' \
+VISITOR_ACCOUNT='<payer_or_viewer_account>' \
+CREATOR_ACCOUNT='<creator_or_recipient_account>' \
+PAYER_ACCOUNT='<payer_account>' \
+VIEWER_PASSPORT='<viewer_passport_subject>' \
+EXPECT_VISITOR='<expected_payer_balance_optional>' \
+EXPECT_CREATOR='<expected_creator_balance_optional>' \
+bash scripts/dev-internal-roc-beta-live-probes.sh
+```
+
+Mutating idempotency probe, only when intentionally spending:
+
+```bash id="tcgvsl"
+RUN_MUTATING=1 \
+GATEWAY_URL=http://127.0.0.1:8090 \
+CRAB_URL='crab://<64hex>.image' \
+PAYER_ACCOUNT='<payer_account>' \
+CREATOR_ACCOUNT='<creator_account>' \
+VIEWER_PASSPORT='<viewer_passport_subject>' \
+AMOUNT=5 \
+bash scripts/probes/internal-roc-live-idempotency.sh
+```
+
+---
+
+# 8. CrabLink checker false positive fixed
+
+## Problem
+
+The Phase 6 CrabLink meta-checker previously scanned checker scripts as if they were runtime code.
+
+That produced false positives because checker scripts intentionally contain forbidden deny-list words such as:
+
+```text id="os1ycg"
+solana
+rox
+fakebalance
+fakereceipt
+bridge
+staking
+liquidity
+```
+
+Those words were present in deny lists, not runtime authority paths.
+
+## Fix applied
+
+Updated:
+
+```text id="96s2d8"
+ /Users/mymac/Desktop/crablink/scripts/check-internal-roc-beta.mjs
+```
+
+Updated package script:
+
+```text id="ft50l5"
+/Users/mymac/Desktop/crablink/apps/crablink-tauri/package.json
+```
+
+The checker now:
+
+```text id="zozsgs"
+still verifies the aggregate Internal ROC Beta checks
+still requires the paid-content boundary checks
+still requires replay visibility checks
+still requires wallet/receipt UX checks
+still requires confirmation/failure UX checks
+still requires build
+still requires Rust mac-media check
+does not treat checker deny-list text as runtime authority
+does scan selected runtime/UI/adapter files for forbidden authority patterns
+```
+
+Final CrabLink proof target passed:
+
+```text id="awxx6x"
+Internal ROC Beta Phase 6 CrabLink Tauri proof target passed
+CrabLink remains display/user intent only with backend-derived receipts/balances/access
+```
+
+---
+
+# 9. Full Phase 6 smoke gate passed
+
+Command run:
+
+```bash id="spyk53"
+cd /Users/mymac/Desktop/RustyOnions
+
+CRABLINK_ROOT=/Users/mymac/Desktop/crablink \
+  bash scripts/internal-roc-beta-crablink-check.sh
+
+CRABLINK_ROOT=/Users/mymac/Desktop/crablink \
+  bash scripts/dev-internal-roc-beta-phase6-smoke.sh
+```
+
+Final gate result:
+
+```text id="q2yf0c"
+Internal ROC Beta Phase 6 reproducible smoke suite complete.
+Phase 6 status: COMPLETE / GREEN / PARKED candidate, pending notes/terminal review.
+```
+
+After review:
+
+```text id="zqmdnj"
+Internal ROC Beta Phase 6: COMPLETE / GREEN / PARKED
+```
+
+---
+
+# 10. Test targets that passed in the final smoke suite
+
+## Wallet / ledger proof target
+
+Script:
+
+```text id="rs8y1w"
+scripts/internal-roc-beta-wallet-ledger-check.sh
+```
+
+Passed:
+
+```text id="uw1bje"
+cargo fmt -p svc-wallet -- --check
+cargo fmt -p ron-ledger -- --check
+cargo test -p svc-wallet --test internal_roc_beta_paid_content_receipt_path
+cargo test -p svc-wallet --test internal_roc_beta_phase2_paid_action_idempotency
+cargo test -p svc-wallet --test internal_roc_beta_phase2_receipt_lookup_after_replay
+cargo test -p svc-wallet --test internal_roc_beta_phase3_approved_payout_execution_boundary
+cargo test -p ron-ledger --features quickchain-preflight --test internal_roc_beta_paid_content_replay_label
+cargo test -p ron-ledger --features quickchain-preflight --test internal_roc_beta_phase2_replay_conservation
+cargo test -p ron-ledger --features quickchain-preflight --test internal_roc_beta_phase3_approved_payout_replay
+```
+
+Key proof:
+
+```text id="kyv3fs"
+svc-wallet remains mutation front-door
+ron-ledger remains durable receipt/balance truth
+idempotency prevents double mutation
+approved payout execution uses wallet issue path only
+receipt lookup after replay does not fabricate truth
+```
+
+## Replay / conservation proof target
+
+Script:
+
+```text id="g0l0ky"
+scripts/internal-roc-beta-replay-check.sh
+```
+
+Passed:
+
+```text id="j3i6a0"
+cargo fmt -p ron-ledger -- --check
+cargo fmt -p ron-accounting -- --check
+cargo fmt -p svc-wallet -- --check
+cargo test -p ron-ledger --features quickchain-preflight --test internal_roc_beta_phase2_replay_conservation
+cargo test -p ron-ledger --features quickchain-preflight --test internal_roc_beta_phase3_approved_payout_replay
+cargo test -p ron-accounting --test internal_roc_beta_phase2_snapshot_cannot_change_replay
+cargo test -p svc-wallet --test internal_roc_beta_phase2_receipt_lookup_after_replay
+```
+
+Key proof:
+
+```text id="8h8mh1"
+accepted replay stays deterministic
+balance conservation holds
+hold terminality holds
+paid flow replay equality holds
+accounting snapshots cannot change replay
+receipt lookup does not fabricate backend truth
+```
+
+## Tokenomics / anti-farming proof target
+
+Script:
+
+```text id="9edx5q"
+scripts/internal-roc-beta-tokenomics-check.sh
+```
+
+Passed:
+
+```text id="0h5nnv"
+cargo fmt -p ron-ledger -- --check
+cargo fmt -p svc-wallet -- --check
+cargo fmt -p ron-accounting -- --check
+cargo fmt -p svc-rewarder -- --check
+cargo fmt -p ron-policy -- --check
+cargo test -p ron-ledger --features quickchain-preflight --test internal_roc_beta_phase5_economics_config_non_authority
+cargo test -p svc-wallet --test internal_roc_beta_phase5_config_non_authority
+cargo test -p ron-accounting --test internal_roc_beta_phase5_config_label_non_authority
+cargo test -p ron-accounting --test internal_roc_beta_phase5_event_class_antifarming
+cargo test -p svc-rewarder --test internal_roc_beta_phase5_config_driven_planning
+cargo test -p svc-rewarder --test internal_roc_beta_phase5_antifarming_event_gates
+cargo test -p svc-rewarder --test internal_roc_beta_phase5_policy_gate_interlock
+cargo test -p ron-policy --test internal_roc_beta_phase5_economics_toml_policy_validation
+cargo test -p ron-policy --test internal_roc_beta_phase5_antifarming_policy_gate
+```
+
+Key proof:
+
+```text id="md8p3i"
+configs/roc-economics.toml remains non-authority
+no floats / numeric money in economics TOML
+bridge and staking remain inert
+raw engagement cannot directly mint or allocate ROC
+metering cannot directly become payout or receipt truth
+analytics_only is quarantined from reward material
+ad_budgeted requires explicit non-protocol budget
+proof_eligible requires verification/caps/policy
+rewarder remains non-mutating planning-only
+policy remains gate-only
+```
+
+## Access boundary proof target
+
+Script:
+
+```text id="n4zy4r"
+scripts/internal-roc-beta-access-check.sh
+```
+
+Passed:
+
+```text id="xleuy8"
+cargo fmt -p svc-storage -- --check
+cargo fmt -p svc-index -- --check
+cargo fmt -p svc-gateway -- --check
+cargo fmt -p omnigate -- --check
+cargo test -p svc-storage --test internal_roc_beta_paid_content_artifact_boundary
+cargo test -p svc-index --test internal_roc_beta_paid_content_pointer_boundary
+cargo test -p svc-gateway --test internal_roc_beta_paid_content_route_boundary
+cargo test -p svc-gateway --test internal_roc_beta_phase2_replay_visibility_boundary
+cargo test -p svc-gateway --test internal_roc_beta_phase4_confirmation_failure_boundary
+cargo test -p omnigate --test internal_roc_beta_paid_content_access_boundary
+cargo test -p omnigate --test internal_roc_beta_phase2_replay_visibility_boundary
+cargo test -p omnigate --test internal_roc_beta_phase4_confirmation_failure_boundary
+```
+
+Key proof:
+
+```text id="eaoe9m"
+svc-storage stores artifacts by b3, not payment truth
+svc-index stores pointers/navigation metadata, not entitlement truth
+svc-gateway proxies and labels backend-derived truth, not ledger authority
+omnigate coordinates paid access, quote, pay, and hydration without direct ledger authority
+fake receipt/balance/unlock/finality poison fields reject
+replay visibility stays display metadata
+confirmation/failure contract stays display-safe
+```
+
+## CrabLink Tauri proof target
+
+Script:
+
+```text id="sdqjl4"
+scripts/internal-roc-beta-crablink-check.sh
+```
+
+Passed:
+
+```text id="n02ze0"
+node --check /Users/mymac/Desktop/crablink/scripts/check-internal-roc-beta.mjs
+npm --prefix /Users/mymac/Desktop/crablink/apps/crablink-tauri run check:internal-roc-beta
+npm run build
+npm run check:rust:mac-media
+```
+
+Key proof:
+
+```text id="cynlv4"
+CrabLink remains display/user intent only
+explicit confirmation intact
+backend-derived receipts intact
+backend-derived balance refresh intact
+display-only receipt cache intact
+no silent spend
+replay/audit labels are display-only
+honest stale/offline status
+no client-side replay authority
+no cache-only entitlement
+failure-locked rendering
+safe retry/idempotency UX
+Vite production build passes
+Tauri Rust mac-media cargo check passes
+```
+
+---
+
+# 11. What remains deferred
+
+Do **not** start any of these automatically in the next session:
+
+```text id="7du0b7"
+ROX
+Solana
+external settlement
+public bridge
+bridge mint/burn
+staking runtime
+yield-bearing staking
+liquidity pool
+exchange-facing logic
+public validator economy
+external L2 / DA
+public checkpoint/anchor runtime
+public chain claims
+```
+
+QuickChain remains:
+
+```text id="3g1myk"
+future settlement infrastructure
+not public runtime
+not current ROC balance authority
+not external settlement
+not a public validator economy
+```
+
+Internal ROC remains:
+
+```text id="b61frx"
+internal closed value loop
+integer minor-unit accounting
+svc-wallet mutation front-door
+ron-ledger durable truth
+CrabLink display/client UX only
+```
+
+---
+
+# 12. Current project position after Phase 6
+
+We should treat the project as having completed the active Internal ROC Beta buildplan:
+
+```text id="7b6g3e"
+Phase 0: doc sync / safe language
+Phase 1: repeatable paid flows using wallet path
+Phase 2: ledger replay + conservation
+Phase 3: accounting → rewarder → wallet payout
+Phase 4: CrabLink Tauri wallet/receipt UX
+Phase 5: tokenomics TOML + anti-farming
+Phase 6: reproducible beta smoke suite
+```
+
+Current state:
+
+```text id="1ia7gb"
+Internal ROC Beta value-loop proof is complete.
+QuickChain remains parked through boundary/preflight Phase 5.
+CrabLink Tauri is the primary client.
+The backend owns truth.
+The client displays truth and sends user intent.
+No external settlement creep happened.
+```
+
+There is no Phase 7 in the current buildplan unless we create a new reviewed buildplan.
+
+---
+
+# 13. Recommended next workstream
+
+The next session should not begin by inventing a new chain/bridge/staking phase.
+
+Recommended next workstream name:
+
+```text id="31jkd5"
+Internal ROC Beta Stabilization / Product Beta Readiness
+```
+
+Purpose:
+
+```text id="p22i36"
+Turn the proven value loop into a smoother, safer, more repeatable beta product.
+```
+
+This should be product-hardening and packaging work, not external settlement.
+
+---
+
+# 14. Best next-session priorities
+
+## Priority 1 — Write/update status docs
+
+Create or update a final closeout doc, likely:
+
+```text id="sb23hb"
+docs/internal-roc-beta/PHASE6_CLOSEOUT.md
+```
+
+Should include:
+
+```text id="6oip09"
+Phase 6 final status
+commands run
+live image proof values
+tests passed
+bug found/fixed/proven
+deferred scopes
+next workstream recommendation
+```
+
+Also consider adding a shorter status line to:
+
+```text id="inoc91"
+ALLNOTES.MD
+INTERNAL_ROC_BETA_BUILDPLAN.md
+INTERNAL_ROC_BETA_VALUE_LOOP_BLUEPRINT.md
+POST_QUICKCHAIN_DECISION_GATE.md
+```
+
+Only add to docs if the next session wants documentation patches.
+
+## Priority 2 — Create fresh codebundles
+
+Suggested commands:
+
+```bash id="a7r82j"
+cd /Users/mymac/Desktop/RustyOnions
+
+bash scripts/make_crate_codex.sh --force -c omnigate
+bash scripts/make_crate_codex.sh --force -c svc-gateway
+bash scripts/make_crate_codex.sh --force -c svc-wallet
+bash scripts/make_crate_codex.sh --force -c ron-ledger
+bash scripts/make_crate_codex.sh --force -c ron-accounting
+bash scripts/make_crate_codex.sh --force -c svc-rewarder
+bash scripts/make_crate_codex.sh --force -c ron-policy
+bash scripts/make_crate_codex.sh --force -c svc-storage
+bash scripts/make_crate_codex.sh --force -c svc-index
+```
+
+For CrabLink, regenerate its codebundle using the project’s existing CrabLink bundle command if needed.
+
+## Priority 3 — Product beta polish
+
+Good targets:
+
+```text id="iqzub7"
+receipt history polish
+copy/export receipt button
+paid image access UX polish
+better idempotency retry UX
+clearer quote expiration messaging
+better stale/offline balance labels
+post-payment route refresh polish
+friendly failure messages for quote_id / quote_hash mismatch
+live probe docs for developers
+```
+
+## Priority 4 — Persistent/restart behavior review
+
+The live proof used local dev stack behavior. Next session could inspect restart durability boundaries:
+
+```text id="9qgcam"
+What persists across restart?
+What is intentionally in-memory for dev?
+Which receipts survive service restart?
+Which asset manifests survive service restart?
+Which storage/index state is durable now?
+What needs beta-grade persistence before broader testing?
+```
+
+This should remain internal ROC only.
+
+## Priority 5 — Packaging / install readiness
+
+For CrabLink beta readiness:
+
+```text id="nxu1nz"
+Tauri packaging smoke
+macOS bundle smoke
+dev/prod gateway config separation
+first-run settings
+gateway URL selection
+safe localhost/dev labels
+receipt cache migration behavior
+error redaction in production mode
+no raw backend stack traces in UI
+```
+
+## Priority 6 — More paid asset types
+
+The proven flow is image/content_view. Next product work can expand similar checks to:
+
+```text id="5bkzld"
+article paid view
+post paid view
+comment paid view
+music paid view
+video paid view
+site visit paid access
+```
+
+The rule stays:
+
+```text id="3nfhrz"
+No new ledger mutation paths.
+All paid flows go through prepare/quote → explicit confirmation → svc-wallet → ron-ledger → backend receipt/access → display-only client UX.
+```
+
+---
+
+# 15. Known improvement candidates
+
+These are not blockers for Phase 6 completion.
+
+## Idempotency retry polish
+
+Observed:
+
+```text id="7mfqwy"
+Duplicate retry did not double-spend.
+Second attempt returned IDEMPOTENCY_CONFLICT because wallet saw same key with different request body.
+```
+
+Desired future behavior:
+
+```text id="879mgi"
+Exact same content_view retry should return prior accepted receipt when possible.
+```
+
+Possible cause:
+
+```text id="e4r5mw"
+content/view/pay may include request fields or generated fields that differ between first attempt and retry.
+```
+
+Priority:
+
+```text id="f8qyps"
+medium
+```
+
+Reason:
+
+```text id="b7sz00"
+value-safe already, but retry UX can be better.
+```
+
+## b3sum not installed
+
+Live probes skipped local independent b3 verification:
+
+```text id="3em1r3"
+b3sum not installed; skipped local raw-byte b3 verification
+b3sum not installed; skipped local manifest b3 verification
+```
+
+Not a Phase 6 blocker because byte counts and backend b3 route identity passed, but future local hardening can install `b3sum` and turn this into a stronger local digest verification.
+
+Possible install later:
+
+```bash id="iuwwe4"
+cargo install b3sum
+```
+
+Only do this when disk/time allows.
+
+## Broader paid-flow coverage
+
+Image content_view is proven strongly. Future product beta can repeat permanent live probes across other asset kinds.
+
+---
+
+# 16. What not to regress
+
+Carry these boundaries forward aggressively:
+
+```text id="frbusv"
+CrabLink must not invent balances.
+CrabLink must not invent receipts.
+CrabLink must not claim finality.
+CrabLink must not unlock paid content from cache alone.
+CrabLink must not hold wallet authority.
+CrabLink must not expose secrets in React state/localStorage/URL/logs.
+Gateway must not mutate ledger.
+Omnigate must not mutate ledger directly.
+Storage must not provide paid entitlement truth.
+Index must not provide paid entitlement truth.
+Accounting must not become balance truth.
+Rewarder must not mutate ledger.
+Policy must not become authority.
+Tokenomics config must not create supply, balances, receipts, or payouts by itself.
+Raw engagement must not directly mint or allocate ROC.
+External settlement must remain deferred.
+```
+
+---
+
+# 17. Exact final commands that matter
+
+Final live non-mutating probe command:
+
+```bash id="s8w4ma"
+cd /Users/mymac/Desktop/RustyOnions
+
+GATEWAY_URL=http://127.0.0.1:8090 \
+OMNIGATE_URL=http://127.0.0.1:9090 \
+WALLET_URL=http://127.0.0.1:8088 \
+CRAB_URL='crab://13879a70bf77a3fac6458b23ddece6f3de02763a267c43c162ecc3e0105c456b.image' \
+ASSET_HEX='13879a70bf77a3fac6458b23ddece6f3de02763a267c43c162ecc3e0105c456b' \
+VISITOR_ACCOUNT=acct_dev \
+CREATOR_ACCOUNT=acct_visitor_b \
+PAYER_ACCOUNT=acct_dev \
+VIEWER_PASSPORT=passport:main:dev \
+EXPECT_VISITOR=3547 \
+EXPECT_CREATOR=1756 \
+bash scripts/dev-internal-roc-beta-live-probes.sh
+```
+
+Final CrabLink proof command:
+
+```bash id="ol7068"
+cd /Users/mymac/Desktop/RustyOnions
+
+CRABLINK_ROOT=/Users/mymac/Desktop/crablink \
+  bash scripts/internal-roc-beta-crablink-check.sh
+```
+
+Final full Phase 6 smoke command:
+
+```bash id="t78ce4"
+cd /Users/mymac/Desktop/RustyOnions
+
+CRABLINK_ROOT=/Users/mymac/Desktop/crablink \
+  bash scripts/dev-internal-roc-beta-phase6-smoke.sh
+```
+
+---
+
+# 18. Final carry-over summary for the next session
+
+Paste this into the next session:
+
+```text id="n672dm"
+We completed Internal ROC Beta Phase 6.
+
+Final status:
+COMPLETE / GREEN / PARKED.
+
+Important context:
+QuickChain remains COMPLETE / GREEN / PARKED only as future settlement boundary/preflight through Phase 5, not public runtime.
+Internal ROC Beta value-loop is now proven through Phase 6.
+No ROX/Solana/bridge/staking/liquidity/exchange-facing/public validator/external settlement work is authorized.
+
+What was proven:
+- CrabLink Tauri launched.
+- Image mint worked.
+- Paid image view worked.
+- Backend-derived receipt displayed.
+- Ledger-backed balances refreshed.
+- Gateway/omnigate/storage/index route worked.
+- Raw asset and manifest fetched.
+- Privacy-clean proof passed.
+- Negative malformed/tampered/unfunded paid attempts rejected.
+- Fake receipt/finality/paid headers did not authorize.
+- Quote tamper bug was found, fixed, regression-tested, and live-proven.
+- Full Phase 6 reproducible smoke suite completed.
+
+Important bug fixed:
+Omnigate /content/view/pay accepted a tampered quote_hash.
+Patch added quote_id/quote_hash binding before wallet transfer.
+Regression tests added:
+pay_rejects_tampered_quote_hash_without_wallet_call
+pay_rejects_tampered_quote_id_without_wallet_call
+Live quote tamper probe after restart passed.
+
+Permanent scripts added:
+scripts/probes/internal-roc-live-readonly.sh
+scripts/probes/internal-roc-live-negative-content-view.sh
+scripts/probes/internal-roc-live-quote-tamper.sh
+scripts/probes/internal-roc-live-idempotency.sh
+scripts/dev-internal-roc-beta-live-probes.sh
+
+CrabLink checker repaired:
+scripts/check-internal-roc-beta.mjs no longer treats checker deny-list text as runtime authority.
+apps/crablink-tauri/package.json check:internal-roc-beta updated.
+
+Final live proof image:
+crab://13879a70bf77a3fac6458b23ddece6f3de02763a267c43c162ecc3e0105c456b.image
+asset CID b3:13879a70bf77a3fac6458b23ddece6f3de02763a267c43c162ecc3e0105c456b
+manifest CID b3:86cfd6f845c3c993db664aa6c3b618f39b0dadab2b471bae29d322889dd404e9
+payer acct_dev balance 3547
+creator acct_visitor_b balance 1756
+
+Final full gate:
+CRABLINK_ROOT=/Users/mymac/Desktop/crablink bash scripts/dev-internal-roc-beta-phase6-smoke.sh
+Result:
+Internal ROC Beta Phase 6 reproducible smoke suite complete.
+Promoted after review to COMPLETE / GREEN / PARKED.
+
+Recommended next workstream:
+Internal ROC Beta Stabilization / Product Beta Readiness.
+
+Recommended next priorities:
+1. Write docs/internal-roc-beta/PHASE6_CLOSEOUT.md.
+2. Update status docs/notes with Phase 6 complete.
+3. Generate fresh codebundles.
+4. Review persistence/restart behavior for beta readiness.
+5. Polish CrabLink receipt/access UX.
+6. Expand paid-flow probes to other asset types.
+7. Improve idempotency retry UX so exact retries can replay prior receipt instead of returning conflict.
+8. Keep all bridge/staking/ROX/Solana/external settlement work deferred unless explicitly authorized by a new reviewed decision gate.
+```
+
+---
+
+# 19. Final recommendation
+
+Next session should start with:
+
+```text id="wrlvb7"
+docs/internal-roc-beta/PHASE6_CLOSEOUT.md
+```
+
+Then choose the next workstream:
+
+```text id="q3fvao"
+Internal ROC Beta Stabilization / Product Beta Readiness
+```
+
+Do not start a Phase 7 unless we explicitly create a new buildplan.
+
+
+### END NOTE - JUNE 30 2026 - 14:05 CST

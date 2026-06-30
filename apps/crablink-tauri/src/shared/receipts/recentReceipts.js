@@ -3,6 +3,7 @@
  * local receipt replay/audit labels are display-only.
  * local receipt replay/audit labels cannot create receipt truth.
  * local receipt replay/audit labels cannot create paid unlock authority.
+ * Backend wallet and ledger remain authoritative.
  */
 
 /**
