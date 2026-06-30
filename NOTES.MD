@@ -12999,3 +12999,1039 @@ QuickChain should remain parked unless the next session explicitly defines a new
 
 
 ### END NOTE - JUNE 28 2026 - 22:05 CST
+
+
+### BEGIN NOTE - JUNE 29 2026 - 15:15 CST
+
+CrabLink is now **GREEN / PARKED** for the Internal ROC Beta Phase 1 paid-content client boundary. The terminal output shows the focused Internal ROC client check passed, the full Tauri check path passed, Vite build succeeded, Rust `cargo check` succeeded, all QuickChain client gates stayed green, and the parking marker printed cleanly. 
+
+### BEGIN NOTE - JUNE 29 2026 - INTERNAL ROC BETA PHASE 1 - CrabLink Tauri / Client Adapters
+
+## Status
+
+CrabLink Tauri + client adapters are GREEN / PARKED for Internal ROC Beta Phase 1 paid-content client boundary proof.
+
+This completes the CrabLink side of the Phase 1 paid content proof.
+
+This also means the larger Phase 1 paid content flow proof is now GREEN / PARKED across:
+
+```text
+ron-proto + ron-ledger
+svc-wallet + ron-accounting
+svc-rewarder + ron-policy
+svc-storage + svc-index
+svc-gateway + omnigate
+CrabLink Tauri + client adapters
+```
+
+Safe label:
+
+```text
+Internal ROC Beta Phase 1 CrabLink paid content client boundary is GREEN / PARKED.
+```
+
+Larger safe label:
+
+```text
+Internal ROC Beta Phase 1 paid content flow proof is GREEN / PARKED.
+```
+
+This does not mean bridge, staking, ROX, Solana, external settlement, liquidity, exchange-facing logic, public chain runtime, or public validator economy is live.
+
+Those remain deferred / parked.
+
+---
+
+## Files added or updated
+
+### Added
+
+```text
+docs/tauri/INTERNAL_ROC_BETA_PHASE1_PAID_CONTENT_CLIENT_BOUNDARY.md
+scripts/check-internal-roc-paid-content-boundary.mjs
+```
+
+### Updated
+
+```text
+apps/crablink-tauri/package.json
+scripts/check-tauri.sh
+scripts/dev-quickchain-tauri-park.sh
+scripts/make_codebundle.sh
+```
+
+### Regenerated after green
+
+```text
+CODEBUNDLE_TAURI_APP.md
+```
+
+---
+
+## Main new check
+
+New npm check:
+
+```bash
+npm --prefix apps/crablink-tauri run check:internal-roc-paid-content-boundary
+```
+
+New package scripts added:
+
+```text
+check:internal-roc-paid-content-boundary
+check:internal-roc-no-silent-spend
+check:internal-roc-receipt-display-only
+check:internal-roc-paid-cache-boundary
+```
+
+These currently delegate to:
+
+```text
+scripts/check-internal-roc-paid-content-boundary.mjs
+```
+
+---
+
+## Focused check result
+
+Focused Internal ROC client check passed:
+
+```text
+Internal ROC Beta Phase 1 CrabLink paid content client boundary check passed.
+Explicit confirmation, backend-derived receipts, backend-derived balance refresh, display-only receipt cache, and no-silent-spend boundaries are intact.
+```
+
+This proves the new client-side scanner is active and passing.
+
+---
+
+## App-local park result
+
+The full app-local Tauri park path passed.
+
+The terminal printed:
+
+```text
+== Internal ROC Beta Phase 1 CrabLink paid content client boundary parking gate passed ==
+== explicit confirmation and backend-derived receipt UX proof complete ==
+== display-only receipt cache and backend-derived balance refresh boundary complete ==
+== no fake receipts, fake balances, fake finality, silent spend, cache-only unlock, bridge, staking, liquidity, ROX/Solana, or external settlement introduced ==
+```
+
+The park run also kept all previous QuickChain client boundary gates green.
+
+---
+
+## Build and Rust checks
+
+The app build passed:
+
+```text
+vite build
+313 modules transformed
+built successfully
+```
+
+The Tauri Rust check passed:
+
+```text
+cargo check --manifest-path src-tauri/Cargo.toml
+Finished dev profile
+```
+
+No Rust/Tauri compile failure remained.
+
+---
+
+## Existing QuickChain client gates stayed green
+
+The app-local park re-ran and passed:
+
+```text
+check:quickchain-boundary
+check:quickchain-paid-cache-boundary
+check:quickchain-readiness-boundary
+check:quickchain-phase1-interlock
+check:quickchain-phase2-replay-boundary
+check:quickchain-phase2-committee-boundary
+check:quickchain-phase3-validator-boundary
+check:quickchain-phase3-lifecycle-boundary
+check:quickchain-phase4-bond-boundary
+check:quickchain-phase4-bond-dispute-boundary
+check:quickchain-phase4-bond-enforcement-boundary
+check:quickchain-phase5-anchor-boundary
+check:quickchain-phase5-da-fallback-boundary
+check:quickchain-phase5-external-posture-boundary
+```
+
+This means the new Internal ROC Beta client check did not weaken the previously parked QuickChain client boundary posture.
+
+---
+
+## What the new CrabLink check proves
+
+The new checker proves the CrabLink side of the paid-content UX boundary:
+
+```text
+paid post flow uses adapter path
+paid comment flow uses adapter path
+paid article flow uses adapter path
+generic content_view uses adapter path
+site_visit uses adapter path
+wallet hold/payment helpers require confirmed=true
+publish flows require explicit hold/review path
+content_view payment requires explicit user action
+site_visit payment requires explicit user action
+backend receipts are displayed, not invented
+recent receipt cache remains display-only
+local catalog remains display/display-cache only
+balance refresh remains backend-derived
+Tauri invoke remains centralized through the typed platform adapter
+Tauri Rust command bridge remains allowlisted/bounded/redacted
+```
+
+---
+
+## Paid publish flows covered
+
+The scanner covers these client publish flows:
+
+```text
+PostPublishFlow.jsx
+CommentPublishFlow.jsx
+ArticlePublishFlow.jsx
+```
+
+Required boundary evidence:
+
+```text
+createPostAssetClient / createCommentAssetClient / createArticleAssetClient
+createWalletClient
+walletClient.hold
+confirmed: true
+publishPost / publishComment / publishArticle
+refreshWallet after accepted path
+visible review / confirmation posture
+no local wallet authority shortcut
+```
+
+This preserves the publish path:
+
+```text
+prepare
+→ explicit hold/review
+→ wallet hold through backend path
+→ paid proof headers
+→ publish through gateway/backend route
+→ backend-derived result
+→ backend-derived balance refresh
+```
+
+Forbidden publish shortcuts remain blocked:
+
+```text
+publish because cache says paid
+publish because manifest says paid
+publish because local state says paid
+publish because index pointer exists
+invent paid proof in React
+invent receipt in React
+silently open hold
+silently capture hold
+store spend authority in localStorage
+```
+
+---
+
+## Generic content_view flow covered
+
+The scanner covers:
+
+```text
+AssetContentViewAccess.jsx
+contentViewClient.js
+```
+
+Required evidence includes:
+
+```text
+createContentViewClient
+client.pay
+confirmed: true
+persistContentViewProof
+writeRecentReceipt
+writeLocalCatalogEntry
+backend-derived balance refresh
+error state does not unlock
+```
+
+This preserves the content_view path:
+
+```text
+quote
+→ explicit click / confirmation
+→ pay through gateway/backend
+→ backend wallet receipt
+→ backend access result
+→ render only after backend success
+→ display-only receipt/cache write
+→ backend-derived balance refresh
+```
+
+Forbidden content_view shortcuts remain blocked:
+
+```text
+unlock from local receipt cache
+unlock from local catalog
+unlock from b3 existence
+unlock from offline cache
+unlock from manifest paid=true
+unlock from index pointer
+unlock from policy allow
+unlock from QuickChain/readiness/anchor metadata
+```
+
+---
+
+## Site visit flow covered
+
+The scanner covers:
+
+```text
+SiteVisitAccess.jsx
+siteVisitClient.js
+```
+
+The final scanner was tightened to accept the actual implemented site_visit naming:
+
+```text
+visitClient.pay
+notifyBalanceRefresh(app, payment, persistedReceipt)
+```
+
+The implementation uses a named site_visit client and a helper wrapper for backend-derived balance refresh rather than direct inline `app.refreshWallet(...)`.
+
+This is acceptable because the balance refresh still happens after the accepted backend payment/access path and remains display/backend-derived.
+
+Required evidence includes:
+
+```text
+createSiteVisitClient
+visitClient.pay
+confirmed: true
+writeRecentReceipt
+writeLocalCatalogEntry
+notifyBalanceRefresh
+canRender
+```
+
+Forbidden site_visit shortcuts remain blocked:
+
+```text
+local balance edits
+fake unlock
+cache-only unlock
+receipt-cache unlock
+silent spend
+client-generated receipt truth
+client-generated balance truth
+```
+
+---
+
+## Receipt cache boundary
+
+The scanner covers:
+
+```text
+recentReceipts.js
+```
+
+Required doctrine:
+
+```text
+Read-only recent receipt collector
+display-only
+no wallet mutation
+no fake receipts
+Backend wallet and ledger remain authoritative.
+```
+
+Allowed receipt cache use:
+
+```text
+display recent backend-returned receipt metadata
+help users review past actions
+show receipt-like details as local history
+clear local display cache
+```
+
+Forbidden receipt cache use:
+
+```text
+authorize spend
+authorize paid access
+set current balance
+prove finality
+become wallet truth
+become ledger truth
+become settlement truth
+become bridge truth
+become staking truth
+```
+
+---
+
+## Balance boundary
+
+The client may display backend-derived balances and refresh after accepted paid actions.
+
+The client must not compute balance truth from:
+
+```text
+recent receipts
+local catalog
+cache
+manifest
+index pointer
+accounting snapshots
+reward plans
+QuickChain readiness
+anchor/finality labels
+```
+
+Correct rule:
+
+```text
+After paid action success, refresh from backend truth.
+If refresh fails, show stale/failure honestly.
+Do not locally invent the new balance.
+```
+
+---
+
+## Tauri command bridge boundary
+
+The scanner covers:
+
+```text
+tauriPlatform.js
+src-tauri/src/commands/mod.rs
+src-tauri/src/commands/gateway.rs
+src-tauri/src/commands/wallet.rs
+```
+
+Allowed Tauri command posture:
+
+```text
+central typed Tauri invoke adapter
+allowlisted commands only
+gateway_request
+wallet_balance_gateway
+redacted errors
+bounded body/response sizes
+gateway-first service path
+```
+
+Forbidden command posture remains blocked:
+
+```text
+raw arbitrary invoke from paid surfaces
+shell
+execute
+eval
+native raw commands
+direct ledger commands
+direct wallet mutation authority commands
+receipt fabrication commands
+balance fabrication commands
+finality fabrication commands
+bridge commands
+staking commands
+liquidity commands
+external settlement commands
+uncapped spend authority
+private keys/seeds/raw capabilities in outputs
+```
+
+---
+
+## `make_codebundle.sh` repair
+
+A temporary patch inserted an `echo` line into the selected script path-list area of:
+
+```text
+scripts/make_codebundle.sh
+```
+
+That caused a shell syntax failure.
+
+It was repaired by keeping the new checker in the correct two locations:
+
+```text
+human-readable scope output:
+  echo "scripts/check-internal-roc-paid-content-boundary.mjs"
+
+selected_scripts path list:
+  "$ROOT/scripts/check-internal-roc-paid-content-boundary.mjs" \
+```
+
+After repair:
+
+```bash
+bash scripts/make_codebundle.sh
+```
+
+succeeded and wrote:
+
+```text
+CODEBUNDLE_TAURI_APP.md
+```
+
+---
+
+## Important terminal proof markers
+
+Focused check:
+
+```text
+Internal ROC Beta Phase 1 CrabLink paid content client boundary check passed.
+Explicit confirmation, backend-derived receipts, backend-derived balance refresh, display-only receipt cache, and no-silent-spend boundaries are intact.
+```
+
+Build:
+
+```text
+vite build
+313 modules transformed
+built successfully
+```
+
+Tauri Rust:
+
+```text
+cargo check --manifest-path src-tauri/Cargo.toml
+Finished dev profile
+```
+
+Park marker:
+
+```text
+== Internal ROC Beta Phase 1 CrabLink paid content client boundary parking gate passed ==
+== explicit confirmation and backend-derived receipt UX proof complete ==
+== display-only receipt cache and backend-derived balance refresh boundary complete ==
+== no fake receipts, fake balances, fake finality, silent spend, cache-only unlock, bridge, staking, liquidity, ROX/Solana, or external settlement introduced ==
+```
+
+Codebundle:
+
+```text
+wrote: /Users/mymac/Desktop/crablink/CODEBUNDLE_TAURI_APP.md
+```
+
+---
+
+## Authority boundaries preserved
+
+CrabLink may:
+
+```text
+display backend-derived balances
+display backend-derived receipts
+display paid access status
+collect user intent
+show quote/prepare information
+ask for explicit confirmation
+call TypeScript adapters
+request allowlisted Tauri commands
+call configured gateway paths
+render paid content after backend access truth
+write display-only recent receipt entries
+write display-only local catalog entries
+verify b3 cache bytes before trusted render
+```
+
+CrabLink must not:
+
+```text
+own wallet truth
+own ledger truth
+invent balances
+invent receipts
+invent finality
+invent paid entitlement
+silently spend ROC
+unlock paid content from cache alone
+store private keys/seeds/raw capabilities in React
+store spend authority in localStorage
+store secrets in URLs
+store secrets in logs
+call raw Tauri invoke from arbitrary UI files
+mutate ledger
+mutate wallet
+run bridge logic
+run staking logic
+run liquidity logic
+run external settlement logic
+```
+
+The check now enforces these boundaries for the paid post/comment/article/content_view/site_visit client surfaces.
+
+---
+
+## Phase 1 total status after this patch
+
+Internal ROC Beta Phase 1 paid content flow proof is now complete / parked for the intended round.
+
+Backend route/authority proof is green across:
+
+```text
+ron-proto + ron-ledger
+svc-wallet + ron-accounting
+svc-rewarder + ron-policy
+svc-storage + svc-index
+svc-gateway + omnigate
+```
+
+Client UX/boundary proof is green across:
+
+```text
+CrabLink Tauri + client adapters
+```
+
+Safe final Phase 1 label:
+
+```text
+Internal ROC Beta Phase 1 paid content flow proof is GREEN / PARKED.
+```
+
+---
+
+## What is not complete yet
+
+This does not complete the full Internal ROC Beta value loop.
+
+Still ahead:
+
+```text
+Phase 2 — Ledger replay + conservation proof
+Phase 3 — Accounting → rewarder → wallet payout loop
+Phase 4 — CrabLink Tauri wallet/receipt UX hardening
+Phase 5 — Tokenomics TOML validation and anti-farming gates
+Phase 6 — Reproducible internal ROC beta smoke suite
+```
+
+This also does not authorize:
+
+```text
+ROX runtime
+Solana runtime
+bridge runtime
+public bridge
+external settlement
+staking runtime
+staking UI
+staking yield
+liquidity
+exchange-facing logic
+public validator economy
+QuickChain public chain live
+```
+
+Those remain parked until explicit later authorization.
+
+---
+
+## Recommended next session starting point
+
+Next active phase should be:
+
+```text
+Internal ROC Beta Phase 2 — Ledger replay + conservation proof
+```
+
+Likely first crate pair:
+
+```text
+ron-proto + ron-ledger
+```
+
+Primary goal:
+
+```text
+Prove paid flows replay deterministically and conserve ROC.
+```
+
+Suggested Phase 2 Round 1 focus:
+
+```text
+same accepted operation history produces same balances
+same accepted operation history produces same receipts
+same accepted operation history produces same holds
+paid transfers conserve value
+holds conserve value
+captures conserve value
+releases conserve value
+burns/remainders go to explicit sinks
+duplicate terminal hold operations are rejected
+replay cannot depend on DB iteration order or wall clock
+```
+
+Suggested focused tests from buildplan:
+
+```text
+ron-ledger:
+  internal_roc_beta_paid_flow_replay_equality
+  internal_roc_beta_balance_conservation
+  internal_roc_beta_hold_terminality
+  internal_roc_beta_replay_order_independence
+
+svc-wallet:
+  internal_roc_beta_paid_action_idempotency
+  internal_roc_beta_receipt_lookup_after_replay
+
+ron-accounting:
+  internal_roc_beta_snapshot_cannot_change_replay
+```
+
+Do not start bridge/staking/ROX/Solana/external settlement work.
+
+---
+
+## Final CrabLink note
+
+CrabLink now has an explicit Internal ROC Beta Phase 1 client boundary gate in the app-local park path.
+
+This is exactly the right posture:
+
+```text
+CrabLink is the product/user-intent layer.
+Tauri Rust mediates native privilege.
+Gateway/Omnigate coordinate backend access.
+svc-wallet mutates.
+ron-ledger records truth.
+CrabLink displays receipts and balances only after backend truth.
+Local caches stay convenience/display-only.
+```
+
+### END NOTE - JUNE 29 2026 - INTERNAL ROC BETA PHASE 1 - CrabLink Tauri / Client Adapters
+
+
+### END NOTE - JUNE 29 2026 - 15:15 CST
+
+
+
+### BEGIN NOTE - JUNE 29 2026 - 17:10 CST
+
+Here are the paste-ready **CrabLink Tauri notes** for the Phase 2 completion pass. The terminal output confirms the new Internal ROC Phase 2 CrabLink replay/audit visibility check passed, the QuickChain replay and Internal ROC paid-content regressions passed, Vite build passed, Tauri Rust cargo check passed, and the app-local park printed the final Phase 2 completion marker. 
+
+Append this to:
+
+```text
+apps/crablink-tauri/NOTES.MD
+```
+
+### BEGIN NOTE - JUNE 29 2026 - INTERNAL ROC BETA PHASE 2 ROUND 2
+
+# CrabLink Tauri — Internal ROC Beta Phase 2 Round 2 replay/audit visibility boundary
+
+## Status
+
+```text
+Internal ROC Beta Phase 2 Round 2 — CrabLink Tauri + client adapters
+Status: GREEN / PARKED
+```
+
+This pass completed the CrabLink Tauri/client-adapter side of Internal ROC Beta Phase 2 Round 2.
+
+It also completed Internal ROC Beta Phase 2 overall.
+
+Safe phase label:
+
+```text
+Internal ROC Beta Phase 2 replay/conservation proof complete.
+Status: COMPLETE / GREEN / PARKED
+```
+
+This work is Internal ROC Beta value-loop proof only.
+
+QuickChain boundary/preflight scope remains COMPLETE / GREEN / PARKED through Phase 5, but this is not QuickChain public runtime work.
+
+No bridge, staking, ROX, Solana, liquidity, exchange-facing logic, public validator economy, external settlement, fake receipt, fake balance, fake finality, silent spend, or cache-only paid unlock was introduced.
+
+## What changed
+
+Added focused client boundary document:
+
+```text
+docs/tauri/INTERNAL_ROC_BETA_PHASE2_REPLAY_VISIBILITY_CLIENT_BOUNDARY.md
+```
+
+Added focused client boundary scanner:
+
+```text
+scripts/check-internal-roc-phase2-replay-visibility.mjs
+```
+
+Integrated the new check into the CrabLink app check flow:
+
+```text
+apps/crablink-tauri/package.json
+scripts/check-tauri.sh
+scripts/dev-quickchain-tauri-park.sh
+scripts/make_codebundle.sh
+```
+
+Added display-only source markers to the relevant client display/cache surfaces:
+
+```text
+apps/crablink-tauri/src/pages/quickchain/QuickchainReadinessPage.jsx
+apps/crablink-tauri/src/pages/receipts/ReceiptsPage.jsx
+apps/crablink-tauri/src/app/shell/RecentReceiptsPanel.jsx
+apps/crablink-tauri/src/shared/receipts/recentReceipts.js
+```
+
+A small follow-up repair fixed malformed quoted echo lines in:
+
+```text
+scripts/dev-quickchain-tauri-park.sh
+```
+
+After the repair, the app-local park passed.
+
+## What the new check proves
+
+The new Internal ROC Phase 2 CrabLink replay/audit visibility scanner proves that CrabLink may display replay/conservation/audit status only as optional, source-labeled, display-only status context.
+
+Covered proof areas:
+
+```text
+display-only replay/audit labels
+honest stale/offline status
+missing replay/audit status does not fabricate truth
+paid unlock still depends on backend access truth
+accepted backend wallet/ledger receipts remain the paid unlock authority
+receipt cache remains display-only
+local catalog remains display-only
+QuickchainReadinessPage remains display/evidence only
+ReceiptsPage remains display-only
+RecentReceiptsPanel remains display-only
+recentReceipts local cache remains display-only
+Tauri allowed command list does not expose replay/audit authority commands
+client source scan rejects replay-status unlock authority markers
+client source scan rejects replay-status receipt/balance/finality/settlement authority markers
+client source scan rejects bridge/staking/liquidity/external settlement coupling
+```
+
+## Boundary preserved
+
+CrabLink Tauri remains display, routing, user intent, and explicit confirmation UX only.
+
+Allowed relationship:
+
+```text
+backend replay/conservation/audit evidence
+→ source-labeled display metadata
+→ optional UI label / receipt detail / readiness context
+```
+
+Forbidden relationship:
+
+```text
+replay/audit status
+→ paid unlock
+
+replay/audit status
+→ balance truth
+
+replay/audit status
+→ receipt truth
+
+replay/audit status
+→ finality truth
+
+replay/audit status
+→ settlement truth
+
+replay/audit status
+→ wallet mutation
+
+replay/audit status
+→ ledger mutation
+
+replay/audit status
+→ bridge/staking/liquidity behavior
+
+local receipt cache
+→ paid unlock
+
+local catalog cache
+→ paid unlock
+```
+
+## Commands that passed
+
+Focused syntax and boundary checks:
+
+```text
+node --check scripts/check-internal-roc-phase2-replay-visibility.mjs
+bash -n scripts/check-tauri.sh
+bash -n scripts/dev-quickchain-tauri-park.sh
+bash -n scripts/make_codebundle.sh
+npm --prefix apps/crablink-tauri run check:internal-roc-phase2-replay-visibility
+npm --prefix apps/crablink-tauri run check:quickchain-phase2-replay-boundary
+npm --prefix apps/crablink-tauri run check:internal-roc-paid-content-boundary
+```
+
+App-local park:
+
+```text
+bash scripts/dev-quickchain-tauri-park.sh
+```
+
+The app-local park delegated the full Tauri check gate and passed:
+
+```text
+npm run check:quickchain-boundary
+npm run check:quickchain-paid-cache-boundary
+npm run check:internal-roc-paid-content-boundary
+npm run check:quickchain-readiness-boundary
+npm run check:quickchain-phase1-interlock
+npm run check:quickchain-phase2-replay-boundary
+npm run check:internal-roc-phase2-replay-visibility
+npm run check:quickchain-phase2-committee-boundary
+npm run check:quickchain-phase3-validator-boundary
+npm run check:quickchain-phase3-lifecycle-boundary
+npm run check:quickchain-phase4-bond-boundary
+npm run check:quickchain-phase4-bond-dispute-boundary
+npm run check:quickchain-phase4-bond-enforcement-boundary
+npm run check:quickchain-phase5-anchor-boundary
+npm run check:quickchain-phase5-da-fallback-boundary
+npm run check:quickchain-phase5-external-posture-boundary
+npm run build
+npm run check:rust:mac-media
+```
+
+## Terminal proof
+
+Internal ROC Phase 2 CrabLink replay/audit visibility boundary passed:
+
+```text
+Internal ROC Beta Phase 2 CrabLink replay/audit visibility boundary check passed.
+Display-only replay/audit labels, honest stale/offline status, backend access truth, and no client-side replay authority are intact.
+```
+
+QuickChain Phase 2 replay regression passed:
+
+```text
+QuickChain Phase 2 replay boundary check passed.
+```
+
+Internal ROC Phase 1 paid-content client regression passed:
+
+```text
+Internal ROC Beta Phase 1 CrabLink paid content client boundary check passed.
+Explicit confirmation, backend-derived receipts, backend-derived balance refresh, display-only receipt cache, and no-silent-spend boundaries are intact.
+```
+
+Vite build passed:
+
+```text
+vite v5.4.21 building for production...
+✓ 313 modules transformed.
+✓ built
+```
+
+Tauri Rust check passed:
+
+```text
+cargo check --manifest-path src-tauri/Cargo.toml
+Finished `dev` profile
+```
+
+Final app-local park markers printed:
+
+```text
+== Internal ROC Beta Phase 2 CrabLink replay/audit visibility boundary parking gate passed ==
+== Internal ROC Beta Phase 2 replay/conservation proof complete ==
+== display-only replay/audit labels and honest stale/offline status complete ==
+== no client-side replay authority, fake receipts, fake balances, fake finality, silent spend, cache-only unlock, bridge, staking, liquidity, ROX/Solana, or external settlement introduced ==
+```
+
+Final completion marker printed:
+
+```text
+Internal ROC Beta Phase 2 CrabLink park quote fix applied and app-local park passed.
+Internal ROC Beta Phase 2 replay/conservation proof complete.
+```
+
+## Safe labels
+
+CrabLink slice label:
+
+```text
+Internal ROC Beta Phase 2 Round 2 CrabLink Tauri + client adapters replay/audit visibility boundary is GREEN / PARKED.
+```
+
+Phase label:
+
+```text
+Internal ROC Beta Phase 2 replay/conservation proof complete.
+Status: COMPLETE / GREEN / PARKED.
+```
+
+## Current Internal ROC Beta status
+
+```text
+Phase 0:
+  docs/safe-language sync: COMPLETE / GREEN / PARKED
+
+Phase 1:
+  paid content flow proof: COMPLETE / GREEN / PARKED
+
+Phase 2:
+  replay/conservation proof: COMPLETE / GREEN / PARKED
+```
+
+Phase 2 completed crate-pair coverage:
+
+```text
+Round 1:
+  ron-proto + ron-ledger: GREEN / PARKED
+  svc-wallet + ron-accounting: GREEN / PARKED
+
+Round 2:
+  svc-gateway + omnigate: GREEN / PARKED
+  CrabLink Tauri + client adapters: GREEN / PARKED
+```
+
+## Next planned work
+
+The next active phase is:
+
+```text
+Internal ROC Beta Phase 3 — Accounting → rewarder → wallet payout loop
+```
+
+Expected next starting crate pair:
+
+```text
+ron-proto + ron-ledger
+```
+
+Phase 3 must preserve the same authority doctrine:
+
+```text
+ron-accounting snapshots are not balance truth.
+svc-rewarder plans payouts but does not mutate ledger.
+ron-policy gates/validates but does not create receipts.
+svc-wallet remains the only approved payout mutation path.
+ron-ledger remains durable receipt and balance truth.
+CrabLink remains display/user intent only.
+```
+
+### END NOTE - JUNE 29 2026 - INTERNAL ROC BETA PHASE 2 ROUND 2
+
+
+### END NOTE - JUNE 29 2026 - 17:10 CST

@@ -7,6 +7,7 @@
  * RO:CONFIG — uses current CrabLink wallet/passport settings and configured gateway URL.
  * RO:SECURITY — pay button requires explicit click; local cache never grants authorization.
  * RO:TEST — open crab://<hash>.article, .post, .comment, .image, .video, .music, and .stream; quote, click Pay, confirm protected content unlocks only after receipt.
+ * RO:PHASE4-R2 — INTERNAL-ROC-PHASE4-R2; every spend shows amount/action/asset/recipient; cancel never mutates; confirm triggers adapter path only; failure does not unlock; retry is idempotent/safe.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -347,6 +348,27 @@ export default function AssetContentViewAccess({ app, summary, onAccessChange })
           confirmed: true,
         },
       );
+
+      const paymentSummary = payment?.summary || payment?.receipt || payment || {};
+
+      if (!hasBackendPaymentProof(paymentSummary)) {
+        const missingReceipt = new Error(
+          'Backend payment did not return wallet/ledger receipt proof. CrabLink will keep this paid content locked.',
+        );
+        missingReceipt.reason = 'payment_missing_backend_receipt';
+        missingReceipt.payment = payment;
+        throw missingReceipt;
+      }
+
+function hasBackendPaymentProof(summary = {}) {
+  return Boolean(
+    summary?.txid ||
+      summary?.receiptHash ||
+      summary?.receipt_hash ||
+      summary?.ledgerRoot ||
+      summary?.ledger_root
+  );
+}
 
       const receipt = persistContentViewProof({
         target,

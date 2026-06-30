@@ -1,4 +1,13 @@
 /**
+ * Internal ROC Beta Phase 2 Round 2: downstream replay/audit visibility.
+ * replay/audit status is display-only.
+ * missing replay/audit status stays unavailable/stale and never fabricates truth.
+ * paid unlock still depends on backend access truth.
+ * accepted backend wallet/ledger receipts remain the only paid unlock authority.
+ * no client-side replay authority.
+ */
+
+/**
  * RO:WHAT — CrabLink QuickChain readiness dashboard for Phase 5 anchor-only, DA/archive/challenge fallback, and selected external posture display.
  * RO:WHY — Shows Phase 5 Round 1 anchor-only dry-run, Phase 5 Round 2 DA/archive/challenge fallback, and Phase 5 Round 3 selected external posture readiness without letting CrabLink become external posture authority, anchor authority, DA truth, archive restore truth, missing-data challenge truth, pruning authority, finality, settlement, bridge, external-chain ROC truth, wallet, ledger, balance, receipt, or paid-unlock authority.
  * RO:INTERACTS — localCatalog, recentReceipts, app navigation, NEXT_LEVEL/QUICKCHAIN product milestones.

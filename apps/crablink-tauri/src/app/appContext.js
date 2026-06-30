@@ -425,8 +425,9 @@ export function AppContextProvider({ children }) {
           status: 'error',
           checkedAt: new Date().toISOString(),
           account: walletAccount,
-          data: null,
-          response: null,
+          data: walletState.data,
+          response: walletState.response,
+          stale: Boolean(walletState.data),
           error,
         };
 

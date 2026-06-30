@@ -1546,3 +1546,31 @@
     flex: 1 1 auto;
   }
 }
+
+.cl-balance-chip {
+  gap: 0.34rem;
+}
+
+.cl-balance-chip small {
+  max-width: 9.5rem;
+  color: var(--cl-muted);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cl-chip-backend-derived small,
+.cl-chip-verified small {
+  color: var(--cl-success);
+}
+
+.cl-receipt-source-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-bottom: 0.7rem;
+}

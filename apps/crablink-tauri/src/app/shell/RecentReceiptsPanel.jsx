@@ -1,4 +1,10 @@
 /**
+ * Internal ROC Beta Phase 2 compact receipt replay/audit posture.
+ * recent receipt replay/audit labels are display-only.
+ * recent receipt replay/audit labels are not paid unlock authority.
+ */
+
+/**
  * RO:WHAT — Recent wallet/site/asset receipt panel for the CrabLink passport drawer.
  * RO:WHY — Gives creators/visitors a readable local receipt history after paid site/image/text actions.
  * RO:INTERACTS — PassportDrawer, recentReceipts.js, CopyButton, JsonPreview.
@@ -65,6 +71,9 @@ export default function RecentReceiptsPanel({
           `  txid: ${receipt.txid || 'not returned'}`,
           `  receipt_hash: ${receipt.receiptHash || 'not returned'}`,
           `  ledger_root: ${receipt.ledgerRoot || 'not returned'}`,
+          `  source_boundary: ${receipt.sourceLabel || receipt.source || 'local display'}`,
+          `  backend_derived: ${receipt.backendDerived === true ? 'yes' : 'no'}`,
+          `  display_cache: display-only; not paid entitlement`,
           `  nonce: ${receipt.nonce || 'not returned'}`,
         ].join('\n'),
       ),
@@ -89,7 +98,7 @@ export default function RecentReceiptsPanel({
         <div>
           <strong>Recent receipts</strong>
           <p>
-            Local display copies of backend-returned receipt metadata. Wallet and ledger truth remain backend-owned.
+            Local display copies of backend-returned receipt metadata. Each card labels backend source and display-only cache status. Wallet and ledger truth remain backend-owned.
           </p>
         </div>
         <span className="cl-local-count-pill">{latest.length}</span>
@@ -195,6 +204,8 @@ function ReceiptCard({ receipt }) {
   const paidTo = receipt.recipient || receipt.to || 'not returned';
   const proofText = buildProofText(receipt);
   const route = receipt.crabUrl || receipt.route || '';
+  const sourceLabel = receipt.sourceLabel || receipt.source || 'local display';
+  const backendLabel = receipt.backendDerived === true ? 'yes — backend-derived receipt' : 'no — local display hint only';
 
   return (
     <article className={`cl-receipt-card is-${classSafe(action)}`}>
@@ -214,6 +225,12 @@ function ReceiptCard({ receipt }) {
         <ReceiptMini label="Asset" value={String(receipt.asset || 'roc').toUpperCase()} />
       </div>
 
+      <div className="cl-receipt-source-strip" aria-label="Receipt source boundary">
+        <ReceiptMini label="Source boundary" value={sourceLabel} />
+        <ReceiptMini label="Backend-derived" value={backendLabel} />
+        <ReceiptMini label="Display cache" value="display-only; not paid entitlement" />
+      </div>
+
       <dl className="cl-proof-grid">
         <ReceiptFact label="Action" value={action || 'not returned'} />
         <ReceiptFact label="Crab URL" value={route || 'not returned'} monospace copyable />
@@ -226,11 +243,14 @@ function ReceiptCard({ receipt }) {
         <ReceiptFact label="Root CID" value={receipt.rootDocumentCid || 'not returned'} monospace copyable />
         <ReceiptFact label="Idempotency" value={receipt.idempotencyKey || 'not returned'} monospace copyable />
         <ReceiptFact label="Source" value={receipt.source || 'local_display_cache'} />
+        <ReceiptFact label="Source boundary" value={sourceLabel} />
+        <ReceiptFact label="Backend-derived" value={backendLabel} />
+        <ReceiptFact label="Display cache" value="display-only; not paid entitlement" />
         <ReceiptFact label="Created" value={formatTimestamp(receipt.createdAt || receipt.storedAt)} />
       </dl>
 
       <p className="cl-receipt-truth-note">
-        Display-only copy. Backend wallet/ledger remain authoritative.
+        Display-only copy. Backend wallet/ledger remain authoritative; this cache is not paid entitlement.
       </p>
     </article>
   );

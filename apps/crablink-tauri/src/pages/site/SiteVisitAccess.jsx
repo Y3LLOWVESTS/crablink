@@ -7,6 +7,7 @@
  * RO:CONFIG — uses current app settings wallet/passport and local display receipt memory.
  * RO:SECURITY — pay button requires explicit user click; no local balance edits; no fake unlock.
  * RO:TEST — Visitor B opens crab://ron7, quotes 10 ROC, pays through gateway, and unlocks only from the live backend receipt response.
+ * RO:PHASE4-R2 — INTERNAL-ROC-PHASE4-R2; every spend shows amount/action/asset/recipient; cancel never mutates; confirm triggers adapter path only; failure does not unlock; retry is idempotent/safe.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -282,6 +283,27 @@ export default function SiteVisitAccess({
         }),
         { confirmed: true },
       );
+
+      const paymentSummary = payment?.summary || payment?.receipt || payment || {};
+
+      if (!hasBackendPaymentProof(paymentSummary)) {
+        const missingReceipt = new Error(
+          'Backend payment did not return wallet/ledger receipt proof. CrabLink will keep this paid site locked.',
+        );
+        missingReceipt.reason = 'payment_missing_backend_receipt';
+        missingReceipt.payment = payment;
+        throw missingReceipt;
+      }
+
+function hasBackendPaymentProof(summary = {}) {
+  return Boolean(
+    summary?.txid ||
+      summary?.receiptHash ||
+      summary?.receipt_hash ||
+      summary?.ledgerRoot ||
+      summary?.ledger_root
+  );
+}
 
       const persistedReceipt = writeSiteVisitDisplayCaches({
         app,

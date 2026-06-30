@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — ROC balance chip for the trusted CrabLink shell.
- * RO:WHY — Shows wallet display state while keeping ledger truth backend-owned.
- * RO:INTERACTS — appContext settings/walletState/refreshWallet, TopBar, future wallet display routes.
+ * RO:WHY — Shows backend-derived or visibly stale wallet display state while keeping ledger truth backend-owned.
+ * RO:INTERACTS — appContext settings/walletState/refreshWallet, TopBar, walletClient.
  * RO:INVARIANTS — no fake balances; no local ledger truth; no silent spend; click only refreshes read-only balance.
  * RO:METRICS — refreshWallet inherits gateway x-correlation-id behavior.
  * RO:CONFIG — walletAccount, rocBalanceDisplay, rocBalanceSource.
- * RO:SECURITY — no spend authority stored or displayed.
- * RO:TEST — manual wallet chip smoke in extension and Vite contexts.
+ * RO:SECURITY — no spend authority stored or displayed; stale labels are visible and never balance truth.
+ * RO:TEST — npm run check:internal-roc-phase4-wallet-receipt-ux.
  */
 
 import { useMemo } from 'react';
@@ -40,6 +40,7 @@ export default function BalanceChip() {
         'cl-chip',
         'cl-balance-chip',
         view.ledgerBacked ? 'cl-chip-verified' : '',
+        view.backendDerived ? 'cl-chip-backend-derived' : '',
         view.tone ? `cl-chip-${view.tone}` : '',
       ]
         .filter(Boolean)
@@ -47,10 +48,11 @@ export default function BalanceChip() {
       type="button"
       title={view.title}
       onClick={onRefresh}
-      aria-label={`Refresh ROC balance: ${view.display}`}
+      aria-label={`Refresh ROC balance: ${view.display}; ${view.sourceLabel}`}
     >
       <span className="cl-chip-label">ROC</span>
       <strong>{view.display}</strong>
+      <small>{view.sourceLabel}</small>
     </button>
   );
 }
@@ -60,6 +62,7 @@ function buildBalanceView({ settings = {}, storage = {}, wallet = null, state = 
   const status = String(state?.status || 'idle');
   const checking = status === 'checking';
   const error = state?.error || null;
+  const checkedAt = state?.checkedAt || '';
   const walletAccount = String(
     firstPresent(
       walletBody.account,
@@ -69,41 +72,44 @@ function buildBalanceView({ settings = {}, storage = {}, wallet = null, state = 
     ) || '',
   ).trim();
 
-  const display = cleanRocDisplay(
-    firstPresent(
-      walletBody.display,
-      walletBody.balance_display,
-      walletBody.balanceDisplay,
-      walletBody.roc_balance,
-      walletBody.rocBalance,
-      walletBody.available,
-      walletBody.available_minor,
-      walletBody.availableMinor,
-      walletBody.available_minor_units,
-      walletBody.availableMinorUnits,
-      walletBody.amount_minor,
-      walletBody.amountMinor,
-      walletBody.amount_minor_units,
-      walletBody.amountMinorUnits,
-      walletBody.balance_minor,
-      walletBody.balanceMinor,
-      walletBody.balance_minor_units,
-      walletBody.balanceMinorUnits,
-      settings.rocBalanceDisplay,
-      settings.rocBalanceMinorUnits,
-    ),
+  const backendDisplayCandidate = firstPresent(
+    walletBody.display,
+    walletBody.balance_display,
+    walletBody.balanceDisplay,
+    walletBody.roc_balance,
+    walletBody.rocBalance,
+    walletBody.available,
+    walletBody.available_minor,
+    walletBody.availableMinor,
+    walletBody.available_minor_units,
+    walletBody.availableMinorUnits,
+    walletBody.amount_minor,
+    walletBody.amountMinor,
+    walletBody.amount_minor_units,
+    walletBody.amountMinorUnits,
+    walletBody.balance_minor,
+    walletBody.balanceMinor,
+    walletBody.balance_minor_units,
+    walletBody.balanceMinorUnits,
   );
+  const settingsDisplayCandidate = firstPresent(settings.rocBalanceDisplay, settings.rocBalanceMinorUnits);
+  const displaySource = backendDisplayCandidate !== undefined && backendDisplayCandidate !== null ? 'backend' : settingsDisplayCandidate ? 'settings' : '';
+  const display = cleanRocDisplay(displaySource === 'backend' ? backendDisplayCandidate : settingsDisplayCandidate);
+  const source = normalizeSource(walletBody.source || walletBody.balance_source || walletBody.balanceSource || settings.rocBalanceSource);
 
   const ledgerBacked =
     walletBody.ledger_backed === true ||
     walletBody.ledgerBacked === true ||
     walletBody.source === 'ledger';
+  const backendDerived = displaySource === 'backend' && (status === 'ok' || Boolean(source) || ledgerBacked);
 
   if (!walletAccount && !display && !checking && !error) {
     return {
       display: 'No acct',
       ledgerBacked: false,
+      backendDerived: false,
       tone: 'empty',
+      sourceLabel: 'no wallet account',
       title: storage?.isDevFallback
         ? 'No wallet account is configured in this HTTP preview. Use the passport drawer dev labels for preview-only headers.'
         : 'No wallet account is configured. Set one in CrabLink settings or refresh identity from the gateway.',
@@ -112,10 +118,23 @@ function buildBalanceView({ settings = {}, storage = {}, wallet = null, state = 
 
   if (checking) {
     return {
-      display: '…',
+      display: display || '…',
       ledgerBacked: false,
+      backendDerived: false,
       tone: 'checking',
+      sourceLabel: 'gateway refresh pending',
       title: 'Refreshing wallet balance through the gateway.',
+    };
+  }
+
+  if (error && display) {
+    return {
+      display,
+      ledgerBacked,
+      backendDerived: false,
+      tone: 'warning',
+      sourceLabel: 'refresh failed — stale display',
+      title: `${walletErrorTitle(error, storage)} Last visible value is stale display only.`,
     };
   }
 
@@ -123,29 +142,41 @@ function buildBalanceView({ settings = {}, storage = {}, wallet = null, state = 
     return {
       display: '!',
       ledgerBacked: false,
+      backendDerived: false,
       tone: 'warning',
+      sourceLabel: 'refresh failed — no backend balance',
       title: walletErrorTitle(error, storage),
     };
   }
 
   if (display) {
+    const sourceLabel = backendDerived
+      ? ledgerBacked
+        ? 'ledger-backed backend balance'
+        : 'backend-derived balance'
+      : displaySource === 'settings'
+        ? 'stale display hint'
+        : 'Display-only wallet balance';
+
     return {
       display,
       ledgerBacked,
-      tone: ledgerBacked ? 'verified' : 'display',
+      backendDerived,
+      tone: backendDerived ? 'verified' : 'display',
+      sourceLabel,
       title:
-        walletBody.source ||
-        settings.rocBalanceSource ||
-        (ledgerBacked
-          ? 'Last known ledger-backed balance display. Click to refresh through the gateway.'
-          : 'Display-only wallet balance. Click to refresh through the gateway.'),
+        backendDerived
+          ? `Backend-derived wallet balance${source ? ` from ${source}` : ''}${checkedAt ? ` refreshed at ${checkedAt}` : ''}. Click to refresh through the gateway.`
+          : 'Display-only wallet balance. Click to refresh through the gateway; local settings are never balance truth.',
     };
   }
 
   return {
     display: '—',
     ledgerBacked: false,
+    backendDerived: false,
     tone: storage?.isDevFallback ? 'fallback' : 'empty',
+    sourceLabel: storage?.isDevFallback ? 'preview unavailable' : 'backend balance unavailable',
     title: storage?.isDevFallback
       ? 'Balance unavailable in HTTP preview unless gateway CORS permits this origin. Test extension-origin React for live balance.'
       : 'Balance unavailable. Click to refresh through the gateway.',
@@ -172,6 +203,10 @@ function objectOrEmpty(value) {
 
 function firstPresent(...values) {
   return values.find((value) => value !== undefined && value !== null && String(value).trim() !== '');
+}
+
+function normalizeSource(value) {
+  return String(value || '').trim().replace(/[^a-z0-9_.:-]+/gi, '-').slice(0, 64);
 }
 
 function walletErrorTitle(error, storage) {

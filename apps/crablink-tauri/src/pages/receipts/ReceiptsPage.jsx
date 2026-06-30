@@ -1,4 +1,11 @@
 /**
+ * Internal ROC Beta Phase 2 receipt replay/audit detail posture.
+ * receipt replay/audit labels are optional display metadata.
+ * receipt replay/audit labels cannot unlock paid content.
+ * receipt replay/audit labels cannot claim finality or settlement.
+ */
+
+/**
  * RO:WHAT — Dedicated CrabLink receipt history page.
  * RO:WHY — Moves receipt/debug detail out of the Passport drawer while preserving local display proof for paid actions.
  * RO:INTERACTS — recentReceipts.js, localCatalog.js, PageHeader, CopyButton, JsonPreview.
@@ -65,7 +72,7 @@ export default function ReceiptsPage({ app }) {
       ...normalized.map((receipt) => buildProofText(receipt)),
       '',
       'Truth boundary:',
-      'Browser-local display cache only. Backend wallet and ledger remain authoritative.',
+      'Browser-local receipt display cache only. Backend wallet and ledger remain authoritative; cache is not paid entitlement.',
     ];
 
     try {
@@ -87,7 +94,7 @@ export default function ReceiptsPage({ app }) {
         meta={
           <>
             <Badge tone={normalized.length > 0 ? 'success' : 'warning'}>{normalized.length} receipts</Badge>
-            <Badge tone="neutral">display cache</Badge>
+            <Badge tone="neutral">display-only receipt cache</Badge>
             <Badge tone="info">wallet/ledger backend truth</Badge>
           </>
         }
@@ -121,7 +128,7 @@ export default function ReceiptsPage({ app }) {
       <TruthBoundary
         tone="warning"
         title="Receipts are display copies here"
-        copy="CrabLink can display txid, receipt_hash, ledger_root, nonce, amount, payer, and recipient returned by backend routes, but it does not verify ledger continuity locally and does not authorize spending."
+        copy="CrabLink can display txid, receipt_hash, ledger_root, nonce, amount, payer, recipient, and backend source labels returned by backend routes, but it does not verify ledger continuity locally, does not authorize spending, and never treats the display cache as paid entitlement."
       />
 
       <Card className="receipts-toolbar" eyebrow="Browse receipts" title="Filter receipt display cache">
@@ -200,6 +207,8 @@ function ReceiptCard({ receipt, app }) {
   const route = receipt.crabUrl || receipt.route || '';
   const amount = receipt.amountDisplay || formatAmount(receipt.amountMinor, receipt.asset);
   const proofText = buildProofText(receipt);
+  const sourceLabel = receipt.sourceLabel || receipt.source || 'local display';
+  const backendLabel = receipt.backendDerived === true ? 'yes — backend-derived receipt' : 'no — local display hint only';
 
   return (
     <article className={`receipts-card is-${classSafe(action)}`}>
@@ -208,13 +217,19 @@ function ReceiptCard({ receipt, app }) {
           <span>{labelFromAction(action)}</span>
           <strong>{receipt.title || route || receipt.txid || receipt.receiptHash || 'Receipt'}</strong>
         </div>
-        <Badge tone={toneForReceipt(action)}>{receipt.source || 'local display'}</Badge>
+        <Badge tone={receipt.backendDerived === true ? 'success' : toneForReceipt(action)}>{sourceLabel}</Badge>
       </header>
 
       <div className="receipts-proof-strip">
         <ReceiptMini label="Amount" value={amount || 'not returned'} />
         <ReceiptMini label="Nonce" value={receipt.nonce || 'not returned'} />
         <ReceiptMini label="Asset" value={String(receipt.asset || 'roc').toUpperCase()} />
+      </div>
+
+      <div className="receipts-source-strip" aria-label="Receipt source boundary">
+        <ReceiptMini label="Source boundary" value={sourceLabel} />
+        <ReceiptMini label="Backend-derived" value={backendLabel} />
+        <ReceiptMini label="Display cache" value="display-only; not paid entitlement" />
       </div>
 
       <div className="receipts-fact-grid">
@@ -230,6 +245,9 @@ function ReceiptCard({ receipt, app }) {
         <ReceiptFact label="Idempotency" value={receipt.idempotencyKey || 'not returned'} monospace />
         <ReceiptFact label="Created" value={formatTimestamp(receipt.createdAt || receipt.storedAt)} />
         <ReceiptFact label="Source" value={receipt.source || 'local_display_cache'} />
+        <ReceiptFact label="Source boundary" value={sourceLabel} />
+        <ReceiptFact label="Backend-derived" value={backendLabel} />
+        <ReceiptFact label="Display cache" value="display-only; not paid entitlement" />
       </div>
 
       <footer className="receipts-card-actions">

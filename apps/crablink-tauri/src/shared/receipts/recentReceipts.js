@@ -1,8 +1,15 @@
 /**
+ * Internal ROC Beta Phase 2 receipt cache replay/audit posture.
+ * local receipt replay/audit labels are display-only.
+ * local receipt replay/audit labels cannot create receipt truth.
+ * local receipt replay/audit labels cannot create paid unlock authority.
+ */
+
+/**
  * RO:WHAT — Read-only recent receipt collector for CrabLink browser UI.
  * RO:WHY — Surfaces backend-returned wallet/site/asset receipts without inventing wallet or ledger truth.
  * RO:INTERACTS — SiteVisitAccess, PassportDrawer, RecentReceiptsPanel, LibraryPage, HomePage.
- * RO:INVARIANTS — display-only; no wallet mutation; no fake receipts; backend receipt_hash/txid/ledger_root remain truth; bond/slash labels are display-only and never paid unlock authority.
+ * RO:INVARIANTS — display-only; no wallet mutation; no fake receipts; backend receipt_hash/txid/ledger_root remain truth; route/crabUrl/idempotency/storageKey alone is not backend receipt proof.
  * RO:METRICS — none.
  * RO:CONFIG — browser local/session storage only.
  * RO:SECURITY — stores public receipt metadata only; no keys, bearer tokens, seed phrases, or spend authority.
@@ -55,7 +62,7 @@ export function writeRecentReceipt(input, options = {}) {
     generatedAt: new Date().toISOString(),
     receipts: merged,
     truthBoundary:
-      'Browser-local display cache only. Backend wallet and ledger remain authoritative.',
+      'Browser-local receipt display cache only. Backend wallet and ledger remain authoritative; cache is not paid entitlement.',
   });
 
   if (options.session !== false) {
@@ -64,7 +71,7 @@ export function writeRecentReceipt(input, options = {}) {
       generatedAt: new Date().toISOString(),
       receipts: merged,
       truthBoundary:
-        'Browser-local display cache only. Backend wallet and ledger remain authoritative.',
+        'Browser-local receipt display cache only. Backend wallet and ledger remain authoritative; cache is not paid entitlement.',
     });
   }
 
@@ -341,6 +348,10 @@ export function normalizeReceipt(input, options = {}) {
     result.title,
     titleForReceipt(action, crabUrl, amountMinor, asset),
   );
+  const backendDerived = hasBackendReceiptProof({ txid, receiptHash, ledgerRoot });
+  const sourceLabel = backendDerived
+    ? sourceLabelForReceipt(options.source || raw.source || 'backend_receipt')
+    : 'local display hint only — not a backend receipt';
 
   return {
     schema: 'crablink.recent-receipt.v1',
@@ -348,6 +359,10 @@ export function normalizeReceipt(input, options = {}) {
     kind: action || 'receipt',
     action: action || 'receipt',
     title,
+    backendDerived,
+    displayOnly: true,
+    sourceLabel,
+    paidEntitlementAuthority: false,
     crabUrl,
     route: crabUrl,
     amountMinor: amountMinor || '',
@@ -370,7 +385,7 @@ export function normalizeReceipt(input, options = {}) {
     storedAt: new Date().toISOString(),
     raw,
     truthBoundary:
-      'Browser-local display cache only. Backend wallet and ledger remain authoritative.',
+      'Browser-local receipt display cache only. Backend wallet and ledger remain authoritative; cache is not paid entitlement.',
   };
 }
 
@@ -463,15 +478,18 @@ function dedupeReceipts(receipts) {
   return out.sort((a, b) => timestampForSort(b.createdAt || b.storedAt) - timestampForSort(a.createdAt || a.storedAt));
 }
 
+
+function hasBackendReceiptProof(receipt) {
+  return Boolean(receipt?.txid || receipt?.receiptHash || receipt?.ledgerRoot);
+}
+
+function sourceLabelForReceipt(source) {
+  const clean = String(source || '').trim().replace(/[^a-z0-9_.:-]+/gi, '-').slice(0, 64);
+  return clean ? `backend-derived receipt via ${clean}` : 'backend-derived receipt';
+}
+
 function hasReceiptProof(receipt) {
-  return Boolean(
-    receipt?.txid ||
-      receipt?.receiptHash ||
-      receipt?.ledgerRoot ||
-      receipt?.crabUrl ||
-      receipt?.idempotencyKey ||
-      receipt?.storageKey,
-  );
+  return hasBackendReceiptProof(receipt);
 }
 
 function receiptDedupeKey(receipt) {

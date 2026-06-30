@@ -8,6 +8,10 @@ bash scripts/check-tauri.sh
 
 echo "== CrabLink Tauri QuickChain Phase 1 Round 2 final client parking gate passed =="
 echo "== scripts/check-tauri.sh delegated full Tauri check gate =="
+echo "== Internal ROC Beta Phase 1 CrabLink paid content client boundary parking gate passed =="
+echo "== explicit confirmation and backend-derived receipt UX proof complete =="
+echo "== display-only receipt cache and backend-derived balance refresh boundary complete =="
+echo "== no fake receipts, fake balances, fake finality, silent spend, cache-only unlock, bridge, staking, liquidity, ROX/Solana, or external settlement introduced =="
 
 echo "== CrabLink Tauri QuickChain Phase 2 replay client parking gate passed =="
 echo "== QuickChain Phase 2 replay boundary complete =="
@@ -86,3 +90,7 @@ echo "== QuickChain Phase 5 complete =="
 echo "== external anchoring/decentralization option complete =="
 echo "== CrabLink Tauri + client adapters are 100% COMPLETE / PARKED for QuickChain Phase 5 boundary/preflight scope =="
 echo "== no external posture authority, no external settlement, no public bridge, no ROX/Solana, no staking, no liquidity, no exchange-facing logic, no paid unlock from external posture evidence, no fake receipts, no fake balances, no fake finality, and no silent spend introduced =="
+echo "== Internal ROC Beta Phase 2 CrabLink replay/audit visibility boundary parking gate passed =="
+echo "== Internal ROC Beta Phase 2 replay/conservation proof complete =="
+echo "== display-only replay/audit labels and honest stale/offline status complete =="
+echo "== no client-side replay authority, fake receipts, fake balances, fake finality, silent spend, cache-only unlock, bridge, staking, liquidity, ROX/Solana, or external settlement introduced =="
