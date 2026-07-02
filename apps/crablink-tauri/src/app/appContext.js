@@ -30,7 +30,12 @@ import {
 } from './settings.js';
 import { createGatewayClient } from '../shared/api/gatewayClient.js';
 import { createIdentityClient } from '../shared/api/identityClient.js';
-import { createWalletClient } from '../shared/api/walletClient.js';
+import {
+  createWalletClient,
+  markWalletBalanceStale,
+  normalizeWalletBalance,
+  normalizeWalletBalanceError,
+} from '../shared/api/walletClient.js';
 
 const AppContext = createContext(null);
 
@@ -402,7 +407,7 @@ export function AppContextProvider({ children }) {
         }
 
         const response = await client.getBalance(walletAccount);
-        const data = unwrapGatewayData(response);
+        const data = response?.walletBalance || normalizeWalletBalance(unwrapGatewayData(response), walletAccount);
         const next = {
           status: 'ok',
           checkedAt: new Date().toISOString(),
@@ -421,20 +426,21 @@ export function AppContextProvider({ children }) {
 
         return next;
       } catch (error) {
+        const safeError = normalizeWalletBalanceError(error);
         const next = {
           status: 'error',
           checkedAt: new Date().toISOString(),
           account: walletAccount,
-          data: walletState.data,
+          data: markWalletBalanceStale(walletState.data, safeError, walletAccount),
           response: walletState.response,
           stale: Boolean(walletState.data),
-          error,
+          error: safeError,
         };
 
         setWalletState(next);
         notify({
           title: 'Wallet unavailable',
-          message: gatewayUnavailableMessage(error, storage),
+          message: gatewayUnavailableMessage(safeError, storage),
           tone: 'warning',
         });
 

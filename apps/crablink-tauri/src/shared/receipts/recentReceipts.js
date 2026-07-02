@@ -230,6 +230,17 @@ export function normalizeReceipt(input, options = {}) {
     ),
   );
 
+  const operationId = firstString(
+    raw.operationId,
+    raw.operation_id,
+    receipt.operationId,
+    receipt.operation_id,
+    payment.operationId,
+    payment.operation_id,
+    result.operationId,
+    result.operation_id,
+  );
+
   const amountMinor = firstString(
     raw.amountMinor,
     raw.amount_minor,
@@ -349,7 +360,7 @@ export function normalizeReceipt(input, options = {}) {
     result.title,
     titleForReceipt(action, crabUrl, amountMinor, asset),
   );
-  const backendDerived = hasBackendReceiptProof({ txid, receiptHash, ledgerRoot });
+  const backendDerived = hasBackendReceiptProof({ txid, receiptHash, ledgerRoot, operationId });
   const sourceLabel = backendDerived
     ? sourceLabelForReceipt(options.source || raw.source || 'backend_receipt')
     : 'local display hint only — not a backend receipt';
@@ -376,6 +387,7 @@ export function normalizeReceipt(input, options = {}) {
     txid,
     receiptHash,
     ledgerRoot,
+    operationId,
     nonce,
     manifestCid,
     rootDocumentCid,
@@ -481,7 +493,7 @@ function dedupeReceipts(receipts) {
 
 
 function hasBackendReceiptProof(receipt) {
-  return Boolean(receipt?.txid || receipt?.receiptHash || receipt?.ledgerRoot);
+  return Boolean(receipt?.txid || receipt?.receiptHash || receipt?.ledgerRoot || receipt?.operationId);
 }
 
 function sourceLabelForReceipt(source) {
@@ -498,6 +510,7 @@ function receiptDedupeKey(receipt) {
     receipt.receiptHash,
     receipt.txid,
     receipt.ledgerRoot,
+    receipt.operationId,
     receipt.idempotencyKey,
     receipt.action,
     receipt.crabUrl,
@@ -509,7 +522,7 @@ function receiptDedupeKey(receipt) {
 }
 
 function receiptStorageKey(receipt) {
-  const proof = sanitizeKeyPart(receipt.receiptHash || receipt.txid || receipt.ledgerRoot || receipt.idempotencyKey || Date.now());
+  const proof = sanitizeKeyPart(receipt.receiptHash || receipt.txid || receipt.ledgerRoot || receipt.operationId || receipt.idempotencyKey || Date.now());
   const action = sanitizeKeyPart(receipt.action || 'receipt');
 
   if (receipt.action === 'site_visit' || receipt.kind === 'site_visit') {

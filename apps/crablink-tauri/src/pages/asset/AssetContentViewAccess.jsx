@@ -10,7 +10,7 @@
  * RO:PHASE4-R2 — INTERNAL-ROC-PHASE4-R2; every spend shows amount/action/asset/recipient; cancel never mutates; confirm triggers adapter path only; failure does not unlock; retry is idempotent/safe.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
@@ -21,6 +21,14 @@ import TruthBoundary from '../../shared/components/TruthBoundary.jsx';
 import { createContentViewClient } from '../../shared/api/contentViewClient.js';
 import { writeLocalCatalogEntry } from '../../shared/catalog/localCatalog.js';
 import { writeRecentReceipt } from '../../shared/receipts/recentReceipts.js';
+import {
+  buildPaidRetryState,
+  clearPaidRetryKey,
+  ensureBackendPaymentProof,
+  makeStablePaidIdempotencyKey,
+  paidRetryStatusLabel,
+  sanitizePaidAccessError,
+} from '../../shared/paidAccess/paidAccessTruth.js';
 
 const PAYABLE_KINDS = new Set(['article', 'post', 'comment', 'image', 'video', 'music', 'podcast', 'stream']);
 
@@ -170,8 +178,10 @@ export default function AssetContentViewAccess({ app, summary, onAccessChange })
     quote: null,
     payment: null,
     receipt: null,
+    retry: null,
     error: null,
   });
+  const payIdempotencyKeyRef = useRef('');
 
   const target = useMemo(() => normalizeTarget(summary), [summary]);
   const copy = useMemo(() => copyForKind(target.kind), [target.kind]);
@@ -324,15 +334,35 @@ export default function AssetContentViewAccess({ app, summary, onAccessChange })
       return;
     }
 
+    const quoteSummaryForPay = quote?.summary || {};
+    const payIdempotencyKey = makeStablePaidIdempotencyKey({
+      scope: 'content-view-pay',
+      action: 'content_view',
+      target: target.assetCrabUrl,
+      payer: payerAccount,
+      recipient: quoteSummaryForPay.recipientAccount,
+      amountMinor: quoteSummaryForPay.amountMinor,
+      quoteId: quoteSummaryForPay.quoteId,
+      quoteHash: quoteSummaryForPay.quoteHash,
+    });
+    payIdempotencyKeyRef.current = payIdempotencyKey;
+    const retry = buildPaidRetryState({
+      status: 'paying',
+      idempotencyKey: payIdempotencyKey,
+      sourceLabel: 'content_view_backend_pay',
+    });
+
     setState((current) => ({
       ...current,
       status: 'paying',
+      retry,
       error: null,
     }));
     publishAccess({
       canView: false,
       status: 'paying',
       quote,
+      retry,
     });
 
     try {
@@ -346,29 +376,18 @@ export default function AssetContentViewAccess({ app, summary, onAccessChange })
         },
         {
           confirmed: true,
+          idempotencyKey: payIdempotencyKey,
         },
       );
 
       const paymentSummary = payment?.summary || payment?.receipt || payment || {};
 
-      if (!hasBackendPaymentProof(paymentSummary)) {
-        const missingReceipt = new Error(
+      // hasBackendPaymentProof is centralized in paidAccessTruth.js; payment_missing_backend_receipt keeps failure locked.
+      const backendProof = ensureBackendPaymentProof(paymentSummary, {
+        sourceLabel: 'content_view_backend_pay',
+        message:
           'Backend payment did not return wallet/ledger receipt proof. CrabLink will keep this paid content locked.',
-        );
-        missingReceipt.reason = 'payment_missing_backend_receipt';
-        missingReceipt.payment = payment;
-        throw missingReceipt;
-      }
-
-function hasBackendPaymentProof(summary = {}) {
-  return Boolean(
-    summary?.txid ||
-      summary?.receiptHash ||
-      summary?.receipt_hash ||
-      summary?.ledgerRoot ||
-      summary?.ledger_root
-  );
-}
+      });
 
       const receipt = persistContentViewProof({
         target,
@@ -377,11 +396,19 @@ function hasBackendPaymentProof(summary = {}) {
         payment,
       });
 
+      const confirmedRetry = buildPaidRetryState({
+        status: 'confirmed',
+        idempotencyKey: payIdempotencyKey,
+        sourceLabel: 'content_view_backend_pay',
+        proof: backendProof,
+      });
+
       setState({
         status: 'paid',
         quote,
         payment,
         receipt,
+        retry: confirmedRetry,
         error: null,
       });
       publishAccess({
@@ -390,6 +417,8 @@ function hasBackendPaymentProof(summary = {}) {
         quote,
         payment,
         receipt,
+        retry: confirmedRetry,
+        backendProof,
       });
 
       if (typeof app?.refreshWallet === 'function') {
@@ -404,22 +433,35 @@ function hasBackendPaymentProof(summary = {}) {
         });
       }
     } catch (error) {
+      const safeError = sanitizePaidAccessError(error, {
+        sourceLabel: 'content_view_backend_pay',
+        idempotencyKey: payIdempotencyKeyRef.current,
+        fallbackReason: 'content_view_payment_failed',
+      });
+      const failedRetry = buildPaidRetryState({
+        status: 'failed',
+        idempotencyKey: payIdempotencyKeyRef.current,
+        sourceLabel: 'content_view_backend_pay',
+      });
+
       setState((current) => ({
         ...current,
         status: 'error',
-        error,
+        retry: failedRetry,
+        error: safeError,
       }));
       publishAccess({
         canView: false,
         status: 'error',
         quote,
-        error,
+        retry: failedRetry,
+        error: safeError,
       });
 
       if (typeof app?.notify === 'function') {
         app.notify({
           title: 'Content view payment failed',
-          message: error?.message || 'The gateway rejected the content_view payment.',
+          message: safeError?.message || 'The gateway rejected the content_view payment.',
           tone: 'warning',
         });
       }
@@ -482,6 +524,7 @@ function hasBackendPaymentProof(summary = {}) {
         <Fact label="Amount" value={quoteSummary.displayAmount || paymentSummary.displayAmount || quoteSummary.amountMinor || 'Not quoted'} />
         <Fact label="Payer" value={quoteSummary.payerAccount || paymentSummary.payerAccount || payerAccount || 'Not configured'} monospace />
         <Fact label="Recipient" value={quoteSummary.recipientAccount || paymentSummary.recipientAccount || 'Manifest recipient not quoted'} monospace />
+        <Fact label="Retry state" value={state.retry?.statusLabel || paidRetryStatusLabel('idle')} />
       </div>
 
       <details className="asset-content-view-proof-details">
@@ -526,6 +569,7 @@ function hasBackendPaymentProof(summary = {}) {
             quote: state.quote,
             payment: state.payment,
             receipt: state.receipt,
+            retry: state.retry,
             error: serializeError(state.error),
             truth_boundary:
               'This is a local display copy of backend-returned content_view metadata. Wallet and ledger truth remain backend-owned.',

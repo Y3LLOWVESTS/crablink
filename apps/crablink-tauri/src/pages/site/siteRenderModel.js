@@ -14,6 +14,8 @@ import { escapeHtml } from '../../shared/embed/safeHtml.js';
 export function toneForRootStatus(status) {
   if (status === 'ok') return 'success';
   if (status === 'loading') return 'info';
+  if (status === 'loading_after_backend_access') return 'info';
+  if (status === 'root_locked_until_paid_access') return 'warning';
   if (status === 'error') return 'warning';
   if (status === 'missing') return 'neutral';
   if (status === 'empty') return 'warning';
@@ -23,6 +25,8 @@ export function toneForRootStatus(status) {
 export function labelForRootStatus(status) {
   if (status === 'ok') return 'root fetched';
   if (status === 'loading') return 'fetching root';
+  if (status === 'loading_after_backend_access') return 'fetching root after backend access';
+  if (status === 'root_locked_until_paid_access') return 'root locked until paid access';
   if (status === 'error') return 'root fetch failed';
   if (status === 'missing') return 'no root CID';
   if (status === 'empty') return 'empty root';

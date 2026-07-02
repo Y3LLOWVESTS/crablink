@@ -242,6 +242,7 @@ export function normalizeContentViewSummary(value) {
     receiptHash: firstString(data.receiptHash, data.receipt_hash, payment.receiptHash, payment.receipt_hash, walletReceipt.receiptHash, walletReceipt.receipt_hash, receipt.walletReceiptHash, receipt.wallet_receipt_hash),
     ledgerRoot: firstString(data.ledgerRoot, data.ledger_root, payment.ledgerRoot, payment.ledger_root, walletReceipt.ledgerRoot, walletReceipt.ledger_root),
     nonce: firstString(data.nonce, payment.nonce, walletReceipt.nonce),
+    operationId: firstString(data.operationId, data.operation_id, payment.operationId, payment.operation_id, walletReceipt.operationId, walletReceipt.operation_id, receipt.operationId, receipt.operation_id),
     idempotencyKey: firstString(data.clientIdempotencyKey, data.client_idempotency_key, payment.clientIdempotencyKey, payment.client_idempotency_key, receipt.idempotencyKey, receipt.idempotency_key, walletReceipt.idem),
     expiresInSeconds: firstString(data.expiresInSeconds, data.expires_in_seconds, quote.expiresInSeconds, quote.expires_in_seconds),
     raw: data,

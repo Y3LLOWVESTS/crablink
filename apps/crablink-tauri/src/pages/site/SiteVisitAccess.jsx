@@ -2,7 +2,7 @@
  * RO:WHAT — Paid site_visit gate for named CrabLink sites.
  * RO:WHY — NEXT_LEVEL creator-economy proof: quote/pay before rendering paid creator sites.
  * RO:INTERACTS — siteVisitClient, SiteRender, GatewayClient, BalanceChip refresh events, recentReceipts, localCatalog.
- * RO:INVARIANTS — no silent spend; no fake receipt; render unlock follows the live backend quote/pay response only.
+ * RO:INVARIANTS — no silent spend; no fake receipt; render unlock follows live backend quote/pay proof only; backend-pending never renders protected sites.
  * RO:METRICS — displays gateway correlation IDs and returned receipt identifiers.
  * RO:CONFIG — uses current app settings wallet/passport and local display receipt memory.
  * RO:SECURITY — pay button requires explicit user click; no local balance edits; no fake unlock.
@@ -19,6 +19,13 @@ import JsonPreview from '../../shared/components/JsonPreview.jsx';
 import { createSiteVisitClient } from '../../shared/api/siteVisitClient.js';
 import { writeLocalCatalogEntry } from '../../shared/catalog/localCatalog.js';
 import { writeRecentReceipt } from '../../shared/receipts/recentReceipts.js';
+import {
+  buildPaidRetryState,
+  clearPaidRetryKey,
+  ensureBackendPaymentProof,
+  makeStablePaidIdempotencyKey,
+  sanitizePaidAccessError,
+} from '../../shared/paidAccess/paidAccessTruth.js';
 
 
 const FREE_ACCESS = Object.freeze({
@@ -51,8 +58,6 @@ export default function SiteVisitAccess({
 
   const walletAccount = cleanString(app?.settings?.walletAccount || app?.state?.walletAccount || '');
   const passportSubject = cleanString(app?.settings?.passportSubject || app?.state?.passportSubject || '');
-  const devPreviewAllowed = canUseBackendPendingPreview(app);
-
   const target = useMemo(
     () => normalizeAccessTarget(summary),
     [summary.siteName, summary.crabUrl],
@@ -103,6 +108,7 @@ export default function SiteVisitAccess({
   const mountedRef = useRef(false);
   const quoteSeqRef = useRef(0);
   const activeQuoteKeyRef = useRef('');
+  const payIdempotencyKeyRef = useRef('');
 
   const [state, setState] = useState(() => ({
     status: policy.requiresPayment ? 'idle' : 'free',
@@ -143,10 +149,12 @@ export default function SiteVisitAccess({
       return;
     }
 
+    clearPaidRetryKey(payIdempotencyKeyRef);
     setState({
       status: 'idle',
       quote: null,
       payment: null,
+      retry: null,
       error: null,
     });
     emitAccessChange(PENDING_ACCESS);
@@ -224,8 +232,8 @@ export default function SiteVisitAccess({
         const backendPending = Boolean(error?.backendMissing);
         const access = {
           requiresPayment: true,
-          canRender: backendPending && devPreviewAllowed,
-          status: backendPending ? 'backend_pending' : 'quote_error',
+          canRender: false,
+          status: backendPending ? 'backend_pending_locked' : 'quote_error',
           quote: null,
           payment: null,
           error,
@@ -244,7 +252,6 @@ export default function SiteVisitAccess({
     void quoteVisit();
   }, [
     accessKey,
-    devPreviewAllowed,
     emitAccessChange,
     policy,
     state.status,
@@ -258,9 +265,24 @@ export default function SiteVisitAccess({
       return;
     }
 
+    const payPayload = buildPayPayload({
+      summary,
+      policy,
+      target,
+      quote: state.quote,
+    });
+    const payIdempotencyKey = payPayload.client_idempotency_key;
+    payIdempotencyKeyRef.current = payIdempotencyKey;
+    const retry = buildPaidRetryState({
+      status: 'paying',
+      idempotencyKey: payIdempotencyKey,
+      sourceLabel: 'site_visit_backend_pay',
+    });
+
     setState((current) => ({
       ...current,
       status: 'paying',
+      retry,
       error: null,
     }));
     emitAccessChange({
@@ -269,41 +291,25 @@ export default function SiteVisitAccess({
       status: 'paying',
       quote: state.quote,
       payment: null,
+      retry,
       error: null,
     });
 
     try {
       const payment = await visitClient.pay(
         target.siteName,
-        buildPayPayload({
-          summary,
-          policy,
-          target,
-          quote: state.quote,
-        }),
+        payPayload,
         { confirmed: true },
       );
 
       const paymentSummary = payment?.summary || payment?.receipt || payment || {};
 
-      if (!hasBackendPaymentProof(paymentSummary)) {
-        const missingReceipt = new Error(
+      // hasBackendPaymentProof is centralized in paidAccessTruth.js; payment_missing_backend_receipt keeps failure locked.
+      const backendProof = ensureBackendPaymentProof(paymentSummary, {
+        sourceLabel: 'site_visit_backend_pay',
+        message:
           'Backend payment did not return wallet/ledger receipt proof. CrabLink will keep this paid site locked.',
-        );
-        missingReceipt.reason = 'payment_missing_backend_receipt';
-        missingReceipt.payment = payment;
-        throw missingReceipt;
-      }
-
-function hasBackendPaymentProof(summary = {}) {
-  return Boolean(
-    summary?.txid ||
-      summary?.receiptHash ||
-      summary?.receipt_hash ||
-      summary?.ledgerRoot ||
-      summary?.ledger_root
-  );
-}
+      });
 
       const persistedReceipt = writeSiteVisitDisplayCaches({
         app,
@@ -314,12 +320,20 @@ function hasBackendPaymentProof(summary = {}) {
         payment,
       });
 
+      const confirmedRetry = buildPaidRetryState({
+        status: 'confirmed',
+        idempotencyKey: payIdempotencyKey,
+        sourceLabel: 'site_visit_backend_pay',
+        proof: backendProof,
+      });
       const access = {
         requiresPayment: true,
         canRender: true,
         status: 'paid',
         quote: state.quote,
         payment,
+        retry: confirmedRetry,
+        backendProof,
         error: null,
       };
 
@@ -327,31 +341,45 @@ function hasBackendPaymentProof(summary = {}) {
         status: 'paid',
         quote: state.quote,
         payment,
+        retry: confirmedRetry,
         error: null,
       });
       emitAccessChange(access);
       notifyBalanceRefresh(app, payment, persistedReceipt);
     } catch (error) {
+      const safeError = sanitizePaidAccessError(error, {
+        sourceLabel: 'site_visit_backend_pay',
+        idempotencyKey: payIdempotencyKeyRef.current,
+        fallbackReason: 'site_visit_payment_failed',
+      });
+      const failedRetry = buildPaidRetryState({
+        status: 'failed',
+        idempotencyKey: payIdempotencyKeyRef.current,
+        sourceLabel: 'site_visit_backend_pay',
+      });
       const access = {
         requiresPayment: true,
         canRender: false,
         status: 'pay_error',
         quote: state.quote,
         payment: null,
-        error,
+        retry: failedRetry,
+        error: safeError,
       };
 
       setState({
         status: 'pay_error',
         quote: state.quote,
         payment: null,
-        error,
+        retry: failedRetry,
+        error: safeError,
       });
       emitAccessChange(access);
     }
   }
 
   function retryQuote() {
+    clearPaidRetryKey(payIdempotencyKeyRef);
     quoteSeqRef.current += 1;
     activeQuoteKeyRef.current = '';
     setState({
@@ -399,12 +427,12 @@ function hasBackendPaymentProof(summary = {}) {
     );
   }
 
-  if (state.status === 'backend_pending') {
+  if (state.status === 'backend_pending_locked') {
     return (
-      <Card eyebrow="Paid access" title="Backend route pending" className="site-visit-access-card site-visit-access-pending">
+      <Card eyebrow="Paid access" title="Backend route pending — locked" className="site-visit-access-card site-visit-access-pending">
         <p>
           This site advertises paid <code>site_visit</code> access, but the gateway did not expose the quote/pay route.
-          Developer mode may preview the page, but no ROC was deducted and no creator payout was credited.
+          CrabLink keeps the preview locked; no root document was fetched or rendered, no ROC was deducted, and no creator payout was credited.
         </p>
         <div className="site-visit-facts" aria-label="Pending paid access facts">
           <Fact label="Action" value={policy.action || 'site_visit'} />
@@ -510,7 +538,8 @@ function hasBackendPaymentProof(summary = {}) {
         <Fact label="Payer" value={payer} />
         <Fact label="Recipient" value={recipient} />
         <Fact label="Quote correlation" value={state.quote?.response?.correlationId || 'pending'} />
-        <Fact label="Receipt" value={receiptProof.receiptHash || receiptProof.txid || 'not paid yet'} />
+        <Fact label="Receipt" value={receiptProof.receiptHash || receiptProof.txid || receiptProof.operationId || 'not paid yet'} />
+        <Fact label="Retry state" value={state.retry?.statusLabel || 'no payment retry active'} />
       </div>
 
       {state.status === 'paid' && <ReceiptProof proof={receiptProof} />}
@@ -540,6 +569,7 @@ function hasBackendPaymentProof(summary = {}) {
           data={{
             quote: state.quote?.summary || null,
             payment: state.payment?.summary || null,
+            retry: state.retry || null,
             wallet_receipt: state.payment?.summary?.walletReceipt || null,
             site_receipt: state.payment?.summary?.siteReceipt || null,
             quote_response: state.quote?.response || null,
@@ -553,15 +583,13 @@ function hasBackendPaymentProof(summary = {}) {
 }
 
 export function siteVisitCanRender(access, app = null) {
+  void app;
+
   if (!access || access.requiresPayment === false) {
     return true;
   }
 
-  if (access.canRender === true) {
-    return true;
-  }
-
-  return access.status === 'backend_pending' && canUseBackendPendingPreview(app);
+  return access.status === 'paid' && access.canRender === true && Boolean(access.backendProof);
 }
 
 export function deriveSiteVisitPolicy(summary = {}, context = {}) {
@@ -633,14 +661,16 @@ function buildPayPayload({ summary, policy, target, quote }) {
     quote_id: quoteSummary.quoteId || '',
     quote_hash: quoteSummary.quoteHash || '',
     quote: quote?.data || null,
-    client_idempotency_key: uniqueSiteVisitIdem(
-      'pay',
-      target.siteName,
+    client_idempotency_key: makeStablePaidIdempotencyKey({
+      scope: 'site-visit-pay',
+      action: 'site_visit',
+      target: target.crabUrl || target.siteName,
       payer,
       recipient,
-      policy.visitorPassport,
-      quoteSummary.quoteId || quoteSummary.quoteHash || summary.rootDocumentCid || summary.manifestCid || '',
-    ),
+      amountMinor: quoteSummary.amountMinor || policy.expectedAmountMinor,
+      quoteId: quoteSummary.quoteId,
+      quoteHash: quoteSummary.quoteHash || summary.rootDocumentCid || summary.manifestCid || '',
+    }),
   };
 }
 
@@ -786,14 +816,6 @@ function stableSiteVisitIdem(scope, siteName, payer, recipient, passport, seed =
   return compactIdem(['crablink-react', 'site-visit', scope, siteName, payer, recipient, passport, seed].filter(Boolean).join(':'));
 }
 
-function uniqueSiteVisitIdem(scope, siteName, payer, recipient, passport, seed = '') {
-  const entropy = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-  return compactIdem(
-    ['crablink-react', 'site-visit', scope, siteName, payer, recipient, passport, seed, entropy]
-      .filter(Boolean)
-      .join(':'),
-  );
-}
 
 function compactIdem(value) {
   const raw = cleanString(value)
@@ -829,6 +851,7 @@ function summarizeReceiptProof(paymentSummary = null) {
     txid: cleanString(paymentSummary?.txid),
     receiptHash: cleanString(paymentSummary?.receiptHash),
     ledgerRoot: cleanString(paymentSummary?.ledgerRoot),
+    operationId: cleanString(paymentSummary?.operationId || paymentSummary?.operation_id),
     nonce: cleanString(paymentSummary?.nonce),
     idempotencyKey: cleanString(paymentSummary?.idempotencyKey),
     manifestCid: cleanString(paymentSummary?.manifestCid),
@@ -838,7 +861,7 @@ function summarizeReceiptProof(paymentSummary = null) {
 }
 
 function ReceiptProof({ proof }) {
-  if (!proof?.txid && !proof?.receiptHash && !proof?.ledgerRoot) {
+  if (!proof?.txid && !proof?.receiptHash && !proof?.ledgerRoot && !proof?.operationId) {
     return null;
   }
 
@@ -849,6 +872,7 @@ function ReceiptProof({ proof }) {
         <Fact label="Txid" value={proof.txid || 'not returned'} monospace />
         <Fact label="Receipt hash" value={proof.receiptHash || 'not returned'} monospace />
         <Fact label="Ledger root" value={proof.ledgerRoot || 'not returned'} monospace />
+        <Fact label="Operation" value={proof.operationId || 'not returned'} monospace />
         <Fact label="Nonce" value={proof.nonce || 'not returned'} />
         <Fact label="Idempotency" value={proof.idempotencyKey || 'not returned'} monospace />
         <Fact label="Manifest" value={proof.manifestCid || 'not returned'} monospace />
@@ -885,9 +909,6 @@ function notifyBalanceRefresh(app, payment, receipt = null) {
   }
 }
 
-function canUseBackendPendingPreview(app = null) {
-  return Boolean(app?.settings?.devMode || app?.state?.developerMode || app?.state?.viewMode === 'developer');
-}
 
 function labelForStatus(status) {
   switch (status) {

@@ -34,6 +34,7 @@ export default function SiteResolvedProof({
   rootResponse = null,
   rootError = null,
   rootUrl = '',
+  rootFetchGate = 'not_provided',
 }) {
   const summary = result?.summary || {};
   const receipts = Array.isArray(summary.receipts) ? summary.receipts : [];
@@ -93,6 +94,7 @@ export default function SiteResolvedProof({
     root_document_cid: summary.rootDocumentCid || null,
     root_url: rootUrl || null,
     root_status: rootStatus,
+    root_fetch_gate: rootFetchGate,
     root_http_status: rootResponse?.status || null,
     correlation_id: result?.response?.correlationId || rootResponse?.correlationId || null,
     receipts_count: receipts.length,
@@ -117,7 +119,7 @@ export default function SiteResolvedProof({
   });
 
   function openRootDocument() {
-    if (rootUrl) {
+    if (rootUrl && rootFetchGate === 'backend_access_allowed') {
       window.open(rootUrl, '_blank', 'noopener,noreferrer');
     }
   }
@@ -139,7 +141,7 @@ export default function SiteResolvedProof({
             <Badge tone={toneForRootStatus(rootStatus)}>{labelForRootStatus(rootStatus)}</Badge>
             <CopyButton text={siteCrabUrl || ''} label="Copy site URL" disabled={!siteCrabUrl} />
             <CopyButton text={summary.rootDocumentCid || ''} label="Copy root CID" disabled={!summary.rootDocumentCid} />
-            <Button variant="secondary" disabled={!rootUrl} onClick={openRootDocument}>
+            <Button variant="secondary" disabled={!rootUrl || rootFetchGate !== 'backend_access_allowed'} onClick={openRootDocument}>
               Open raw root
             </Button>
             <Button variant="secondary" onClick={app?.refreshRoute}>
@@ -153,6 +155,7 @@ export default function SiteResolvedProof({
           <Fact label="Manifest CID" value={summary.manifestCid || 'not returned'} monospace />
           <Fact label="Root CID" value={summary.rootDocumentCid || 'not returned'} monospace />
           <Fact label="Root fetch" value={labelForRootStatus(rootStatus)} />
+          <Fact label="Root gate" value={rootFetchGate || 'not provided'} />
           <Fact label="Owner" value={summary.ownerPassport || summary.owner || 'not returned'} />
           <Fact label="Wallet" value={summary.ownerWallet || summary.payoutRecipient || 'not returned'} />
           <Fact label="Receipts" value={receipts.length ? `${receipts.length} returned` : 'none returned'} />
@@ -224,6 +227,7 @@ export default function SiteResolvedProof({
                   truth_boundary:
                     'Display-only browser memory. Backend catalogue/index/ownership truth must come from future gateway routes.',
                 },
+                root_fetch_gate: rootFetchGate,
                 root_response: summarizeRootResponse(rootResponse, rootHtml, rootError),
                 root_error: rootError ? normalizeRenderError(rootError) : null,
                 attempts: result?.attempts || [],

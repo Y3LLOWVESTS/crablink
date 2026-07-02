@@ -39,12 +39,15 @@ export class WalletClient {
     }
 
     if (typeof this.gateway.getWalletBalance === 'function') {
-      return this.gateway.getWalletBalance(walletAccount);
+      const response = await this.gateway.getWalletBalance(walletAccount);
+      return normalizeGatewayWalletBalanceResponse(response, walletAccount);
     }
 
-    return this.gateway.request(`/wallet/${encodeURIComponent(walletAccount)}/balance`, {
+    const response = await this.gateway.request(`/wallet/${encodeURIComponent(walletAccount)}/balance`, {
       label: 'Wallet balance',
     });
+
+    return normalizeGatewayWalletBalanceResponse(response, walletAccount);
   }
 
   async hold(payload = {}, options = {}) {
@@ -393,32 +396,81 @@ export function expectedNonceFromText(text) {
   return 0;
 }
 
-export function normalizeWalletBalance(data = {}, account = '') {
-  const source = data?.data && typeof data.data === 'object' ? data.data : data;
-  const availableMinor = normalizeAmountMinor(
-    source.available_minor,
-    source.availableMinor,
-    source.available_minor_units,
-    source.availableMinorUnits,
-    source.available,
-    source.balance_minor,
-    source.balanceMinor,
-    source.balance_minor_units,
-    source.balanceMinorUnits,
-    source.balance,
-    source.amount_minor,
-    source.amountMinor,
-  );
+export function normalizeGatewayWalletBalanceResponse(response = {}, account = '') {
+  const walletBalance = normalizeWalletBalance(response?.data || response || {}, account);
 
-  return {
+  return Object.freeze({
+    ...(response && typeof response === 'object' ? response : {}),
+    data: walletBalance,
+    walletBalance,
+  });
+}
+
+export function normalizeWalletBalance(data = {}, account = '') {
+  const source = chooseWalletBalanceObject(data);
+  const availableMinor = normalizeAmountMinor(source.available_minor, source.availableMinor, source.available_minor_units, source.availableMinorUnits, source.available, source.balance_minor, source.balanceMinor, source.balance_minor_units, source.balanceMinorUnits, source.balance, source.amount_minor, source.amountMinor);
+  const ledgerBacked = Boolean(source.ledger_backed || source.ledgerBacked || source.source === 'ledger');
+  const refreshedAt = stringValue(source.refreshed_at, source.refreshedAt, source.checked_at, source.checkedAt, source.ts, source.timestamp, new Date().toISOString());
+  const display = displayRoc(availableMinor) || stringValue(source.display, source.balance_display, source.balanceDisplay);
+
+  return Object.freeze(stripEmpty({
     account: stringValue(source.account, source.wallet_account, source.walletAccount, account),
     asset: stringValue(source.asset, DEFAULT_ASSET).toLowerCase(),
     available_minor: availableMinor,
-    available_display: displayRoc(availableMinor),
-    ledger_backed: Boolean(source.ledger_backed || source.ledgerBacked || source.source === 'ledger'),
-    source: stringValue(source.source, availableMinor ? 'gateway wallet response' : 'gateway response'),
+    availableMinor,
+    available_display: display,
+    display,
+    balance_display: display,
+    balanceDisplay: display,
+    ledger_backed: ledgerBacked,
+    ledgerBacked,
+    backendDerived: true,
+    backend_derived: true,
+    stale: false,
+    displayOnly: true,
+    source: stringValue(source.source, ledgerBacked ? 'ledger' : 'gateway wallet response'),
+    sourceLabel: ledgerBacked ? 'ledger-backed backend balance' : 'backend-derived balance',
+    refreshedAt,
+    refreshed_at: refreshedAt,
+    truthBoundary: 'Backend wallet balance response. CrabLink display only; ron-ledger remains durable balance truth.',
     raw: data,
-  };
+  }));
+}
+
+export function markWalletBalanceStale(balance = null, error = null, account = '') {
+  const previous = balance && typeof balance === 'object' && !Array.isArray(balance) ? balance : null;
+  const safeError = normalizeWalletBalanceError(error);
+
+  if (!previous) {
+    return null;
+  }
+
+  return Object.freeze(stripEmpty({
+    ...previous,
+    account: previous.account || account,
+    backendDerived: false,
+    backend_derived: false,
+    stale: true,
+    staleDisplay: true,
+    displayOnly: true,
+    sourceLabel: 'stale backend display',
+    staleReason: safeError.reason || 'wallet_balance_refresh_failed',
+    staleMessage: safeError.message,
+    truthBoundary: 'Stale wallet balance display. Backend refresh failed; this is not balance truth.',
+  }));
+}
+
+export function normalizeWalletBalanceError(error = null) {
+  return Object.freeze(stripEmpty({
+    name: stringValue(error?.name, 'WalletBalanceRefreshError'),
+    message: redactWalletError(error?.message || error || 'Wallet balance refresh failed.'),
+    reason: stringValue(error?.reason, error?.code, 'wallet_balance_refresh_failed'),
+    status: Number(error?.status || 0) || undefined,
+    correlationId: stringValue(error?.correlationId, error?.correlation_id),
+    retryable: error?.retryable !== false,
+    sourceLabel: 'backend wallet balance refresh',
+    displayOnly: true,
+  }));
 }
 
 export function displayRoc(minor) {
@@ -514,6 +566,27 @@ export function summarizeWalletError(error) {
     data: error?.data || null,
     api_request: error?.apiRequest || null,
   });
+}
+
+function chooseWalletBalanceObject(data = {}) {
+  const root = data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+  for (const candidate of [root.balance, root.wallet, root.walletBalance, root.wallet_balance, root.data]) {
+    if (candidate && typeof candidate === 'object' && !Array.isArray(candidate)) {
+      return candidate;
+    }
+  }
+  return root;
+}
+
+function redactWalletError(value) {
+  return stringValue(value, 'Wallet balance refresh failed.')
+    .replace(/bearer\s+[^\s,;}]+/gi, 'Bearer [redacted]')
+    .replace(/(authorization\s*[:=]\s*)[^\s,;}]+/gi, '$1[redacted]')
+    .replace(/(token\s*[:=]\s*)[^\s,;}]+/gi, '$1[redacted]')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, 240);
 }
 
 function nestedHoldObjects(object) {

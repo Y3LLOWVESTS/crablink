@@ -1,8 +1,8 @@
 /**
  * RO:WHAT — Safe site renderer for local drafts and named gateway-resolved sites.
- * RO:WHY — Keeps site rendering focused: resolve/fetch root, paid access proof, sandbox render, and proof panel.
+ * RO:WHY — Keeps site rendering focused: resolve metadata first, defer protected root fetch until paid access proof, sandbox render, and proof panel.
  * RO:INTERACTS — siteClient, SiteVisitAccess, SiteSandboxPreview, SiteResolvedProof, shared safe renderer.
- * RO:INVARIANTS — gateway-only named resolution; no direct storage/index; iframe preview has no scripts; no fake proof or silent spend.
+ * RO:INVARIANTS — gateway-only named resolution; protected root fetch waits for backend access; no direct storage/index; iframe preview has no scripts; no fake proof or silent spend.
  * RO:METRICS — displays gateway status, root fetch status, correlation IDs, sandbox policy, and embed render summary.
  * RO:CONFIG — gateway client from app context.
  * RO:SECURITY — untrusted HTML goes through shared sanitizer and strict sandbox iframe props.
@@ -54,31 +54,7 @@ export default function SiteRender({
 
       try {
         const result = await siteClient.resolveSite(siteName);
-        let rootHtml = '';
-        let rootStatus = result.summary.rootDocumentCid ? 'loading' : 'missing';
-        let rootResponse = null;
-        let rootError = null;
-
-        if (alive) {
-          setState({
-            ...EMPTY_STATE,
-            status: 'resolved',
-            result,
-            rootStatus,
-          });
-        }
-
-        if (result.summary.rootDocumentCid) {
-          try {
-            rootResponse = await siteClient.fetchRootDocument(result.summary.rootDocumentCid);
-            rootHtml = String(rootResponse.data || '');
-            rootStatus = rootHtml.trim() ? 'ok' : 'empty';
-          } catch (error) {
-            rootStatus = 'error';
-            rootError = error;
-            rootHtml = '';
-          }
-        }
+        const rootStatus = result.summary.rootDocumentCid ? 'root_locked_until_paid_access' : 'missing';
 
         if (!alive) {
           return;
@@ -87,10 +63,10 @@ export default function SiteRender({
         setState({
           status: 'resolved',
           result,
-          rootHtml,
+          rootHtml: '',
           rootStatus,
-          rootResponse,
-          rootError,
+          rootResponse: null,
+          rootError: null,
           error: null,
         });
       } catch (error) {
@@ -157,12 +133,18 @@ export default function SiteRender({
   );
 }
 
-function ResolvedSiteView({ app, result, rootHtml, rootStatus, rootResponse, rootError, siteClient }) {
+function ResolvedSiteView({ app, result, rootStatus, siteClient }) {
   const summary = result?.summary || {};
-  const rootUrl = siteClient.rootDocumentUrl(summary.rootDocumentCid);
-  const previewHtml = rootHtml || '';
+  const rootDocumentCid = summary.rootDocumentCid || '';
+  const rootUrl = siteClient.rootDocumentUrl(rootDocumentCid);
   const developer = Boolean(app?.settings?.devMode || app?.state?.developerMode || app?.state?.viewMode === 'developer');
   const [visitAccess, setVisitAccess] = useState(null);
+  const [rootState, setRootState] = useState(() => ({
+    rootHtml: '',
+    rootStatus: rootDocumentCid ? rootStatus || 'root_locked_until_paid_access' : 'missing',
+    rootResponse: null,
+    rootError: null,
+  }));
 
   const initialPolicy = deriveSiteVisitPolicy(summary, {
     walletAccount: app?.settings?.walletAccount || app?.state?.walletAccount || '',
@@ -171,6 +153,74 @@ function ResolvedSiteView({ app, result, rootHtml, rootStatus, rootResponse, roo
 
   const pendingPaidAccess = initialPolicy.requiresPayment && !visitAccess;
   const canRenderPreview = !pendingPaidAccess && siteVisitCanRender(visitAccess || { requiresPayment: false, canRender: true }, app);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function fetchRootDocumentAfterAccess() {
+      if (!rootDocumentCid) {
+        setRootState({
+          rootHtml: '',
+          rootStatus: 'missing',
+          rootResponse: null,
+          rootError: null,
+        });
+        return;
+      }
+
+      if (!canRenderPreview) {
+        setRootState({
+          rootHtml: '',
+          rootStatus: 'root_locked_until_paid_access',
+          rootResponse: null,
+          rootError: null,
+        });
+        return;
+      }
+
+      setRootState({
+        rootHtml: '',
+        rootStatus: 'loading_after_backend_access',
+        rootResponse: null,
+        rootError: null,
+      });
+
+      try {
+        const response = await siteClient.fetchRootDocument(rootDocumentCid);
+        const html = String(response.data || '');
+
+        if (!alive) {
+          return;
+        }
+
+        setRootState({
+          rootHtml: html,
+          rootStatus: html.trim() ? 'ok' : 'empty',
+          rootResponse: response,
+          rootError: null,
+        });
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+
+        setRootState({
+          rootHtml: '',
+          rootStatus: 'error',
+          rootResponse: null,
+          rootError: error,
+        });
+      }
+    }
+
+    void fetchRootDocumentAfterAccess();
+
+    return () => {
+      alive = false;
+    };
+  }, [canRenderPreview, rootDocumentCid, siteClient]);
+
+  const previewHtml = canRenderPreview ? rootState.rootHtml : '';
 
   return (
     <section className="site-render-stack">
@@ -186,8 +236,8 @@ function ResolvedSiteView({ app, result, rootHtml, rootStatus, rootResponse, roo
           mode="gateway"
           summary={summary}
           rootHtml={previewHtml}
-          rootStatus={rootStatus}
-          rootError={rootError}
+          rootStatus={rootState.rootStatus}
+          rootError={rootState.rootError}
           app={app}
           siteClient={siteClient}
           developer={developer}
@@ -197,8 +247,8 @@ function ResolvedSiteView({ app, result, rootHtml, rootStatus, rootResponse, roo
           <p className="cl-eyebrow">Preview locked</p>
           <h2>Pay the site visit quote to render this page</h2>
           <p>
-            CrabLink has the site bytes, but it will not render paid content until the backend returns a
-            payment receipt. This prevents fake creator payouts and silent wallet deductions.
+            CrabLink has resolved site metadata, but it has not fetched or rendered the protected site root document yet.
+            Backend receipt/access proof is required before protected site bytes are requested.
           </p>
         </section>
       )}
@@ -206,11 +256,12 @@ function ResolvedSiteView({ app, result, rootHtml, rootStatus, rootResponse, roo
       <SiteResolvedProof
         app={app}
         result={result}
-        rootHtml={rootHtml}
-        rootStatus={rootStatus}
-        rootResponse={rootResponse}
-        rootError={rootError}
+        rootHtml={canRenderPreview ? rootState.rootHtml : ''}
+        rootStatus={rootState.rootStatus}
+        rootResponse={canRenderPreview ? rootState.rootResponse : null}
+        rootError={rootState.rootError}
         rootUrl={rootUrl}
+        rootFetchGate={canRenderPreview ? 'backend_access_allowed' : 'locked_until_paid_access'}
       />
     </section>
   );

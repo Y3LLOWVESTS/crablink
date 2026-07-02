@@ -6,7 +6,7 @@
  * RO:METRICS — refreshWallet inherits gateway x-correlation-id behavior.
  * RO:CONFIG — walletAccount, rocBalanceDisplay, rocBalanceSource.
  * RO:SECURITY — no spend authority stored or displayed; stale labels are visible and never balance truth.
- * RO:TEST — npm run check:internal-roc-phase4-wallet-receipt-ux.
+ * RO:TEST — npm run check:internal-roc-stabilization-balance-refresh; npm run check:internal-roc-phase4-wallet-receipt-ux.
  */
 
 import { useMemo } from 'react';
@@ -41,6 +41,7 @@ export default function BalanceChip() {
         'cl-balance-chip',
         view.ledgerBacked ? 'cl-chip-verified' : '',
         view.backendDerived ? 'cl-chip-backend-derived' : '',
+        view.stale ? 'cl-chip-stale' : '',
         view.tone ? `cl-chip-${view.tone}` : '',
       ]
         .filter(Boolean)
@@ -63,6 +64,10 @@ function buildBalanceView({ settings = {}, storage = {}, wallet = null, state = 
   const checking = status === 'checking';
   const error = state?.error || null;
   const checkedAt = state?.checkedAt || '';
+  const stale = Boolean(state?.stale || walletBody.stale || walletBody.staleDisplay);
+  const refreshedAt = firstPresent(walletBody.refreshedAt, walletBody.refreshed_at, checkedAt);
+  const refreshAgeLabel = refreshedAt ? formatRefreshAge(refreshedAt) : '';
+  const staleReason = normalizeSource(walletBody.staleReason || error?.reason || '');
   const walletAccount = String(
     firstPresent(
       walletBody.account,
@@ -76,6 +81,8 @@ function buildBalanceView({ settings = {}, storage = {}, wallet = null, state = 
     walletBody.display,
     walletBody.balance_display,
     walletBody.balanceDisplay,
+    walletBody.available_display,
+    walletBody.availableDisplay,
     walletBody.roc_balance,
     walletBody.rocBalance,
     walletBody.available,
@@ -95,19 +102,37 @@ function buildBalanceView({ settings = {}, storage = {}, wallet = null, state = 
   const settingsDisplayCandidate = firstPresent(settings.rocBalanceDisplay, settings.rocBalanceMinorUnits);
   const displaySource = backendDisplayCandidate !== undefined && backendDisplayCandidate !== null ? 'backend' : settingsDisplayCandidate ? 'settings' : '';
   const display = cleanRocDisplay(displaySource === 'backend' ? backendDisplayCandidate : settingsDisplayCandidate);
-  const source = normalizeSource(walletBody.source || walletBody.balance_source || walletBody.balanceSource || settings.rocBalanceSource);
+  const source = normalizeSource(
+    firstPresent(
+      walletBody.sourceLabel,
+      walletBody.source_label,
+      walletBody.source,
+      walletBody.balance_source,
+      walletBody.balanceSource,
+      settings.rocBalanceSource,
+    ),
+  );
 
   const ledgerBacked =
-    walletBody.ledger_backed === true ||
-    walletBody.ledgerBacked === true ||
+    isTruthy(walletBody.ledger_backed) ||
+    isTruthy(walletBody.ledgerBacked) ||
     walletBody.source === 'ledger';
-  const backendDerived = displaySource === 'backend' && (status === 'ok' || Boolean(source) || ledgerBacked);
+  const backendDerived =
+    !stale &&
+    displaySource === 'backend' &&
+    (isTruthy(walletBody.backendDerived) ||
+      isTruthy(walletBody.backend_derived) ||
+      status === 'ok' ||
+      Boolean(source) ||
+      ledgerBacked);
 
   if (!walletAccount && !display && !checking && !error) {
     return {
       display: 'No acct',
       ledgerBacked: false,
       backendDerived: false,
+      stale: false,
+      refreshAgeLabel,
       tone: 'empty',
       sourceLabel: 'no wallet account',
       title: storage?.isDevFallback
@@ -121,9 +146,11 @@ function buildBalanceView({ settings = {}, storage = {}, wallet = null, state = 
       display: display || '…',
       ledgerBacked: false,
       backendDerived: false,
+      stale,
+      refreshAgeLabel,
       tone: 'checking',
-      sourceLabel: 'gateway refresh pending',
-      title: 'Refreshing wallet balance through the gateway.',
+      sourceLabel: stale ? 'refreshing stale backend display' : 'gateway refresh pending',
+      title: 'Refreshing wallet balance through the gateway. Local display remains non-authoritative while refresh is pending.',
     };
   }
 
@@ -132,9 +159,11 @@ function buildBalanceView({ settings = {}, storage = {}, wallet = null, state = 
       display,
       ledgerBacked,
       backendDerived: false,
+      stale: true,
+      refreshAgeLabel,
       tone: 'warning',
       sourceLabel: 'refresh failed — stale display',
-      title: `${walletErrorTitle(error, storage)} Last visible value is stale display only.`,
+      title: `${walletErrorTitle(error, storage)} Last visible value is stale display only${staleReason ? ` (${staleReason})` : ''}${refreshAgeLabel ? `; ${refreshAgeLabel}` : ''}.`,
     };
   }
 
@@ -143,6 +172,8 @@ function buildBalanceView({ settings = {}, storage = {}, wallet = null, state = 
       display: '!',
       ledgerBacked: false,
       backendDerived: false,
+      stale: false,
+      refreshAgeLabel,
       tone: 'warning',
       sourceLabel: 'refresh failed — no backend balance',
       title: walletErrorTitle(error, storage),
@@ -154,20 +185,26 @@ function buildBalanceView({ settings = {}, storage = {}, wallet = null, state = 
       ? ledgerBacked
         ? 'ledger-backed backend balance'
         : 'backend-derived balance'
-      : displaySource === 'settings'
-        ? 'stale display hint'
-        : 'Display-only wallet balance';
+      : stale
+        ? 'stale backend display'
+        : displaySource === 'settings'
+          ? 'stale display hint'
+          : 'Display-only wallet balance';
 
     return {
       display,
       ledgerBacked,
       backendDerived,
-      tone: backendDerived ? 'verified' : 'display',
+      stale,
+      refreshAgeLabel,
+      tone: backendDerived ? 'verified' : stale ? 'warning' : 'display',
       sourceLabel,
       title:
         backendDerived
-          ? `Backend-derived wallet balance${source ? ` from ${source}` : ''}${checkedAt ? ` refreshed at ${checkedAt}` : ''}. Click to refresh through the gateway.`
-          : 'Display-only wallet balance. Click to refresh through the gateway; local settings are never balance truth.',
+          ? `Backend-derived balance refresh truth${source ? ` from ${source}` : ''}${refreshedAt ? ` refreshed at ${formatRefreshTime(refreshedAt)}` : ''}. Click to refresh through the gateway.`
+          : stale
+            ? `Stale backend display only${refreshAgeLabel ? `; ${refreshAgeLabel}` : ''}. Click to retry backend balance refresh. Local cache/settings are never balance truth.`
+            : 'Display-only wallet balance. Click to refresh through the gateway; local settings are never balance truth.',
     };
   }
 
@@ -175,6 +212,8 @@ function buildBalanceView({ settings = {}, storage = {}, wallet = null, state = 
     display: '—',
     ledgerBacked: false,
     backendDerived: false,
+    stale: false,
+    refreshAgeLabel,
     tone: storage?.isDevFallback ? 'fallback' : 'empty',
     sourceLabel: storage?.isDevFallback ? 'preview unavailable' : 'backend balance unavailable',
     title: storage?.isDevFallback
@@ -207,6 +246,38 @@ function firstPresent(...values) {
 
 function normalizeSource(value) {
   return String(value || '').trim().replace(/[^a-z0-9_.:-]+/gi, '-').slice(0, 64);
+}
+
+function formatRefreshAge(value) {
+  const ms = Date.parse(value);
+
+  if (!Number.isFinite(ms)) {
+    return '';
+  }
+
+  const ageMs = Math.max(0, Date.now() - ms);
+  const ageSeconds = Math.floor(ageMs / 1000);
+
+  if (ageSeconds < 60) {
+    return 'refreshed less than 1 minute ago';
+  }
+
+  const ageMinutes = Math.floor(ageSeconds / 60);
+
+  if (ageMinutes < 60) {
+    return `refreshed ${ageMinutes} minute${ageMinutes === 1 ? '' : 's'} ago`;
+  }
+
+  const ageHours = Math.floor(ageMinutes / 60);
+  return `refreshed ${ageHours} hour${ageHours === 1 ? '' : 's'} ago`;
+}
+
+function formatRefreshTime(value) {
+  return String(value || '').trim();
+}
+
+function isTruthy(value) {
+  return value === true || value === 'true' || value === 1 || value === '1';
 }
 
 function walletErrorTitle(error, storage) {

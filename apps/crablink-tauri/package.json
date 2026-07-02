@@ -11,7 +11,7 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "check": "npm run check:quickchain-boundary && npm run check:quickchain-paid-cache-boundary && npm run check:internal-roc-paid-content-boundary && npm run check:quickchain-readiness-boundary && npm run check:quickchain-phase1-interlock && npm run check:quickchain-phase2-replay-boundary && npm run check:internal-roc-phase2-replay-visibility && npm run check:quickchain-phase2-committee-boundary && npm run check:quickchain-phase3-validator-boundary && npm run check:quickchain-phase3-lifecycle-boundary && npm run check:quickchain-phase4-bond-boundary && npm run check:quickchain-phase4-bond-dispute-boundary && npm run check:quickchain-phase4-bond-enforcement-boundary && npm run check:quickchain-phase5-anchor-boundary && npm run check:quickchain-phase5-da-fallback-boundary && npm run check:quickchain-phase5-external-posture-boundary && npm run check:internal-roc-phase4-wallet-receipt-ux && npm run check:internal-roc-phase4-confirmation-failure-ux && npm run build && npm run check:rust:mac-media",
+    "check": "npm run check:quickchain-boundary && npm run check:quickchain-paid-cache-boundary && npm run check:internal-roc-paid-content-boundary && npm run check:quickchain-readiness-boundary && npm run check:quickchain-phase1-interlock && npm run check:quickchain-phase2-replay-boundary && npm run check:internal-roc-phase2-replay-visibility && npm run check:quickchain-phase2-committee-boundary && npm run check:quickchain-phase3-validator-boundary && npm run check:quickchain-phase3-lifecycle-boundary && npm run check:quickchain-phase4-bond-boundary && npm run check:quickchain-phase4-bond-dispute-boundary && npm run check:quickchain-phase4-bond-enforcement-boundary && npm run check:quickchain-phase5-anchor-boundary && npm run check:quickchain-phase5-da-fallback-boundary && npm run check:quickchain-phase5-external-posture-boundary && npm run check:internal-roc-stabilization-balance-refresh && npm run check:internal-roc-stabilization-render-lock && npm run check:internal-roc-stabilization-paid-ux && npm run check:internal-roc-phase4-wallet-receipt-ux && npm run check:internal-roc-phase4-confirmation-failure-ux && npm run build && npm run check:rust:mac-media",
     "check:quickchain-boundary": "node ../../scripts/check-quickchain-client-boundary.mjs",
     "check:quickchain-paid-cache-boundary": "node ../../scripts/check-quickchain-paid-cache-boundary.mjs",
     "check:quickchain-readiness-boundary": "node ../../scripts/check-quickchain-readiness-boundary.mjs",
@@ -42,7 +42,15 @@
     "check:internal-roc-explicit-confirmation": "node ../../scripts/check-internal-roc-phase4-confirmation-failure-ux.mjs",
     "check:internal-roc-failure-does-not-unlock": "node ../../scripts/check-internal-roc-phase4-confirmation-failure-ux.mjs",
     "check:internal-roc-cancel-no-mutation": "node ../../scripts/check-internal-roc-phase4-confirmation-failure-ux.mjs",
-    "check:internal-roc-beta": "npm run check:internal-roc-paid-content-boundary && npm run check:internal-roc-paid-cache-boundary && npm run check:internal-roc-phase2-replay-visibility && npm run check:internal-roc-phase4-wallet-receipt-ux && npm run check:internal-roc-phase4-confirmation-failure-ux && node ../../scripts/check-internal-roc-beta.mjs && npm run build && npm run check:rust:mac-media"
+    "check:internal-roc-beta": "npm run check:internal-roc-paid-content-boundary && npm run check:internal-roc-paid-cache-boundary && npm run check:internal-roc-phase2-replay-visibility && npm run check:internal-roc-stabilization-balance-refresh && npm run check:internal-roc-stabilization-render-lock && npm run check:internal-roc-stabilization-paid-ux && npm run check:internal-roc-phase4-wallet-receipt-ux && npm run check:internal-roc-phase4-confirmation-failure-ux && node ../../scripts/check-internal-roc-beta.mjs && npm run build && npm run check:rust:mac-media",
+    "check:internal-roc-stabilization-paid-ux": "node ../../scripts/check-internal-roc-stabilization-paid-ux.mjs",
+    "park:internal-roc-stabilization-paid-ux": "../../scripts/dev-internal-roc-stabilization-paid-ux-preflight.sh",
+    "check:internal-roc-stabilization-balance-refresh": "node ../../scripts/check-internal-roc-stabilization-balance-refresh.mjs",
+    "park:internal-roc-stabilization-balance-refresh": "../../scripts/dev-internal-roc-stabilization-balance-refresh-preflight.sh",
+    "check:internal-roc-stabilization-render-lock": "node ../../scripts/check-internal-roc-stabilization-render-lock.mjs",
+    "park:internal-roc-stabilization-render-lock": "../../scripts/dev-internal-roc-stabilization-render-lock-preflight.sh",
+    "check:internal-roc-stabilization-tauri-park": "node ../../scripts/check-internal-roc-stabilization-tauri-park.mjs",
+    "park:internal-roc-stabilization-tauri": "../../scripts/dev-internal-roc-stabilization-tauri-park.sh"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.34",

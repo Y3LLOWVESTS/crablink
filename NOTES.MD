@@ -15180,3 +15180,1144 @@ Do not start a Phase 7 unless we explicitly create a new buildplan.
 
 
 ### END NOTE - JUNE 30 2026 - 14:05 CST
+
+
+
+
+
+### BEGIN NOTE - JULY 1 2026 - 13:45 CST
+
+Yes — these notes should go into **`CRABLINK_NOTES.MD`** because this was a **CrabLink Tauri app stabilization slice**, not a RustyOnions backend crate slice.
+
+Paste this near the top of `CRABLINK_NOTES.MD` as the newest note.
+
+### BEGIN NOTE - JULY 1 2026 - INTERNAL ROC STABILIZATION PAID UX
+
+# CrabLink Tauri Notes — Internal ROC Stabilization Paid UX Retry / Receipt Truth
+
+Date: 2026-07-01
+Workstream: Internal ROC Beta Stabilization / Product Beta Readiness
+Area: CrabLink Tauri paid access UX
+Status: COMPLETE / GREEN for this stabilization slice
+
+---
+
+## 0. Safe project label
+
+```text
+Internal ROC Beta Phase 6: COMPLETE / GREEN / PARKED.
+Internal ROC beta value-loop proof: COMPLETE / GREEN / PARKED.
+Current workstream: Internal ROC Beta Stabilization / Product Beta Readiness.
+QuickChain boundary/preflight scope: COMPLETE / GREEN / PARKED through Phase 5.
+Bridge work: docs / threat-model / decision-gate only.
+No ROX/Solana/bridge/staking/liquidity/external settlement runtime.
+```
+
+This was **not** a restart of Internal ROC Beta Phase 1–6.
+
+This was a stabilization/product beta readiness hardening pass over already-proven paid UX surfaces.
+
+---
+
+## 1. What this patch hardened
+
+This slice hardened CrabLink Tauri paid access UX around:
+
+```text
+deterministic paid retry idempotency keys
+backend-derived wallet/ledger receipt proof before render
+operation_id display support
+redacted/source-labeled paid failure state
+failure remains locked
+receipt cache remains display-only
+no cache-only unlock
+no silent spend
+no fake receipt
+no fake balance
+no fake finality
+no bridge/ROX/Solana/staking/liquidity/external settlement creep
+```
+
+The focused target was:
+
+```text
+CrabLink Tauri paid UX retry/receipt truth hardening
+```
+
+This affects product beta readiness by making paid failures safer, retries more deterministic, and receipt proof display more explicitly backend-derived.
+
+---
+
+## 2. Files added
+
+### `apps/crablink-tauri/src/shared/paidAccess/paidAccessTruth.js`
+
+New shared helper for paid access stabilization.
+
+Primary responsibilities:
+
+```text
+makeStablePaidIdempotencyKey()
+buildPaidRetryState()
+clearPaidRetryKey()
+describeBackendPaymentProof()
+hasBackendPaymentProof()
+ensureBackendPaymentProof()
+sanitizePaidAccessError()
+paidRetryStatusLabel()
+redactForDisplay()
+```
+
+Important boundary:
+
+```text
+idempotency_key = retry glue, not authority
+operation_id = backend durable ledger-op display metadata, not client authority
+backend receipt/access proof is required before paid render
+failure state is display-only and locked
+```
+
+The helper does not create balance truth, receipt truth, entitlement truth, payout truth, finality truth, or wallet authority.
+
+### `docs/tauri/INTERNAL_ROC_STABILIZATION_PAID_UX.md`
+
+New product-beta stabilization doc.
+
+Locks the paid UX behavior:
+
+```text
+backend quote
+→ visible user confirmation
+→ deterministic retry idempotency key
+→ confirmed backend payment route
+→ backend wallet/ledger receipt/access proof
+→ render paid content/site
+→ display-only receipt cache
+→ backend-derived balance refresh
+```
+
+Failure behavior:
+
+```text
+failure stays locked
+failure is source-labeled
+failure is redacted
+failure may retry with the same idempotency key
+failure never renders protected content by itself
+```
+
+### `scripts/check-internal-roc-stabilization-paid-ux.mjs`
+
+New focused scanner/checker.
+
+It enforces that the CrabLink Tauri paid UX surfaces contain:
+
+```text
+deterministic retry key helper usage
+backend proof helper usage
+operation_id support
+display-only receipt cache boundary
+locked failure state
+redacted/source-labeled errors
+no cache-only paid unlock
+no fake balances/receipts/finality
+no forbidden external runtime vocabulary coupled to paid UX
+```
+
+### `scripts/dev-internal-roc-stabilization-paid-ux-preflight.sh`
+
+New focused app-local preflight.
+
+Runs:
+
+```bash
+npm run check:internal-roc-stabilization-paid-ux
+npm run check:internal-roc-phase4-confirmation-failure-ux
+npm run check:internal-roc-phase4-wallet-receipt-ux
+npm run build
+```
+
+---
+
+## 3. Files patched
+
+### `apps/crablink-tauri/src/pages/asset/AssetContentViewAccess.jsx`
+
+Patched content-view paid access flow.
+
+New behavior:
+
+```text
+uses useRef for payIdempotencyKeyRef
+creates deterministic content-view payment retry key
+stores retry state as display-only UI state
+sends idempotencyKey into content_view pay request
+requires backend payment proof before setting canView: true
+adds backendProof to successful access event
+sanitizes failure error
+keeps failed paid access locked with canView: false
+shows retry state in the proof/facts panel
+includes retry data in debug/proof payload
+```
+
+Important invariant:
+
+```text
+Asset paid access only becomes renderable after backend-derived receipt/access proof.
+```
+
+### `apps/crablink-tauri/src/pages/site/SiteVisitAccess.jsx`
+
+Patched site-visit paid access flow.
+
+New behavior:
+
+```text
+uses payIdempotencyKeyRef
+creates deterministic site-visit payment retry key
+replaces older uniqueSiteVisitIdem behavior
+keeps confirmation option shape compatible with older Phase 4 checker: { confirmed: true }
+passes idempotency through the payment payload itself
+requires backend payment proof before canRender: true
+adds backendProof to successful site access event
+sanitizes failure error
+keeps failed paid access locked with canRender: false
+shows retry state in the proof/facts panel
+adds operation_id display support
+clears retry key when quote retry starts
+```
+
+Important compatibility fix:
+
+```text
+The first patch used:
+{ confirmed: true, idempotencyKey: payIdempotencyKey }
+
+The old Phase 4 checker expected the literal:
+{ confirmed: true }
+
+The call shape was restored to { confirmed: true } while keeping the deterministic idempotency key in the payment payload.
+```
+
+This preserved both old Phase 4 checker compatibility and the new stabilization boundary.
+
+### `apps/crablink-tauri/src/shared/api/contentViewClient.js`
+
+Patched to preserve/display backend durable operation identifiers.
+
+Added support for:
+
+```text
+operationId
+operation_id
+client_idempotency_key
+```
+
+Purpose:
+
+```text
+CrabLink may display backend durable ledger-op metadata, but does not treat it as client authority.
+```
+
+### `apps/crablink-tauri/src/shared/api/siteVisitClient.js`
+
+Patched to preserve/display backend durable operation identifiers.
+
+Added support for:
+
+```text
+operationId
+operation_id
+client_idempotency_key
+```
+
+Purpose:
+
+```text
+Site paid receipt/access display can include backend operation_id without becoming receipt or entitlement authority.
+```
+
+### `apps/crablink-tauri/src/shared/receipts/recentReceipts.js`
+
+Patched display-only receipt normalization.
+
+New behavior:
+
+```text
+captures operationId / operation_id
+includes operationId in backendDerived proof check
+includes operationId in stored display-only receipt object
+includes operationId in receipt key/proof material
+still requires backend-derived proof markers
+keeps displayOnly: true
+```
+
+Important invariant:
+
+```text
+Recent receipts remain display-only convenience, never paid entitlement truth.
+```
+
+### `apps/crablink-tauri/package.json`
+
+Added scripts:
+
+```json
+"check:internal-roc-stabilization-paid-ux": "node ../../scripts/check-internal-roc-stabilization-paid-ux.mjs",
+"park:internal-roc-stabilization-paid-ux": "../../scripts/dev-internal-roc-stabilization-paid-ux-preflight.sh"
+```
+
+Also wired the new checker into existing app check flow when applicable.
+
+### `scripts/check-tauri.sh`
+
+Patched to include:
+
+```bash
+npm run check:internal-roc-stabilization-paid-ux
+```
+
+### `scripts/make_codebundle.sh`
+
+Patched to include the new checker and preflight scripts in future CrabLink codebundles:
+
+```text
+scripts/check-internal-roc-stabilization-paid-ux.mjs
+scripts/dev-internal-roc-stabilization-paid-ux-preflight.sh
+```
+
+---
+
+## 4. Validation results
+
+The focused patch script completed successfully.
+
+Observed green output:
+
+```text
+Internal ROC Stabilization paid UX retry/receipt truth check passed.
+Deterministic retry keys, backend-derived proof checks, locked failures, redacted/source-labeled errors, and display-only receipt cache boundaries are intact.
+Internal ROC Stabilization paid UX retry/receipt truth patch applied.
+```
+
+Then the focused preflight was run:
+
+```bash
+bash scripts/dev-internal-roc-stabilization-paid-ux-preflight.sh
+```
+
+Green checks:
+
+```text
+check:internal-roc-stabilization-paid-ux ✅
+check:internal-roc-phase4-confirmation-failure-ux ✅
+check:internal-roc-phase4-wallet-receipt-ux ✅
+vite build ✅
+dev-internal-roc-stabilization-paid-ux-preflight ✅
+```
+
+Final successful preflight output:
+
+```text
+== Internal ROC Stabilization paid UX retry/receipt truth preflight passed ==
+== deterministic retry key; backend-derived payment proof; locked/redacted failure state; display-only receipt cache ==
+== no silent spend, cache-only paid access, fake receipt, fake balance, fake finality, direct wallet/ledger mutation, bridge, staking, liquidity, ROX/Solana, or external settlement introduced ==
+```
+
+Vite build succeeded:
+
+```text
+✓ 314 modules transformed.
+✓ built in 4.85s
+```
+
+---
+
+## 5. One harmless terminal issue encountered
+
+A temporary fix script ran:
+
+```bash
+node --check apps/crablink-tauri/src/pages/site/SiteVisitAccess.jsx
+```
+
+Node 22 returned:
+
+```text
+TypeError [ERR_UNKNOWN_FILE_EXTENSION]: Unknown file extension ".jsx"
+```
+
+This was not a code failure.
+
+Reason:
+
+```text
+node --check does not directly syntax-check .jsx files by default.
+```
+
+The real JSX validation happened through:
+
+```bash
+npm run build
+```
+
+That Vite build passed.
+
+Conclusion:
+
+```text
+Ignore the node --check .jsx issue. Use Vite build or the existing app checkers for JSX validation.
+```
+
+---
+
+## 6. Stabilization status for this slice
+
+```text
+Internal ROC Stabilization / Product Beta Readiness
+CrabLink Tauri paid UX retry/receipt truth hardening: COMPLETE / GREEN
+```
+
+This slice is parked unless future regression output specifically points back to these files.
+
+---
+
+## 7. Boundaries preserved
+
+This patch did not add:
+
+```text
+new ledger mutation paths
+client wallet authority
+client receipt authority
+client paid entitlement authority
+cache-only unlock
+fake balances
+fake receipts
+fake finality
+silent spend
+gateway ledger mutation
+omnigate ledger mutation
+storage/index/payment authority
+rewarder/accounting/policy mutation authority
+ROX runtime
+Solana runtime
+bridge runtime
+staking runtime
+liquidity runtime
+external settlement runtime
+exchange-facing logic
+public validator economy
+```
+
+The paid flow remains:
+
+```text
+CrabLink user intent
+→ backend quote/prepare
+→ explicit confirmation
+→ backend payment route
+→ svc-wallet / ron-ledger truth
+→ backend receipt/access response
+→ CrabLink display-only receipt/access UX
+```
+
+---
+
+## 8. Suggested next stabilization target
+
+Next best CrabLink/Product Beta Readiness targets:
+
+```text
+1. backend-derived balance refresh / stale status clarity
+2. paid denial without protected content leakage
+3. redacted/source-labeled gateway/omnigate paid errors
+4. idempotent retry UX polish across additional paid surfaces
+5. reproducible full-stack paid smoke script consolidation
+```
+
+Most likely next patch:
+
+```text
+CrabLink Tauri backend-derived balance refresh + stale/failure labeling
+```
+
+Reason:
+
+```text
+The receipt/access retry proof is now green. The next product-beta concern is making sure balance display is clearly backend-derived, stale-aware, and never interpreted as local truth.
+```
+
+### END NOTE - JULY 1 2026 - INTERNAL ROC STABILIZATION PAID UX
+
+For the next session, also attach the updated `CRABLINK_NOTES.MD` plus a fresh `CODEBUNDLE_TAURI_APP.md` after regenerating it.
+
+
+### END NOTE - JULY 1 2026 - 13:45 CST
+
+
+### BEGIN NOTE - JULY 1 2026 - 15:00 CST
+
+Yes — these should go into **`CRABLINK_NOTES.MD`** before we move to `svc-gateway + omnigate`.
+
+The terminal output confirms the aggregate CrabLink Tauri stabilization park gate passed, including paid UX, balance refresh, render-lock, Phase 4 checks, Vite build, and Tauri Rust mac-media check.  The fresh CrabLink codebundle also confirms the new stabilization docs, checkers, and park script are now part of the Tauri app bundle.  The safe doctrine remains that Phase 6 is parked, stabilization is the current workstream, and CrabLink stays display/user-intent only. 
+
+Paste this into **`CRABLINK_NOTES.MD`**:
+
+## BEGIN NOTE — 2026-07-01 — INTERNAL ROC STABILIZATION / CRABLINK TAURI PAID-ACCESS PARK GATE
+
+### Safe project label
+
+Internal ROC Beta Phase 6: COMPLETE / GREEN / PARKED.
+
+Internal ROC beta value-loop proof: COMPLETE / GREEN / PARKED.
+
+Current workstream: Internal ROC Beta Stabilization / Product Beta Readiness.
+
+CrabLink Tauri paid-access stabilization block: COMPLETE / GREEN / PARKED.
+
+Bridge work remains docs / threat-model / decision-gate only.
+
+No ROX, Solana, bridge runtime, staking runtime, liquidity runtime, exchange-facing runtime, public validator economy, or external settlement runtime is authorized.
+
+This work did not restart Internal ROC Beta Phase 1–6. It hardened and parked the current CrabLink Tauri product-beta stabilization surface.
+
+---
+
+### Summary
+
+This session completed a CrabLink Tauri stabilization block for the proven internal ROC value loop.
+
+The focus was not new economic authority. The focus was product-beta readiness for paid access UX, backend-derived receipt proof, backend-derived balance refresh, locked denial states, and one aggregate Tauri park gate.
+
+The final green label for this slice is:
+
+```text
+Internal ROC Stabilization / Product Beta Readiness
+CrabLink Tauri paid-access stabilization block: COMPLETE / GREEN / PARKED
+```
+
+The parked Tauri block now includes:
+
+```text
+1. Paid UX retry / receipt truth hardening
+2. Backend-derived balance refresh / stale labeling
+3. Paid denial render-lock / protected payload fetch gating
+4. Aggregate CrabLink Tauri Internal ROC Stabilization park gate
+```
+
+---
+
+### Stabilization slice 1 — Paid UX retry / receipt truth
+
+Status:
+
+```text
+COMPLETE / GREEN
+```
+
+Purpose:
+
+```text
+Make paid content/site UX retry-safe, backend-proof-gated, receipt-aware, and failure-locked.
+```
+
+Key behavior locked:
+
+```text
+backend quote
+→ visible user confirmation
+→ deterministic retry idempotency key
+→ confirmed backend payment route
+→ backend wallet/ledger receipt/access proof
+→ paid render only after proof
+→ display-only receipt cache
+→ backend-derived balance refresh
+```
+
+Important invariants:
+
+```text
+idempotency_key = retry key, not authority
+operation_id = backend durable ledger-op display metadata, not client authority
+receipt cache = display-only
+failure remains locked
+failure is source-labeled
+failure is redacted
+failure can retry with same idempotency key
+failure never renders protected content by itself
+```
+
+Files added or hardened included:
+
+```text
+apps/crablink-tauri/src/shared/paidAccess/paidAccessTruth.js
+docs/tauri/INTERNAL_ROC_STABILIZATION_PAID_UX.md
+scripts/check-internal-roc-stabilization-paid-ux.mjs
+scripts/dev-internal-roc-stabilization-paid-ux-preflight.sh
+```
+
+Files patched included:
+
+```text
+apps/crablink-tauri/src/pages/asset/AssetContentViewAccess.jsx
+apps/crablink-tauri/src/pages/site/SiteVisitAccess.jsx
+apps/crablink-tauri/src/shared/api/contentViewClient.js
+apps/crablink-tauri/src/shared/api/siteVisitClient.js
+apps/crablink-tauri/src/shared/receipts/recentReceipts.js
+apps/crablink-tauri/package.json
+scripts/check-tauri.sh
+scripts/make_codebundle.sh
+```
+
+Validated by:
+
+```text
+npm run check:internal-roc-stabilization-paid-ux
+npm run check:internal-roc-phase4-confirmation-failure-ux
+npm run check:internal-roc-phase4-wallet-receipt-ux
+npm run build
+```
+
+Green result:
+
+```text
+Internal ROC Stabilization paid UX retry/receipt truth check passed.
+Deterministic retry keys, backend-derived proof checks, locked failures, redacted/source-labeled errors, and display-only receipt cache boundaries are intact.
+```
+
+---
+
+### Stabilization slice 2 — Backend-derived balance refresh / stale labeling
+
+Status:
+
+```text
+COMPLETE / GREEN
+```
+
+Purpose:
+
+```text
+Ensure CrabLink balance display is backend-derived or visibly stale, never locally authoritative.
+```
+
+Key behavior locked:
+
+```text
+paid success
+→ backend receipt/access proof
+→ display-only receipt cache update
+→ backend wallet balance refresh requested
+→ backend-derived balance display if refresh succeeds
+→ stale/failure label if refresh fails
+```
+
+Important invariants:
+
+```text
+backend-derived balance = display only
+stale balance = last backend value, visibly stale, never truth
+settings balance = stale display hint only, never truth
+failed refresh never computes a new balance
+local cache never creates balance truth
+receipt cache never creates balance truth
+CrabLink never mutates wallet/ledger balance
+```
+
+Files added or hardened included:
+
+```text
+docs/tauri/INTERNAL_ROC_STABILIZATION_BALANCE_REFRESH.md
+scripts/check-internal-roc-stabilization-balance-refresh.mjs
+scripts/dev-internal-roc-stabilization-balance-refresh-preflight.sh
+```
+
+Files patched included:
+
+```text
+apps/crablink-tauri/src/app/shell/BalanceChip.jsx
+apps/crablink-tauri/src/app/appContext.js
+apps/crablink-tauri/src/shared/api/walletClient.js
+apps/crablink-tauri/src/pages/asset/AssetContentViewAccess.jsx
+apps/crablink-tauri/src/pages/site/SiteVisitAccess.jsx
+apps/crablink-tauri/package.json
+scripts/check-tauri.sh
+scripts/make_codebundle.sh
+```
+
+Validated by:
+
+```text
+npm run check:internal-roc-stabilization-balance-refresh
+npm run check:internal-roc-stabilization-paid-ux
+npm run check:internal-roc-phase4-wallet-receipt-ux
+npm run check:internal-roc-phase4-confirmation-failure-ux
+npm run build
+```
+
+Green result:
+
+```text
+Internal ROC Stabilization backend balance refresh truth check passed.
+Backend-derived balance normalization, stale/failure labels, paid-success refresh requests, and no local balance truth boundaries are intact.
+```
+
+---
+
+### Stabilization slice 3 — Paid denial render-lock / protected fetch gating
+
+Status:
+
+```text
+COMPLETE / GREEN
+```
+
+Purpose:
+
+```text
+Prevent paid denial, quote failure, payment failure, backend-pending routes, local cache, local catalog, or developer mode from fetching or rendering protected paid payloads.
+```
+
+Key behavior locked for paid sites:
+
+```text
+resolve named site metadata
+→ derive site_visit policy
+→ if paid: keep root document fetch locked
+→ quote/pay through backend
+→ require backend wallet/ledger receipt/access proof
+→ fetch protected root document only after render is allowed
+→ sandbox render only after backend-derived access
+```
+
+Required denial behavior locked:
+
+```text
+quote failure → no root document fetch, no render
+payment failure → no root document fetch, no render
+backend-pending route → no developer bypass render
+cached receipt/display history → no render
+local catalog/cache/settings → no render
+```
+
+Important invariants:
+
+```text
+metadata may resolve before payment
+protected root/body/media bytes fetch only after backend proof
+denial/failure keeps protected payload empty and locked
+backend-pending stays locked
+developer mode cannot preview paid protected content
+cache-only unlock remains forbidden
+```
+
+Files added or hardened included:
+
+```text
+docs/tauri/INTERNAL_ROC_STABILIZATION_RENDER_LOCK.md
+scripts/check-internal-roc-stabilization-render-lock.mjs
+scripts/dev-internal-roc-stabilization-render-lock-preflight.sh
+```
+
+Files patched included:
+
+```text
+apps/crablink-tauri/src/pages/site/SiteRender.jsx
+apps/crablink-tauri/src/pages/site/SiteVisitAccess.jsx
+apps/crablink-tauri/src/pages/site/SiteResolvedProof.jsx
+apps/crablink-tauri/src/pages/site/siteRenderModel.js
+apps/crablink-tauri/src/pages/asset/AssetHydratedView.jsx
+apps/crablink-tauri/src/pages/asset/AssetContentViewAccess.jsx
+apps/crablink-tauri/package.json
+scripts/check-tauri.sh
+scripts/make_codebundle.sh
+```
+
+Validated by:
+
+```text
+npm run check:internal-roc-stabilization-render-lock
+npm run check:internal-roc-stabilization-balance-refresh
+npm run check:internal-roc-stabilization-paid-ux
+npm run check:internal-roc-phase4-wallet-receipt-ux
+npm run check:internal-roc-phase4-confirmation-failure-ux
+npm run build
+```
+
+Green result:
+
+```text
+Internal ROC Stabilization paid denial render-lock check passed.
+Protected site root fetch is deferred until backend access proof; backend-pending/developer bypass render remains locked; paid asset byte fetch gates remain intact.
+```
+
+---
+
+### Stabilization slice 4 — Aggregate CrabLink Tauri product-beta park gate
+
+Status:
+
+```text
+COMPLETE / GREEN / PARKED
+```
+
+Purpose:
+
+```text
+Create one reproducible local command proving the green Tauri paid-access stabilization slices stay green together.
+```
+
+Files added:
+
+```text
+docs/tauri/INTERNAL_ROC_STABILIZATION_TAURI_PARK.md
+scripts/check-internal-roc-stabilization-tauri-park.mjs
+scripts/dev-internal-roc-stabilization-tauri-park.sh
+```
+
+Package scripts added:
+
+```text
+check:internal-roc-stabilization-tauri-park
+park:internal-roc-stabilization-tauri
+```
+
+Aggregate park command:
+
+```bash
+bash scripts/dev-internal-roc-stabilization-tauri-park.sh
+```
+
+Aggregate park gate runs:
+
+```text
+shell syntax checks
+scanner syntax checks
+check:internal-roc-stabilization-tauri-park
+check:internal-roc-stabilization-render-lock
+check:internal-roc-stabilization-balance-refresh
+check:internal-roc-stabilization-paid-ux
+check:internal-roc-phase4-wallet-receipt-ux
+check:internal-roc-phase4-confirmation-failure-ux
+npm run build
+npm run check:rust:mac-media
+```
+
+Final green terminal result:
+
+```text
+== CrabLink Tauri Internal ROC Stabilization product beta park gate passed ==
+== paid UX retry/receipt truth; backend-derived balance refresh; paid denial render-lock ==
+== no fake receipt, fake balance, fake finality, silent spend, cache-only unlock, developer paid bypass, direct wallet/ledger mutation, ROX/Solana, bridge, staking, liquidity, or external settlement introduced ==
+```
+
+This makes the current Tauri paid-access stabilization block parkable before switching to backend crate pairs.
+
+---
+
+### One repair during the park-gate patch
+
+The first aggregate park checker failed because the scanner inspected its own denylist marker strings.
+
+Initial false-positive markers:
+
+```text
+fakebalancetrue
+fakebackendreceipt
+fakefinalitytrue
+silentspendtrue
+cacheonlyunlocktrue
+developerpaidbypasstrue
+ledgermutatefromtauri
+walletmutatefromreact
+```
+
+Diagnosis:
+
+```text
+checker self-scan bug, not a product failure
+```
+
+Repair:
+
+```text
+scripts/check-internal-roc-stabilization-tauri-park.mjs still verifies the park checker file exists, but it no longer scans its own denylist literal strings as target source content.
+```
+
+After repair:
+
+```text
+Internal ROC Stabilization CrabLink Tauri park-gate check passed.
+Paid UX, backend-derived balance refresh, paid denial render-lock, Phase 4 compatibility, build, and Tauri Rust mac-media checks are wired for one park gate.
+```
+
+The final aggregate park gate passed after the self-scan fix.
+
+---
+
+### Final validated gates
+
+The final green CrabLink Tauri stabilization park run validated:
+
+```text
+check:internal-roc-stabilization-tauri-park ✅
+check:internal-roc-stabilization-render-lock ✅
+check:internal-roc-stabilization-balance-refresh ✅
+check:internal-roc-stabilization-paid-ux ✅
+check:internal-roc-phase4-wallet-receipt-ux ✅
+check:internal-roc-phase4-confirmation-failure-ux ✅
+vite build ✅
+check:rust:mac-media ✅
+```
+
+This is the strongest current CrabLink Tauri local proof command:
+
+```bash
+bash scripts/dev-internal-roc-stabilization-tauri-park.sh
+```
+
+---
+
+### Boundaries preserved
+
+The CrabLink Tauri stabilization block preserved these boundaries:
+
+```text
+CrabLink remains display/user-intent only.
+React owns no wallet truth.
+React owns no ledger truth.
+React owns no paid entitlement truth.
+React owns no receipt truth.
+React owns no balance truth.
+Local caches remain display-only.
+Recent receipts remain display-only.
+Backend receipt/access proof gates paid render.
+Backend-derived balance refresh gates balance display.
+Stale/failure state is visible and honest.
+Paid denial keeps protected payload locked.
+Developer mode cannot bypass paid proof.
+Idempotency key remains retry glue only.
+operation_id remains durable backend ledger-op display metadata only.
+```
+
+Forbidden behavior remained absent:
+
+```text
+fake receipt
+fake balance
+fake finality
+silent spend
+cache-only unlock
+developer paid bypass
+direct wallet mutation from CrabLink
+direct ledger mutation from CrabLink
+ROX runtime
+Solana runtime
+bridge runtime
+staking runtime
+liquidity runtime
+external settlement runtime
+exchange-facing runtime
+```
+
+---
+
+### Current CrabLink status
+
+Use this label going forward:
+
+```text
+CrabLink Tauri paid-access stabilization block: COMPLETE / GREEN / PARKED.
+```
+
+Expanded status:
+
+```text
+Internal ROC Stabilization / Product Beta Readiness:
+- CrabLink paid UX retry / receipt truth: COMPLETE / GREEN
+- CrabLink backend-derived balance refresh / stale labeling: COMPLETE / GREEN
+- CrabLink paid denial render-lock / protected payload fetch gating: COMPLETE / GREEN
+- CrabLink aggregate Tauri stabilization park gate: COMPLETE / GREEN / PARKED
+```
+
+Do not say:
+
+```text
+Product beta is fully complete.
+Backend stabilization is complete.
+svc-gateway + omnigate are parked for this stabilization workstream.
+ROX is ready.
+Bridge is ready.
+External settlement is ready.
+```
+
+Correct meaning:
+
+```text
+The focused CrabLink Tauri paid-access product-beta stabilization surface is now green and parked.
+```
+
+---
+
+### Latest CrabLink codebundle status
+
+A fresh `CODEBUNDLE_TAURI_APP.md` was generated after the green Tauri stabilization work.
+
+The bundle includes the new docs, checkers, preflights, and aggregate park gate.
+
+Relevant bundle scope now includes:
+
+```text
+docs/tauri/INTERNAL_ROC_STABILIZATION_PAID_UX.md
+docs/tauri/INTERNAL_ROC_STABILIZATION_BALANCE_REFRESH.md
+docs/tauri/INTERNAL_ROC_STABILIZATION_RENDER_LOCK.md
+docs/tauri/INTERNAL_ROC_STABILIZATION_TAURI_PARK.md
+
+scripts/check-internal-roc-stabilization-paid-ux.mjs
+scripts/check-internal-roc-stabilization-balance-refresh.mjs
+scripts/check-internal-roc-stabilization-render-lock.mjs
+scripts/check-internal-roc-stabilization-tauri-park.mjs
+
+scripts/dev-internal-roc-stabilization-paid-ux-preflight.sh
+scripts/dev-internal-roc-stabilization-balance-refresh-preflight.sh
+scripts/dev-internal-roc-stabilization-render-lock-preflight.sh
+scripts/dev-internal-roc-stabilization-tauri-park.sh
+```
+
+Important package scripts now include:
+
+```text
+check:internal-roc-stabilization-paid-ux
+park:internal-roc-stabilization-paid-ux
+
+check:internal-roc-stabilization-balance-refresh
+park:internal-roc-stabilization-balance-refresh
+
+check:internal-roc-stabilization-render-lock
+park:internal-roc-stabilization-render-lock
+
+check:internal-roc-stabilization-tauri-park
+park:internal-roc-stabilization-tauri
+```
+
+---
+
+### Current estimated completion impact
+
+Before this CrabLink park gate, the active session-pack / stabilization completion estimate was around:
+
+```text
+~88%
+```
+
+After the aggregate CrabLink Tauri stabilization park gate passed, the updated estimate is:
+
+```text
+~90–91%
+```
+
+Reason:
+
+```text
+The Tauri paid-access product-beta stabilization surface is now parked, but backend paid-route/error hardening still needs a focused svc-gateway + omnigate pass before this workstream can be called broadly parked.
+```
+
+---
+
+### Next recommended workstream
+
+Next target after these notes:
+
+```text
+svc-gateway + omnigate
+```
+
+Recommended backend stabilization target:
+
+```text
+Internal ROC Stabilization backend paid-route/error hardening
+```
+
+Goals for the next backend pass:
+
+```text
+gateway/omnigate paid denial does not leak protected body
+gateway/omnigate paid errors are redacted and source-labeled
+accepted paid responses are backend-derived
+backend response shapes match CrabLink’s stabilized expectations
+no fake receipt
+no fake access proof
+no fake finality
+no cache-only unlock
+no gateway direct wallet mutation
+no gateway direct ledger mutation
+no omnigate direct wallet mutation
+no omnigate direct ledger mutation
+idempotency_key remains retry key only
+operation_id remains durable backend ledger-op display metadata only
+```
+
+Recommended next upload set:
+
+```text
+crates/svc-gateway/CODEBUNDLE.md
+crates/omnigate/CODEBUNDLE.md
+latest RustyOnions notes/carryover if changed
+```
+
+No new CrabLink bundle is needed before the next backend patch unless CrabLink changes again.
+
+---
+
+### Carry-forward command summary
+
+Best single CrabLink Tauri stabilization verification command:
+
+```bash
+bash scripts/dev-internal-roc-stabilization-tauri-park.sh
+```
+
+Focused sub-gates if needed:
+
+```bash
+bash scripts/dev-internal-roc-stabilization-paid-ux-preflight.sh
+bash scripts/dev-internal-roc-stabilization-balance-refresh-preflight.sh
+bash scripts/dev-internal-roc-stabilization-render-lock-preflight.sh
+```
+
+Package-level checks:
+
+```bash
+cd apps/crablink-tauri
+
+npm run check:internal-roc-stabilization-tauri-park
+npm run check:internal-roc-stabilization-render-lock
+npm run check:internal-roc-stabilization-balance-refresh
+npm run check:internal-roc-stabilization-paid-ux
+npm run check:internal-roc-phase4-wallet-receipt-ux
+npm run check:internal-roc-phase4-confirmation-failure-ux
+npm run build
+npm run check:rust:mac-media
+```
+
+---
+
+### Final note
+
+CrabLink Tauri is now parked for this focused paid-access stabilization block.
+
+The next phase of this same stabilization workstream should move to the backend public/enforcement layer:
+
+```text
+svc-gateway + omnigate
+```
+
+CrabLink is currently ready to consume stricter backend paid-route/error/access behavior without becoming authority.
+
+## END NOTE — 2026-07-01 — INTERNAL ROC STABILIZATION / CRABLINK TAURI PAID-ACCESS PARK GATE
+
+After this is pasted into `CRABLINK_NOTES.MD`, the next clean move is attaching `svc-gateway` and `omnigate` focused codebundles.
+
+
+### END NOTE - JULY 1 2026 - 15:00 CST

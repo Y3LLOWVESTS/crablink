@@ -7,6 +7,9 @@ cd "$ROOT/apps/crablink-tauri"
 npm run check:quickchain-boundary
 npm run check:quickchain-paid-cache-boundary
 npm run check:internal-roc-paid-content-boundary
+npm run check:internal-roc-stabilization-paid-ux
+npm run check:internal-roc-stabilization-balance-refresh
+npm run check:internal-roc-stabilization-render-lock
 npm run check:quickchain-readiness-boundary
 npm run check:quickchain-phase1-interlock
 npm run check:quickchain-phase2-replay-boundary

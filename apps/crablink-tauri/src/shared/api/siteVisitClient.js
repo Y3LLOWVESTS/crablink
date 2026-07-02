@@ -502,6 +502,16 @@ export function summarizeSiteVisitPaymentData(data = {}, request = {}, target = 
       siteReceipt.ledger_root ||
       siteReceipt.ledgerRoot,
   );
+  const operationId = cleanString(
+    payment.operation_id ||
+      payment.operationId ||
+      object.operation_id ||
+      object.operationId ||
+      walletReceipt.operation_id ||
+      walletReceipt.operationId ||
+      siteReceipt.operation_id ||
+      siteReceipt.operationId,
+  );
 
   return Object.freeze({
     ok: object.ok !== false,
@@ -532,6 +542,7 @@ export function summarizeSiteVisitPaymentData(data = {}, request = {}, target = 
     txid,
     receiptHash,
     ledgerRoot,
+    operationId,
     idempotencyKey: cleanString(
       siteReceipt.idempotency_key ||
         siteReceipt.idempotencyKey ||

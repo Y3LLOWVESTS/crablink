@@ -222,6 +222,10 @@ selected_scripts() {
     "$ROOT/scripts/check-quickchain-client-boundary.mjs" \
     "$ROOT/scripts/check-quickchain-paid-cache-boundary.mjs" \
     "$ROOT/scripts/check-internal-roc-paid-content-boundary.mjs" \
+    "$ROOT/scripts/check-internal-roc-stabilization-paid-ux.mjs" \
+    "$ROOT/scripts/check-internal-roc-stabilization-balance-refresh.mjs" \
+    "$ROOT/scripts/check-internal-roc-stabilization-render-lock.mjs" \
+    "$ROOT/scripts/check-internal-roc-stabilization-tauri-park.mjs" \
     "$ROOT/scripts/check-internal-roc-phase2-replay-visibility.mjs" \
     "$ROOT/scripts/check-internal-roc-phase4-wallet-receipt-ux.mjs" \
     "$ROOT/scripts/check-internal-roc-phase4-confirmation-failure-ux.mjs" \
@@ -239,6 +243,10 @@ selected_scripts() {
     "$ROOT/scripts/check-quickchain-phase5-client-external-posture-boundary.mjs" \
     "$ROOT/scripts/dev-quickchain-tauri-park.sh" \
     "$ROOT/scripts/dev-internal-roc-beta-phase4-preflight.sh" \
+    "$ROOT/scripts/dev-internal-roc-stabilization-paid-ux-preflight.sh" \
+    "$ROOT/scripts/dev-internal-roc-stabilization-balance-refresh-preflight.sh" \
+    "$ROOT/scripts/dev-internal-roc-stabilization-render-lock-preflight.sh" \
+    "$ROOT/scripts/dev-internal-roc-stabilization-tauri-park.sh" \
     "$ROOT/scripts/smoke-tauri-local-gateway.sh" \
     "$ROOT/scripts/migrate_chrome_react_to_tauri.sh" \
     "$ROOT/scripts/scaffold_crablink_tauri.sh" \
