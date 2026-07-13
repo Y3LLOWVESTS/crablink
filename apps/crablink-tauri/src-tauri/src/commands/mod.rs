@@ -9,6 +9,7 @@ pub mod diagnostics;
 pub mod gateway;
 pub mod health;
 pub mod identity;
+pub mod local_node;
 pub mod media;
 pub mod resolve;
 pub mod settings;

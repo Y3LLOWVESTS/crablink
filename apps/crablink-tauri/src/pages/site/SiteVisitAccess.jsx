@@ -2,7 +2,7 @@
  * RO:WHAT — Paid site_visit gate for named CrabLink sites.
  * RO:WHY — NEXT_LEVEL creator-economy proof: quote/pay before rendering paid creator sites.
  * RO:INTERACTS — siteVisitClient, SiteRender, GatewayClient, BalanceChip refresh events, recentReceipts, localCatalog.
- * RO:INVARIANTS — no silent spend; no fake receipt; render unlock follows live backend quote/pay proof only; backend-pending never renders protected sites.
+ * RO:INVARIANTS — no silent spend; no fake receipt; render unlock follows the live backend quote/pay response only; render unlock follows live backend quote/pay proof only; backend-pending never renders protected sites.
  * RO:METRICS — displays gateway correlation IDs and returned receipt identifiers.
  * RO:CONFIG — uses current app settings wallet/passport and local display receipt memory.
  * RO:SECURITY — pay button requires explicit user click; no local balance edits; no fake unlock.

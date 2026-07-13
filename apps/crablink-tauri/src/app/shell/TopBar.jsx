@@ -38,6 +38,8 @@ export default function TopBar({ route, navigation }) {
   const [zoomScale, setZoomScale] = useState(() => readStoredZoomScale());
   const gatewayState = context.gatewayStatus?.state || 'unknown';
   const gatewayLabel = context.gatewayStatus?.label || 'Gateway unchecked';
+  const localNodeState = context.localNodeStatus?.state || 'disabled';
+  const localNodeLabel = context.localNodeStatus?.label || 'Local node disabled';
 
   useEffect(() => {
     const scale = readStoredZoomScale();
@@ -200,6 +202,22 @@ export default function TopBar({ route, navigation }) {
                 : 'Gateway'}
         </button>
 
+        <button
+          className={`cl-status-pill cl-status-${localNodeState}`}
+          type="button"
+          onClick={context.checkLocalNode}
+          title={localNodeLabel}
+        >
+          <span aria-hidden="true" />
+          {localNodeState === 'checking'
+            ? 'Node…'
+            : localNodeState === 'online'
+              ? 'Node'
+              : localNodeState === 'degraded'
+                ? 'Node!'
+                : 'Node off'}
+        </button>
+
         <PassportChip navigation={navigation} />
         <BalanceChip />
 
@@ -334,6 +352,10 @@ function SettingsSummary({
     ['Extension context', storage.isExtensionContext ? 'Yes' : 'No'],
     ['HTTP/Vite fallback', storage.isDevFallback ? 'Yes' : 'No'],
     ['Gateway status', gatewayStatus.label || 'Unchecked'],
+    ['Local node enabled', settings.localNodeEnabled ? 'Yes' : 'No'],
+    ['Local node URL', settings.localNodeUrl || 'http://127.0.0.1:5310'],
+    ['Local node status', context.localNodeStatus?.label || 'Local node disabled'],
+    ['Local node boundary', 'Optional loopback attachment; no wallet/ledger mutation or confirmed ROC'],
     ['Dev token', settings.authToken ? 'Configured / redacted' : 'Not configured'],
   ];
 

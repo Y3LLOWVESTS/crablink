@@ -29,6 +29,7 @@ import {
   watchAppSettings,
 } from './settings.js';
 import { createGatewayClient } from '../shared/api/gatewayClient.js';
+import { createLocalNodeClient } from '../shared/api/localNodeClient.js';
 import { createIdentityClient } from '../shared/api/identityClient.js';
 import {
   createWalletClient,
@@ -45,6 +46,14 @@ const INITIAL_GATEWAY_STATUS = Object.freeze({
   checkedAt: '',
   health: null,
   ready: null,
+  error: null,
+});
+
+const INITIAL_LOCAL_NODE_STATUS = Object.freeze({
+  state: 'disabled',
+  label: 'Local node disabled',
+  checkedAt: '',
+  data: null,
   error: null,
 });
 
@@ -71,6 +80,7 @@ export function AppContextProvider({ children }) {
   const [settingsReady, setSettingsReady] = useState(false);
   const [settingsError, setSettingsError] = useState(null);
   const [gatewayStatus, setGatewayStatus] = useState(INITIAL_GATEWAY_STATUS);
+  const [localNodeStatus, setLocalNodeStatus] = useState(INITIAL_LOCAL_NODE_STATUS);
   const [identityState, setIdentityState] = useState(INITIAL_IDENTITY_STATE);
   const [walletState, setWalletState] = useState(INITIAL_WALLET_STATE);
   const [toasts, setToasts] = useState([]);
@@ -79,14 +89,16 @@ export function AppContextProvider({ children }) {
   const autoHydrateKeyRef = useRef('');
 
   const gateway = useMemo(() => createGatewayClient(settings), [settings]);
+  const localNode = useMemo(() => createLocalNodeClient(settings), [settings]);
 
   const clients = useMemo(
     () => ({
       gateway,
+      localNode,
       identity: createIdentityClient(gateway),
       wallet: createWalletClient(gateway),
     }),
-    [gateway],
+    [gateway, localNode],
   );
 
   const reloadSettings = useCallback(async () => {
@@ -307,6 +319,102 @@ export function AppContextProvider({ children }) {
     }
   }, [gateway, notify, settings.gatewayUrl, storage]);
 
+  const checkLocalNode = useCallback(async () => {
+    const checking = {
+      state: 'checking',
+      label: 'Checking local node…',
+      checkedAt: new Date().toISOString(),
+      data: localNodeStatus.data,
+      error: null,
+    };
+
+    setLocalNodeStatus(checking);
+
+    try {
+      const data = await localNode.getStatus();
+      const next = normalizeLocalNodeStatus(data);
+
+      setLocalNodeStatus(next);
+      notify({
+        title: next.state === 'online'
+          ? 'Local node attached'
+          : next.state === 'disabled'
+            ? 'Local node disabled'
+            : 'Local node degraded',
+        message: next.label,
+        tone: next.state === 'online' ? 'success' : next.state === 'disabled' ? 'info' : 'warning',
+        ttlMs: 3600,
+      });
+
+      return next;
+    } catch (error) {
+      const next = {
+        state: 'error',
+        label: error?.message || 'Local node status failed.',
+        checkedAt: new Date().toISOString(),
+        data: null,
+        error,
+      };
+
+      setLocalNodeStatus(next);
+      notify({
+        title: 'Local node unavailable',
+        message: error?.message || 'Unable to check local node.',
+        tone: 'warning',
+      });
+
+      return next;
+    }
+  }, [localNode, localNodeStatus.data, notify]);
+
+  const runLocalNodeAction = useCallback(
+    async (action) => {
+      const verb = String(action || 'status').trim();
+      const clientAction = localNode?.[verb];
+
+      if (typeof clientAction !== 'function') {
+        throw new Error(`Unsupported local node action: ${verb}`);
+      }
+
+      try {
+        const data = await clientAction();
+        const next = normalizeLocalNodeStatus(data);
+
+        setLocalNodeStatus(next);
+        notify({
+          title: 'Local node control',
+          message: next.label,
+          tone: next.state === 'online' ? 'success' : next.state === 'disabled' ? 'info' : 'warning',
+          ttlMs: 4200,
+        });
+
+        return next;
+      } catch (error) {
+        const next = {
+          state: 'error',
+          label: error?.message || `Local node ${verb} failed.`,
+          checkedAt: new Date().toISOString(),
+          data: null,
+          error,
+        };
+
+        setLocalNodeStatus(next);
+        notify({
+          title: 'Local node control failed',
+          message: next.label,
+          tone: 'warning',
+        });
+
+        return next;
+      }
+    },
+    [localNode, notify],
+  );
+
+  const startLocalNode = useCallback(() => runLocalNodeAction('start'), [runLocalNodeAction]);
+  const stopLocalNode = useCallback(() => runLocalNodeAction('stop'), [runLocalNodeAction]);
+  const restartLocalNode = useCallback(() => runLocalNodeAction('restart'), [runLocalNodeAction]);
+
   const refreshIdentity = useCallback(async () => {
     const checking = {
       status: 'checking',
@@ -519,12 +627,17 @@ export function AppContextProvider({ children }) {
       gateway,
       clients,
       gatewayStatus,
+      localNodeStatus,
       identityState,
       walletState,
       reloadSettings,
       updateSettings,
       resetSettingsToDefaults,
       checkGateway,
+      checkLocalNode,
+      startLocalNode,
+      stopLocalNode,
+      restartLocalNode,
       refreshIdentity,
       refreshWallet,
       toasts,
@@ -543,12 +656,17 @@ export function AppContextProvider({ children }) {
       gateway,
       clients,
       gatewayStatus,
+      localNodeStatus,
       identityState,
       walletState,
       reloadSettings,
       updateSettings,
       resetSettingsToDefaults,
       checkGateway,
+      checkLocalNode,
+      startLocalNode,
+      stopLocalNode,
+      restartLocalNode,
       refreshIdentity,
       refreshWallet,
       toasts,
@@ -571,6 +689,43 @@ export function useAppContext() {
   }
 
   return context;
+}
+
+function normalizeLocalNodeStatus(data) {
+  const lifecycle = String(data?.lifecycleState || data?.lifecycle_state || 'unknown');
+  const enabled = Boolean(data?.enabled);
+  const ok = lifecycle === 'active';
+  const disabled = !enabled || lifecycle === 'disabled';
+  const blocked = lifecycle === 'blocked';
+  const checkedAt = data?.checkedAtMs
+    ? new Date(Number(data.checkedAtMs)).toISOString()
+    : new Date().toISOString();
+
+  let state = 'degraded';
+  if (ok) {
+    state = 'online';
+  } else if (disabled) {
+    state = 'disabled';
+  } else if (blocked) {
+    state = 'degraded';
+  }
+
+  const reason = data?.reason || (disabled ? 'Local node disabled.' : 'Local node degraded.');
+  const privacy = data?.peerIpDisplay === 'forbidden' && data?.publicInboundEnabled === false;
+  const rewardTruth = data?.confirmedRocMinorUnits == null && data?.walletMutation === false && data?.ledgerMutation === false;
+
+  return {
+    state,
+    label: [
+      state === 'online' ? 'Local node attached' : state === 'disabled' ? 'Local node disabled' : 'Local node not active',
+      privacy ? 'private' : 'privacy degraded',
+      rewardTruth ? 'no ROC claim' : 'reward truth degraded',
+      reason,
+    ].filter(Boolean).join(' · '),
+    checkedAt,
+    data,
+    error: null,
+  };
 }
 
 function normalizeTone(tone) {

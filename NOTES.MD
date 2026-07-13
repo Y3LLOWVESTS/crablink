@@ -16321,3 +16321,1337 @@ After this is pasted into `CRABLINK_NOTES.MD`, the next clean move is attaching 
 
 
 ### END NOTE - JULY 1 2026 - 15:00 CST
+
+
+### BEGIN NOTE - JULY 10 2026 - 13:05 CST
+
+Grounded in the newer CrabLink Tauri codebundle and the BUILD_PLAN_Z notes. The codebundle confirms the current Tauri app scope, package check chain, `local_node` command bridge, frontend `localNodeClient`, app-context status normalization, and the local-node boundary scanner; the notes record Phase 6C/6D as the CrabLink work completed for BUILD_PLAN_Z.    
+
+# BUILD_PLAN_Z — CrabLink Tauri Change Notes
+
+## Exhaustive Carryover Notes for `apps/crablink-tauri` / CrabLink Frontend
+
+## 0. Current CrabLink BUILD_PLAN_Z Status
+
+Current repo:
+
+```text
+/Users/mymac/Desktop/crablink
+```
+
+Current app surface:
+
+```text
+apps/crablink-tauri
+```
+
+Current BUILD_PLAN_Z role:
+
+```text
+CrabLink is the normal-user product/client layer.
+For BUILD_PLAN_Z Phase 6, CrabLink gained the safe local user-node controller/status boundary.
+```
+
+Current known status:
+
+```text
+CrabLink local-node controller boundary — GREEN / PARKED
+BUILD_PLAN_Z Phase 6C — CrabLink local-node controller contract: GREEN / PARKED
+BUILD_PLAN_Z Phase 6D — CrabLink local-node boundary scanner: GREEN / PARKED
+```
+
+Known green checks from the notes:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+
+npm run check:local-node-boundary
+npm run build
+npm run check
+```
+
+Known Tauri Rust check:
+
+```bash
+TAURI_CONFIG="$(cat apps/crablink-tauri/src-tauri/tauri.macos.dev-media.conf.json)" \
+  cargo check --manifest-path apps/crablink-tauri/src-tauri/Cargo.toml
+```
+
+The package check chain now includes `check:local-node-boundary`, and the codebundle’s `package.json` shows the full `npm run check` chain ending with `npm run check:local-node-boundary`, `npm run build`, and `npm run check:rust:mac-media`. 
+
+---
+
+## 1. CrabLink’s Role in BUILD_PLAN_Z
+
+CrabLink is not the backend.
+
+Correct role:
+
+```text
+CrabLink = client/product shell
+CrabLink = Tauri-first desktop UX
+CrabLink = local status/probe surface
+CrabLink = user intent/display surface
+CrabLink = optional local user-node controller surface
+```
+
+CrabLink must not become:
+
+```text
+wallet truth
+ledger truth
+receipt truth
+confirmed ROC truth
+node reward authority
+local service authority by default
+service-node registry authority
+QuickChain runtime authority
+ROX/Solana bridge authority
+staking/liquidity/exchange authority
+arbitrary shell/process runner
+```
+
+The newer Tauri codebundle includes the local-node/sidecar IDB language warning against the wrong mental model:
+
+```text
+CrabLink Tauri is the backend.
+React owns services.
+The app can mutate ledger locally.
+Localhost is automatically safe.
+A sidecar grants spend authority.
+A deep link can start services.
+The user must run a full node to use CrabLink.
+```
+
+That IDB exists to prevent hidden service startup, direct wallet/ledger mutation, unsafe binary execution, unbounded logs, public exposure by default, and fake backend truth. 
+
+---
+
+## 2. Main BUILD_PLAN_Z Phase Affecting CrabLink
+
+The main BUILD_PLAN_Z phase that changed CrabLink was:
+
+```text
+Phase 6 — User Node as Passive CrabLink-Managed Runtime
+```
+
+The plan goal was:
+
+```text
+Make the User Node a CrabLink-managed passive verifier.
+```
+
+The plan originally listed:
+
+```text
+CrabLink starts/stops/restarts micronode.
+Micronode binds loopback only.
+Public inbound disabled.
+Verification queue enabled.
+Economic replay worker stub enabled.
+Resource budgets enforced.
+CrabLink shows privacy/status/pending evidence/confirmed ROC.
+```
+
+Important interpretation from the actual implementation:
+
+```text
+We implemented the safe controller/status boundary.
+We intentionally parked real process start/stop/restart.
+The commands exist, but lifecycle mutation is blocked until real sidecar supervision exists.
+```
+
+That was the right safety posture because we do not want CrabLink silently spawning local services before supervision, packaging, consent, permissions, crash handling, resource limits, and user controls are real. 
+
+---
+
+## 3. Phase 6C — CrabLink Local-Node Controller Contract
+
+## 3.1 Goal
+
+Phase 6C moved into the CrabLink repo after `micronode` had already been hardened.
+
+Goal:
+
+```text
+Create a safe lifecycle/status boundary so CrabLink can display/probe a local micronode without silently spawning it or claiming economic truth.
+```
+
+Explicit non-goal:
+
+```text
+Do not implement full sidecar supervision yet.
+Do not spawn micronode yet.
+Do not kill processes yet.
+Do not claim real local-node lifecycle mutation yet.
+```
+
+## 3.2 Rust Tauri command bridge added
+
+Primary Rust file added/changed:
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/local_node.rs
+```
+
+Command module registration files changed:
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/mod.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+```
+
+The Tauri command list in the codebundle includes `apps/crablink-tauri/src-tauri/src/commands/local_node.rs`, and the notes record that the command module was registered in the Tauri invoke handler.  
+
+## 3.3 Commands added
+
+Commands added:
+
+```text
+local_node_status
+local_node_start
+local_node_stop
+local_node_restart
+```
+
+These are Tauri invoke commands. They are exposed through the frontend local-node client.
+
+## 3.4 `local_node_status` behavior
+
+`local_node_status` is the only meaningful active command in the current phase.
+
+It:
+
+```text
+probes an already-running loopback micronode
+defaults to disabled unless request.enabled=true
+only allows explicit loopback HTTP URLs
+probes /healthz
+probes /readyz
+probes /api/v1/status
+extracts privacy posture from micronode status
+extracts economic non-authority posture from micronode status
+returns a bounded status object to the frontend
+```
+
+Expected default local node URL:
+
+```text
+http://127.0.0.1:5310
+```
+
+Important safety:
+
+```text
+localhost is not treated as automatically safe.
+The URL must be explicit loopback.
+The command does not grant spend authority.
+The command does not create receipt/finality truth.
+```
+
+## 3.5 `local_node_start`, `local_node_stop`, `local_node_restart`
+
+These commands exist but are intentionally parked.
+
+They must return blocked/ignored/non-mutating status.
+
+Expected fields:
+
+```text
+supervisorEnabled = false
+sidecarEnabled = false
+startSupported = false
+stopSupported = false
+restartSupported = false
+actionAccepted = false
+```
+
+Meaning:
+
+```text
+The app exposes the future lifecycle shape, but it does not claim to supervise a real sidecar yet.
+```
+
+## 3.6 Explicitly forbidden behavior
+
+The Tauri local-node command bridge must not:
+
+```text
+spawn a process
+kill a process
+shell out
+run arbitrary binary paths
+execute user-provided commands
+start from a deep link
+start silently on app boot
+mutate wallet
+mutate ledger
+claim confirmed ROC
+claim receipt finality
+claim ROX/Solana/bridge behavior
+```
+
+The Phase 6 notes explicitly lock “no process spawning,” “no shell execution,” “no arbitrary binary path,” “no wallet mutation,” “no ledger mutation,” “no confirmed ROC claim,” “no receipt finality claim,” and “no ROX/Solana/bridge behavior.” 
+
+---
+
+## 4. Frontend Local-Node Client Added
+
+## 4.1 Primary file
+
+```text
+apps/crablink-tauri/src/shared/api/localNodeClient.js
+```
+
+## 4.2 Purpose
+
+The local-node client gives React a narrow typed adapter for local-node status/lifecycle commands.
+
+It exposes:
+
+```text
+getStatus()
+start()
+stop()
+restart()
+```
+
+The current codebundle shows `getStatus()` calling:
+
+```javascript
+callTauri('local_node_status', { request: request() })
+```
+
+and the lifecycle methods calling:
+
+```javascript
+callTauri('local_node_start', { request: request() })
+callTauri('local_node_stop', { request: request() })
+callTauri('local_node_restart', { request: request() })
+```
+
+only when Tauri invoke is available. 
+
+## 4.3 Tauri runtime unavailable fallback
+
+If Tauri invoke is unavailable, the client returns a disabled fallback instead of throwing an authority-shaped or fake-success result.
+
+The fallback reports:
+
+```text
+schema = crablink.local_node.status.v1
+enabled = false
+configured = false
+mode = disabled
+baseUrl = http://127.0.0.1:5310
+lifecycleState = disabled
+supervisorEnabled = false
+sidecarEnabled = false
+startSupported = false
+stopSupported = false
+restartSupported = false
+actionAccepted = false
+privacyMode = true
+publicInboundEnabled = false
+peerIpDisplay = forbidden
+verificationEnabled = false
+economicReplayEnabled = false
+verificationQueueStatus = disabled
+economicReplayWorkerStatus = disabled
+pendingEvidenceItems = 0
+confirmedRocMinorUnits = null
+confirmedRocSource = wallet_ledger_receipt_only
+walletMutation = false
+ledgerMutation = false
+walletExecutionParticipant = false
+ledgerReplayEnabled = false
+contentServingEnabled = false
+```
+
+The codebundle shows this exact disabled fallback shape in `localNodeClient.js`. 
+
+## 4.4 Why the fallback matters
+
+This prevents the browser/dev/non-Tauri frontend from pretending a node exists.
+
+Correct behavior:
+
+```text
+No Tauri runtime -> local node unavailable/disabled.
+```
+
+Wrong behavior avoided:
+
+```text
+No Tauri runtime -> fake node active.
+No Tauri runtime -> fake ROC confirmed.
+No Tauri runtime -> fake wallet/ledger status.
+```
+
+## 4.5 URL normalization
+
+`localNodeClient.js` normalizes local node URLs by trimming and removing trailing slashes.
+
+Default:
+
+```text
+DEFAULT_LOCAL_NODE_URL = http://127.0.0.1:5310
+```
+
+The frontend default must remain loopback.
+
+---
+
+## 5. App Settings Changes
+
+## 5.1 Primary files
+
+```text
+apps/crablink-tauri/src/storage.js
+apps/crablink-tauri/src/app/settings.js
+```
+
+## 5.2 Settings added
+
+BUILD_PLAN_Z local-node integration added or locked these settings:
+
+```text
+localNodeEnabled
+localNodeUrl
+localNodeMode
+```
+
+Expected defaults:
+
+```text
+localNodeEnabled = false
+localNodeUrl = http://127.0.0.1:5310
+localNodeMode = disabled
+```
+
+The Phase 6 notes explicitly list these defaults. 
+
+## 5.3 Meaning
+
+Default user posture:
+
+```text
+Local node is off.
+No hidden background node starts.
+No user is forced to run a full node.
+No local service is silently trusted.
+```
+
+This follows BUILD_PLAN_Z’s “users are not sysadmins” posture.
+
+---
+
+## 6. App Context Integration
+
+## 6.1 Primary file
+
+```text
+apps/crablink-tauri/src/app/appContext.js
+```
+
+## 6.2 State added
+
+The app context now includes local-node state:
+
+```text
+localNodeStatus
+```
+
+Initial status:
+
+```text
+state = disabled
+label = Local node disabled
+checkedAt = ""
+data = null
+error = null
+```
+
+The current codebundle shows `INITIAL_LOCAL_NODE_STATUS` with this disabled default. 
+
+## 6.3 Client added
+
+`AppContextProvider` creates:
+
+```javascript
+const localNode = useMemo(() => createLocalNodeClient(settings), [settings]);
+```
+
+and adds it to the shared `clients` object:
+
+```text
+clients.localNode
+```
+
+The codebundle shows this in `appContext.js`. 
+
+## 6.4 Actions added to context
+
+The app context exports:
+
+```text
+checkLocalNode
+startLocalNode
+stopLocalNode
+restartLocalNode
+```
+
+The current codebundle shows these being included in the provider value and dependency list. 
+
+## 6.5 Status normalization
+
+`appContext.js` now contains:
+
+```text
+normalizeLocalNodeStatus(data)
+```
+
+It converts raw Tauri/local-node response into UI state:
+
+```text
+online
+disabled
+degraded
+```
+
+Normalization logic:
+
+```text
+lifecycleState = active -> online
+enabled=false or lifecycleState=disabled -> disabled
+lifecycleState=blocked -> degraded
+other states -> degraded
+```
+
+It also computes:
+
+```text
+privacy = peerIpDisplay === "forbidden" && publicInboundEnabled === false
+rewardTruth = confirmedRocMinorUnits == null && walletMutation === false && ledgerMutation === false
+```
+
+Then the status label includes:
+
+```text
+Local node attached / Local node disabled / Local node not active
+private / privacy degraded
+no ROC claim / reward truth degraded
+reason
+```
+
+The codebundle shows this normalization logic directly. 
+
+## 6.6 Why normalization matters
+
+The UI does not blindly trust a node response.
+
+It evaluates:
+
+```text
+Is the node active?
+Is privacy posture still safe?
+Is reward truth still non-authoritative?
+```
+
+If reward truth degrades, the UI can show a warning instead of a fake “earned ROC” claim.
+
+---
+
+## 7. TopBar / UI Status Integration
+
+## 7.1 Primary file
+
+```text
+apps/crablink-tauri/src/app/shell/TopBar.jsx
+```
+
+## 7.2 Behavior added
+
+The TopBar gained a local-node status pill.
+
+Expected labels from notes:
+
+```text
+Node off by default
+Node when attached
+Node! when degraded
+```
+
+## 7.3 Purpose
+
+The user can see whether a local user node is:
+
+```text
+disabled
+attached/online
+degraded
+```
+
+without opening a raw admin UI.
+
+This supports the BUILD_PLAN_Z user-node doctrine:
+
+```text
+Users are not sysadmins.
+Normal user sees simple status.
+No raw admin UI for normal user.
+```
+
+## 7.4 What the UI must not do
+
+The TopBar pill must not:
+
+```text
+show fake ROC earned
+show fake confirmed rewards
+show wallet/ledger finality
+show raw peer IP
+show raw bind/socket addresses
+start a process from a deep link
+imply user is required to run a node
+```
+
+---
+
+## 8. Settings / Status Rows Added
+
+The frontend added local-node status rows in the app/settings/status surface.
+
+Expected rows from notes:
+
+```text
+Local node enabled
+Local node URL
+Local node status
+Local node boundary
+```
+
+Purpose:
+
+```text
+show whether the local node integration is enabled
+show configured loopback URL
+show current local-node status
+show the safety boundary / non-authority posture
+```
+
+Important:
+
+```text
+These are display/config/status rows.
+They are not wallet/ledger/reward authority.
+```
+
+---
+
+## 9. Tauri Platform Adapter Boundary
+
+## 9.1 Primary file
+
+```text
+apps/crablink-tauri/src/platform/tauriPlatform.js
+```
+
+## 9.2 Role
+
+The platform adapter centralizes direct Tauri invoke calls.
+
+Current pattern:
+
+```javascript
+import { invoke } from "@tauri-apps/api/core";
+
+export function callTauri(command, args = {}) {
+  return invoke(command, args);
+}
+```
+
+The codebundle includes scaffold comments that say typed command names only, no raw shell/eval/native execution, and command results must be redacted before display. 
+
+## 9.3 BUILD_PLAN_Z local-node relevance
+
+`localNodeClient.js` uses this adapter rather than calling `invoke()` directly everywhere.
+
+This matters because:
+
+```text
+React calls adapters, not raw authority surfaces.
+Tauri command names stay centralized and scanner-friendly.
+```
+
+---
+
+## 10. Tauri Command Registration
+
+## 10.1 Primary files
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/mod.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+```
+
+## 10.2 Change
+
+The local-node commands were added to the Tauri command module and registered in the invoke handler.
+
+Required command names:
+
+```text
+local_node_status
+local_node_start
+local_node_stop
+local_node_restart
+```
+
+The local-node boundary scanner checks that these commands are registered. 
+
+## 10.3 Non-regression
+
+Do not remove registration unless replacing it with an equivalent, tested, safer local-node boundary.
+
+Do not add unscanned raw process/shell commands.
+
+---
+
+## 11. Phase 6D — Local-Node Boundary Scanner
+
+## 11.1 Primary script added
+
+```text
+scripts/check-crablink-local-node-boundary.mjs
+```
+
+## 11.2 Package script added
+
+In:
+
+```text
+apps/crablink-tauri/package.json
+```
+
+New script:
+
+```text
+check:local-node-boundary
+```
+
+The codebundle package file shows:
+
+```json
+"check:local-node-boundary": "node ../../scripts/check-crablink-local-node-boundary.mjs"
+```
+
+and the full `check` chain includes `npm run check:local-node-boundary`. 
+
+## 11.3 Scanner purpose
+
+The scanner locks the CrabLink local-node boundary against authority creep.
+
+It enforces:
+
+```text
+local-node integration disabled by default
+default local-node URL is loopback
+Tauri commands are registered
+frontend command allowlist includes local-node commands
+frontend client has disabled fallback
+start/stop/restart are parked
+supervisorEnabled=false
+sidecarEnabled=false
+startSupported=false
+stopSupported=false
+restartSupported=false
+actionAccepted=false
+confirmedRocMinorUnits=null
+confirmedRocSource=wallet_ledger_receipt_only
+walletMutation=false
+ledgerMutation=false
+walletExecutionParticipant=false
+ledgerReplayEnabled=false
+no Command::new
+no std::process::Command
+no spawn
+no kill
+no Solana/ROX/bridge/settlement/validator authority truth claims
+```
+
+The Phase 6 notes record this scanner contract explicitly. 
+
+## 11.4 Scanner fixes made
+
+Two scanner false negatives were fixed:
+
+```text
+1. Initial scanner regex was too brittle around multiline Rust URL guards.
+2. Scanner checked JavaScript startsWith instead of Rust starts_with.
+```
+
+Meaning:
+
+```text
+The scanner was adjusted to match the actual Rust/JS code style without weakening the boundary.
+```
+
+## 11.5 Why this matters
+
+Without the scanner, future frontend/Rust patches could accidentally introduce:
+
+```text
+process spawning
+shell execution
+arbitrary binary path
+silent node start
+fake local-node reward truth
+Solana/ROX/bridge authority
+wallet/ledger mutation claims
+```
+
+The scanner keeps Phase 6 parked safely until a real supervisor phase exists.
+
+---
+
+## 12. SiteVisitAccess Marker Compatibility Fix
+
+## 12.1 File touched
+
+```text
+apps/crablink-tauri/src/pages/site/SiteVisitAccess.jsx
+```
+
+## 12.2 Reason
+
+An existing QuickChain Phase 1 interlock script required the exact marker:
+
+```text
+render unlock follows the live backend quote/pay response only
+```
+
+During the CrabLink local-node work, this marker had to be restored while keeping stronger backend-proof wording.
+
+The notes say this was a marker-only change and did not change behavior. 
+
+## 12.3 Important boundary
+
+Paid content render/unlock still follows:
+
+```text
+backend quote/pay/access response
+backend wallet/ledger accepted receipt
+backend-derived access proof
+```
+
+It must not follow:
+
+```text
+local node state
+local-node status
+cache-only receipt
+frontend mock receipt
+external posture evidence
+b3 hash alone
+manifest alone
+policy allow alone
+```
+
+---
+
+## 13. Package Check Chain
+
+## 13.1 File
+
+```text
+apps/crablink-tauri/package.json
+```
+
+## 13.2 Important scripts
+
+The current package includes:
+
+```text
+check
+check:local-node-boundary
+check:rust:mac-media
+build
+tauri:dev
+tauri:build
+```
+
+The `check` script is broad and includes many QuickChain/Internal ROC boundary scans before build and Rust check. It now includes:
+
+```text
+npm run check:local-node-boundary
+```
+
+then:
+
+```text
+npm run build
+npm run check:rust:mac-media
+```
+
+The codebundle shows this full check chain. 
+
+## 13.3 Important consequence
+
+For CrabLink BUILD_PLAN_Z work, a green `npm run check` means the local-node boundary passes alongside existing QuickChain/Internal ROC client-boundary scanners.
+
+It is stronger than just `npm run build`.
+
+---
+
+## 14. Current Known Files Changed / Important Files
+
+## 14.1 Tauri Rust files
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/local_node.rs
+apps/crablink-tauri/src-tauri/src/commands/mod.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+apps/crablink-tauri/src-tauri/Cargo.toml
+apps/crablink-tauri/src-tauri/Cargo.lock
+apps/crablink-tauri/src-tauri/tauri.macos.dev-media.conf.json
+```
+
+`Cargo.lock` and `Cargo.toml` are part of the app’s Rust boundary. The codebundle shows the Tauri Rust app depends on `reqwest`, `serde`, `serde_json`, `tauri`, `tokio`, `tokio-util`, `blake3`, and other app command dependencies. 
+
+## 14.2 Frontend files
+
+```text
+apps/crablink-tauri/src/shared/api/localNodeClient.js
+apps/crablink-tauri/src/storage.js
+apps/crablink-tauri/src/app/settings.js
+apps/crablink-tauri/src/app/appContext.js
+apps/crablink-tauri/src/app/shell/TopBar.jsx
+apps/crablink-tauri/src/platform/tauriPlatform.js
+apps/crablink-tauri/src/pages/site/SiteVisitAccess.jsx
+```
+
+## 14.3 Scripts
+
+```text
+scripts/check-crablink-local-node-boundary.mjs
+apps/crablink-tauri/package.json
+scripts/check-tauri.sh
+scripts/make_codebundle.sh
+```
+
+## 14.4 Docs / IDBs to watch
+
+The codebundle contains:
+
+```text
+docs/tauri/SIDECAR_LOCAL_NODE_IDB.MD
+docs/tauri/RUN_STACK_AND_MODES_IDB.MD
+docs/tauri/TAURI_COMMAND_BRIDGE_IDB.MD
+docs/tauri/SECURITY.MD
+```
+
+The local-node/sidecar IDB is especially important. It defines future sidecar goals but does not mean those goals are implemented yet. 
+
+---
+
+## 15. What CrabLink Does Now for BUILD_PLAN_Z
+
+Current completed behavior:
+
+```text
+has local-node settings defaults
+has local-node frontend client
+has Tauri commands for status/start/stop/restart
+status command can probe existing loopback micronode
+status command extracts privacy/economic posture
+frontend can normalize local-node status
+TopBar can show disabled/attached/degraded node status
+non-Tauri runtime gets disabled fallback
+start/stop/restart are intentionally blocked/parked
+scanner enforces no process spawn/kill/shell
+scanner enforces no wallet/ledger/confirmed ROC claims
+scanner is wired into npm run check
+```
+
+---
+
+## 16. What CrabLink Does NOT Do Yet
+
+CrabLink does not yet provide:
+
+```text
+real micronode sidecar packaging
+real sidecar supervisor
+real start/stop/restart process lifecycle
+real crash-loop detection
+real crash-loop backoff
+real graceful shutdown
+real bounded log capture
+real binary provenance checks
+real bundled micronode
+real update/signature verification for node binary
+real user consent flow for enabling local node
+real OS resource scheduler
+real battery-aware scheduling
+real local-node tray/background lifecycle
+real local-node data directory management
+real pending evidence submission
+real confirmed ROC display from actual wallet/ledger receipt through local-node path
+real node reward claim UI
+real service-node/macronode management UI
+```
+
+These are future phases.
+
+Do not imply they are complete.
+
+---
+
+## 17. Economic Truth Boundary
+
+CrabLink local-node status must continue to report:
+
+```text
+confirmedRocMinorUnits = null
+confirmedRocSource = wallet_ledger_receipt_only
+walletMutation = false
+ledgerMutation = false
+walletExecutionParticipant = false
+ledgerReplayEnabled = false
+```
+
+Meaning:
+
+```text
+CrabLink can display local-node status.
+CrabLink cannot turn local-node status into ROC truth.
+CrabLink cannot treat pending evidence as confirmed ROC.
+CrabLink cannot treat local-node cache as wallet/ledger receipt.
+```
+
+The frontend disabled fallback in the codebundle shows these exact fields and values. 
+
+---
+
+## 18. Privacy Boundary
+
+CrabLink local-node status must continue to report and/or enforce:
+
+```text
+privacyMode = true
+publicInboundEnabled = false
+peerIpDisplay = forbidden
+```
+
+The app context computes the privacy label from:
+
+```text
+peerIpDisplay === "forbidden"
+publicInboundEnabled === false
+```
+
+If this is not true, the UI labels the node as privacy degraded. 
+
+CrabLink must not expose:
+
+```text
+peer IP
+user residential IP
+raw local bind address beyond configured local node URL
+remote socket address
+provider socket address
+admin bind socket from node status
+transport route
+```
+
+---
+
+## 19. Lifecycle Boundary
+
+Start/stop/restart commands exist but remain parked.
+
+Expected response posture:
+
+```text
+actionAccepted = false
+supervisorEnabled = false
+sidecarEnabled = false
+startSupported = false
+stopSupported = false
+restartSupported = false
+```
+
+This applies to:
+
+```text
+local_node_start
+local_node_stop
+local_node_restart
+```
+
+Wrong behavior:
+
+```text
+actionAccepted = true without real supervisor
+spawn micronode directly
+kill process directly
+shell out
+silently start node on app open
+deep link starts node
+```
+
+---
+
+## 20. Tauri Bridge Non-Regression Checklist
+
+Future CrabLink/Tauri patches must preserve:
+
+```text
+typed command names only
+frontend uses adapters/clients, not scattered raw invoke
+local-node command bridge remains narrow
+local-node default disabled
+default local-node URL loopback
+no Command::new
+no std::process::Command
+no spawn
+no kill
+no shell execution
+no arbitrary binary path
+no deep-link service start
+no wallet mutation
+no ledger mutation
+no fake confirmed ROC
+no receipt finality claim
+no ROX/Solana/bridge/settlement authority
+```
+
+The package scanner exists specifically to enforce these boundaries. 
+
+---
+
+## 21. Frontend Non-Regression Checklist
+
+Future frontend patches must preserve:
+
+```text
+localNodeEnabled defaults false
+localNodeUrl defaults http://127.0.0.1:5310
+localNodeMode defaults disabled
+non-Tauri local node fallback is disabled
+local-node status normalization checks privacy posture
+local-node status normalization checks reward truth posture
+TopBar shows status only, not reward finality
+settings/status rows remain display/config only
+no localStorage flag unlocks paid content
+no cache-only unlocks paid content
+no local-node status unlocks paid content
+no local-node status creates confirmed ROC
+```
+
+---
+
+## 22. Scripts / Boundary Scanner Non-Regression Checklist
+
+Future scanner changes must keep checking:
+
+```text
+required files exist
+local_node.rs exists
+commands/mod.rs exports local_node
+lib.rs registers local_node_* commands
+package.json includes check:local-node-boundary
+npm run check includes local-node boundary
+local node disabled by default
+loopback default URL
+disabled fallback fields
+start/stop/restart parked fields
+no process spawning APIs
+no shell execution APIs
+no wallet/ledger mutation fields set true
+no confirmed ROC value
+no ROX/Solana/bridge authority creep
+```
+
+Do not weaken scanner checks just to make a patch pass.
+
+---
+
+## 23. Recommended CrabLink Baseline Commands
+
+Before touching CrabLink local-node code again:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+
+npm run check:local-node-boundary
+npm run build
+```
+
+Then run the full app check:
+
+```bash
+npm run check
+```
+
+Rust-only Tauri check:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+TAURI_CONFIG="$(cat apps/crablink-tauri/src-tauri/tauri.macos.dev-media.conf.json)" \
+  cargo check --manifest-path apps/crablink-tauri/src-tauri/Cargo.toml
+```
+
+If editing only frontend local-node files:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+
+npm run check:local-node-boundary
+npm run build
+```
+
+If editing Rust Tauri commands:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+
+TAURI_CONFIG="$(cat apps/crablink-tauri/src-tauri/tauri.macos.dev-media.conf.json)" \
+  cargo check --manifest-path apps/crablink-tauri/src-tauri/Cargo.toml
+
+cd apps/crablink-tauri
+npm run check:local-node-boundary
+npm run build
+```
+
+---
+
+## 24. How CrabLink Fits the Next BUILD_PLAN_Z Phase
+
+The next official BUILD_PLAN_Z phase after Phase 7 is:
+
+```text
+Phase 8 — Service Node Foundation
+```
+
+CrabLink probably should not be the first surface touched for Phase 8 unless the task is specifically UI/status display.
+
+Expected Phase 8 CrabLink role:
+
+```text
+display service-node status only after macronode exposes real service-node status
+possibly show optional node-management/status surface
+possibly show local user-node status alongside gateway status
+not invent service-node provider readiness
+not invent storage/index/OAP readiness
+not invent reward binding finality
+not manage macronode as normal-user default
+```
+
+Recommended Phase 8 sequencing:
+
+```text
+1. Start in macronode.
+2. Expose real headless service-node foundation/readiness/status.
+3. Only then project selected status into svc-admin or CrabLink.
+4. Keep CrabLink display-only unless a real backend/Tauri command exists.
+```
+
+Potential future CrabLink work after macronode Phase 8:
+
+```text
+service-node readiness display
+operator-facing service-node attach/status page
+local-node settings refinement
+user consent flow for local-node enablement
+future sidecar supervisor UI, only after Rust supervisor exists
+local node degraded/crash display
+pending evidence display, only from real micronode status
+confirmed ROC display, only from wallet/ledger receipt path
+```
+
+---
+
+## 25. Good CrabLink Phase Marker to Carry Forward
+
+Use this marker:
+
+```text
+CrabLink Tauri — BUILD_PLAN_Z status
+
+Completed:
+- added safe local-node Tauri command bridge:
+  local_node_status
+  local_node_start
+  local_node_stop
+  local_node_restart
+- local_node_status probes existing loopback micronode only
+- local_node_status probes:
+  /healthz
+  /readyz
+  /api/v1/status
+- local_node_status extracts privacy/economic posture
+- start/stop/restart are parked:
+  actionAccepted=false
+  supervisorEnabled=false
+  sidecarEnabled=false
+  startSupported=false
+  stopSupported=false
+  restartSupported=false
+- frontend localNodeClient added
+- non-Tauri disabled fallback added
+- settings defaults:
+  localNodeEnabled=false
+  localNodeUrl=http://127.0.0.1:5310
+  localNodeMode=disabled
+- app context localNodeStatus added
+- app context actions added:
+  checkLocalNode
+  startLocalNode
+  stopLocalNode
+  restartLocalNode
+- local node status normalization added:
+  online
+  disabled
+  degraded
+  private/privacy degraded
+  no ROC claim/reward truth degraded
+- TopBar Node pill added:
+  Node off
+  Node
+  Node!
+- local-node status/settings rows added
+- SiteVisitAccess marker restored for existing QuickChain interlock
+- local-node boundary scanner added:
+  scripts/check-crablink-local-node-boundary.mjs
+- package script added:
+  check:local-node-boundary
+- npm run check includes local-node boundary
+- no process spawning
+- no shell execution
+- no arbitrary binary path
+- no wallet mutation
+- no ledger mutation
+- no confirmed ROC claim
+- no receipt finality claim
+- no ROX/Solana/bridge behavior
+
+Known green:
+npm run check:local-node-boundary
+npm run build
+npm run check
+TAURI_CONFIG="$(cat apps/crablink-tauri/src-tauri/tauri.macos.dev-media.conf.json)" cargo check --manifest-path apps/crablink-tauri/src-tauri/Cargo.toml
+```
+
+---
+
+## 26. Short Summary
+
+```text
+Since starting BUILD_PLAN_Z, CrabLink Tauri has gained the safe local user-node controller/status boundary. It now has typed Tauri commands for local_node_status/start/stop/restart, a frontend localNodeClient, disabled-by-default local-node settings, app-context localNodeStatus normalization, a TopBar node status pill, and a dedicated local-node boundary scanner wired into npm run check. The implementation intentionally probes only an already-running loopback micronode and parks real start/stop/restart lifecycle mutation until a real sidecar supervisor exists. It preserves the critical guarantees: no process spawning, no shell execution, no arbitrary binary path, no wallet mutation, no ledger mutation, no confirmed ROC claim, no receipt finality, and no ROX/Solana/bridge authority.
+```
+
+
+### END NOTE - JULY 10 2026 - 13:05 CST
