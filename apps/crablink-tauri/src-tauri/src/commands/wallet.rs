@@ -51,7 +51,10 @@ pub async fn wallet_balance_gateway(
         )
     };
 
-    let url = format!("{base_url}/wallet/{}/balance", urlencoding::encode(&account));
+    let url = format!(
+        "{base_url}/wallet/{}/balance",
+        urlencoding::encode(&account)
+    );
 
     let mut request = state
         .http

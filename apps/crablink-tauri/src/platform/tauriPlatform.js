@@ -20,6 +20,7 @@ export const ALLOWED_TAURI_COMMANDS = Object.freeze([
   'wallet_balance_gateway',
   'gateway_request',
   'local_node_status',
+  'service_node_operator_status',
   'local_node_start',
   'local_node_stop',
   'local_node_restart',

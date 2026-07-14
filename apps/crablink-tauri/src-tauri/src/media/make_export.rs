@@ -306,7 +306,9 @@ pub fn append_make_export_chunk(
         }
 
         if input.segment_index >= record.segment_count {
-            return Err("segmentIndex is outside the Make export session segment count".to_string());
+            return Err(
+                "segmentIndex is outside the Make export session segment count".to_string(),
+            );
         }
 
         let segment = ensure_segment(record, &input)?;
@@ -461,7 +463,6 @@ pub fn append_make_export_audio_chunk(
     get_make_export_status(store, clean_session_id)
 }
 
-
 pub fn finish_make_export_session(
     store: &MakeExportStore,
     source_store: &VideoSourceStore,
@@ -478,7 +479,9 @@ pub fn finish_make_export_session(
             .ok_or_else(|| "Make export session not found".to_string())?;
 
         if record.status != "receiving" {
-            return Err("Make export session cannot be finished from its current state".to_string());
+            return Err(
+                "Make export session cannot be finished from its current state".to_string(),
+            );
         }
 
         if record.segments.len() != record.segment_count {
@@ -561,7 +564,8 @@ pub fn finish_make_export_session(
     let mut normalized_paths = Vec::with_capacity(segments.len());
 
     for segment in &segments {
-        let normalized_path = normalized_dir.join(format!("normalized-{:03}.mp4", segment.index + 1));
+        let normalized_path =
+            normalized_dir.join(format!("normalized-{:03}.mp4", segment.index + 1));
         run_ffmpeg_normalize_segment(
             &segment.path,
             &normalized_path,
@@ -686,7 +690,9 @@ pub fn finish_make_export_session(
         };
         record.progress_percent = 100;
         record.completed_at_unix_ms = Some(now_unix_ms()?);
-        record.updated_at_unix_ms = record.completed_at_unix_ms.unwrap_or(record.updated_at_unix_ms);
+        record.updated_at_unix_ms = record
+            .completed_at_unix_ms
+            .unwrap_or(record.updated_at_unix_ms);
         record.title = title;
         record.output_file_name = output_file_name;
         record.width = Some(target_width);
@@ -877,10 +883,7 @@ fn ensure_segment<'a>(
     }
 
     let file_name = safe_segment_file_name(
-        input
-            .segment_name
-            .as_deref()
-            .unwrap_or("make-segment.webm"),
+        input.segment_name.as_deref().unwrap_or("make-segment.webm"),
         input.segment_index,
     );
     let path = record.dir.join(&file_name);
@@ -973,7 +976,9 @@ fn ensure_audio_track<'a>(
         volume_pct: input.volume_pct.unwrap_or(100).clamp(0, 150),
         muted: input.muted.unwrap_or(false),
     });
-    record.audio_tracks.sort_by(|left, right| left.id.cmp(&right.id));
+    record
+        .audio_tracks
+        .sort_by(|left, right| left.id.cmp(&right.id));
 
     record
         .audio_tracks
@@ -1016,10 +1021,7 @@ fn run_ffmpeg_normalize_segment(
         "scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,fps={fps},format=yuv420p,setpts=PTS-STARTPTS"
     );
 
-    command
-        .arg("-map")
-        .arg("0:v:0")
-        .arg("-map");
+    command.arg("-map").arg("0:v:0").arg("-map");
 
     if input_has_audio {
         command.arg("0:a:0");
@@ -1058,10 +1060,7 @@ fn run_ffmpeg_normalize_segment(
     run_command(command, "FFmpeg segment normalization failed")
 }
 
-fn run_ffmpeg_concat_normalized(
-    concat_list_path: &Path,
-    output_path: &Path,
-) -> Result<(), String> {
+fn run_ffmpeg_concat_normalized(concat_list_path: &Path, output_path: &Path) -> Result<(), String> {
     let ffmpeg = ffmpeg_binary();
     let mut command = Command::new(&ffmpeg);
     configure_command_stdio(&mut command);
@@ -1119,7 +1118,10 @@ fn run_ffmpeg_mix_audio_tracks(
     let mut mix_inputs: Vec<String> = Vec::new();
 
     if base_has_audio {
-        filter_parts.push("[0:a:0]aresample=48000,aformat=sample_rates=48000:channel_layouts=stereo[basea]".to_string());
+        filter_parts.push(
+            "[0:a:0]aresample=48000,aformat=sample_rates=48000:channel_layouts=stereo[basea]"
+                .to_string(),
+        );
         mix_inputs.push("[basea]".to_string());
     }
 
@@ -1128,7 +1130,10 @@ fn run_ffmpeg_mix_audio_tracks(
         let label = format!("a{}", input_index);
         let volume = (track.volume_pct.clamp(0, 150) as f64 / 100.0).clamp(0.0, 1.5);
         let mut trim = format!("atrim=start={}", ms_to_ffmpeg_seconds(track.trim_start_ms));
-        if let Some(trim_end_ms) = track.trim_end_ms.filter(|value| *value > track.trim_start_ms) {
+        if let Some(trim_end_ms) = track
+            .trim_end_ms
+            .filter(|value| *value > track.trim_start_ms)
+        {
             trim.push_str(&format!(":end={}", ms_to_ffmpeg_seconds(trim_end_ms)));
         }
 
@@ -1295,7 +1300,9 @@ fn status_from_record(record: &MakeExportRecord) -> MakeExportStatus {
         title: record.title.clone(),
         output_file_name: record.output_file_name.clone(),
         output_content_type: "video/mp4".to_string(),
-        output_bytes: fs::metadata(&record.output_path).ok().map(|meta| meta.len()),
+        output_bytes: fs::metadata(&record.output_path)
+            .ok()
+            .map(|meta| meta.len()),
         width: record.width,
         height: record.height,
         fps: record.fps,

@@ -16,6 +16,7 @@ export const ROUTES = Object.freeze({
   library: lazy(() => import('../pages/library/LibraryPage.jsx')),
   receipts: lazy(() => import('../pages/receipts/ReceiptsPage.jsx')),
   quickchain: lazy(() => import('../pages/quickchain/QuickchainReadinessPage.jsx')),
+  operator: lazy(() => import('../pages/operator/ServiceNodeOperatorPage.jsx')),
   text: lazy(() => import('../pages/text/TextPrimitiveReadinessPage.jsx')),
   site: lazy(() => import('../pages/site/SitePage.jsx')),
   image: lazy(() => import('../pages/image/ImagePage.jsx')),
@@ -80,6 +81,7 @@ export const PROVEN_FLOW_ROUTE_KINDS = Object.freeze([
   'library',
   'receipts',
   'quickchain',
+  'operator',
   'text',
 ]);
 

@@ -25,5 +25,12 @@ npm run check:quickchain-phase5-da-fallback-boundary
 npm run check:quickchain-phase5-external-posture-boundary
 npm run check:internal-roc-phase4-wallet-receipt-ux
 npm run check:internal-roc-phase4-confirmation-failure-ux
+npm run check:service-node-operator-boundary
+npm run check:service-node-operator-ui-boundary
+npm run check:signed-reward-binding-boundary
+npm run check:moderation-review-boundary
+npm run check:persistence-review-boundary
+npm run check:phase21-operator-acceptance
+npm run check:tab-hit-testing-boundary
 npm run build
 npm run check:rust:mac-media

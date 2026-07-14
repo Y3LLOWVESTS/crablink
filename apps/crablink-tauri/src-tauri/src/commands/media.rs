@@ -310,9 +310,15 @@ pub fn media_prepare_video_bundle(
     state: State<'_, AppState>,
     input: VideoPrepareBundleInput,
 ) -> Result<VideoJobStatus, String> {
-    let registered_source = match input.source_handle.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+    let registered_source = match input
+        .source_handle
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
         Some(source_handle) => {
-            let registered = get_registered_video_source_for_job(&state.video_sources, source_handle)?;
+            let registered =
+                get_registered_video_source_for_job(&state.video_sources, source_handle)?;
 
             if registered.public.bytes != input.plan.source.bytes {
                 return Err(
@@ -328,7 +334,6 @@ pub fn media_prepare_video_bundle(
 
     start_video_prepare_job(&state.video_jobs, input, registered_source)
 }
-
 
 #[tauri::command]
 pub fn media_make_export_begin(
@@ -521,7 +526,10 @@ fn clean_preview_extension(extension: &str, content_type: &str) -> String {
         .trim_start_matches('.')
         .to_ascii_lowercase();
 
-    if matches!(clean.as_str(), "mp4" | "m4v" | "mov" | "webm" | "ogv" | "ogg") {
+    if matches!(
+        clean.as_str(),
+        "mp4" | "m4v" | "mov" | "webm" | "ogv" | "ogg"
+    ) {
         return clean;
     }
 

@@ -2,12 +2,14 @@
  * RO:WHAT — Preview studio chrome for the crab://make route.
  * RO:WHY — App Integration; Concerns: DX/SEC/RES; keeps the route shell smaller while preserving local creator-studio UX.
  * RO:INTERACTS — MakePage.jsx, make timeline/audio/sequence models, linked video preview, cutout/preset/mode cards.
- * RO:INVARIANTS — display/user intent only; no fake CIDs; no fake receipts; no wallet mutation; no paid unlock from cache.
+ * RO:INVARIANTS — display/user intent only; inactive tabs cannot retain body-level overlays; no fake CIDs, receipts, wallet mutation, or cache-only unlock.
  * RO:METRICS — none.
  * RO:CONFIG — local draft settings and timeline editor state only.
  * RO:SECURITY — no private keys, capabilities, balances, receipts, or backend truth are created here.
  * RO:TEST — npm run build; manual crab://make preview/timeline/audio/linked-video smoke.
  */
+
+import { useEffect } from 'react';
 
 import MakeLinkedMediaComposerPopover from './MakeLinkedMediaComposerPopover.jsx';
 import MakePreviewDrawer from './MakePreviewDrawer.jsx';
@@ -212,6 +214,15 @@ export default function MakePreviewStudioChrome({
     audioPreviewRefs,
     totalDurationMs,
   });
+
+  const isActiveTab = app?.isActiveTab !== false;
+
+  useEffect(() => {
+    if (!isActiveTab && linkedMediaComposer) {
+      closeLinkedMediaComposer();
+    }
+  }, [closeLinkedMediaComposer, isActiveTab, linkedMediaComposer]);
+
   return (
     <div
       className={`make-preview-chrome ${activeDrawer ? 'has-open-drawer' : ''} ${isRecording ? 'is-recording' : ''} ${sequenceActive ? 'is-sequence-active' : ''} ${timelinePreviewActive ? 'has-timeline-preview' : ''} ${timelineLoopPlaying ? 'is-range-looping' : ''} ${trimEditorActive ? 'is-trimming-clip' : ''} ${cursorToolActive ? 'is-timeline-cursor' : ''} ${previewClipMoveDrag ? 'is-moving-timeline-item' : ''}`}
@@ -341,6 +352,7 @@ export default function MakePreviewStudioChrome({
       />
 
       <MakeLinkedMediaComposerPopover
+        active={isActiveTab}
         closeLinkedMediaComposer={closeLinkedMediaComposer}
         handleLinkedMediaComposerSubmit={handleLinkedMediaComposerSubmit}
         linkedMediaComposer={linkedMediaComposer}

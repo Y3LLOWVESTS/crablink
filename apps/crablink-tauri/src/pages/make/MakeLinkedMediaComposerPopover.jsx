@@ -2,7 +2,7 @@
  * RO:WHAT — Portal popover for adding linked media references in crab://make.
  * RO:WHY — App Integration; Concerns: DX/SEC; keeps linked-reference UI separate from the main preview chrome.
  * RO:INTERACTS — MakePreviewStudioChrome and makeLinkedMediaModel-backed draft metadata.
- * RO:INVARIANTS — draft metadata only; no reuse permission; no payout split truth; no wallet mutation; no export authority.
+ * RO:INVARIANTS — active tab only; draft metadata only; no reuse permission, payout truth, wallet mutation, or export authority.
  * RO:METRICS — none.
  * RO:CONFIG — local linked media input state only.
  * RO:SECURITY — no private keys, capabilities, balances, receipts, or backend truth are created here.
@@ -12,12 +12,13 @@
 import { createPortal } from 'react-dom';
 
 export default function MakeLinkedMediaComposerPopover({
+  active = true,
   closeLinkedMediaComposer,
   handleLinkedMediaComposerSubmit,
   linkedMediaComposer,
   updateLinkedMediaComposerField,
 }) {
-  if (!linkedMediaComposer || typeof document === 'undefined') {
+  if (!active || !linkedMediaComposer || typeof document === 'undefined') {
     return null;
   }
 

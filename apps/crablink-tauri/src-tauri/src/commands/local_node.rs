@@ -7,8 +7,8 @@
 //!   - Status can probe an already-running micronode.
 //!   - Start/stop/restart are parked until a real sidecar supervisor exists.
 //!   - No wallet mutation, ledger mutation, receipt finality, or confirmed ROC claim.
-//! RO:SECURITY — No shell execution, arbitrary binary path, direct ledger call,
-//!               wallet authority, public bind, or deep-link startup.
+//!
+//! RO:SECURITY — No shell execution, arbitrary binary path, direct ledger call, wallet authority, public bind, or deep-link startup.
 
 use crate::state::AppState;
 use serde::{Deserialize, Serialize};
@@ -88,11 +88,14 @@ pub async fn local_node_status(
     });
     let enabled = request.enabled.unwrap_or(false);
     let base_url = normalize_local_node_base_url(
-        request.base_url.as_deref().unwrap_or(DEFAULT_LOCAL_NODE_URL),
+        request
+            .base_url
+            .as_deref()
+            .unwrap_or(DEFAULT_LOCAL_NODE_URL),
     )?;
 
     if !enabled {
-        return Ok(disabled_status(base_url, "status", "local node disabled by settings")?);
+        return disabled_status(base_url, "status", "local node disabled by settings");
     }
 
     let timeout_ms = {
@@ -107,7 +110,8 @@ pub async fn local_node_status(
 
     let health = probe_local_node_route(&client, &base_url, "/healthz", timeout_ms).await;
     let ready = probe_local_node_route(&client, &base_url, "/readyz", timeout_ms).await;
-    let status_probe = probe_local_node_route(&client, &base_url, "/api/v1/status", timeout_ms).await;
+    let status_probe =
+        probe_local_node_route(&client, &base_url, "/api/v1/status", timeout_ms).await;
 
     let health_probe = probe_result_to_option(&health);
     let ready_probe = probe_result_to_option(&ready);
@@ -141,7 +145,8 @@ pub async fn local_node_status(
         status.reason = "local micronode attached and reporting safe user-node posture".to_string();
     } else if node_status_ok {
         status.lifecycle_state = "degraded".to_string();
-        status.reason = "local node responded but posture is degraded or not fully private".to_string();
+        status.reason =
+            "local node responded but posture is degraded or not fully private".to_string();
     } else {
         status.lifecycle_state = "degraded".to_string();
         status.reason = "local node enabled but status endpoint is unavailable".to_string();
@@ -185,7 +190,10 @@ async fn parked_action_status(
     });
     let enabled = request.enabled.unwrap_or(false);
     let base_url = normalize_local_node_base_url(
-        request.base_url.as_deref().unwrap_or(DEFAULT_LOCAL_NODE_URL),
+        request
+            .base_url
+            .as_deref()
+            .unwrap_or(DEFAULT_LOCAL_NODE_URL),
     )?;
 
     let mut status = disabled_status(base_url, action, "local node supervisor is parked")?;
@@ -230,7 +238,10 @@ async fn probe_local_node_route(
     let status = response.status().as_u16();
     let ok = (200..300).contains(&status);
     let body = response.text().await.unwrap_or_default();
-    let bounded_body = body.chars().take(MAX_LOCAL_NODE_BODY_BYTES).collect::<String>();
+    let bounded_body = body
+        .chars()
+        .take(MAX_LOCAL_NODE_BODY_BYTES)
+        .collect::<String>();
 
     Ok((
         LocalNodeProbe {
@@ -243,11 +254,17 @@ async fn probe_local_node_route(
     ))
 }
 
-fn probe_result_to_option(result: &Result<(LocalNodeProbe, String), String>) -> Option<LocalNodeProbe> {
+fn probe_result_to_option(
+    result: &Result<(LocalNodeProbe, String), String>,
+) -> Option<LocalNodeProbe> {
     result.as_ref().ok().map(|(probe, _body)| probe.clone())
 }
 
-fn disabled_status(base_url: String, action: &str, reason: &str) -> Result<LocalNodeStatus, String> {
+fn disabled_status(
+    base_url: String,
+    action: &str,
+    reason: &str,
+) -> Result<LocalNodeStatus, String> {
     Ok(LocalNodeStatus {
         schema: "crablink.local_node.status.v1",
         enabled: false,
@@ -295,7 +312,8 @@ fn apply_node_status_truth(status: &mut LocalNodeStatus, node_status: Option<&Va
     };
 
     status.privacy_mode = json_get_bool(value, &["privacy_mode"]).unwrap_or(false);
-    status.public_inbound_enabled = json_get_bool(value, &["public_inbound_enabled"]).unwrap_or(true);
+    status.public_inbound_enabled =
+        json_get_bool(value, &["public_inbound_enabled"]).unwrap_or(true);
     status.peer_ip_display =
         json_get_string(value, &["peer_ip_display"]).unwrap_or_else(|| "unknown".to_string());
     status.verification_enabled = json_get_bool(value, &["verification_enabled"]).unwrap_or(false);
@@ -307,11 +325,9 @@ fn apply_node_status_truth(status: &mut LocalNodeStatus, node_status: Option<&Va
     status.content_serving_enabled =
         json_get_bool(value, &["content_serving_enabled"]).unwrap_or(true);
 
-    status.verification_queue_status = json_get_string(
-        value,
-        &["passive_runtime", "verification_queue", "status"],
-    )
-    .unwrap_or_else(|| "unknown".to_string());
+    status.verification_queue_status =
+        json_get_string(value, &["passive_runtime", "verification_queue", "status"])
+            .unwrap_or_else(|| "unknown".to_string());
 
     status.economic_replay_worker_status = json_get_string(
         value,
@@ -327,11 +343,9 @@ fn apply_node_status_truth(status: &mut LocalNodeStatus, node_status: Option<&Va
 
     status.confirmed_roc_minor_units =
         json_get_string(value, &["passive_runtime", "confirmed_roc_minor_units"]);
-    status.confirmed_roc_source = json_get_string(
-        value,
-        &["passive_runtime", "confirmed_roc_source"],
-    )
-    .unwrap_or_else(|| "wallet_ledger_receipt_only".to_string());
+    status.confirmed_roc_source =
+        json_get_string(value, &["passive_runtime", "confirmed_roc_source"])
+            .unwrap_or_else(|| "wallet_ledger_receipt_only".to_string());
 
     status.wallet_mutation =
         json_get_bool(value, &["passive_runtime", "wallet_mutation"]).unwrap_or(true);

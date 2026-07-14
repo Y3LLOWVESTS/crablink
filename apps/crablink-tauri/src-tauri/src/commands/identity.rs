@@ -48,7 +48,9 @@ pub async fn identity_me_gateway(
     };
 
     let passport = validate_optional_label(
-        passport_subject.as_deref().unwrap_or(default_passport.as_str()),
+        passport_subject
+            .as_deref()
+            .unwrap_or(default_passport.as_str()),
         "passport_subject",
     )?;
     let wallet = validate_optional_label(

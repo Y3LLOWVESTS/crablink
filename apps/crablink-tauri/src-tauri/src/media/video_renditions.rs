@@ -107,7 +107,9 @@ pub struct VideoPlanTruthBoundary {
     pub unlocks_paid_content: bool,
 }
 
-pub fn plan_video_renditions_from_probe(input: VideoRenditionPlanInput) -> VideoRenditionPlanResponse {
+pub fn plan_video_renditions_from_probe(
+    input: VideoRenditionPlanInput,
+) -> VideoRenditionPlanResponse {
     let probe = input.probe;
     let max_entries = input
         .max_entries
@@ -274,7 +276,8 @@ fn clean_master_entry(probe: &VideoProbeSummary) -> VideoRenditionEntry {
         output_file_claimed: false,
         cid: None,
         crab_url: None,
-        note: "Cleaned MP4 master output. Not minted until backend returns a real b3/crab URL.".to_string(),
+        note: "Cleaned MP4 master output. Not minted until backend returns a real b3/crab URL."
+            .to_string(),
     }
 }
 
@@ -324,8 +327,9 @@ fn push_video_profile(
     }
 
     let target_height = profile.max_height.min(source_height);
-    let target_width =
-        even_u32(((source_width as f64 / source_height as f64) * target_height as f64).round() as u32);
+    let target_width = even_u32(
+        ((source_width as f64 / source_height as f64) * target_height as f64).round() as u32,
+    );
 
     entries.push(VideoRenditionEntry {
         role: profile.role.to_string(),
@@ -345,11 +349,18 @@ fn push_video_profile(
         output_file_claimed: false,
         cid: None,
         crab_url: None,
-        note: "Generated MP4 rendition. Not minted until backend upload returns real truth.".to_string(),
+        note: "Generated MP4 rendition. Not minted until backend upload returns real truth."
+            .to_string(),
     });
 }
 
-fn image_entry(role: &str, label: &str, width: u32, height: u32, note: &str) -> VideoRenditionEntry {
+fn image_entry(
+    role: &str,
+    label: &str,
+    width: u32,
+    height: u32,
+    note: &str,
+) -> VideoRenditionEntry {
     VideoRenditionEntry {
         role: role.to_string(),
         label: label.to_string(),

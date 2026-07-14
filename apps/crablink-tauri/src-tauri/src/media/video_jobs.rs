@@ -301,9 +301,9 @@ pub fn cancel_video_prepare_job(
         .ok_or_else(|| "video job not found".to_string())?;
 
     if record.status == "completed" {
-        record.warnings.push(
-            "Cancel was requested after the prepare job had already completed.".to_string(),
-        );
+        record
+            .warnings
+            .push("Cancel was requested after the prepare job had already completed.".to_string());
         record.updated_at_unix_ms = now;
         return Ok(record.clone());
     }
@@ -601,13 +601,7 @@ fn mark_completed(store: &VideoJobStore, job_id: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn mark_failed(
-    store: &VideoJobStore,
-    job_id: &str,
-    code: &str,
-    message: &str,
-    retryable: bool,
-) {
+fn mark_failed(store: &VideoJobStore, job_id: &str, code: &str, message: &str, retryable: bool) {
     let now = now_unix_ms().unwrap_or(0);
 
     if let Ok(mut guard) = store.lock() {

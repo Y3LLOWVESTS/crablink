@@ -175,7 +175,11 @@ pub async fn hash_staged_asset_bytes(
     request: StagedAssetHashRequest,
 ) -> Result<StagedAssetHashResponse, String> {
     let asset_kind = normalize_staged_asset_kind(request.expected_asset_kind.as_deref());
-    let mime_prefix = if asset_kind == "image" { "image/" } else { "video/" };
+    let mime_prefix = if asset_kind == "image" {
+        "image/"
+    } else {
+        "video/"
+    };
     let default_content_type = if asset_kind == "image" {
         "image/jpeg"
     } else {
@@ -315,10 +319,12 @@ pub async fn fetch_asset_bytes_gateway(
         }
     }
 
-    let response = builder
-        .send()
-        .await
-        .map_err(|err| format!("asset byte gateway request failed: {}", redact_error(&err.to_string())))?;
+    let response = builder.send().await.map_err(|err| {
+        format!(
+            "asset byte gateway request failed: {}",
+            redact_error(&err.to_string())
+        )
+    })?;
 
     let status = response.status().as_u16();
     let response_headers = response.headers().clone();
@@ -349,7 +355,9 @@ pub async fn fetch_asset_bytes_gateway(
 
     if content_type.is_empty()
         || content_type.eq_ignore_ascii_case("application/octet-stream")
-        || content_type.to_ascii_lowercase().starts_with("application/octet-stream")
+        || content_type
+            .to_ascii_lowercase()
+            .starts_with("application/octet-stream")
     {
         let clean_hint = hint.trim();
 
@@ -362,10 +370,12 @@ pub async fn fetch_asset_bytes_gateway(
         content_type = "application/octet-stream".to_string();
     }
 
-    let body = response
-        .bytes()
-        .await
-        .map_err(|err| format!("asset byte gateway response read failed: {}", redact_error(&err.to_string())))?;
+    let body = response.bytes().await.map_err(|err| {
+        format!(
+            "asset byte gateway response read failed: {}",
+            redact_error(&err.to_string())
+        )
+    })?;
 
     if body.len() > max_bytes {
         return Err(format!(
@@ -545,7 +555,10 @@ async fn upload_staged_paid_asset_gateway(
     }
 
     let path = resolve_video_staged_handle_to_path(&request.staged_handle)?;
-    let max_bytes = request.max_bytes.unwrap_or(spec.max_bytes).min(spec.max_bytes);
+    let max_bytes = request
+        .max_bytes
+        .unwrap_or(spec.max_bytes)
+        .min(spec.max_bytes);
 
     let metadata = std::fs::metadata(&path)
         .map_err(|_| format!("{} staged file is not available", spec.bridge_label))?;
@@ -606,7 +619,11 @@ async fn upload_staged_paid_asset_gateway(
     let correlation_id = header_value(&headers, "x-correlation-id")
         .unwrap_or_else(|| format!("crablink-tauri-{}-staged-upload", spec.asset_kind));
     let idempotency_key = header_value(&headers, "Idempotency-Key")
-        .or_else(|| request.idempotency_key.map(|value| value.trim().to_string()))
+        .or_else(|| {
+            request
+                .idempotency_key
+                .map(|value| value.trim().to_string())
+        })
         .filter(|value| !value.is_empty())
         .ok_or_else(|| format!("{} requires an Idempotency-Key", spec.bridge_label))?;
 
@@ -677,7 +694,12 @@ async fn upload_staged_paid_asset_gateway(
     let body_text = response
         .text()
         .await
-        .map_err(|err| format!("{} gateway response read failed: {}", spec.bridge_label, err))
+        .map_err(|err| {
+            format!(
+                "{} gateway response read failed: {}",
+                spec.bridge_label, err
+            )
+        })
         .and_then(response_text_with_limit)?;
 
     Ok(PaidAssetUploadResponse {
@@ -698,7 +720,10 @@ async fn upload_paid_asset_gateway(
     spec: PaidAssetUploadSpec,
 ) -> Result<PaidAssetUploadResponse, String> {
     if request.body_bytes.is_empty() {
-        return Err(format!("{} requires non-empty {} bytes", spec.bridge_label, spec.asset_kind));
+        return Err(format!(
+            "{} requires non-empty {} bytes",
+            spec.bridge_label, spec.asset_kind
+        ));
     }
 
     if request.body_bytes.len() > spec.max_bytes {
@@ -730,7 +755,11 @@ async fn upload_paid_asset_gateway(
     let correlation_id = header_value(&request_headers, "x-correlation-id")
         .unwrap_or_else(|| format!("crablink-tauri-{}-upload", spec.asset_kind));
     let idempotency_key = header_value(&request_headers, "Idempotency-Key")
-        .or_else(|| request.idempotency_key.map(|value| value.trim().to_string()))
+        .or_else(|| {
+            request
+                .idempotency_key
+                .map(|value| value.trim().to_string())
+        })
         .filter(|value| !value.is_empty())
         .ok_or_else(|| format!("{} requires an Idempotency-Key", spec.bridge_label))?;
 
@@ -783,10 +812,13 @@ async fn upload_paid_asset_gateway(
         }
     }
 
-    let response = builder
-        .send()
-        .await
-        .map_err(|err| format!("{} gateway request failed: {}", spec.bridge_label, redact_error(&err.to_string())))?;
+    let response = builder.send().await.map_err(|err| {
+        format!(
+            "{} gateway request failed: {}",
+            spec.bridge_label,
+            redact_error(&err.to_string())
+        )
+    })?;
 
     let status = response.status().as_u16();
     let content_type = response
@@ -806,7 +838,12 @@ async fn upload_paid_asset_gateway(
     let body_text = response
         .text()
         .await
-        .map_err(|err| format!("{} gateway response read failed: {}", spec.bridge_label, err))
+        .map_err(|err| {
+            format!(
+                "{} gateway response read failed: {}",
+                spec.bridge_label, err
+            )
+        })
         .and_then(response_text_with_limit)?;
 
     Ok(PaidAssetUploadResponse {
@@ -822,8 +859,8 @@ async fn upload_paid_asset_gateway(
 }
 
 fn hash_file_blake3(path: PathBuf) -> Result<String, String> {
-    let mut file =
-        std::fs::File::open(path).map_err(|_| "staged hash file could not be opened".to_string())?;
+    let mut file = std::fs::File::open(path)
+        .map_err(|_| "staged hash file could not be opened".to_string())?;
     let mut hasher = blake3::Hasher::new();
     let mut buffer = [0_u8; 64 * 1024];
 
@@ -843,7 +880,12 @@ fn hash_file_blake3(path: PathBuf) -> Result<String, String> {
 }
 
 fn normalize_staged_asset_kind(value: Option<&str>) -> String {
-    match value.unwrap_or("video").trim().to_ascii_lowercase().as_str() {
+    match value
+        .unwrap_or("video")
+        .trim()
+        .to_ascii_lowercase()
+        .as_str()
+    {
         "image" => "image".to_string(),
         _ => "video".to_string(),
     }
@@ -901,7 +943,9 @@ fn safe_path_segment(value: &str, label: &str) -> Result<String, String> {
         .chars()
         .all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '-')
     {
-        return Err(format!("staged handle {label} contains unsupported characters"));
+        return Err(format!(
+            "staged handle {label} contains unsupported characters"
+        ));
     }
 
     Ok(clean.to_string())
@@ -962,7 +1006,9 @@ fn validate_required_paid_upload_headers(
 
     for name in required {
         if header_value(headers, name).is_none() {
-            return Err(format!("{asset_kind} upload requires paid proof header {name}"));
+            return Err(format!(
+                "{asset_kind} upload requires paid proof header {name}"
+            ));
         }
     }
 
@@ -977,7 +1023,9 @@ fn normalize_asset_bytes_route(value: &str) -> Result<String, String> {
     }
 
     if raw.starts_with("http://") || raw.starts_with("https://") {
-        return Err("asset byte fetch route must be a gateway path, not an absolute URL".to_string());
+        return Err(
+            "asset byte fetch route must be a gateway path, not an absolute URL".to_string(),
+        );
     }
 
     let path = raw.split('?').next().unwrap_or(raw).trim();
@@ -1081,8 +1129,7 @@ fn sanitize_header_name(value: &str) -> Option<HeaderName> {
 fn sanitize_header_value(value: &str) -> Option<HeaderValue> {
     let clean = value
         .replace("\r\n", " ")
-        .replace('\r', " ")
-        .replace('\n', " ")
+        .replace(['\r', '\n'], " ")
         .split_whitespace()
         .collect::<Vec<_>>()
         .join(" ");

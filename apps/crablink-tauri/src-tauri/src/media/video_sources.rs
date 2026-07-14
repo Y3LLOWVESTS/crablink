@@ -138,7 +138,10 @@ pub fn register_video_source_from_path(
 
     let supported_input = is_supported_extension(&extension) || content_type.starts_with("video/");
     if !supported_input {
-        return Err("video source extension/content type is not supported by the current planner".to_string());
+        return Err(
+            "video source extension/content type is not supported by the current planner"
+                .to_string(),
+        );
     }
 
     let source_handle = format!(
@@ -191,7 +194,8 @@ pub fn register_video_source_from_path(
             .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
             .map(|duration| duration.as_millis()),
         registered_at_unix_ms: now,
-        source_kind: clean_string(input.source).unwrap_or_else(|| "native_path_registration".to_string()),
+        source_kind: clean_string(input.source)
+            .unwrap_or_else(|| "native_path_registration".to_string()),
         supported_input,
         native_file_authority: true,
         warnings,

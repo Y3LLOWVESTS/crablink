@@ -154,8 +154,7 @@ fn sanitize_header_name(value: &str) -> Option<HeaderName> {
 fn sanitize_header_value(value: &str) -> Option<HeaderValue> {
     let clean = value
         .replace("\r\n", " ")
-        .replace('\r', " ")
-        .replace('\n', " ")
+        .replace(['\r', '\n'], " ")
         .split_whitespace()
         .collect::<Vec<_>>()
         .join(" ");

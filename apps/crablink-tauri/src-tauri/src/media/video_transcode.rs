@@ -312,12 +312,8 @@ pub fn probe_staged_output(ffprobe: &str, target: &VideoTranscodeTarget) -> Vide
         .and_then(|stream| f64_string_field(stream, "duration"))
         .or_else(|| format_duration_seconds(&root));
 
-    let dimensions_within_target = dimensions_within_target(
-        target.width,
-        target.height,
-        actual_width,
-        actual_height,
-    );
+    let dimensions_within_target =
+        dimensions_within_target(target.width, target.height, actual_width, actual_height);
 
     let status = if actual_width.is_some() && actual_height.is_some() {
         "verified"

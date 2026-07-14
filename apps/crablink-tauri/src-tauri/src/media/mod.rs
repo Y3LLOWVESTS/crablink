@@ -19,9 +19,7 @@ pub use video_jobs::{
     cancel_video_prepare_job, get_video_prepare_job_status, new_video_job_store,
     start_video_prepare_job, VideoJobStatus, VideoJobStore, VideoPrepareBundleInput,
 };
-pub use video_probe::{
-    probe_video_from_local_facts, VideoProbeInput, VideoProbeSummary,
-};
+pub use video_probe::{probe_video_from_local_facts, VideoProbeInput, VideoProbeSummary};
 pub use video_renditions::{
     plan_video_renditions_from_probe, VideoRenditionPlanInput, VideoRenditionPlanResponse,
 };

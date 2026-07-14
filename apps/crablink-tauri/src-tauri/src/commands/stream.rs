@@ -40,9 +40,16 @@ pub fn start_local_stream_session(
     request: StartLocalStreamSessionRequest,
 ) -> Result<LocalStreamSession, String> {
     let now = now_millis()?;
-    let title = clean_label(request.title.as_deref().unwrap_or("Untitled stream"), "title", 180)?;
+    let title = clean_label(
+        request.title.as_deref().unwrap_or("Untitled stream"),
+        "title",
+        180,
+    )?;
     let channel_display = clean_label(
-        request.channel_display.as_deref().unwrap_or("Local stream room"),
+        request
+            .channel_display
+            .as_deref()
+            .unwrap_or("Local stream room"),
         "channel_display",
         120,
     )?;
@@ -59,7 +66,10 @@ pub fn start_local_stream_session(
         80,
     )?;
     let preview_label = clean_label(
-        request.preview_label.as_deref().unwrap_or("No local preview"),
+        request
+            .preview_label
+            .as_deref()
+            .unwrap_or("No local preview"),
         "preview_label",
         160,
     )?;

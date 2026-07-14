@@ -219,6 +219,14 @@ selected_root_files() {
 selected_scripts() {
   for script in \
     "$ROOT/scripts/check-tauri.sh" \
+    "$ROOT/scripts/check-crablink-service-node-operator-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-service-node-operator-ui-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-signed-reward-binding-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-moderation-review-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-persistence-review-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-phase21-operator-acceptance.mjs" \
+    "$ROOT/scripts/check-crablink-tab-hit-testing-boundary.mjs" \
+    "$ROOT/scripts/check-phase21-operator-acceptance.sh" \
     "$ROOT/scripts/check-quickchain-client-boundary.mjs" \
     "$ROOT/scripts/check-quickchain-paid-cache-boundary.mjs" \
     "$ROOT/scripts/check-internal-roc-paid-content-boundary.mjs" \
@@ -434,6 +442,14 @@ binary_count="$(binary_files | count_stream)"
   echo "packages/crablink-core/"
   echo "packages/crablink-platform/"
   echo "scripts/check-tauri.sh"
+  echo "scripts/check-crablink-service-node-operator-boundary.mjs"
+  echo "scripts/check-crablink-service-node-operator-ui-boundary.mjs"
+  echo "scripts/check-crablink-signed-reward-binding-boundary.mjs"
+  echo "scripts/check-crablink-moderation-review-boundary.mjs"
+  echo "scripts/check-crablink-persistence-review-boundary.mjs"
+  echo "scripts/check-crablink-phase21-operator-acceptance.mjs"
+  echo "scripts/check-crablink-tab-hit-testing-boundary.mjs"
+  echo "scripts/check-phase21-operator-acceptance.sh"
   echo "scripts/check-quickchain-client-boundary.mjs"
   echo "scripts/check-quickchain-paid-cache-boundary.mjs"
   echo "scripts/check-internal-roc-paid-content-boundary.mjs"

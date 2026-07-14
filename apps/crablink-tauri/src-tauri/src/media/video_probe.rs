@@ -92,8 +92,8 @@ pub fn probe_video_from_local_facts(input: VideoProbeInput) -> VideoProbeSummary
     let guessed_container = guess_container(&raw_name, &content_type).to_string();
     let input_family = input_family_for(&guessed_container, &content_type).to_string();
     let supported_input = is_supported_input(&guessed_container, &content_type);
-    let needs_transcode =
-        guessed_container != TARGET_CONTAINER || !content_type.to_ascii_lowercase().starts_with("video/mp4");
+    let needs_transcode = guessed_container != TARGET_CONTAINER
+        || !content_type.to_ascii_lowercase().starts_with("video/mp4");
 
     let mut warnings = Vec::new();
 
@@ -240,7 +240,10 @@ fn guess_container(file_name: &str, content_type: &str) -> &'static str {
         "m4v"
     } else if lower_type.contains("webm") || lower_name.ends_with(".webm") {
         "webm"
-    } else if lower_type.contains("ogg") || lower_name.ends_with(".ogv") || lower_name.ends_with(".ogg") {
+    } else if lower_type.contains("ogg")
+        || lower_name.ends_with(".ogv")
+        || lower_name.ends_with(".ogg")
+    {
         "ogg"
     } else if lower_name.ends_with(".mkv") {
         "mkv"
@@ -265,8 +268,10 @@ fn input_family_for(container: &str, content_type: &str) -> &'static str {
 }
 
 fn is_supported_input(container: &str, content_type: &str) -> bool {
-    matches!(container, "mp4" | "m4v" | "mov" | "webm" | "ogg" | "mkv" | "avi")
-        || content_type.to_ascii_lowercase().starts_with("video/")
+    matches!(
+        container,
+        "mp4" | "m4v" | "mov" | "webm" | "ogg" | "mkv" | "avi"
+    ) || content_type.to_ascii_lowercase().starts_with("video/")
 }
 
 fn resolution_label(width: Option<u32>, height: Option<u32>) -> Option<String> {

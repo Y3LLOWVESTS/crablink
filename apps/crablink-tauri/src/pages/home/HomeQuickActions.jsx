@@ -72,6 +72,13 @@ function routeGroups({ proofSite, proofImage }) {
           risk: 'future blueprint only',
         },
         {
+          kind: 'operator',
+          label: 'Service Node Operator',
+          displayRoute: 'crab://operator',
+          purpose: 'optional local/remote read-only Service Node connection and canonical status',
+          risk: 'explicit operator mode',
+        },
+        {
           kind: 'home',
           label: 'Home',
           displayRoute: 'crab://home',

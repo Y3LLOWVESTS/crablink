@@ -17655,3 +17655,1087 @@ Since starting BUILD_PLAN_Z, CrabLink Tauri has gained the safe local user-node 
 
 
 ### END NOTE - JULY 10 2026 - 13:05 CST
+
+
+
+
+### BEGIN NOTE - JULY 14 2026 - 16:45 CST
+
+
+# CrabLink / `crablink-tauri` — Session Changelog Notes
+
+## Phase 21 Operator Mode
+
+Completed the CrabLink-side implementation of **Service Node Operator Mode** and added the `crab://operator` route as an optional controller surface for a local or remote Service Node.
+
+CrabLink remains a friendly client/controller rather than becoming the node daemon, policy engine, wallet, ledger, registry, quorum authority, storage authority, or external-finality authority.
+
+## Optional Service Node connection
+
+* Added explicit enable/disable control for Service Node Operator Mode.
+
+* Kept Operator Mode **disabled by default**.
+
+* Added separate connection postures:
+
+  * local Service Node
+  * remote Service Node
+
+* Added local connection validation requiring an explicit loopback HTTP or HTTPS endpoint.
+
+* Added remote connection validation requiring non-loopback HTTPS.
+
+* Rejected URLs containing:
+
+  * embedded usernames or passwords
+  * query strings
+  * fragments
+  * unsupported schemes
+
+* Added the default local endpoint:
+
+  ```text
+  http://127.0.0.1:8080
+  ```
+
+* Added bounded request timeouts and response-body limits.
+
+* Made connection failures degrade only the Operator page rather than breaking normal CrabLink operation.
+
+* Preserved CrabLink operation when no Service Node is configured or running.
+
+* Prevented CrabLink from starting, stopping, restarting, killing, or otherwise managing the Service Node process.
+
+## Ephemeral administrator authentication
+
+* Added an administrator credential field for authenticated Service Node operations.
+* Rendered the credential as a password-style input.
+* Kept the credential only in route-local React memory.
+* Prevented the credential from being written to:
+
+  * CrabLink settings
+  * `localStorage`
+  * `sessionStorage`
+  * IndexedDB
+  * browser cache
+* Cleared the credential when Operator Mode is disabled.
+* Added explicit credential-clear behavior.
+* Added validation for:
+
+  * maximum credential length
+  * control characters
+  * unsafe whitespace
+* Prevented credentials from being returned, logged, or projected into status output.
+
+## Canonical Service Node status
+
+Added the Tauri command:
+
+```text
+service_node_operator_status
+```
+
+The command now reads the Service Node’s real:
+
+* `/healthz`
+* `/readyz`
+* `/api/v1/status`
+
+CrabLink projects the backend response into a bounded canonical status view containing information such as:
+
+* connection state
+* Service Node profile
+* node role
+* readiness
+* headless posture
+* administrator UI posture
+* public inbound posture
+* IP-publication posture
+* moderation state
+* persistence-review counts
+* reward-recipient binding state
+* lifecycle state
+* quorum state
+* confirmed issuance evidence
+
+The projection remains observational and cannot authorize backend state changes.
+
+## Receipt-derived confirmed ROC display
+
+* Added a dedicated **Confirmed ROC issuance evidence** section.
+
+* Prevented pending reward plans, evidence records, review state, binding state, cached values, or quorum eligibility from appearing as confirmed ROC.
+
+* Required accepted wallet and ledger receipt evidence before projecting confirmed issuance.
+
+* Preserved the distinction between:
+
+  * pending evidence
+  * reward planning
+  * receipt evidence
+  * confirmed issuance
+  * external finality
+
+* Kept external finality explicitly false even when valid local ledger receipt evidence exists.
+
+* Added a truthful empty state:
+
+  ```text
+  NO CONFIRMED RECEIPT EVIDENCE
+  ```
+
+* Added tests proving pending reward material cannot become confirmed issuance evidence.
+
+## Signed reward-recipient binding
+
+Added the Tauri command:
+
+```text
+service_node_operator_bind_reward_recipient
+```
+
+Implemented a signed reward-recipient intent compatible with the `macronode` contract.
+
+### Signed intent behavior
+
+* Added the canonical signing domain:
+
+  ```text
+  crablink.reward_binding.intent.v1
+  ```
+
+* Added the signing algorithm:
+
+  ```text
+  admin_bearer_blake3_keyed_v1
+  ```
+
+* Bound the signature to the exact:
+
+  * administrator credential
+  * reward-recipient `@address`
+  * creation timestamp
+  * nonce
+
+* Generated a fresh nonce for each submission.
+
+* Submitted the exact canonical payload expected by `macronode`.
+
+* Required the backend to return:
+
+  ```text
+  signedIntentVerified: true
+  ```
+
+* Rejected responses that attempted to claim:
+
+  * registry finality
+  * wallet mutation
+  * ledger mutation
+  * confirmed ROC
+  * external settlement
+
+### Reward-binding UI
+
+* Added a canonical lowercase CrabLink/RON `@address` input.
+
+* Added an explicit acknowledgment:
+
+  ```text
+  I understand this records a binding request only
+  ```
+
+* Added the action:
+
+  ```text
+  Sign and submit binding request
+  ```
+
+* Added clear-form behavior.
+
+* Added request status and failure display.
+
+* Refreshed canonical Service Node status after a successful request.
+
+* Kept binding explicitly separate from payment, payout, receipt creation, and confirmed ROC.
+
+## Moderation-review queue
+
+Added Tauri commands:
+
+```text
+service_node_operator_moderation_pending
+service_node_operator_moderation_decide
+```
+
+Implemented a bounded authenticated moderation-review workflow.
+
+### Queue behavior
+
+* Added bounded pending-review retrieval.
+* Enforced the backend queue limit.
+* Accepted pending moderation items only.
+* Required canonical lowercase `b3:<64 hex>` object IDs.
+* Displayed:
+
+  * object ID
+  * review sequence
+  * source
+  * reason
+  * effective policy state
+  * current serve permission
+* Refused malformed, oversized, or authority-poisoned responses.
+
+### Moderation decisions
+
+* Added explicit approve and reject operations.
+
+* Defined approval as **approval for escalation**, not policy activation.
+
+* Required exact backend result states.
+
+* Made decisions explicit rather than automatic.
+
+* Added required acknowledgment before mutation:
+
+  ```text
+  I understand this changes review metadata only
+  ```
+
+* Refreshed the queue and canonical Service Node status after a decision.
+
+* Rejected responses claiming:
+
+  * policy mutation
+  * runtime activation
+  * storage deletion
+  * provider withdrawal
+  * reward finality
+  * wallet mutation
+  * ledger mutation
+
+## Persistence-review queue
+
+Added Tauri commands:
+
+```text
+service_node_operator_persistence_pending
+service_node_operator_persistence_decide
+```
+
+Added:
+
+```text
+PersistenceReviewCard.jsx
+```
+
+Implemented the complete CrabLink persistence-review interface.
+
+### Pending persistence candidates
+
+* Added bounded pending-candidate loading.
+* Used a client default limit of 100.
+* Enforced the client maximum of 256.
+* Accepted only undecided backend candidate states:
+
+  * `ephemeral_unvetted`
+  * `pending_review`
+* Required candidates to be initially ineligible for durable storage.
+* Required canonical lowercase `b3:` object identifiers.
+* Displayed:
+
+  * object ID
+  * asset kind
+  * current persistence state
+  * persistence eligibility
+  * durable-byte status
+
+### Persistence decisions
+
+Added explicit actions for:
+
+* submit for review
+* approve persistence eligibility
+* reject persistence
+
+Required exact backend transitions:
+
+```text
+ephemeral_unvetted
+→ pending_review
+→ verified_persistent
+```
+
+or:
+
+```text
+ephemeral_unvetted / pending_review
+→ operator_blocked
+```
+
+Added the acknowledgment:
+
+```text
+I understand approval changes eligibility metadata only
+```
+
+Added the explicit truth statement:
+
+```text
+No durable bytes were written.
+```
+
+Approval does not:
+
+* write object bytes
+* pin the object
+* guarantee storage residency
+* override moderation
+* delete storage
+* withdraw providers
+* create a reward
+* mutate a wallet
+* append a ledger receipt
+* claim external finality
+
+The queue and canonical Service Node status refresh after each decision.
+
+## Operator page and interface
+
+Expanded `ServiceNodeOperatorPage.jsx` into the full Phase 21 controller interface.
+
+The page now includes:
+
+* disabled-by-default posture
+* local/remote connection profile
+* administrator credential handling
+* canonical attachment state
+* backend-derived Service Node status
+* confirmed ROC receipt evidence
+* signed reward-recipient binding
+* moderation-review queue
+* persistence-review queue
+* explicit truth and authority boundaries throughout
+
+The page was visually inspected in the running Tauri application and the new Phase 21 sections rendered successfully.
+
+## Shared frontend model and client
+
+Expanded the shared Service Node Operator surfaces, including:
+
+```text
+src/shared/operator/serviceNodeOperatorModel.js
+src/shared/api/serviceNodeOperatorClient.js
+```
+
+* Added the operator connection model.
+* Added disabled-by-default state.
+* Added local and remote mode handling.
+* Added Tauri command wrappers.
+* Kept Service Node commands confined to operator-owned frontend modules.
+* Prevented Operator Mode commands from becoming ambient capability across unrelated CrabLink pages.
+* Kept all administrator state route-local and ephemeral.
+
+## Tauri Rust command bridge
+
+Added and registered the Operator Mode command modules:
+
+```text
+operator_node
+operator_reward_binding
+operator_moderation_review
+operator_persistence_review
+```
+
+Updated:
+
+```text
+src-tauri/src/commands/mod.rs
+src-tauri/src/lib.rs
+```
+
+Registered the full command family:
+
+```text
+service_node_operator_status
+service_node_operator_bind_reward_recipient
+service_node_operator_moderation_pending
+service_node_operator_moderation_decide
+service_node_operator_persistence_pending
+service_node_operator_persistence_decide
+```
+
+The Operator Mode command bridge uses native Rust HTTP validation and does not expose raw browser fetch authority.
+
+## Boundary and acceptance tooling
+
+Added focused boundary gates:
+
+```text
+check-crablink-service-node-operator-boundary.mjs
+check-crablink-service-node-operator-ui-boundary.mjs
+check-crablink-signed-reward-binding-boundary.mjs
+check-crablink-moderation-review-boundary.mjs
+check-crablink-persistence-review-boundary.mjs
+```
+
+Added the integrated Phase 21 gate:
+
+```text
+check-crablink-phase21-operator-acceptance.mjs
+```
+
+The integrated checker verifies that:
+
+* Operator Mode is disabled by default.
+* Operator commands remain confined to the active operator frontend graph.
+* credentials remain memory-only.
+* CrabLink contains no daemon process-management path.
+* signed binding remains non-authoritative.
+* moderation cannot mutate or activate policy.
+* persistence approval cannot claim durable bytes.
+* confirmed ROC remains receipt-derived.
+* all Operator command families are explicitly registered.
+
+Added the cross-repository acceptance runner:
+
+```text
+scripts/check-phase21-operator-acceptance.sh
+```
+
+The runner verifies both:
+
+* the independently headless `macronode`
+* the optional CrabLink controller
+
+## Package and verification integration
+
+Updated:
+
+```text
+apps/crablink-tauri/package.json
+scripts/check-tauri.sh
+scripts/make_codebundle.sh
+```
+
+Added npm scripts for:
+
+```text
+check:service-node-operator-boundary
+check:service-node-operator-ui-boundary
+check:signed-reward-binding-boundary
+check:moderation-review-boundary
+check:persistence-review-boundary
+check:phase21-operator-acceptance
+```
+
+Added all new Operator sources and acceptance scripts to the generated CrabLink codebundle scope. The resulting codebundle includes the four Rust Operator command modules, Operator page components, shared operator model/client, and all Phase 21 boundary scripts. 
+
+## Acceptance-runner repairs
+
+Fixed several issues discovered while bringing up the integrated closeout runner:
+
+* Corrected malformed Bash parameter expansion for `RUSTYONIONS_ROOT`.
+* Replaced a broad source-tree scan with active frontend module-graph traversal.
+* Distinguished operator-owned pages and shared operator modules from ambient application code.
+* Changed command checks to detect real `callTauri(...)` invocations rather than incidental command-name strings.
+* Aligned URL-security assertions with the actual compile-tested Rust error wording.
+* Prevented unused legacy Tauri scaffold files and backup sources from creating false acceptance failures.
+
+These were test-infrastructure repairs; they did not weaken Operator Mode security boundaries.
+
+## Verification completed
+
+The final Phase 21 CrabLink acceptance sweep completed successfully:
+
+* Service Node Operator boundary gate: passed
+* Operator UI boundary gate: passed
+* signed reward-binding gate: passed
+* moderation-review gate: passed
+* persistence-review gate: passed
+* integrated Phase 21 gate: passed
+* Tauri Operator tests: **21 passed**
+* Tauri `cargo check`: passed
+* strict Tauri Clippy with `--all-targets --no-deps -D warnings`: passed
+* Vite production build: passed
+* production build transformed **319 modules**
+* complete Phase 21 cross-repository acceptance runner: passed 
+
+## Session result
+
+CrabLink now contains a complete optional Service Node Operator surface for:
+
+* canonical status
+* signed reward-recipient binding
+* moderation review
+* persistence eligibility review
+* confirmed ROC receipt evidence
+
+The Service Node remains independent and headless, and CrabLink does not gain daemon, policy, storage, wallet, ledger, registry, quorum, mint, burn, or external-finality authority.
+
+## Known unresolved issue discovered during visual inspection
+
+A high-priority Tauri-wide mouse interaction defect was observed after launching the new Operator page:
+
+* only about one out of four clicks registers
+* some inputs require keyboard `Tab` navigation before they can be used
+* multiple controls intermittently ignore mouse clicks
+* the scrollbar does not reliably respond to mouse interaction
+* the issue affects more than the Operator page
+
+The Operator interface itself renders correctly, so the likely cause is in a shared input or window layer, such as:
+
+* an invisible overlay
+* incorrect `pointer-events`
+* an oversized Tauri drag region
+* a bad `z-index`
+* a portal or toast layer intercepting clicks
+* global event capture or `preventDefault()` behavior
+
+This issue was **recorded but not fixed during this session**. It should be investigated before proceeding deeply into the Phase 22 live two-node smoke because it will interfere with runtime and Operator Mode testing.
+
+
+
+### END NOTE - JULY 14 2026 - 16:45 CST
+
+
+
+
+### BEGIN NOTE - JULY 14 2026 - 16:50 CST
+
+
+# CrabLink / `crablink-tauri` — Session Changelog Notes
+
+## Phase 21 Operator Mode
+
+Completed the CrabLink-side implementation of **Service Node Operator Mode** and added the `crab://operator` route as an optional controller surface for a local or remote Service Node.
+
+CrabLink remains a friendly client/controller rather than becoming the node daemon, policy engine, wallet, ledger, registry, quorum authority, storage authority, or external-finality authority.
+
+## Optional Service Node connection
+
+* Added explicit enable/disable control for Service Node Operator Mode.
+
+* Kept Operator Mode **disabled by default**.
+
+* Added separate connection postures:
+
+  * local Service Node
+  * remote Service Node
+
+* Added local connection validation requiring an explicit loopback HTTP or HTTPS endpoint.
+
+* Added remote connection validation requiring non-loopback HTTPS.
+
+* Rejected URLs containing:
+
+  * embedded usernames or passwords
+  * query strings
+  * fragments
+  * unsupported schemes
+
+* Added the default local endpoint:
+
+  ```text
+  http://127.0.0.1:8080
+  ```
+
+* Added bounded request timeouts and response-body limits.
+
+* Made connection failures degrade only the Operator page rather than breaking normal CrabLink operation.
+
+* Preserved CrabLink operation when no Service Node is configured or running.
+
+* Prevented CrabLink from starting, stopping, restarting, killing, or otherwise managing the Service Node process.
+
+## Ephemeral administrator authentication
+
+* Added an administrator credential field for authenticated Service Node operations.
+* Rendered the credential as a password-style input.
+* Kept the credential only in route-local React memory.
+* Prevented the credential from being written to:
+
+  * CrabLink settings
+  * `localStorage`
+  * `sessionStorage`
+  * IndexedDB
+  * browser cache
+* Cleared the credential when Operator Mode is disabled.
+* Added explicit credential-clear behavior.
+* Added validation for:
+
+  * maximum credential length
+  * control characters
+  * unsafe whitespace
+* Prevented credentials from being returned, logged, or projected into status output.
+
+## Canonical Service Node status
+
+Added the Tauri command:
+
+```text
+service_node_operator_status
+```
+
+The command now reads the Service Node’s real:
+
+* `/healthz`
+* `/readyz`
+* `/api/v1/status`
+
+CrabLink projects the backend response into a bounded canonical status view containing information such as:
+
+* connection state
+* Service Node profile
+* node role
+* readiness
+* headless posture
+* administrator UI posture
+* public inbound posture
+* IP-publication posture
+* moderation state
+* persistence-review counts
+* reward-recipient binding state
+* lifecycle state
+* quorum state
+* confirmed issuance evidence
+
+The projection remains observational and cannot authorize backend state changes.
+
+## Receipt-derived confirmed ROC display
+
+* Added a dedicated **Confirmed ROC issuance evidence** section.
+
+* Prevented pending reward plans, evidence records, review state, binding state, cached values, or quorum eligibility from appearing as confirmed ROC.
+
+* Required accepted wallet and ledger receipt evidence before projecting confirmed issuance.
+
+* Preserved the distinction between:
+
+  * pending evidence
+  * reward planning
+  * receipt evidence
+  * confirmed issuance
+  * external finality
+
+* Kept external finality explicitly false even when valid local ledger receipt evidence exists.
+
+* Added a truthful empty state:
+
+  ```text
+  NO CONFIRMED RECEIPT EVIDENCE
+  ```
+
+* Added tests proving pending reward material cannot become confirmed issuance evidence.
+
+## Signed reward-recipient binding
+
+Added the Tauri command:
+
+```text
+service_node_operator_bind_reward_recipient
+```
+
+Implemented a signed reward-recipient intent compatible with the `macronode` contract.
+
+### Signed intent behavior
+
+* Added the canonical signing domain:
+
+  ```text
+  crablink.reward_binding.intent.v1
+  ```
+
+* Added the signing algorithm:
+
+  ```text
+  admin_bearer_blake3_keyed_v1
+  ```
+
+* Bound the signature to the exact:
+
+  * administrator credential
+  * reward-recipient `@address`
+  * creation timestamp
+  * nonce
+
+* Generated a fresh nonce for each submission.
+
+* Submitted the exact canonical payload expected by `macronode`.
+
+* Required the backend to return:
+
+  ```text
+  signedIntentVerified: true
+  ```
+
+* Rejected responses that attempted to claim:
+
+  * registry finality
+  * wallet mutation
+  * ledger mutation
+  * confirmed ROC
+  * external settlement
+
+### Reward-binding UI
+
+* Added a canonical lowercase CrabLink/RON `@address` input.
+
+* Added an explicit acknowledgment:
+
+  ```text
+  I understand this records a binding request only
+  ```
+
+* Added the action:
+
+  ```text
+  Sign and submit binding request
+  ```
+
+* Added clear-form behavior.
+
+* Added request status and failure display.
+
+* Refreshed canonical Service Node status after a successful request.
+
+* Kept binding explicitly separate from payment, payout, receipt creation, and confirmed ROC.
+
+## Moderation-review queue
+
+Added Tauri commands:
+
+```text
+service_node_operator_moderation_pending
+service_node_operator_moderation_decide
+```
+
+Implemented a bounded authenticated moderation-review workflow.
+
+### Queue behavior
+
+* Added bounded pending-review retrieval.
+* Enforced the backend queue limit.
+* Accepted pending moderation items only.
+* Required canonical lowercase `b3:<64 hex>` object IDs.
+* Displayed:
+
+  * object ID
+  * review sequence
+  * source
+  * reason
+  * effective policy state
+  * current serve permission
+* Refused malformed, oversized, or authority-poisoned responses.
+
+### Moderation decisions
+
+* Added explicit approve and reject operations.
+
+* Defined approval as **approval for escalation**, not policy activation.
+
+* Required exact backend result states.
+
+* Made decisions explicit rather than automatic.
+
+* Added required acknowledgment before mutation:
+
+  ```text
+  I understand this changes review metadata only
+  ```
+
+* Refreshed the queue and canonical Service Node status after a decision.
+
+* Rejected responses claiming:
+
+  * policy mutation
+  * runtime activation
+  * storage deletion
+  * provider withdrawal
+  * reward finality
+  * wallet mutation
+  * ledger mutation
+
+## Persistence-review queue
+
+Added Tauri commands:
+
+```text
+service_node_operator_persistence_pending
+service_node_operator_persistence_decide
+```
+
+Added:
+
+```text
+PersistenceReviewCard.jsx
+```
+
+Implemented the complete CrabLink persistence-review interface.
+
+### Pending persistence candidates
+
+* Added bounded pending-candidate loading.
+* Used a client default limit of 100.
+* Enforced the client maximum of 256.
+* Accepted only undecided backend candidate states:
+
+  * `ephemeral_unvetted`
+  * `pending_review`
+* Required candidates to be initially ineligible for durable storage.
+* Required canonical lowercase `b3:` object identifiers.
+* Displayed:
+
+  * object ID
+  * asset kind
+  * current persistence state
+  * persistence eligibility
+  * durable-byte status
+
+### Persistence decisions
+
+Added explicit actions for:
+
+* submit for review
+* approve persistence eligibility
+* reject persistence
+
+Required exact backend transitions:
+
+```text
+ephemeral_unvetted
+→ pending_review
+→ verified_persistent
+```
+
+or:
+
+```text
+ephemeral_unvetted / pending_review
+→ operator_blocked
+```
+
+Added the acknowledgment:
+
+```text
+I understand approval changes eligibility metadata only
+```
+
+Added the explicit truth statement:
+
+```text
+No durable bytes were written.
+```
+
+Approval does not:
+
+* write object bytes
+* pin the object
+* guarantee storage residency
+* override moderation
+* delete storage
+* withdraw providers
+* create a reward
+* mutate a wallet
+* append a ledger receipt
+* claim external finality
+
+The queue and canonical Service Node status refresh after each decision.
+
+## Operator page and interface
+
+Expanded `ServiceNodeOperatorPage.jsx` into the full Phase 21 controller interface.
+
+The page now includes:
+
+* disabled-by-default posture
+* local/remote connection profile
+* administrator credential handling
+* canonical attachment state
+* backend-derived Service Node status
+* confirmed ROC receipt evidence
+* signed reward-recipient binding
+* moderation-review queue
+* persistence-review queue
+* explicit truth and authority boundaries throughout
+
+The page was visually inspected in the running Tauri application and the new Phase 21 sections rendered successfully.
+
+## Shared frontend model and client
+
+Expanded the shared Service Node Operator surfaces, including:
+
+```text
+src/shared/operator/serviceNodeOperatorModel.js
+src/shared/api/serviceNodeOperatorClient.js
+```
+
+* Added the operator connection model.
+* Added disabled-by-default state.
+* Added local and remote mode handling.
+* Added Tauri command wrappers.
+* Kept Service Node commands confined to operator-owned frontend modules.
+* Prevented Operator Mode commands from becoming ambient capability across unrelated CrabLink pages.
+* Kept all administrator state route-local and ephemeral.
+
+## Tauri Rust command bridge
+
+Added and registered the Operator Mode command modules:
+
+```text
+operator_node
+operator_reward_binding
+operator_moderation_review
+operator_persistence_review
+```
+
+Updated:
+
+```text
+src-tauri/src/commands/mod.rs
+src-tauri/src/lib.rs
+```
+
+Registered the full command family:
+
+```text
+service_node_operator_status
+service_node_operator_bind_reward_recipient
+service_node_operator_moderation_pending
+service_node_operator_moderation_decide
+service_node_operator_persistence_pending
+service_node_operator_persistence_decide
+```
+
+The Operator Mode command bridge uses native Rust HTTP validation and does not expose raw browser fetch authority.
+
+## Boundary and acceptance tooling
+
+Added focused boundary gates:
+
+```text
+check-crablink-service-node-operator-boundary.mjs
+check-crablink-service-node-operator-ui-boundary.mjs
+check-crablink-signed-reward-binding-boundary.mjs
+check-crablink-moderation-review-boundary.mjs
+check-crablink-persistence-review-boundary.mjs
+```
+
+Added the integrated Phase 21 gate:
+
+```text
+check-crablink-phase21-operator-acceptance.mjs
+```
+
+The integrated checker verifies that:
+
+* Operator Mode is disabled by default.
+* Operator commands remain confined to the active operator frontend graph.
+* credentials remain memory-only.
+* CrabLink contains no daemon process-management path.
+* signed binding remains non-authoritative.
+* moderation cannot mutate or activate policy.
+* persistence approval cannot claim durable bytes.
+* confirmed ROC remains receipt-derived.
+* all Operator command families are explicitly registered.
+
+Added the cross-repository acceptance runner:
+
+```text
+scripts/check-phase21-operator-acceptance.sh
+```
+
+The runner verifies both:
+
+* the independently headless `macronode`
+* the optional CrabLink controller
+
+## Package and verification integration
+
+Updated:
+
+```text
+apps/crablink-tauri/package.json
+scripts/check-tauri.sh
+scripts/make_codebundle.sh
+```
+
+Added npm scripts for:
+
+```text
+check:service-node-operator-boundary
+check:service-node-operator-ui-boundary
+check:signed-reward-binding-boundary
+check:moderation-review-boundary
+check:persistence-review-boundary
+check:phase21-operator-acceptance
+```
+
+Added all new Operator sources and acceptance scripts to the generated CrabLink codebundle scope. The resulting codebundle includes the four Rust Operator command modules, Operator page components, shared operator model/client, and all Phase 21 boundary scripts. 
+
+## Acceptance-runner repairs
+
+Fixed several issues discovered while bringing up the integrated closeout runner:
+
+* Corrected malformed Bash parameter expansion for `RUSTYONIONS_ROOT`.
+* Replaced a broad source-tree scan with active frontend module-graph traversal.
+* Distinguished operator-owned pages and shared operator modules from ambient application code.
+* Changed command checks to detect real `callTauri(...)` invocations rather than incidental command-name strings.
+* Aligned URL-security assertions with the actual compile-tested Rust error wording.
+* Prevented unused legacy Tauri scaffold files and backup sources from creating false acceptance failures.
+
+These were test-infrastructure repairs; they did not weaken Operator Mode security boundaries.
+
+## Verification completed
+
+The final Phase 21 CrabLink acceptance sweep completed successfully:
+
+* Service Node Operator boundary gate: passed
+* Operator UI boundary gate: passed
+* signed reward-binding gate: passed
+* moderation-review gate: passed
+* persistence-review gate: passed
+* integrated Phase 21 gate: passed
+* Tauri Operator tests: **21 passed**
+* Tauri `cargo check`: passed
+* strict Tauri Clippy with `--all-targets --no-deps -D warnings`: passed
+* Vite production build: passed
+* production build transformed **319 modules**
+* complete Phase 21 cross-repository acceptance runner: passed 
+
+## Session result
+
+CrabLink now contains a complete optional Service Node Operator surface for:
+
+* canonical status
+* signed reward-recipient binding
+* moderation review
+* persistence eligibility review
+* confirmed ROC receipt evidence
+
+The Service Node remains independent and headless, and CrabLink does not gain daemon, policy, storage, wallet, ledger, registry, quorum, mint, burn, or external-finality authority.
+
+## Known unresolved issue discovered during visual inspection
+
+A high-priority Tauri-wide mouse interaction defect was observed after launching the new Operator page:
+
+* only about one out of four clicks registers
+* some inputs require keyboard `Tab` navigation before they can be used
+* multiple controls intermittently ignore mouse clicks
+* the scrollbar does not reliably respond to mouse interaction
+* the issue affects more than the Operator page
+
+The Operator interface itself renders correctly, so the likely cause is in a shared input or window layer, such as:
+
+* an invisible overlay
+* incorrect `pointer-events`
+* an oversized Tauri drag region
+* a bad `z-index`
+* a portal or toast layer intercepting clicks
+* global event capture or `preventDefault()` behavior
+
+This issue was **recorded but not fixed during this session**. It should be investigated before proceeding deeply into the Phase 22 live two-node smoke because it will interfere with runtime and Operator Mode testing.
+
+
+
+### END NOTE - JULY 14 2026 - 16:50 CST

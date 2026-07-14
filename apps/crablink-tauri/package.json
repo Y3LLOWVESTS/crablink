@@ -11,7 +11,7 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "check": "npm run check:quickchain-boundary && npm run check:quickchain-paid-cache-boundary && npm run check:internal-roc-paid-content-boundary && npm run check:quickchain-readiness-boundary && npm run check:quickchain-phase1-interlock && npm run check:quickchain-phase2-replay-boundary && npm run check:internal-roc-phase2-replay-visibility && npm run check:quickchain-phase2-committee-boundary && npm run check:quickchain-phase3-validator-boundary && npm run check:quickchain-phase3-lifecycle-boundary && npm run check:quickchain-phase4-bond-boundary && npm run check:quickchain-phase4-bond-dispute-boundary && npm run check:quickchain-phase4-bond-enforcement-boundary && npm run check:quickchain-phase5-anchor-boundary && npm run check:quickchain-phase5-da-fallback-boundary && npm run check:quickchain-phase5-external-posture-boundary && npm run check:internal-roc-stabilization-balance-refresh && npm run check:internal-roc-stabilization-render-lock && npm run check:internal-roc-stabilization-paid-ux && npm run check:internal-roc-phase4-wallet-receipt-ux && npm run check:internal-roc-phase4-confirmation-failure-ux && npm run check:local-node-boundary && npm run build && npm run check:rust:mac-media",
+    "check": "npm run check:service-node-operator-boundary && npm run check:service-node-operator-ui-boundary && npm run check:signed-reward-binding-boundary && npm run check:moderation-review-boundary && npm run check:persistence-review-boundary && npm run check:phase21-operator-acceptance && npm run check:tab-hit-testing-boundary && npm run check:quickchain-boundary && npm run check:quickchain-paid-cache-boundary && npm run check:internal-roc-paid-content-boundary && npm run check:quickchain-readiness-boundary && npm run check:quickchain-phase1-interlock && npm run check:quickchain-phase2-replay-boundary && npm run check:internal-roc-phase2-replay-visibility && npm run check:quickchain-phase2-committee-boundary && npm run check:quickchain-phase3-validator-boundary && npm run check:quickchain-phase3-lifecycle-boundary && npm run check:quickchain-phase4-bond-boundary && npm run check:quickchain-phase4-bond-dispute-boundary && npm run check:quickchain-phase4-bond-enforcement-boundary && npm run check:quickchain-phase5-anchor-boundary && npm run check:quickchain-phase5-da-fallback-boundary && npm run check:quickchain-phase5-external-posture-boundary && npm run check:internal-roc-stabilization-balance-refresh && npm run check:internal-roc-stabilization-render-lock && npm run check:internal-roc-stabilization-paid-ux && npm run check:internal-roc-phase4-wallet-receipt-ux && npm run check:internal-roc-phase4-confirmation-failure-ux && npm run check:local-node-boundary && npm run build && npm run check:rust:mac-media",
     "check:quickchain-boundary": "node ../../scripts/check-quickchain-client-boundary.mjs",
     "check:quickchain-paid-cache-boundary": "node ../../scripts/check-quickchain-paid-cache-boundary.mjs",
     "check:quickchain-readiness-boundary": "node ../../scripts/check-quickchain-readiness-boundary.mjs",
@@ -51,7 +51,14 @@
     "park:internal-roc-stabilization-render-lock": "../../scripts/dev-internal-roc-stabilization-render-lock-preflight.sh",
     "check:internal-roc-stabilization-tauri-park": "node ../../scripts/check-internal-roc-stabilization-tauri-park.mjs",
     "park:internal-roc-stabilization-tauri": "../../scripts/dev-internal-roc-stabilization-tauri-park.sh",
-    "check:local-node-boundary": "node ../../scripts/check-crablink-local-node-boundary.mjs"
+    "check:local-node-boundary": "node ../../scripts/check-crablink-local-node-boundary.mjs",
+    "check:service-node-operator-boundary": "node ../../scripts/check-crablink-service-node-operator-boundary.mjs",
+    "check:service-node-operator-ui-boundary": "node ../../scripts/check-crablink-service-node-operator-ui-boundary.mjs",
+    "check:signed-reward-binding-boundary": "node ../../scripts/check-crablink-signed-reward-binding-boundary.mjs",
+    "check:moderation-review-boundary": "node ../../scripts/check-crablink-moderation-review-boundary.mjs",
+    "check:persistence-review-boundary": "node ../../scripts/check-crablink-persistence-review-boundary.mjs",
+    "check:phase21-operator-acceptance": "node ../../scripts/check-crablink-phase21-operator-acceptance.mjs",
+    "check:tab-hit-testing-boundary": "node ../../scripts/check-crablink-tab-hit-testing-boundary.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.34",

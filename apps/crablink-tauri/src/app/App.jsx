@@ -2,7 +2,7 @@
  * RO:WHAT — Top-level CrabLink React app with tab-preserving route-owned page mounting.
  * RO:WHY — App Integration; Concerns: DX/SEC/RES/PERF; lets Tauri keep multiple CrabLink routes alive without giving UI backend authority.
  * RO:INTERACTS — ThemeProvider, AppContextProvider, Shell, appState, router, routeRegistry, pages/*.
- * RO:INVARIANTS — one active visible page; inactive tabs stay mounted as UI state only; no fake backend truth; no silent ROC spend.
+ * RO:INVARIANTS — one active visible and interactive page; inactive tabs stay mounted but inert; no fake backend truth; no silent ROC spend.
  * RO:METRICS — gateway checks carry correlation IDs through GatewayClient.
  * RO:CONFIG — route seed from page URL query/hash plus extension settings bridge.
  * RO:SECURITY — untrusted crab content must render in route-owned sandboxed surfaces, not the shell.
@@ -148,6 +148,7 @@ function RoutePane({ tab, active, app }) {
     route,
     activeTabId: tab?.id || app?.activeTabId,
     activeTab: tab || app?.activeTab,
+    isActiveTab: Boolean(active),
   };
 
   return (
@@ -156,6 +157,7 @@ function RoutePane({ tab, active, app }) {
       data-active={active ? 'true' : 'false'}
       data-route-kind={route?.kind || 'home'}
       aria-hidden={active ? 'false' : 'true'}
+      inert={active ? undefined : ''}
     >
       <Suspense fallback={<RouteLoading route={route} />}>
         <Page key={routeKey} route={route} app={tabApp} />
