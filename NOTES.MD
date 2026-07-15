@@ -18739,3 +18739,1041 @@ This issue was **recorded but not fixed during this session**. It should be inve
 
 
 ### END NOTE - JULY 14 2026 - 16:50 CST
+
+
+### BEGIN NOTE - JULY 15 2026 - 12:25 CST
+
+
+Here are the drop-in changelog notes for the third crate, **`crablink-tauri`**.
+
+## `crablink-tauri` — Phase 22 Session Changelog
+
+### Expanded the live two-node integration surface
+
+* Continued Phase 22 integration between CrabLink, an independently managed Service Node, and an independently managed User Node.
+* Preserved the architecture in which CrabLink observes and coordinates local workflows without owning either daemon.
+* Reused production native command behavior in integration tests rather than introducing fake test-only success paths.
+* Preserved the separation between:
+
+  * Service Node operation
+  * User Node verification
+  * accounting and reward planning
+  * wallet execution
+  * ledger receipt truth
+  * CrabLink display behavior
+
+### Integrated native OAP object retrieval
+
+* Exercised the production Rust OAP client against a real local Service Node.
+* Retrieved seeded Service Node content through OAP/1.
+* Kept all OAP frame and payload parsing inside the Rust/Tauri layer.
+* Prevented React and JavaScript code from parsing OAP wire data.
+* Applied bounded OAP parsing and object-size limits.
+* Required complete object retrieval before admission.
+* Verified the full object using canonical BLAKE3 before allowing it into the User Node verification path.
+* Rejected corrupted live object streams.
+* Rejected truncated live object streams.
+* Preserved strict `b3:<64 lowercase hexadecimal characters>` object identity.
+
+### Connected CrabLink to the real User Node verification queue
+
+* Added the native `user_node_verify_service_object` workflow.
+* Connected the production Service Node OAP fetch path to the real micronode object-verification endpoint.
+* Forwarded only complete, full-BLAKE3-authenticated object bytes.
+* Preserved a strict loopback-only User Node base URL boundary.
+* Prevented non-loopback User Node endpoints from being accepted.
+* Added configurable bounded request timeouts.
+* Preserved the distinction between:
+
+  * CrabLink’s initial OAP verification
+  * micronode’s independent verification and evidence creation
+
+### Added live User Node verification coverage
+
+* Added a cross-process integration test for the complete Service Node object-to-User Node evidence workflow.
+* Verified valid Service Node bytes create `verified_valid` pending evidence.
+* Verified mismatched bytes create challenge evidence.
+* Verified duplicate idempotency submissions are rejected.
+* Verified the real micronode pending-evidence count increases truthfully.
+* Verified the User Node remains active after the Service Node is shut down.
+* Verified pending evidence does not become:
+
+  * accounting acceptance
+  * reward truth
+  * payout authority
+  * wallet mutation
+  * ledger mutation
+  * durable receipt
+  * confirmed ROC
+
+### Added User Node verification boundary checks
+
+* Added static checks ensuring only authenticated OAP bytes enter the User Node verification route.
+* Added checks confirming that the native command does not fabricate accounting or reward success.
+* Added checks preserving the rule that pending evidence is non-authoritative.
+* Added scripts for running the live User Node verification workflow.
+* Registered the new checks in the CrabLink package scripts.
+* Added the new files to CrabLink codebundle generation.
+
+### Refactored User Node status into reusable production behavior
+
+* Extracted the production User Node status request into `query_local_node_status`.
+* Kept the Tauri command as a thin wrapper over the reusable implementation.
+* Reused the same implementation in live Phase 22 tests.
+* Added truthful status projection for:
+
+  * enabled or disabled configuration
+  * loopback base URL
+  * health
+  * readiness
+  * node status
+  * lifecycle state
+  * verification queue status
+  * pending evidence count
+  * privacy mode
+  * public inbound posture
+  * wallet and ledger non-authority
+  * confirmed-ROC source posture
+
+### Added independent lifecycle-isolation proof
+
+* Added `phase22_live_lifecycle_isolation.rs`.
+* Added a three-stage cross-process lifecycle test.
+
+The test verifies:
+
+1. CrabLink can attach to both independently running nodes.
+2. Exiting the CrabLink test client stops neither daemon.
+3. Service Node loss degrades only the Operator surface.
+4. User Node remains active when the Service Node is unavailable.
+5. User Node loss degrades only the User Node surface.
+6. Service Node remains connected when the User Node is unavailable.
+
+* Confirmed CrabLink does not start, stop, restart, or supervise either daemon.
+* Confirmed the Service Node remains headless and independently managed.
+* Confirmed the User Node remains private, loopback-only, and independently managed.
+* Confirmed neither degradation path creates confirmed ROC or finality.
+
+### Added lifecycle boundary checks and runner
+
+* Added `check-crablink-lifecycle-isolation-boundary.mjs`.
+* Added `check-phase22-local-lifecycle-isolation.sh`.
+* Added package commands for the static and live lifecycle checks.
+* Added the lifecycle files to codebundle generation.
+* The live runner:
+
+  * builds the real macronode and micronode binaries
+  * starts both as independent processes
+  * attaches CrabLink through production status behavior
+  * stops one node at a time
+  * verifies the other node remains healthy
+  * confirms CrabLink owns neither process
+
+### Verified existing Operator workflows remained green
+
+* Re-ran the live Service Node Operator attachment workflow.
+* Verified authenticated attachment to the independently managed Service Node.
+* Verified incorrect admin tokens remain rejected.
+* Verified signed reward-recipient binding submission.
+* Verified the signed binding does not itself create:
+
+  * registry finality
+  * wallet mutation
+  * ledger mutation
+  * receipt truth
+  * confirmed ROC
+* Re-ran live moderation and persistence review.
+* Verified review decisions use real runtime state.
+* Preserved the rule that UI review does not directly activate policy, write persistent bytes, mutate providers, or finalize rewards.
+
+### Added native confirmed-ROC projection validation
+
+* Added the native `confirmed_roc` module.
+* Added a strict, versioned `ConfirmedRocProjectionV1` contract.
+* Added JSON parsing with unknown-field rejection.
+* Added validation for:
+
+  * schema and version
+  * epoch identity
+  * account identity
+  * canonical decimal ROC amount
+  * receipt count
+  * operation identities
+  * ledger sequence
+  * ledger root
+  * epoch transition hash
+  * economics configuration hash
+  * wallet receipt confirmation
+  * ledger replay confirmation
+  * User Node replay acceptance
+  * display-only posture
+* Required canonical lowercase BLAKE3 identities.
+* Required at least one wallet/ledger receipt.
+* Required operation count to match receipt count.
+* Required confirmed ROC to be greater than zero.
+
+### Enforced the receipt-only confirmed-ROC source
+
+* Required the exact source label:
+
+```text
+wallet_ledger_receipt_only
+```
+
+* Rejected pending evidence as a confirmed-ROC source.
+* Rejected fake micronode evidence source labels.
+* Rejected projections without durable receipts.
+* Rejected projections without accepted ledger replay.
+* Rejected projections without accepted User Node replay.
+* Rejected projections claiming CrabLink wallet mutation.
+* Rejected projections claiming CrabLink ledger mutation.
+* Rejected projections claiming CrabLink finality authority.
+
+### Added native confirmed-ROC unit tests
+
+* Added a test proving a complete receipt-backed projection validates.
+* Added tests proving pending evidence cannot validate as confirmed ROC.
+* Added tests proving client-side mutation authority cannot be smuggled into the projection.
+* Confirmed both native `confirmed_roc` unit tests pass.
+
+### Added the cross-repository Phase 22H projection test
+
+* Added `phase22_confirmed_roc_projection.rs`.
+* The test reads the projection exported by the real Phase 22G backend reward loop.
+* It passes the exported JSON through the production CrabLink native validator.
+* It verifies the projection contains:
+
+  * positive confirmed ROC
+  * real wallet receipt confirmation
+  * ledger replay confirmation
+  * accepted User Node replay
+  * no pending-only posture
+  * no client mutation authority
+* It additionally mutates the valid projection and verifies rejection of:
+
+  * pending evidence
+  * fake source labels
+  * missing receipts
+
+### Added frontend confirmed-ROC normalization
+
+* Added `confirmedRocProjection.js`.
+* Added a strict JavaScript normalization seam for receipt-backed confirmed ROC.
+* Valid projections normalize to a display model with:
+
+  * `state: confirmed`
+  * `source: ledger`
+  * backend-derived truth
+  * positive ROC minor units
+  * receipt metadata
+  * ledger metadata
+  * transition identity
+  * economics identity
+  * display-only posture
+* Invalid projections normalize to:
+
+  * `state: unconfirmed`
+  * no confirmed amount
+  * no economic authority
+* Re-exported the normalization function through the existing wallet client module.
+* Preserved the existing gateway-first wallet architecture.
+* Did not add a direct browser-to-ledger or browser-to-wallet mutation path.
+
+### Added confirmed-ROC frontend boundary checks
+
+* Added `check-phase22-confirmed-roc-boundary.mjs`.
+* Added source checks confirming:
+
+  * the receipt-only source label is present
+  * pending evidence is rejected
+  * wallet mutation is false
+  * ledger mutation is false
+  * finality authority is false
+  * confirmed display data is backend-derived
+* Added runtime normalization checks for:
+
+  * valid receipt-backed projection
+  * pending evidence
+  * fake source
+  * missing receipt
+* Added optional validation of the real Phase 22G exported projection.
+* Confirmed the standalone confirmed-ROC boundary check passes.
+
+### Added the final Phase 22 acceptance runner
+
+* Added `check-phase22-final-acceptance.sh`.
+* Registered `check:phase22-final-acceptance` in the Tauri package scripts.
+* The runner is designed to verify the complete Phase 22 surface, including:
+
+  * complete Phase 22G backend reward loop
+  * strict Clippy for the reward-loop test
+  * confirmed-ROC projection JSON
+  * DHT provider and repair behavior
+  * registry behavior
+  * enforcement-aware reward denial
+  * micronode object verification
+  * User Node epoch replay
+  * RustyOnions workspace check
+  * native CrabLink confirmed-ROC projection
+  * strict Tauri Clippy
+  * OAP boundary
+  * User Node verification boundary
+  * lifecycle isolation
+  * Operator attachment
+  * Operator review
+  * frontend production build
+  * Tauri cargo check
+* Added the intended conclusive final marker:
+
+```text
+PHASE22_FINAL_STATUS=GREEN_PARKED
+```
+
+### Tests and verification completed
+
+The following checks passed during this session:
+
+* CrabLink OAP object boundary check.
+* CrabLink User Node verification boundary check.
+* CrabLink lifecycle-isolation boundary check.
+* Live OAP Service Node object retrieval.
+* Corrupted and truncated OAP stream rejection.
+* Live User Node pending-evidence workflow.
+* Verification replay rejection.
+* Three-stage lifecycle-isolation workflow.
+* Live Service Node Operator attachment.
+* Live moderation and persistence review.
+* CrabLink frontend production build.
+* Tauri `cargo check`.
+* Native confirmed-ROC static boundary.
+* Native confirmed-ROC unit tests.
+* Strict Clippy for earlier Phase 22 integration targets.
+* RustyOnions workspace check before the final Phase 22H temporary-path failure.
+
+The lifecycle-isolation tests and the larger CrabLink regression sweep were green. 
+
+### Current unresolved Phase 22H issue
+
+* The final cross-repository projection test did not complete because the focused verification command used a macOS-incompatible `mktemp` template.
+* The command attempted to create:
+
+```text
+phase22-confirmed-roc.XXXXXX.json
+```
+
+* On macOS, `mktemp` requires the `XXXXXX` placeholder at the end of the template unless a compatible suffix option is used.
+* Temporary-file creation failed with:
+
+```text
+mktemp: mkstemp failed ... File exists
+```
+
+* The shell assignment therefore produced an empty `PROJECTION_PATH`.
+* The Phase 22G backend test then attempted to write the confirmed-ROC projection to an empty path.
+* The cross-repository CrabLink test subsequently failed because the projection file did not exist.
+* These are temporary-path plumbing failures, not confirmed-ROC validation failures.
+* The standalone frontend boundary check and native confirmed-ROC unit tests already passed.
+* The next session should first repair the temporary path creation and then rerun:
+
+  * Phase 22G projection export
+  * Phase 22H native projection test
+  * strict Tauri Clippy
+  * final Phase 22 acceptance runner
+
+### Recommended temporary-file correction for the next session
+
+Use a directory plus a normal filename, or place `XXXXXX` at the end:
+
+```text
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/phase22-confirmed-roc.XXXXXX")"
+PROJECTION_PATH="$TMP_DIR/confirmed-roc.json"
+```
+
+This matches the approach already used inside the final acceptance runner and avoids the macOS suffix problem.
+
+### Authority posture
+
+* CrabLink remains a client and display surface.
+* CrabLink does not own Service Node or User Node lifecycle.
+* CrabLink does not mint, issue, transfer, or burn ROC.
+* CrabLink does not choose arbitrary payout recipients.
+* CrabLink does not create ledger receipts.
+* CrabLink does not create finality.
+* CrabLink does not convert pending evidence into confirmed ROC.
+* Confirmed ROC is accepted only from wallet/ledger receipt truth after independent User Node replay.
+* `ron-ledger` remains the durable economic source of truth.
+* The confirmed-ROC projection remains display-only and grants no client mutation authority.
+
+The three directly changed crates for this session are now covered: `micronode`, `svc-rewarder`, and `crablink-tauri`.
+
+
+
+### END NOTE - JULY 15 2026 - 12:25 CST
+
+
+### BEGIN NOTE - JULY 15 2026 - 18:30 CST
+
+These notes cover the complete CrabLink implementation and acceptance work from the Operator Mode carryover through Phases 22–24, rather than only the final privacy test. The project notes confirm the Operator command family, native confirmed-ROC validation, User Node verification boundary, privacy-route failure behavior, and final green acceptance state.    
+
+# CrabLink / crablink-tauri — Session Changelog
+
+## Status
+
+CrabLink completed and parked the client-side work required for the closing BUILD_PLAN_Z phases:
+
+```text
+Phase 21 — Operator Mode: GREEN / PARKED
+Phase 22 — Local two-node reward loop: GREEN / PARKED
+Phase 23 — Chaos and fail-closed validation: GREEN / PARKED
+Phase 24 — Private-beta readiness: COMPLETE / GREEN / PARKED
+```
+
+CrabLink now supports the real User Node verification boundary, optional Service Node Operator Mode, receipt-derived confirmed ROC, and fail-closed privacy routing without becoming an economic or network authority.
+
+---
+
+## 1. Service Node Operator Mode
+
+Added the complete optional Service Node Operator surface under:
+
+```text
+crab://operator
+```
+
+Operator Mode is:
+
+```text
+disabled by default
+optional
+separate from normal CrabLink use
+compatible with headless Service Node operation
+not required to keep the Service Node running
+```
+
+Added support for:
+
+* Local and remote Service Node connection modes.
+* Explicit operator connection state.
+* Canonical Service Node status display.
+* Memory-only administrator credentials.
+* Reward-recipient binding and rotation.
+* Moderation queue review.
+* Persistence eligibility review.
+* Receipt-derived confirmed-ROC display.
+* Truthful disconnected, unavailable, and unauthorized states.
+
+CrabLink does not start, stop, supervise, or become the required container for the Service Node daemon.
+
+The Service Node remains independently headless and CLI-operable.
+
+---
+
+## 2. Operator frontend model and client boundary
+
+Added shared Operator frontend modules for:
+
+* Service Node connection configuration.
+* Local-versus-remote connection handling.
+* Canonical operator status normalization.
+* Tauri command invocation.
+* Reward-binding request preparation.
+* Moderation pending-list and decision handling.
+* Persistence pending-list and decision handling.
+* Receipt-derived confirmed issuance display.
+
+Administrator credentials remain route-local and memory-only.
+
+Credentials are not stored in:
+
+```text
+localStorage
+sessionStorage
+persistent application settings
+URL parameters
+logs
+frontend receipt caches
+```
+
+Operator commands remain confined to Operator-owned frontend modules rather than being exposed as generic browser-fetch authority.
+
+---
+
+## 3. Native Tauri Operator commands
+
+Added and registered the native Rust Operator command modules:
+
+```text
+operator_node
+operator_reward_binding
+operator_moderation_review
+operator_persistence_review
+```
+
+Registered command family:
+
+```text
+service_node_operator_status
+service_node_operator_bind_reward_recipient
+service_node_operator_moderation_pending
+service_node_operator_moderation_decide
+service_node_operator_persistence_pending
+service_node_operator_persistence_decide
+```
+
+The native bridge performs bounded and typed HTTP handling rather than allowing the React layer to issue unrestricted administrative requests.
+
+The bridge preserves:
+
+* Explicit loopback and remote connection posture.
+* Bounded request and response handling.
+* Authentication requirements.
+* Redacted error output.
+* Canonical DTO validation.
+* No raw browser administrative authority.
+
+---
+
+## 4. Signed reward-recipient binding
+
+Added the CrabLink Operator workflow for binding a Service Node to an external CrabLink/RON reward recipient.
+
+The UI can prepare and submit a binding request, but it does not decide the recipient or execute a payout.
+
+The canonical path remains:
+
+```text
+Service Node identity
+→ signed binding request
+→ svc-registry resolution
+→ reward plan
+→ quorum approval
+→ svc-wallet execution
+→ ron-ledger receipt
+→ confirmed ROC display
+```
+
+CrabLink does not:
+
+```text
+insert arbitrary payout addresses into evidence
+resolve registry truth locally
+approve its own binding
+issue ROC
+mutate a wallet
+mutate the ledger
+invent a payout receipt
+claim reward finality
+```
+
+Binding and rotation results are displayed as backend-derived status only.
+
+---
+
+## 5. Moderation review boundary
+
+Added Operator Mode support for viewing and deciding real pending moderation reviews.
+
+The UI supports explicit operator actions while preserving the policy boundary.
+
+CrabLink may submit operator intent, but it does not:
+
+```text
+become moderation-policy truth
+activate signed policy locally
+override a global deny
+override an owner tombstone
+silently release quarantined content
+claim network-wide removal
+mutate wallet or ledger state
+```
+
+Moderation responses are validated for prohibited authority claims before display.
+
+---
+
+## 6. Persistence review boundary
+
+Added Operator Mode support for:
+
+```text
+listing pending persistence candidates
+submitting a candidate for review
+approving persistence eligibility
+rejecting persistence
+pinning or unpinning through the real operator path
+```
+
+The expected state flow remains:
+
+```text
+ephemeral_unvetted
+→ pending_review
+→ verified_persistent
+```
+
+Rejection may produce:
+
+```text
+ephemeral_unvetted / pending_review
+→ operator_blocked
+```
+
+CrabLink explicitly distinguishes:
+
+```text
+persistence eligibility
+```
+
+from:
+
+```text
+proof that durable bytes were written
+```
+
+The UI rejects or refuses to present responses that falsely claim:
+
+```text
+durable bytes written
+wallet mutation
+ledger mutation
+policy mutation
+runtime activation
+storage deletion
+provider withdrawal
+reward finality
+external finality
+```
+
+---
+
+## 7. Confirmed-ROC native projection
+
+Added the native confirmed-ROC validation module:
+
+```text
+apps/crablink-tauri/src-tauri/src/confirmed_roc.rs
+```
+
+The module parses and validates the projection exported from the real Phase 22 reward-loop execution.
+
+Validated fields include:
+
+* Projection schema and version.
+* Epoch identifier.
+* Account identifier.
+* Canonical positive ROC amount.
+* Receipt-only source label.
+* Receipt count.
+* Sorted and unique operation identifiers.
+* Last accepted ledger sequence.
+* Canonical BLAKE3 ledger root.
+* Canonical BLAKE3 transition hash.
+* Canonical BLAKE3 economics-configuration hash.
+* Wallet receipt confirmation.
+* Ledger replay confirmation.
+* User Node replay acceptance.
+* Display-only posture.
+* Explicit client non-authority flags.
+
+The required source label is:
+
+```text
+wallet_ledger_receipt_only
+```
+
+The validator rejects:
+
+* Pending evidence presented as confirmed ROC.
+* Reward plans presented as confirmed ROC.
+* Missing or zero receipt counts.
+* Zero or malformed ROC amounts.
+* Noncanonical decimal amounts.
+* Invalid or duplicate operation identifiers.
+* Missing ledger sequence.
+* Malformed or prefixed ledger-root inputs where raw canonical form is required.
+* Fake source labels.
+* Client wallet-mutation claims.
+* Client ledger-mutation claims.
+* Client finality claims.
+
+Confirmed ROC is displayed only when all of the following are true:
+
+```text
+wallet receipt exists
+ledger replay succeeds
+User Node replay accepts the epoch
+projection remains display-only
+client has no mutation or finality authority
+```
+
+---
+
+## 8. Confirmed-ROC frontend boundary
+
+Added frontend normalization and display handling for the native confirmed-ROC projection.
+
+The frontend preserves the distinction between:
+
+```text
+pending evidence
+pending accounting
+pending reward plan
+wallet request candidate
+durable confirmed ROC
+```
+
+The empty Operator state truthfully reports that there is no confirmed receipt evidence instead of displaying a placeholder balance.
+
+The frontend cannot promote pending evidence into confirmed ROC and cannot calculate authoritative balances from local data.
+
+---
+
+## 9. Native OAP object retrieval and verification
+
+Added the CrabLink-native object-verification path for User Node work.
+
+The native boundary:
+
+1. Uses the configured privacy-compatible OAP route.
+2. Requests the canonical B3-addressed object.
+3. Applies bounded response handling.
+4. Rejects truncated, malformed, oversized, or corrupt data.
+5. Performs complete BLAKE3 verification.
+6. Submits only authenticated bytes to the real User Node verification queue.
+
+Only fully verified bytes may enter the pending-evidence path.
+
+The React layer does not certify B3 truth and does not submit arbitrary unverified bytes as successful verification evidence.
+
+---
+
+## 10. User Node verification submission boundary
+
+Added the real Tauri-to-User-Node submission path.
+
+The submission contract requires:
+
+```text
+canonical User Node target
+configured privacy route
+complete BLAKE3-authenticated object bytes
+explicit non-authority fields
+bounded verification request
+```
+
+The returned result remains pending verification evidence.
+
+The boundary requires economic-authority fields to remain false, including:
+
+```text
+accounting authority
+reward authority
+wallet mutation
+ledger mutation
+receipt truth
+confirmed ROC
+finality
+```
+
+Added native unit coverage proving:
+
+* Authority fields are required to be false.
+* User Node targets are validated.
+* Privacy routes are fail-closed.
+* Unverified or malformed inputs cannot enter the verification queue.
+
+---
+
+## 11. Privacy-route fail-closed behavior
+
+Added the Phase 23 privacy-route-unavailable integration test:
+
+```text
+phase23_privacy_relay_unavailable.rs
+```
+
+The test proves that when the configured privacy route is unavailable:
+
+* CrabLink makes one configured OAP attempt.
+* The request fails truthfully.
+* CrabLink does not fall back to a direct public provider route.
+* CrabLink does not contact the User Node verification queue.
+* No verification evidence is created.
+* No reward state is created.
+* No wallet or ledger state is created.
+* No receipt is created.
+* No confirmed ROC is displayed.
+* No finality is claimed.
+
+This locks the rule:
+
+```text
+privacy-route failure
+≠ permission to expose the user through a direct route
+```
+
+---
+
+## 12. Local Service Node attachment support
+
+Added native Phase 22 support helpers for attaching CrabLink Operator Mode to a real local Service Node.
+
+The live attachment coverage verifies:
+
+* Service Node attachment.
+* Unauthorized responses remain unauthorized.
+* Correct bearer authentication is accepted.
+* Canonical operator status is returned.
+* Reward-binding status is backend-derived.
+* Refresh remains bound to the configured Service Node.
+* Operator attachment does not create process-control or economic authority.
+
+Timeout handling was bounded so the attachment tests fail rather than hang indefinitely.
+
+---
+
+## 13. Lifecycle isolation
+
+Added and verified lifecycle-isolation behavior across:
+
+```text
+CrabLink
+User Node
+Service Node
+optional Operator UI
+```
+
+The tests confirm:
+
+* CrabLink may stop without redefining Service Node truth.
+* The Service Node remains independently headless.
+* The optional Operator UI is not the Service Node runtime.
+* User Node verification remains a separate local boundary.
+* Operator attachment does not merge the client and node authority models.
+* No lifecycle event creates wallet, ledger, receipt, or finality authority.
+
+---
+
+## 14. Operator acceptance and boundary tooling
+
+Added focused boundary scanners for:
+
+```text
+Service Node Operator boundary
+Operator UI boundary
+signed reward-binding boundary
+moderation-review boundary
+persistence-review boundary
+User Node verification boundary
+OAP object boundary
+confirmed-ROC projection boundary
+```
+
+Added the integrated Phase 21 Operator acceptance checker and cross-repository runner.
+
+The checkers verify:
+
+* Operator Mode is disabled by default.
+* Administrator credentials remain memory-only.
+* CrabLink has no daemon process-management path.
+* Local and remote connection modes remain distinct.
+* Operator commands remain in the intended frontend module graph.
+* Reward binding remains non-authoritative.
+* Moderation cannot activate or mutate policy truth.
+* Persistence approval cannot claim durable bytes.
+* Confirmed ROC remains receipt-derived.
+* Native Tauri commands are explicitly registered.
+* Browser code cannot bypass the native administrative boundary.
+* No wallet, ledger, payout, or finality authority leaked into the client.
+
+Package scripts, Tauri checking scripts, and codebundle generation were updated to include the new source files and acceptance scanners.
+
+---
+
+## 15. Tauri-wide mouse interaction regression
+
+Investigated and corrected the Tauri-wide mouse interaction defect observed before Phase 22.
+
+Symptoms included:
+
+* Intermittent clicks.
+* Controls requiring keyboard Tab focus.
+* Inputs not consistently accepting mouse interaction.
+* Scrollbar mouse interaction failing.
+* Roughly one click in several registering.
+
+The issue was treated as a real hit-testing or event-capture defect rather than a cosmetic problem.
+
+After correction and rebuild, normal clicking, controls, and scrolling were confirmed working before continuing into Phase 22.
+
+---
+
+## 16. Integration and runner repairs
+
+Several failures were found in new acceptance infrastructure and corrected without weakening product boundaries.
+
+Repairs included:
+
+### Rust module-layout mismatch
+
+The initial confirmed-ROC patch expected:
+
+```rust
+pub mod commands;
+```
+
+The current application uses:
+
+```rust
+mod commands;
+```
+
+The repair aligned the new module registration with the real `lib.rs` layout and completed the missing confirmed-ROC files.
+
+### macOS temporary-file failure
+
+The first cross-repository confirmed-ROC projection command used an incompatible `mktemp` filename template.
+
+This produced an empty projection path and caused:
+
+```text
+confirmed ROC projection write failed
+No such file or directory
+```
+
+The repair switched to a temporary directory plus a normal projection filename, preserving the actual reward, receipt, replay, and projection logic.
+
+### Acceptance-script matching
+
+Operator acceptance tooling was repaired to:
+
+* Use valid Bash parameter expansion.
+* Scan the active frontend module graph instead of unrelated or legacy files.
+* Distinguish operator-owned modules from ambient application code.
+* Detect real Tauri command invocations instead of incidental strings.
+* Match the actual compile-tested Rust error wording.
+* Avoid false failures from inactive scaffold or backup files.
+
+These were test-runner and source-discovery corrections, not relaxations of security behavior.
+
+---
+
+## 17. Verification completed
+
+The completed CrabLink verification included:
+
+* Operator boundary scanners.
+* Operator UI boundary scanner.
+* Signed reward-binding scanner.
+* Moderation-review scanner.
+* Persistence-review scanner.
+* Integrated Phase 21 Operator acceptance.
+* Native Operator command tests.
+* Live local Service Node attachment.
+* Native confirmed-ROC parser tests.
+* Cross-repository confirmed-ROC projection validation.
+* OAP object-boundary scanner.
+* Live OAP object retrieval.
+* Full BLAKE3 object verification.
+* Corrupt and truncated stream rejection.
+* User Node verification-boundary scanner.
+* User Node native unit tests.
+* Live pending-evidence submission.
+* Verification replay rejection.
+* Lifecycle-isolation tests.
+* Privacy-route-unavailable integration test.
+* Frontend production builds.
+* Strict Tauri Clippy with `--all-targets --no-deps -D warnings`.
+* Tauri `cargo check`.
+* Final Phase 22 acceptance.
+* Final Phase 23 acceptance.
+* Final Phase 24 private-beta readiness acceptance.
+
+The final Phase 23 CrabLink checks specifically passed:
+
+```text
+phase23_privacy_relay_unavailable: 1 passed
+user_node_verification native tests: 2 passed
+User Node verification boundary scanner: passed
+strict Tauri Clippy: passed
+Tauri cargo check: passed
+```
+
+The Phase 24 final acceptance reran the CrabLink privacy and User Node boundaries and completed with:
+
+```text
+PHASE24_FINAL_STATUS=GREEN_PARKED
+```
+
+---
+
+## 18. Authority boundaries preserved
+
+CrabLink remains:
+
+```text
+display and user-intent layer
+native privilege client
+optional Service Node controller
+User Node lifecycle manager
+receipt-derived status presenter
+```
+
+CrabLink does not become:
+
+```text
+wallet mutation authority
+ledger mutation authority
+registry truth
+reward-plan authority
+quorum authority
+moderation-policy authority
+persistence truth
+provider truth
+receipt issuer
+balance authority
+confirmed-ROC authority
+finality authority
+public node daemon
+bridge runtime
+ROX/Solana runtime
+staking or liquidity runtime
+exchange-facing settlement
+```
+
+Pending evidence is not confirmed ROC.
+
+A reward plan is not confirmed ROC.
+
+A wallet request is not confirmed ROC.
+
+Confirmed ROC requires a durable wallet/ledger receipt and accepted replay.
+
+---
+
+## 19. Final result
+
+CrabLink now provides:
+
+* A private, managed User Node experience for normal users.
+* Native, bounded OAP retrieval and complete BLAKE3 verification.
+* A real pending-evidence submission path.
+* Fail-closed privacy routing with no direct-provider fallback.
+* An optional Service Node Operator Mode.
+* Headless-compatible Service Node status and controls.
+* Signed external reward-recipient binding.
+* Moderation and persistence review.
+* Receipt-only confirmed-ROC presentation.
+* Strict separation from wallet, ledger, quorum, registry, policy, and finality authority.
+* Reproducible acceptance tooling across the final BUILD_PLAN_Z phases.
+
+Final status:
+
+```text
+CrabLink / crablink-tauri
+BUILD_PLAN_Z closing phases
+COMPLETE / GREEN / PARKED
+```
+
+
+### END NOTE - JULY 15 2026 - 18:30 CST

@@ -21,30 +21,30 @@ const MAX_ADMIN_TOKEN_BYTES: usize = 4 * 1024;
 
 static NONCE_COUNTER: AtomicU64 = AtomicU64::new(1);
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ServiceNodeRewardBindingRequest {
-    enabled: bool,
-    connection_mode: String,
-    base_url: String,
-    admin_token: String,
-    reward_recipient_display_address: String,
+    pub enabled: bool,
+    pub connection_mode: String,
+    pub base_url: String,
+    pub admin_token: String,
+    pub reward_recipient_display_address: String,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServiceNodeRewardBindingResult {
-    status: String,
-    state: String,
-    reward_recipient_display_address: Option<String>,
-    pending_rotation_display_address: Option<String>,
-    signed_intent_verified: bool,
-    intent_signer_kind: Option<String>,
-    registry_finality: bool,
-    wallet_mutation: bool,
-    ledger_mutation: bool,
-    confirmed_roc: Option<u64>,
-    note: String,
+    pub status: String,
+    pub state: String,
+    pub reward_recipient_display_address: Option<String>,
+    pub pending_rotation_display_address: Option<String>,
+    pub signed_intent_verified: bool,
+    pub intent_signer_kind: Option<String>,
+    pub registry_finality: bool,
+    pub wallet_mutation: bool,
+    pub ledger_mutation: bool,
+    pub confirmed_roc: Option<u64>,
+    pub note: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -83,6 +83,17 @@ struct BindResponseBody {
 
 #[tauri::command]
 pub async fn service_node_operator_bind_reward_recipient(
+    request: ServiceNodeRewardBindingRequest,
+) -> Result<ServiceNodeRewardBindingResult, String> {
+    submit_service_node_reward_binding(request).await
+}
+
+/// Submit the same signed binding request used by the Tauri command bridge.
+///
+/// This reusable entrypoint exists for Phase 22 live attachment tests. It
+/// preserves explicit authentication, replay-bounded signed intent, and the
+/// non-authority response validation enforced by the production command.
+pub async fn submit_service_node_reward_binding(
     request: ServiceNodeRewardBindingRequest,
 ) -> Result<ServiceNodeRewardBindingResult, String> {
     validate_request(&request)?;

@@ -82,11 +82,36 @@ pub async fn local_node_status(
     state: State<'_, AppState>,
     request: Option<LocalNodeRequest>,
 ) -> Result<LocalNodeStatus, String> {
+    let timeout_ms = {
+        let settings = state
+            .settings
+            .lock()
+            .map_err(|_| "settings lock poisoned".to_string())?;
+
+        settings.request_timeout_ms
+    };
+
+    query_local_node_status(state.http.clone(), timeout_ms, request).await
+}
+
+/// Execute the production local User Node status boundary without a Tauri
+/// runtime.
+///
+/// Phase 22 uses this helper to prove that CrabLink observes an independently
+/// managed micronode. The helper can neither start nor stop the daemon and
+/// never reports pending evidence as confirmed ROC.
+pub async fn query_local_node_status(
+    client: reqwest::Client,
+    timeout_ms: u64,
+    request: Option<LocalNodeRequest>,
+) -> Result<LocalNodeStatus, String> {
     let request = request.unwrap_or(LocalNodeRequest {
         enabled: None,
         base_url: None,
     });
+
     let enabled = request.enabled.unwrap_or(false);
+
     let base_url = normalize_local_node_base_url(
         request
             .base_url
@@ -98,22 +123,17 @@ pub async fn local_node_status(
         return disabled_status(base_url, "status", "local node disabled by settings");
     }
 
-    let timeout_ms = {
-        let settings = state
-            .settings
-            .lock()
-            .map_err(|_| "settings lock poisoned".to_string())?;
-        settings.request_timeout_ms.clamp(1, 30_000)
-    };
-
-    let client = state.http.clone();
+    let timeout_ms = timeout_ms.clamp(1, 30_000);
 
     let health = probe_local_node_route(&client, &base_url, "/healthz", timeout_ms).await;
+
     let ready = probe_local_node_route(&client, &base_url, "/readyz", timeout_ms).await;
+
     let status_probe =
         probe_local_node_route(&client, &base_url, "/api/v1/status", timeout_ms).await;
 
     let health_probe = probe_result_to_option(&health);
+
     let ready_probe = probe_result_to_option(&ready);
 
     let status_json = match status_probe {
@@ -122,17 +142,25 @@ pub async fn local_node_status(
     };
 
     let mut status = disabled_status(base_url, "status", "local node status checked")?;
+
     status.enabled = true;
     status.configured = true;
     status.mode = "user_managed_micronode".to_string();
+
     status.health = health_probe;
     status.ready = ready_probe;
     status.node_status = status_json.clone();
 
     apply_node_status_truth(&mut status, status_json.as_ref());
 
-    let health_ok = status.health.as_ref().map(|p| p.ok).unwrap_or(false);
+    let health_ok = status
+        .health
+        .as_ref()
+        .map(|probe| probe.ok)
+        .unwrap_or(false);
+
     let node_status_ok = status.node_status.is_some();
+
     let privacy_ok = status.privacy_mode
         && !status.public_inbound_enabled
         && status.peer_ip_display == "forbidden"
@@ -142,13 +170,16 @@ pub async fn local_node_status(
 
     if health_ok && node_status_ok && privacy_ok {
         status.lifecycle_state = "active".to_string();
+
         status.reason = "local micronode attached and reporting safe user-node posture".to_string();
     } else if node_status_ok {
         status.lifecycle_state = "degraded".to_string();
+
         status.reason =
             "local node responded but posture is degraded or not fully private".to_string();
     } else {
         status.lifecycle_state = "degraded".to_string();
+
         status.reason = "local node enabled but status endpoint is unavailable".to_string();
     }
 

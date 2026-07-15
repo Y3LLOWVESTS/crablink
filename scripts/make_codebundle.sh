@@ -224,9 +224,17 @@ selected_scripts() {
     "$ROOT/scripts/check-crablink-signed-reward-binding-boundary.mjs" \
     "$ROOT/scripts/check-crablink-moderation-review-boundary.mjs" \
     "$ROOT/scripts/check-crablink-persistence-review-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-oap-object-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-user-node-verification-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-lifecycle-isolation-boundary.mjs" \
     "$ROOT/scripts/check-crablink-phase21-operator-acceptance.mjs" \
     "$ROOT/scripts/check-crablink-tab-hit-testing-boundary.mjs" \
     "$ROOT/scripts/check-phase21-operator-acceptance.sh" \
+    "$ROOT/scripts/check-phase22-local-operator-attachment.sh" \
+    "$ROOT/scripts/check-phase22-local-operator-reviews.sh" \
+    "$ROOT/scripts/check-phase22-local-oap-object.sh" \
+    "$ROOT/scripts/check-phase22-local-user-node-verification.sh" \
+    "$ROOT/scripts/check-phase22-local-lifecycle-isolation.sh" \
     "$ROOT/scripts/check-quickchain-client-boundary.mjs" \
     "$ROOT/scripts/check-quickchain-paid-cache-boundary.mjs" \
     "$ROOT/scripts/check-internal-roc-paid-content-boundary.mjs" \
@@ -447,9 +455,17 @@ binary_count="$(binary_files | count_stream)"
   echo "scripts/check-crablink-signed-reward-binding-boundary.mjs"
   echo "scripts/check-crablink-moderation-review-boundary.mjs"
   echo "scripts/check-crablink-persistence-review-boundary.mjs"
+  echo "scripts/check-crablink-oap-object-boundary.mjs"
+  echo "scripts/check-crablink-user-node-verification-boundary.mjs"
+  echo "scripts/check-crablink-lifecycle-isolation-boundary.mjs"
   echo "scripts/check-crablink-phase21-operator-acceptance.mjs"
   echo "scripts/check-crablink-tab-hit-testing-boundary.mjs"
   echo "scripts/check-phase21-operator-acceptance.sh"
+  echo "scripts/check-phase22-local-operator-attachment.sh"
+  echo "scripts/check-phase22-local-operator-reviews.sh"
+  echo "scripts/check-phase22-local-oap-object.sh"
+  echo "scripts/check-phase22-local-user-node-verification.sh"
+  echo "scripts/check-phase22-local-lifecycle-isolation.sh"
   echo "scripts/check-quickchain-client-boundary.mjs"
   echo "scripts/check-quickchain-paid-cache-boundary.mjs"
   echo "scripts/check-internal-roc-paid-content-boundary.mjs"

@@ -238,6 +238,28 @@ pub async fn service_node_operator_status(
     state: State<'_, AppState>,
     request: Option<ServiceNodeOperatorRequest>,
 ) -> Result<ServiceNodeOperatorStatus, String> {
+    let timeout_ms = {
+        let settings = state
+            .settings
+            .lock()
+            .map_err(|_| "settings lock poisoned".to_string())?;
+
+        settings.request_timeout_ms
+    };
+
+    query_service_node_operator_status(state.http.clone(), timeout_ms, request).await
+}
+
+/// Execute the same typed Operator status boundary without a Tauri runtime.
+///
+/// Phase 22 uses this entrypoint to attach the production native command logic
+/// to a real independently running Service Node. It cannot start or manage the
+/// daemon and preserves the command's bounded read-only projection.
+pub async fn query_service_node_operator_status(
+    client: reqwest::Client,
+    timeout_ms: u64,
+    request: Option<ServiceNodeOperatorRequest>,
+) -> Result<ServiceNodeOperatorStatus, String> {
     let request = request.unwrap_or(ServiceNodeOperatorRequest {
         enabled: None,
         connection_mode: None,
@@ -267,16 +289,7 @@ pub async fn service_node_operator_status(
         );
     }
 
-    let timeout_ms = {
-        let settings = state
-            .settings
-            .lock()
-            .map_err(|_| "settings lock poisoned".to_string())?;
-
-        settings.request_timeout_ms.clamp(1, 30_000)
-    };
-
-    let client = state.http.clone();
+    let timeout_ms = timeout_ms.clamp(1, 30_000);
     let health = probe_route(
         &client,
         &base_url,

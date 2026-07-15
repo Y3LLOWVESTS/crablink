@@ -721,3 +721,5 @@ function fnv1aHex(value) {
 
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
+
+export { normalizeConfirmedRocProjection } from '../wallet/confirmedRocProjection.js';

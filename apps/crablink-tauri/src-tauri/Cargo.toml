@@ -24,3 +24,6 @@ tokio = { version = "1", features = ["fs"] }
 tokio-util = { version = "0.7", features = ["io"] }
 urlencoding = "2"
 blake3 = "1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

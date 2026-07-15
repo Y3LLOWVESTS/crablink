@@ -5,10 +5,62 @@
 //! RO:SECURITY — command outputs must be typed and redacted.
 
 mod commands;
+mod confirmed_roc;
 mod media;
 mod state;
 
 use state::AppState;
+
+/// Narrow native test surface for Phase 22 cross-repository integration.
+///
+/// These exports execute the same bounded production Operator logic used by
+/// Tauri commands. They do not start, stop, or own either node daemon.
+#[doc(hidden)]
+pub mod phase22_test_support {
+    pub use crate::confirmed_roc::{
+        parse_confirmed_roc_projection, ConfirmedRocProjectionV1, CONFIRMED_ROC_PROJECTION_SCHEMA,
+        CONFIRMED_ROC_PROJECTION_VERSION,
+    };
+
+    pub use crate::commands::local_node::{
+        query_local_node_status, LocalNodeProbe, LocalNodeRequest, LocalNodeStatus,
+    };
+
+    pub use crate::commands::user_node_verification::{
+        submit_user_node_object_verification, user_node_verify_service_object,
+        verify_service_object_with_user_node, UserNodeVerificationRequest,
+        UserNodeVerificationResult, UserNodeVerificationSubmission,
+    };
+
+    pub use crate::commands::oap_object::{
+        build_oap_obj_get_request_wire, fetch_service_node_oap_object, verify_oap_object_stream,
+        ServiceNodeOapObjectFetchRequest, ServiceNodeOapObjectFetchResult,
+    };
+
+    pub use crate::commands::operator_moderation_review::{
+        service_node_operator_moderation_decide, service_node_operator_moderation_pending,
+        ServiceNodeModerationDecisionRequest, ServiceNodeModerationDecisionResult,
+        ServiceNodeModerationPendingRequest, ServiceNodeModerationPendingResult,
+        ServiceNodeModerationReviewItem,
+    };
+
+    pub use crate::commands::operator_node::{
+        query_service_node_operator_status, CanonicalServiceNodeSummary, ConfirmedIssuanceEvidence,
+        OperatorProbe, ServiceNodeOperatorRequest, ServiceNodeOperatorStatus,
+    };
+
+    pub use crate::commands::operator_persistence_review::{
+        service_node_operator_persistence_decide, service_node_operator_persistence_pending,
+        ServiceNodePersistenceCandidate, ServiceNodePersistenceDecisionRequest,
+        ServiceNodePersistenceDecisionResult, ServiceNodePersistencePendingRequest,
+        ServiceNodePersistencePendingResult,
+    };
+
+    pub use crate::commands::operator_reward_binding::{
+        submit_service_node_reward_binding, ServiceNodeRewardBindingRequest,
+        ServiceNodeRewardBindingResult,
+    };
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -26,6 +78,8 @@ pub fn run() {
             commands::wallet::wallet_balance_gateway,
             commands::gateway::gateway_request,
             commands::local_node::local_node_status,
+            commands::oap_object::service_node_oap_object_fetch,
+            commands::user_node_verification::user_node_verify_service_object,
             commands::operator_moderation_review::service_node_operator_moderation_pending,
             commands::operator_moderation_review::service_node_operator_moderation_decide,
             commands::operator_persistence_review::service_node_operator_persistence_pending,

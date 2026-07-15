@@ -58,7 +58,17 @@
     "check:moderation-review-boundary": "node ../../scripts/check-crablink-moderation-review-boundary.mjs",
     "check:persistence-review-boundary": "node ../../scripts/check-crablink-persistence-review-boundary.mjs",
     "check:phase21-operator-acceptance": "node ../../scripts/check-crablink-phase21-operator-acceptance.mjs",
-    "check:tab-hit-testing-boundary": "node ../../scripts/check-crablink-tab-hit-testing-boundary.mjs"
+    "check:tab-hit-testing-boundary": "node ../../scripts/check-crablink-tab-hit-testing-boundary.mjs",
+    "check:phase22-local-operator-attachment": "../../scripts/check-phase22-local-operator-attachment.sh",
+    "check:phase22-local-operator-reviews": "../../scripts/check-phase22-local-operator-reviews.sh",
+    "check:oap-object-boundary": "node ../../scripts/check-crablink-oap-object-boundary.mjs",
+    "check:phase22-local-oap-object": "../../scripts/check-phase22-local-oap-object.sh",
+    "check:user-node-verification-boundary": "node ../../scripts/check-crablink-user-node-verification-boundary.mjs",
+    "check:phase22-local-user-node-verification": "../../scripts/check-phase22-local-user-node-verification.sh",
+    "check:lifecycle-isolation-boundary": "node ../../scripts/check-crablink-lifecycle-isolation-boundary.mjs",
+    "check:phase22-local-lifecycle-isolation": "../../scripts/check-phase22-local-lifecycle-isolation.sh",
+    "check:phase22-confirmed-roc-boundary": "node ../../scripts/check-phase22-confirmed-roc-boundary.mjs",
+    "check:phase22-final-acceptance": "../../scripts/check-phase22-final-acceptance.sh"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.34",

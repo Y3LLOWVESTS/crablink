@@ -20,27 +20,27 @@ const BACKEND_MAX_PENDING_LIMIT: usize = 1_024;
 const MAX_RESPONSE_BYTES: usize = 512 * 1_024;
 const MAX_ADMIN_TOKEN_BYTES: usize = 4 * 1_024;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ServiceNodePersistencePendingRequest {
-    enabled: bool,
-    connection_mode: String,
-    base_url: String,
-    admin_token: String,
+    pub enabled: bool,
+    pub connection_mode: String,
+    pub base_url: String,
+    pub admin_token: String,
 
     #[serde(default)]
-    limit: Option<usize>,
+    pub limit: Option<usize>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ServiceNodePersistenceDecisionRequest {
-    enabled: bool,
-    connection_mode: String,
-    base_url: String,
-    admin_token: String,
-    object: String,
-    action: String,
+    pub enabled: bool,
+    pub connection_mode: String,
+    pub base_url: String,
+    pub admin_token: String,
+    pub object: String,
+    pub action: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
