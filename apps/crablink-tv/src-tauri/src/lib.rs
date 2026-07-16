@@ -12,6 +12,8 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             commands::diagnostics::tv_diagnostics,
+            commands::gateway::tv_gateway_profile,
+            commands::pairing::tv_pairing_status,
             commands::settings::tv_settings_read,
         ])
         .run(tauri::generate_context!())

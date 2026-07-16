@@ -12,7 +12,15 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "check:boundary": "node ../../scripts/check-crablink-tv-command-boundary.mjs",
-    "check": "npm run check:boundary && npm run build && cargo test --manifest-path src-tauri/Cargo.toml --offline && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --offline -- -D warnings"
+    "check": "npm run check:boundary && npm run check:focus && npm run check:route && npm run check:settings && npm run check:pairing && npm run build && cargo test --manifest-path src-tauri/Cargo.toml --offline && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --offline -- -D warnings",
+    "test:focus": "node --test src/focus/focusGraph.test.mjs",
+    "check:focus": "node ../../scripts/check-crablink-tv-focus-boundary.mjs",
+    "test:route": "node --test src/navigation/tvRouteModel.test.mjs",
+    "check:route": "node ../../scripts/check-crablink-tv-route-boundary.mjs",
+    "test:settings": "node --test src/settings/tvPreferences.test.mjs",
+    "check:settings": "node ../../scripts/check-crablink-tv-settings-boundary.mjs",
+    "test:pairing": "node --test src/pairing/tvPairingViewModel.test.mjs",
+    "check:pairing": "node ../../scripts/check-crablink-tv-pairing-boundary.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

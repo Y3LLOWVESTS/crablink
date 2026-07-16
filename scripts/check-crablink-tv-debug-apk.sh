@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+EXPECTED_ANDROID_ABI="${EXPECTED_ANDROID_ABI:-arm64-v8a}"
+
 ROOT="/Users/mymac/Desktop/crablink"
 TV_APP="$ROOT/apps/crablink-tv"
 APK_OUTPUT_ROOT="$TV_APP/src-tauri/gen/android/app/build/outputs/apk"
@@ -295,16 +297,18 @@ ABI_LIST="$(
 
 echo "APK_ABIS=$ABI_LIST"
 
-if [ "$ABI_LIST" != "arm64-v8a" ]; then
-  echo "ERROR: expected an ARM64-only debug APK."
+if [ "$ABI_LIST" != "$EXPECTED_ANDROID_ABI" ]; then
+  echo "ERROR: unexpected APK ABI."
+  echo "EXPECTED_ANDROID_ABI=$EXPECTED_ANDROID_ABI"
+  echo "ACTUAL_ANDROID_ABI=$ABI_LIST"
   exit 1
 fi
 
 echo
-echo "ARM64 native libraries:"
+echo "$EXPECTED_ANDROID_ABI native libraries:"
 
 unzip -Z1 "$APK" |
-  grep -E '^lib/arm64-v8a/[^/]+\.so$'
+  grep -E "^lib/$EXPECTED_ANDROID_ABI/[^/]+\\.so$"
 
 echo
 echo "6. APK signing verification"
@@ -333,5 +337,5 @@ echo
 echo "============================================================"
 echo "CRABLINK_TV_DEBUG_APK_STATUS=GREEN"
 echo "CRABLINK_TV_DEBUG_APK=$APK"
-echo "CRABLINK_TV_DEBUG_APK_ABI=arm64-v8a"
+echo "CRABLINK_TV_DEBUG_APK_ABI=$EXPECTED_ANDROID_ABI"
 echo "============================================================"

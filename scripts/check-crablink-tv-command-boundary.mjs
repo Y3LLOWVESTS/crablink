@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * RO:WHAT — Validates the CrabLink TV Phase 1 native-command boundary.
+ * RO:WHAT — Validates the narrow CrabLink TV native-command boundary.
  * RO:WHY — Prevents desktop node/operator/creator/economic authority from entering TV.
- * RO:INTERACTS — TV Tauri registry, commands, capability, package, and config.
- * RO:INVARIANTS — exactly two host commands; core-only permission; separate identifier.
+ * RO:INTERACTS — TV Tauri registry, command modules, capability, package, and config.
+ * RO:INVARIANTS — exactly four read-only foundation commands; core-only permission; separate identifier.
  * RO:SECURITY — rejects dangerous command names, plugins, and broad permissions.
  * RO:TEST — node scripts/check-crablink-tv-command-boundary.mjs.
  */
@@ -12,17 +12,28 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const scriptDir = path.dirname(
+  fileURLToPath(import.meta.url),
+);
+
 const root = path.resolve(scriptDir, '..');
 
 const files = {
   package: 'apps/crablink-tv/package.json',
-  config: 'apps/crablink-tv/src-tauri/tauri.conf.json',
-  capability: 'apps/crablink-tv/src-tauri/capabilities/tv.json',
-  lib: 'apps/crablink-tv/src-tauri/src/lib.rs',
-  commands: 'apps/crablink-tv/src-tauri/src/commands/mod.rs',
+  config:
+    'apps/crablink-tv/src-tauri/tauri.conf.json',
+  capability:
+    'apps/crablink-tv/src-tauri/capabilities/tv.json',
+  lib:
+    'apps/crablink-tv/src-tauri/src/lib.rs',
+  commands:
+    'apps/crablink-tv/src-tauri/src/commands/mod.rs',
   diagnostics:
     'apps/crablink-tv/src-tauri/src/commands/diagnostics.rs',
+  gateway:
+    'apps/crablink-tv/src-tauri/src/commands/gateway.rs',
+  pairing:
+    'apps/crablink-tv/src-tauri/src/commands/pairing.rs',
   settings:
     'apps/crablink-tv/src-tauri/src/commands/settings.rs',
 };
@@ -30,25 +41,26 @@ const files = {
 const failures = [];
 
 function read(relativePath) {
-  const absolutePath = path.join(root, relativePath);
+  const absolutePath =
+    path.join(root, relativePath);
 
   if (!fs.existsSync(absolutePath)) {
-    failures.push(`missing required file: ${relativePath}`);
+    failures.push(
+      `missing required file: ${relativePath}`,
+    );
     return '';
   }
 
-  return fs.readFileSync(absolutePath, 'utf8');
+  return fs.readFileSync(
+    absolutePath,
+    'utf8',
+  );
 }
 
-const packageSource = read(files.package);
-const configSource = read(files.config);
-const capabilitySource = read(files.capability);
-const libSource = read(files.lib);
-const commandsSource = read(files.commands);
-const diagnosticsSource = read(files.diagnostics);
-const settingsSource = read(files.settings);
-
-function parseJson(relativePath, source) {
+function parseJson(
+  relativePath,
+  source,
+) {
   try {
     return JSON.parse(source);
   } catch (error) {
@@ -59,8 +71,29 @@ function parseJson(relativePath, source) {
   }
 }
 
-const packageData = parseJson(files.package, packageSource);
-const configData = parseJson(files.config, configSource);
+const packageSource = read(files.package);
+const configSource = read(files.config);
+const capabilitySource = read(files.capability);
+const libSource = read(files.lib);
+const commandsSource = read(files.commands);
+
+const commandSources = [
+  read(files.diagnostics),
+  read(files.gateway),
+  read(files.pairing),
+  read(files.settings),
+].join('\n');
+
+const packageData = parseJson(
+  files.package,
+  packageSource,
+);
+
+const configData = parseJson(
+  files.config,
+  configSource,
+);
+
 const capabilityData = parseJson(
   files.capability,
   capabilitySource,
@@ -68,6 +101,8 @@ const capabilityData = parseJson(
 
 const expectedCommands = [
   'tv_diagnostics',
+  'tv_gateway_profile',
+  'tv_pairing_status',
   'tv_settings_read',
 ].sort();
 
@@ -80,7 +115,7 @@ const registeredCommands = [
   .sort();
 
 const declaredCommands = [
-  ...`${diagnosticsSource}\n${settingsSource}`.matchAll(
+  ...commandSources.matchAll(
     /#\[tauri::command\]\s*pub fn\s+([a-z0-9_]+)/g,
   ),
 ]
@@ -105,6 +140,30 @@ if (
   );
 }
 
+const expectedModules = [
+  'diagnostics',
+  'gateway',
+  'pairing',
+  'settings',
+].sort();
+
+const declaredModules = [
+  ...commandsSource.matchAll(
+    /pub\(crate\) mod ([a-z0-9_]+);/g,
+  ),
+]
+  .map((match) => match[1])
+  .sort();
+
+if (
+  JSON.stringify(declaredModules) !==
+  JSON.stringify(expectedModules)
+) {
+  failures.push(
+    `TV command modules must be exactly: ${expectedModules.join(', ')}`,
+  );
+}
+
 const forbiddenCommandName =
   /(?:local_node|user_node|service_node|operator|wallet|ledger|reward|payout|mint|burn|transfer|publish|upload|shell|process|execute|eval|quickchain|bridge|solana|rox|staking|liquidity)/i;
 
@@ -117,15 +176,6 @@ for (const command of registeredCommands) {
 }
 
 if (
-  !commandsSource.includes('pub(crate) mod diagnostics;') ||
-  !commandsSource.includes('pub(crate) mod settings;')
-) {
-  failures.push(
-    'TV command module registry must contain diagnostics and settings only.',
-  );
-}
-
-if (
   configData.identifier !==
   'com.rustyonions.crablink.tv'
 ) {
@@ -134,20 +184,24 @@ if (
   );
 }
 
-if (packageData.name !== '@crablink/crablink-tv') {
+if (
+  packageData.name !==
+  '@crablink/crablink-tv'
+) {
   failures.push(
     'TV package name must be @crablink/crablink-tv.',
   );
 }
 
-const permissions = capabilityData.permissions ?? [];
+const permissions =
+  capabilityData.permissions ?? [];
 
 if (
   JSON.stringify(permissions) !==
   JSON.stringify(['core:default'])
 ) {
   failures.push(
-    'TV Phase 1 capability must contain only core:default.',
+    'TV capability must contain only core:default.',
   );
 }
 
@@ -167,12 +221,17 @@ const allDependencies = {
   ...(packageData.devDependencies ?? {}),
 };
 
-for (const dependency of Object.keys(allDependencies)) {
+for (
+  const dependency of
+  Object.keys(allDependencies)
+) {
   if (
-    dependency.startsWith('@tauri-apps/plugin-')
+    dependency.startsWith(
+      '@tauri-apps/plugin-',
+    )
   ) {
     failures.push(
-      `TV Phase 1 must not add Tauri plugins: ${dependency}`,
+      `TV foundation must not add Tauri plugins: ${dependency}`,
     );
   }
 }
@@ -192,12 +251,19 @@ if (failures.length > 0) {
 console.log(
   'CrabLink TV command-boundary check passed.',
 );
+
 console.log(
-  'Registered commands: tv_diagnostics, tv_settings_read.',
+  'Registered commands: tv_diagnostics, tv_gateway_profile, tv_pairing_status, tv_settings_read.',
 );
+
 console.log(
   'Capability permissions: core:default.',
 );
+
 console.log(
-  'No node, operator, creator, wallet, or ledger command authority exists.',
+  'Gateway and pairing commands are read-only foundation snapshots.',
+);
+
+console.log(
+  'No node, operator, creator, wallet, reward, or ledger command authority exists.',
 );

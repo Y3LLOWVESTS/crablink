@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# RO:WHAT — Builds a clean text-only CrabLink Tauri app codebundle for review.
+# RO:WHAT — Builds a clean CrabLink desktop, Android TV, and shared-platform codebundle for review.
 # RO:WHY — Tauri-first DX/GOV; AI/code review needs deterministic native-app bundles separate from Chrome.
-# RO:INTERACTS — apps/crablink-tauri, packages/crablink-core, packages/crablink-platform, docs/tauri, selected scripts, CODEBUNDLE_TAURI_APP.md.
+# RO:INTERACTS — apps/crablink-tauri, apps/crablink-tv, Android project source, packages/crablink-core, packages/crablink-platform, docs/tauri, selected scripts, assets/app-logo, CODEBUNDLE_TAURI_APP.md.
 # RO:INVARIANTS — text source only; no target/dist/node_modules dumps; Chrome proof bundle remains separate in make_codebundle_chrome.sh.
 # RO:METRICS — reports text and binary counts in the generated bundle.
 # RO:CONFIG — optional first arg sets output path.
@@ -14,11 +14,17 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="${1:-$ROOT/CODEBUNDLE_TAURI_APP.md}"
 
 TAURI_APP_DIR="$ROOT/apps/crablink-tauri"
+TV_APP_DIR="$ROOT/apps/crablink-tv"
 TAURI_DOCS_DIR="$ROOT/docs/tauri"
 PACKAGES_DIR="$ROOT/packages"
 
 if [[ ! -d "$TAURI_APP_DIR" ]]; then
   echo "error: expected Tauri app folder at: $TAURI_APP_DIR"
+  exit 1
+fi
+
+if [[ ! -d "$TV_APP_DIR" ]]; then
+  echo "error: expected CrabLink TV app folder at: $TV_APP_DIR"
   exit 1
 fi
 
@@ -61,13 +67,18 @@ lang_for_file() {
 
   case "$file" in
     *.rs) echo "rust" ;;
+    *.kt|*.kts) echo "kotlin" ;;
+    *.java) echo "java" ;;
+    *.gradle) echo "groovy" ;;
     *.js|*.mjs|*.cjs|*.jsx) echo "javascript" ;;
     *.ts|*.mts|*.cts|*.tsx) echo "typescript" ;;
     *.json|*.jsonc) echo "json" ;;
     *.html|*.htm) echo "html" ;;
     *.css) echo "css" ;;
     *.md|*.markdown) echo "markdown" ;;
-    *.sh|*.bash|*.zsh) echo "bash" ;;
+    *.sh|*.bash|*.zsh|gradlew) echo "bash" ;;
+    *.bat) echo "batch" ;;
+    *.properties|*.pro|*.editorconfig) echo "text" ;;
     *.yml|*.yaml) echo "yaml" ;;
     *.toml) echo "toml" ;;
     *.txt|*.text) echo "text" ;;
@@ -86,19 +97,19 @@ is_text_file() {
   base="$(basename "$file")"
 
   case "$base" in
-    .gitignore|cargo.lock|cargo.toml|build.rs|package.json|vite.config.js|vite.config.mjs|vite.config.cjs|eslint.config.js|prettier.config.js)
+    .gitignore|.editorconfig|cargo.lock|cargo.toml|build.rs|package.json|vite.config.js|vite.config.mjs|vite.config.cjs|eslint.config.js|prettier.config.js|gradlew|gradlew.bat|settings.gradle|settings.gradle.kts|gradle.properties|proguard-rules.pro)
       return 0
       ;;
   esac
 
   case "$file" in
-    *.rs)
+    *.rs|*.kt|*.kts|*.java|*.gradle)
       return 0
       ;;
     *.js|*.mjs|*.cjs|*.jsx|*.ts|*.mts|*.cts|*.tsx)
       return 0
       ;;
-    *.json|*.jsonc|*.html|*.htm|*.css|*.md|*.markdown|*.sh|*.bash|*.zsh|*.txt|*.text|*.yml|*.yaml|*.toml|*.xml|*.svg|*.plist)
+    *.json|*.jsonc|*.html|*.htm|*.css|*.md|*.markdown|*.sh|*.bash|*.zsh|*.bat|*.txt|*.text|*.properties|*.pro|*.editorconfig|*.yml|*.yaml|*.toml|*.xml|*.svg|*.plist)
       return 0
       ;;
     *)
@@ -143,7 +154,30 @@ is_excluded_path() {
       return 0
       ;;
 
-    apps/*/src-tauri/target/*|apps/*/src-tauri/gen/*|apps/*/src-tauri/.tauri/*)
+    apps/*/src-tauri/target/*|apps/*/src-tauri/.tauri/*)
+      return 0
+      ;;
+
+    # Desktop generated Tauri state remains excluded.
+    apps/crablink-tauri/src-tauri/gen/*)
+      return 0
+      ;;
+
+    # CrabLink TV owns its generated Android project as source. Exclude only
+    # machine-local state, compiled output, IDE state, and Rust JNI links.
+    apps/crablink-tv/src-tauri/gen/android/.gradle|apps/crablink-tv/src-tauri/gen/android/.gradle/*|apps/crablink-tv/src-tauri/gen/android/.kotlin|apps/crablink-tv/src-tauri/gen/android/.kotlin/*|apps/crablink-tv/src-tauri/gen/android/.cxx|apps/crablink-tv/src-tauri/gen/android/.cxx/*|apps/crablink-tv/src-tauri/gen/android/.externalNativeBuild|apps/crablink-tv/src-tauri/gen/android/.externalNativeBuild/*)
+      return 0
+      ;;
+
+    apps/crablink-tv/src-tauri/gen/android/app/build|apps/crablink-tv/src-tauri/gen/android/app/build/*|apps/crablink-tv/src-tauri/gen/android/build|apps/crablink-tv/src-tauri/gen/android/build/*)
+      return 0
+      ;;
+
+    apps/crablink-tv/src-tauri/gen/android/app/src/main/jniLibs|apps/crablink-tv/src-tauri/gen/android/app/src/main/jniLibs/*)
+      return 0
+      ;;
+
+    apps/crablink-tv/src-tauri/gen/android/local.properties|apps/crablink-tv/src-tauri/gen/android/*/local.properties|apps/crablink-tv/src-tauri/gen/android/navigation.json|apps/crablink-tv/src-tauri/gen/android/captures/*)
       return 0
       ;;
 
@@ -266,6 +300,17 @@ selected_scripts() {
     "$ROOT/scripts/smoke-tauri-local-gateway.sh" \
     "$ROOT/scripts/migrate_chrome_react_to_tauri.sh" \
     "$ROOT/scripts/scaffold_crablink_tauri.sh" \
+    "$ROOT/scripts/check-crablink-tv-command-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-focus-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-route-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-settings-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-pairing-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-android-tv-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-debug-apk.sh" \
+    "$ROOT/scripts/check-crablink-tv-theme-default.mjs" \
+    "$ROOT/scripts/check-crablink-tv-android-build-task.mjs" \
+    "$ROOT/scripts/check-crablink-tv-brand-assets.mjs" \
+    "$ROOT/scripts/check-crablink-tv-codebundle-boundary.mjs" \
     "$ROOT/scripts/make_codebundle.sh"
   do
     if [[ -f "$script" ]]; then
@@ -276,6 +321,13 @@ selected_scripts() {
 
 candidate_files() {
   selected_root_files
+
+  # Preserve the original brand source as a binary hash/size summary.
+  for brand_asset in "$ROOT"/assets/app-logo.*; do
+    if [[ -f "$brand_asset" ]]; then
+      echo "$brand_asset"
+    fi
+  done
 
   if [[ -d "$TAURI_DOCS_DIR" ]]; then
     find "$TAURI_DOCS_DIR" \
@@ -300,6 +352,24 @@ candidate_files() {
        -o -name target \
        -o -name gen \
        -o -name .tauri \
+    \) -prune -o -type f -print 2>/dev/null
+
+  find "$TV_APP_DIR" \
+    \( -name .git \
+       -o -name node_modules \
+       -o -name dist \
+       -o -name build \
+       -o -name coverage \
+       -o -name .vite \
+       -o -name .turbo \
+       -o -name target \
+       -o -name .tauri \
+       -o -name .gradle \
+       -o -name .kotlin \
+       -o -name .cxx \
+       -o -name .externalNativeBuild \
+       -o -name jniLibs \
+       -o -name captures \
     \) -prune -o -type f -print 2>/dev/null
 
   if [[ -d "$PACKAGES_DIR" ]]; then
@@ -423,10 +493,10 @@ binary_count="$(binary_files | count_stream)"
 
 {
   echo "<!-- Generated by scripts/make_codebundle.sh on $timestamp -->"
-  echo "# Code Bundle — CrabLink Tauri App"
+  echo "# Code Bundle — CrabLink Desktop and Android Apps"
   echo
   echo "> Generated for review/sharing. Source of truth remains the repo."
-  echo "> Includes Tauri app source, Tauri Rust command bridge, Tauri IDBs, platform/core migration packages, and selected Tauri scripts."
+  echo "> Includes CrabLink desktop, CrabLink TV, owned Android project source, Tauri Rust command bridges, Tauri IDBs, platform/core migration packages, brand metadata, and selected scripts."
   echo "> Excludes Chrome extension source, node_modules, dist, target, transient state, secrets, generated npm lockfile bodies, and binary file bodies."
   echo
   echo "- Root: $ROOT"
@@ -447,9 +517,22 @@ binary_count="$(binary_files | count_stream)"
   echo ".gitignore"
   echo "docs/tauri/"
   echo "apps/crablink-tauri/"
+  echo "apps/crablink-tv/"
+  echo "assets/app-logo.*"
   echo "packages/crablink-core/"
   echo "packages/crablink-platform/"
   echo "scripts/check-tauri.sh"
+  echo "scripts/check-crablink-tv-command-boundary.mjs"
+  echo "scripts/check-crablink-tv-focus-boundary.mjs"
+  echo "scripts/check-crablink-tv-route-boundary.mjs"
+  echo "scripts/check-crablink-tv-settings-boundary.mjs"
+  echo "scripts/check-crablink-tv-pairing-boundary.mjs"
+  echo "scripts/check-crablink-tv-android-tv-boundary.mjs"
+  echo "scripts/check-crablink-tv-debug-apk.sh"
+  echo "scripts/check-crablink-tv-theme-default.mjs"
+  echo "scripts/check-crablink-tv-android-build-task.mjs"
+  echo "scripts/check-crablink-tv-brand-assets.mjs"
+  echo "scripts/check-crablink-tv-codebundle-boundary.mjs"
   echo "scripts/check-crablink-service-node-operator-boundary.mjs"
   echo "scripts/check-crablink-service-node-operator-ui-boundary.mjs"
   echo "scripts/check-crablink-signed-reward-binding-boundary.mjs"

@@ -23,7 +23,18 @@
     "tv:android:apk:check": "bash scripts/check-crablink-tv-debug-apk.sh",
     "tv:theme:check": "node scripts/check-crablink-tv-theme-default.mjs",
     "tv:android:build-task:check": "node scripts/check-crablink-tv-android-build-task.mjs",
-    "tv:brand:check": "node scripts/check-crablink-tv-brand-assets.mjs"
+    "tv:brand:check": "node scripts/check-crablink-tv-brand-assets.mjs",
+    "tv:android:build:debug:armv7": "npm --prefix apps/crablink-tv run tauri -- android build --debug --target armv7 --apk --ci",
+    "tv:android:apk:check:armv7": "EXPECTED_ANDROID_ABI=armeabi-v7a bash scripts/check-crablink-tv-debug-apk.sh",
+    "tv:codebundle:check": "node scripts/check-crablink-tv-codebundle-boundary.mjs",
+    "tv:focus:test": "npm --prefix apps/crablink-tv run test:focus",
+    "tv:focus:check": "node scripts/check-crablink-tv-focus-boundary.mjs",
+    "tv:route:test": "npm --prefix apps/crablink-tv run test:route",
+    "tv:route:check": "node scripts/check-crablink-tv-route-boundary.mjs",
+    "tv:settings:test": "npm --prefix apps/crablink-tv run test:settings",
+    "tv:settings:check": "node scripts/check-crablink-tv-settings-boundary.mjs",
+    "tv:pairing:test": "npm --prefix apps/crablink-tv run test:pairing",
+    "tv:pairing:check": "node scripts/check-crablink-tv-pairing-boundary.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
