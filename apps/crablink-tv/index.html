@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-theme-mode="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <meta name="theme-color" content="#090b12" />
+    <title>CrabLink TV</title>
+      <!-- CrabLink TV theme bootstrap: begin -->
+    <meta name="color-scheme" content="dark light" />
+    <script>
+      (() => {
+        const storageKey = 'crablink.theme.mode';
+        const validModes = new Set(['light', 'dark', 'system']);
+        let mode = 'dark';
+
+        try {
+          const storedMode =
+            globalThis.localStorage?.getItem(storageKey) ?? '';
+
+          if (validModes.has(storedMode)) {
+            mode = storedMode;
+          } else {
+            globalThis.localStorage?.setItem(storageKey, mode);
+          }
+        } catch (_error) {
+          // Storage may be unavailable; this session still defaults to dark.
+        }
+
+        const systemDark =
+          globalThis.matchMedia?.(
+            '(prefers-color-scheme: dark)',
+          )?.matches ?? false;
+
+        const resolvedTheme =
+          mode === 'system'
+            ? systemDark
+              ? 'dark'
+              : 'light'
+            : mode;
+
+        document.documentElement.dataset.themeMode = mode;
+        document.documentElement.dataset.theme = resolvedTheme;
+        document.documentElement.style.colorScheme = resolvedTheme;
+      })();
+    </script>
+    <!-- CrabLink TV theme bootstrap: end -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

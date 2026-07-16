@@ -361,3 +361,117 @@ docs/build/
 
 !.gitkeep
 !.keep
+
+# =============================================================================
+# CrabLink TV / Tauri Android project
+# =============================================================================
+# Tauri generates the Android project beneath src-tauri/gen/android.
+#
+# Unlike temporary desktop build output, this Android project contains source
+# and configuration that CrabLink TV intentionally owns and must preserve:
+# AndroidManifest.xml, Gradle wrapper/configuration, Kotlin source, launcher
+# resources, TV banners, icons, themes, and future Android-specific behavior.
+#
+# These negations override the earlier:
+#     apps/**/src-tauri/gen/
+# rule for the CrabLink TV Android project only.
+# =============================================================================
+
+!apps/crablink-tv/src-tauri/gen/
+!apps/crablink-tv/src-tauri/gen/android/
+!apps/crablink-tv/src-tauri/gen/android/**
+
+
+# =============================================================================
+# Android / Gradle local state and generated build output
+# =============================================================================
+
+.gradle/
+apps/**/.gradle/
+apps/**/src-tauri/gen/android/.gradle/
+apps/**/src-tauri/gen/android/**/.gradle/
+
+.kotlin/
+apps/**/.kotlin/
+apps/**/src-tauri/gen/android/.kotlin/
+apps/**/src-tauri/gen/android/**/.kotlin/
+
+apps/**/src-tauri/gen/android/**/build/
+apps/**/src-tauri/gen/android/.cxx/
+apps/**/src-tauri/gen/android/**/.cxx/
+apps/**/src-tauri/gen/android/.externalNativeBuild/
+apps/**/src-tauri/gen/android/**/.externalNativeBuild/
+
+# Tauri creates architecture-specific links to compiled Rust libraries here.
+apps/**/src-tauri/gen/android/app/src/main/jniLibs/
+
+
+# =============================================================================
+# Android machine-local SDK configuration
+# =============================================================================
+# local.properties normally contains the developer machine's Android SDK path.
+
+apps/**/src-tauri/gen/android/local.properties
+apps/**/src-tauri/gen/android/**/local.properties
+
+
+# =============================================================================
+# Android IDE and inspection output
+# =============================================================================
+
+apps/**/src-tauri/gen/android/.idea/
+apps/**/src-tauri/gen/android/**/.idea/
+apps/**/src-tauri/gen/android/captures/
+apps/**/src-tauri/gen/android/**/captures/
+apps/**/src-tauri/gen/android/navigation.json
+
+
+# =============================================================================
+# Android packages, reports, and signing material
+# =============================================================================
+
+*.apk
+*.aab
+*.apks
+*.idsig
+
+apps/**/src-tauri/gen/android/keystore.properties
+apps/**/src-tauri/gen/android/key.properties
+
+*.jks
+*.keystore
+
+
+# =============================================================================
+# Keep Android project source tracked
+# =============================================================================
+# Do not ignore:
+# - gradlew / gradlew.bat
+# - gradle/wrapper/gradle-wrapper.jar
+# - gradle/wrapper/gradle-wrapper.properties
+# - settings.gradle or settings.gradle.kts
+# - build.gradle or build.gradle.kts
+# - gradle.properties
+# - AndroidManifest.xml
+# - app/src/main/java and app/src/main/kotlin
+# - app/src/main/res
+# - launcher icons, Android TV banners, themes, and XML resources
+# =============================================================================
+
+
+# =============================================================================
+# Final CrabLink TV Android generated-output overrides
+# =============================================================================
+# Keep these rules after all src-tauri/gen/android negations so generated Rust
+# shared-library links remain ignored even though Android project source is kept.
+# =============================================================================
+
+# >>> CrabLink TV final Android generated-output overrides >>>
+apps/**/src-tauri/gen/android/app/src/main/jniLibs
+apps/**/src-tauri/gen/android/app/src/main/jniLibs/**
+apps/**/src-tauri/gen/android/app/build
+apps/**/src-tauri/gen/android/app/build/**
+apps/**/src-tauri/gen/android/.gradle
+apps/**/src-tauri/gen/android/.gradle/**
+apps/**/src-tauri/gen/android/local.properties
+# <<< CrabLink TV final Android generated-output overrides <<<

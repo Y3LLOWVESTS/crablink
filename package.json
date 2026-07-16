@@ -14,7 +14,16 @@
     "tauri:build": "tauri build",
     "check": "npm run build && cargo check --manifest-path src-tauri/Cargo.toml",
     "check:quickchain-phase5-anchor-boundary": "npm --prefix apps/crablink-tauri run check:quickchain-phase5-anchor-boundary",
-    "check:quickchain-phase5-external-posture-boundary": "npm --prefix apps/crablink-tauri run check:quickchain-phase5-external-posture-boundary"
+    "check:quickchain-phase5-external-posture-boundary": "npm --prefix apps/crablink-tauri run check:quickchain-phase5-external-posture-boundary",
+    "tv:dev": "npm --prefix apps/crablink-tv run dev",
+    "tv:build": "npm --prefix apps/crablink-tv run build",
+    "tv:check": "npm --prefix apps/crablink-tv run check",
+    "tv:android:check": "node scripts/check-crablink-tv-android-tv-boundary.mjs",
+    "tv:android:build:debug": "npm --prefix apps/crablink-tv run tauri -- android build --debug --target aarch64 --apk --ci",
+    "tv:android:apk:check": "bash scripts/check-crablink-tv-debug-apk.sh",
+    "tv:theme:check": "node scripts/check-crablink-tv-theme-default.mjs",
+    "tv:android:build-task:check": "node scripts/check-crablink-tv-android-build-task.mjs",
+    "tv:brand:check": "node scripts/check-crablink-tv-brand-assets.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

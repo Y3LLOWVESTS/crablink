@@ -1,0 +1,210 @@
+:root {
+  color-scheme: dark;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  background: #090b12;
+  color: #f7f8fc;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 320px;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(92, 98, 255, 0.2),
+      transparent 38rem
+    ),
+    linear-gradient(145deg, #090b12 0%, #101424 100%);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.tv-shell {
+  width: min(100%, 1600px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: clamp(2rem, 5vw, 5rem);
+}
+
+.tv-header,
+.tv-native-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.tv-header h1,
+.tv-hero h2,
+.tv-card h3,
+.tv-native-panel h2 {
+  margin: 0;
+}
+
+.tv-eyebrow,
+.tv-kicker,
+.tv-card-label {
+  margin: 0 0 0.7rem;
+  color: #aab1ff;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.tv-header h1 {
+  font-size: clamp(2rem, 4vw, 4rem);
+}
+
+.tv-profile-badge {
+  flex: 0 0 auto;
+  border: 1px solid rgba(170, 177, 255, 0.65);
+  border-radius: 999px;
+  padding: 0.75rem 1rem;
+  background: rgba(92, 98, 255, 0.16);
+  color: #dfe2ff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.tv-hero {
+  max-width: 72rem;
+  margin: clamp(4rem, 8vw, 8rem) 0;
+}
+
+.tv-hero h2 {
+  max-width: 18ch;
+  font-size: clamp(3rem, 7vw, 7rem);
+  line-height: 0.98;
+}
+
+.tv-hero > p:last-child {
+  max-width: 58rem;
+  margin: 2rem 0 0;
+  color: #bdc3d9;
+  font-size: clamp(1.2rem, 2vw, 1.75rem);
+  line-height: 1.55;
+}
+
+.tv-card-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 1.25rem;
+}
+
+.tv-card,
+.tv-native-panel {
+  border: 1px solid rgba(174, 181, 214, 0.18);
+  border-radius: 1.5rem;
+  background: rgba(20, 25, 43, 0.82);
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.2);
+}
+
+.tv-card {
+  min-height: 15rem;
+  padding: 1.8rem;
+}
+
+.tv-card h3,
+.tv-native-panel h2 {
+  font-size: clamp(1.6rem, 2vw, 2.2rem);
+}
+
+.tv-card p:last-child,
+.tv-native-panel p {
+  color: #b9bfd3;
+  font-size: 1.08rem;
+  line-height: 1.55;
+}
+
+code {
+  overflow-wrap: anywhere;
+  color: #e7e9ff;
+}
+
+.tv-native-panel {
+  margin-top: 1.25rem;
+  padding: 1.8rem;
+}
+
+.tv-native-status {
+  margin-bottom: 0;
+}
+
+.tv-native-status--ready {
+  color: #9ee7bc;
+}
+
+.tv-native-status--checking {
+  color: #f7d48b;
+}
+
+.tv-native-status--browser {
+  color: #c9cdee;
+}
+
+.tv-action {
+  min-width: 14rem;
+  min-height: 4rem;
+  border: 2px solid transparent;
+  border-radius: 1rem;
+  padding: 1rem 1.4rem;
+  background: #6971ff;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tv-action:hover {
+  background: #7b82ff;
+}
+
+.tv-action:focus-visible {
+  outline: 0.3rem solid #ffffff;
+  outline-offset: 0.3rem;
+  transform: scale(1.035);
+}
+
+.tv-footer {
+  padding: 3rem 0 1rem;
+  color: #8f97b4;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 720px) {
+  .tv-header,
+  .tv-native-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tv-action {
+    width: 100%;
+  }
+}
