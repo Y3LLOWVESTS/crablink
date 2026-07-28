@@ -86,6 +86,7 @@ function restoreTvRouteFocus(route) {
 export function useTvSectionHistory({
   sectionIds,
   initialSectionId = 'home',
+  consumeBack = null,
 }) {
   const sectionIdsRef = useRef([
     ...sectionIds,
@@ -103,6 +104,12 @@ export function useTvSectionHistory({
   );
 
   const routeRef = useRef(route);
+
+  const consumeBackRef = useRef(
+    consumeBack,
+  );
+
+  consumeBackRef.current = consumeBack;
 
   useEffect(() => {
     const normalizedRoute =
@@ -134,6 +141,14 @@ export function useTvSectionHistory({
     }
 
     function handleFocusChange(event) {
+      if (
+        event.target?.closest?.(
+          '[data-tv-focus-scope="active"]',
+        )
+      ) {
+        return;
+      }
+
       const focusKey =
         event.target?.dataset?.tvFocusKey;
 
@@ -168,6 +183,21 @@ export function useTvSectionHistory({
         event.shiftKey ||
         targetAcceptsTextInput(event.target)
       ) {
+        return;
+      }
+
+      let consumed = false;
+
+      try {
+        consumed =
+          consumeBackRef.current?.() === true;
+      } catch {
+        consumed = false;
+      }
+
+      if (consumed) {
+        event.preventDefault();
+        event.stopPropagation();
         return;
       }
 

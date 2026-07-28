@@ -1,14 +1,43 @@
 /**
- * RO:WHAT — Settings adapter contract.
- * RO:WHY — Shared React needs settings without knowing Chrome or Tauri storage.
- * RO:INTERACTS — chromeSettingsAdapter, tauriSettingsAdapter, memorySettingsAdapter.
- * RO:INVARIANTS — settings are preferences, not backend truth.
+ * RO:WHAT — Platform-neutral read/write and read-only settings contracts.
+ * RO:WHY — Shared UI needs local preferences without knowing Chrome, Tauri, or test storage.
+ * RO:INTERACTS — desktop settings adapter, TV settings adapter, memory adapter later.
+ * RO:INVARIANTS — settings are preferences only; read-only consumers cannot acquire write access.
+ * RO:SECURITY — no wallet, ledger, receipt, key, capability, session, or entitlement truth.
+ * RO:TEST — adapterContracts.test.mjs.
  */
 
-export function createSettingsPort({ readSettings, writeSettings }) {
-  if (typeof readSettings !== "function" || typeof writeSettings !== "function") {
-    throw new TypeError("settings port requires readSettings and writeSettings");
-  }
+import {
+  createMethodPort,
+} from './portContract.js';
 
-  return Object.freeze({ readSettings, writeSettings });
+const SETTINGS_METHODS =
+  Object.freeze([
+    'readSettings',
+    'writeSettings',
+  ]);
+
+const READONLY_SETTINGS_METHODS =
+  Object.freeze([
+    'readSettings',
+  ]);
+
+export function createSettingsPort(
+  methods,
+) {
+  return createMethodPort(
+    'settings port',
+    methods,
+    SETTINGS_METHODS,
+  );
+}
+
+export function createReadonlySettingsPort(
+  methods,
+) {
+  return createMethodPort(
+    'readonly settings port',
+    methods,
+    READONLY_SETTINGS_METHODS,
+  );
 }

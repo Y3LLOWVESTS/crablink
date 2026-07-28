@@ -11,7 +11,7 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "check": "npm run check:service-node-operator-boundary && npm run check:service-node-operator-ui-boundary && npm run check:signed-reward-binding-boundary && npm run check:moderation-review-boundary && npm run check:persistence-review-boundary && npm run check:phase21-operator-acceptance && npm run check:tab-hit-testing-boundary && npm run check:quickchain-boundary && npm run check:quickchain-paid-cache-boundary && npm run check:internal-roc-paid-content-boundary && npm run check:quickchain-readiness-boundary && npm run check:quickchain-phase1-interlock && npm run check:quickchain-phase2-replay-boundary && npm run check:internal-roc-phase2-replay-visibility && npm run check:quickchain-phase2-committee-boundary && npm run check:quickchain-phase3-validator-boundary && npm run check:quickchain-phase3-lifecycle-boundary && npm run check:quickchain-phase4-bond-boundary && npm run check:quickchain-phase4-bond-dispute-boundary && npm run check:quickchain-phase4-bond-enforcement-boundary && npm run check:quickchain-phase5-anchor-boundary && npm run check:quickchain-phase5-da-fallback-boundary && npm run check:quickchain-phase5-external-posture-boundary && npm run check:internal-roc-stabilization-balance-refresh && npm run check:internal-roc-stabilization-render-lock && npm run check:internal-roc-stabilization-paid-ux && npm run check:internal-roc-phase4-wallet-receipt-ux && npm run check:internal-roc-phase4-confirmation-failure-ux && npm run check:local-node-boundary && npm run build && npm run check:rust:mac-media",
+    "check": "npm run check:shared-crab-url && npm run check:route-metadata && npm run check:receipt-display && npm run check:platform-contracts && npm run check:service-node-operator-boundary && npm run check:service-node-operator-ui-boundary && npm run check:signed-reward-binding-boundary && npm run check:moderation-review-boundary && npm run check:persistence-review-boundary && npm run check:phase21-operator-acceptance && npm run check:tab-hit-testing-boundary && npm run check:quickchain-boundary && npm run check:quickchain-paid-cache-boundary && npm run check:internal-roc-paid-content-boundary && npm run check:quickchain-readiness-boundary && npm run check:quickchain-phase1-interlock && npm run check:quickchain-phase2-replay-boundary && npm run check:internal-roc-phase2-replay-visibility && npm run check:quickchain-phase2-committee-boundary && npm run check:quickchain-phase3-validator-boundary && npm run check:quickchain-phase3-lifecycle-boundary && npm run check:quickchain-phase4-bond-boundary && npm run check:quickchain-phase4-bond-dispute-boundary && npm run check:quickchain-phase4-bond-enforcement-boundary && npm run check:quickchain-phase5-anchor-boundary && npm run check:quickchain-phase5-da-fallback-boundary && npm run check:quickchain-phase5-external-posture-boundary && npm run check:internal-roc-stabilization-balance-refresh && npm run check:internal-roc-stabilization-render-lock && npm run check:internal-roc-stabilization-paid-ux && npm run check:internal-roc-phase4-wallet-receipt-ux && npm run check:internal-roc-phase4-confirmation-failure-ux && npm run check:local-node-boundary && npm run build && npm run check:rust:mac-media",
     "check:quickchain-boundary": "node ../../scripts/check-quickchain-client-boundary.mjs",
     "check:quickchain-paid-cache-boundary": "node ../../scripts/check-quickchain-paid-cache-boundary.mjs",
     "check:quickchain-readiness-boundary": "node ../../scripts/check-quickchain-readiness-boundary.mjs",
@@ -68,7 +68,17 @@
     "check:lifecycle-isolation-boundary": "node ../../scripts/check-crablink-lifecycle-isolation-boundary.mjs",
     "check:phase22-local-lifecycle-isolation": "../../scripts/check-phase22-local-lifecycle-isolation.sh",
     "check:phase22-confirmed-roc-boundary": "node ../../scripts/check-phase22-confirmed-roc-boundary.mjs",
-    "check:phase22-final-acceptance": "../../scripts/check-phase22-final-acceptance.sh"
+    "check:phase22-final-acceptance": "../../scripts/check-phase22-final-acceptance.sh",
+    "test:shared-crab-url": "node --test src/shared/utils/crabUrl.shared.test.mjs",
+    "check:shared-crab-url-boundary": "node ../../scripts/check-crablink-desktop-shared-crab-url-boundary.mjs",
+    "check:shared-crab-url": "npm run test:shared-crab-url && npm run check:shared-crab-url-boundary",
+    "test:route-metadata": "node --test src/app/routeMetadata.shared.test.mjs",
+    "check:route-metadata-boundary": "node ../../scripts/check-crablink-route-metadata-boundary.mjs",
+    "check:route-metadata": "npm run test:route-metadata && npm run check:route-metadata-boundary",
+    "test:receipt-display": "node --test src/shared/receipts/receiptDisplay.shared.test.mjs",
+    "check:receipt-display-boundary": "node ../../scripts/check-crablink-receipt-display-boundary.mjs",
+    "check:receipt-display": "npm run test:receipt-display && npm run check:receipt-display-boundary",
+    "check:platform-contracts": "npm --prefix ../../packages/crablink-platform run check"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.34",

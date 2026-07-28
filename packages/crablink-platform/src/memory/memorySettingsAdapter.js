@@ -1,20 +1,12 @@
 /**
- * RO:WHAT — In-memory settings adapter for tests and static previews.
- * RO:WHY — Lets shared React run without Chrome or Tauri.
- * RO:INTERACTS — settingsPort contract.
- * RO:INVARIANTS — test/display state only.
+ * RO:WHAT — Compatibility export for the deterministic memory settings adapter.
+ * RO:WHY — Existing imports retain their reviewed path while family 5 centralizes behavior.
+ * RO:INTERACTS — memoryAdapters.js and the shared settings port.
+ * RO:INVARIANTS — no duplicate settings rules or ambient storage.
+ * RO:SECURITY — test preferences only; no wallet, ledger, receipt, session, or ROC authority.
+ * RO:TEST — memoryAdapters.test.mjs.
  */
 
-export function createMemorySettingsAdapter(initialSettings = {}) {
-  let settings = { ...initialSettings };
-
-  return {
-    async readSettings() {
-      return { ...settings };
-    },
-    async writeSettings(nextSettings) {
-      settings = { ...nextSettings };
-      return { ...settings };
-    }
-  };
-}
+export {
+  createMemorySettingsAdapter,
+} from './memoryAdapters.js';

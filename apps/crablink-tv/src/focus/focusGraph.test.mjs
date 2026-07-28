@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   chooseNextFocus,
+  wrappedFocusIndex,
 } from './focusGraph.js';
 
 function rect(left, top, width = 100, height = 100) {
@@ -109,4 +110,53 @@ test('rejects unknown directions without guessing', () => {
   );
 
   assert.equal(result, null);
+});
+
+
+test('modal Tab focus advances and wraps', () => {
+  assert.equal(
+    wrappedFocusIndex(0, 3),
+    1,
+  );
+
+  assert.equal(
+    wrappedFocusIndex(2, 3),
+    0,
+  );
+});
+
+test('modal Shift+Tab focus reverses and wraps', () => {
+  assert.equal(
+    wrappedFocusIndex(2, 3, true),
+    1,
+  );
+
+  assert.equal(
+    wrappedFocusIndex(0, 3, true),
+    2,
+  );
+});
+
+test('modal focus enters a valid edge when current focus is outside', () => {
+  assert.equal(
+    wrappedFocusIndex(-1, 4),
+    0,
+  );
+
+  assert.equal(
+    wrappedFocusIndex(-1, 4, true),
+    3,
+  );
+});
+
+test('modal focus rejects empty or invalid scopes', () => {
+  assert.equal(
+    wrappedFocusIndex(0, 0),
+    -1,
+  );
+
+  assert.equal(
+    wrappedFocusIndex(0, Number.NaN),
+    -1,
+  );
 });

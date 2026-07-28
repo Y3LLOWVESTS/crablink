@@ -91,7 +91,7 @@ export default function ProfileEditor({ app, draftState }) {
               <TextInput
                 value={draft.displayName}
                 onChange={updateField('displayName')}
-                placeholder="Skinnycrabby"
+                placeholder="Public display name"
                 maxLength={90}
               />
             </Field>
@@ -104,7 +104,7 @@ export default function ProfileEditor({ app, draftState }) {
               <TextInput
                 value={draft.handle}
                 onChange={updateField('handle')}
-                placeholder="@skinnycrabby"
+                placeholder="@username"
                 spellCheck={false}
                 maxLength={48}
               />

@@ -1,4 +1,8 @@
 import {
+  TvNetworkReadinessPanel,
+} from '../network/TvNetworkReadinessPanel.jsx';
+
+import {
   TV_RESOURCE_MODES,
   TV_THEME_MODES,
   describeTvResourceMode,
@@ -47,6 +51,10 @@ export function TvSettingsPanel({
           ROC balance, or unlock paid content.
         </p>
       </div>
+
+      <TvNetworkReadinessPanel
+        onActivity={onActivity}
+      />
 
       <div className="tv-settings-groups">
         <fieldset className="tv-settings-group">

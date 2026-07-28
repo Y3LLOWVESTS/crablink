@@ -54,8 +54,8 @@ export const USERNAME_STATUS_LABELS = Object.freeze({
 });
 
 export const DEFAULT_PROFILE_DRAFT = Object.freeze({
-  displayName: 'Skinnycrabby',
-  handle: '@skinnycrabby',
+  displayName: '',
+  handle: '',
   bio: '',
   tagline: 'CrabLink creator profile draft',
   avatarCrabUrl: '',

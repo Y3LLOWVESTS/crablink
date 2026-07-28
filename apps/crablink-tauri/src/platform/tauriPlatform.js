@@ -53,6 +53,15 @@ export const ALLOWED_TAURI_COMMANDS = Object.freeze([
   'start_local_stream_session',
   'get_local_stream_session',
   'stop_local_stream_session',
+
+  // Native Passport Phase 15 fixed commands: admitted after Phase 15AG final acceptance.
+  'passport_status',
+  'passport_create',
+  'passport_lock',
+  'passport_unlock_operational',
+  'passport_unlock_root',
+  'passport_recovery_ceremony',
+  'passport_clear',
 ]);
 
 const ALLOWED_TAURI_COMMAND_SET = new Set(ALLOWED_TAURI_COMMANDS);

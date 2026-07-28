@@ -19,16 +19,21 @@ import { useMemo, useState } from 'react';
 import CopyButton from '../../shared/components/CopyButton.jsx';
 import JsonPreview from '../../shared/components/JsonPreview.jsx';
 import {
+  RECEIPT_DISPLAY_FILTERS as FILTERS,
+  buildReceiptProofText as buildProofText,
+  countReceiptDisplayGroups as buildCounts,
+  filterReceiptDisplayList as filterReceipts,
+  formatReceiptAmount as formatAmount,
+  formatReceiptTimestamp as formatTimestamp,
+  normalizeReceiptDisplayList as normalizeReceiptList,
+  receiptActionLabel as labelFromAction,
+  receiptDisplayClassName as classSafe,
+  receiptDisplayKey as receiptKey,
+} from '../../../../../packages/crablink-core/src/index.js';
+import {
   clearRecentReceiptCache,
   dispatchReceiptsChanged,
 } from '../../shared/receipts/recentReceipts.js';
-
-const FILTERS = Object.freeze([
-  { id: 'all', label: 'All' },
-  { id: 'site_visit', label: 'Site visits' },
-  { id: 'publishes', label: 'Publishes' },
-  { id: 'wallet', label: 'Wallet' },
-]);
 
 export default function RecentReceiptsPanel({
   receipts = [],
@@ -283,145 +288,4 @@ function ReceiptFact({ label, value, monospace = false, copyable = false }) {
       </dd>
     </div>
   );
-}
-
-function normalizeReceiptList(receipts) {
-  return Array.isArray(receipts)
-    ? receipts
-        .filter(Boolean)
-        .slice()
-        .sort((a, b) => timestampForSort(b.createdAt || b.storedAt) - timestampForSort(a.createdAt || a.storedAt))
-    : [];
-}
-
-function filterReceipts(receipts, filter) {
-  switch (filter) {
-    case 'site_visit':
-      return receipts.filter((receipt) => normalizeAction(receipt.action || receipt.kind).includes('site_visit'));
-    case 'publishes':
-      return receipts.filter((receipt) => {
-        const action = normalizeAction(receipt.action || receipt.kind);
-        return action.includes('publish') || action.includes('asset') || action.includes('image') || action.includes('post') || action.includes('comment') || action.includes('article');
-      });
-    case 'wallet':
-      return receipts.filter((receipt) => {
-        const action = normalizeAction(receipt.action || receipt.kind);
-        return action.includes('wallet') || action.includes('hold') || action.includes('transfer') || action.includes('issue') || action.includes('burn');
-      });
-    case 'all':
-    default:
-      return receipts;
-  }
-}
-
-function buildCounts(receipts) {
-  return {
-    all: receipts.length,
-    site_visit: filterReceipts(receipts, 'site_visit').length,
-    publishes: filterReceipts(receipts, 'publishes').length,
-    wallet: filterReceipts(receipts, 'wallet').length,
-  };
-}
-
-function buildProofText(receipt) {
-  const lines = [
-    `action=${receipt.action || receipt.kind || 'receipt'}`,
-    receipt.crabUrl ? `crab_url=${receipt.crabUrl}` : '',
-    receipt.amountDisplay || receipt.amountMinor ? `amount=${receipt.amountDisplay || receipt.amountMinor}` : '',
-    receipt.payer || receipt.from ? `from=${receipt.payer || receipt.from}` : '',
-    receipt.recipient || receipt.to ? `to=${receipt.recipient || receipt.to}` : '',
-    receipt.txid ? `txid=${receipt.txid}` : '',
-    receipt.receiptHash ? `receipt_hash=${receipt.receiptHash}` : '',
-    receipt.ledgerRoot ? `ledger_root=${receipt.ledgerRoot}` : '',
-    receipt.nonce ? `nonce=${receipt.nonce}` : '',
-    receipt.manifestCid ? `manifest_cid=${receipt.manifestCid}` : '',
-    receipt.rootDocumentCid ? `root_document_cid=${receipt.rootDocumentCid}` : '',
-  ].filter(Boolean);
-
-  return lines.join('\n');
-}
-
-function receiptKey(receipt, index) {
-  return [
-    receipt?.receiptHash,
-    receipt?.txid,
-    receipt?.ledgerRoot,
-    receipt?.idempotencyKey,
-    receipt?.storageKey,
-    receipt?.crabUrl,
-    index,
-  ]
-    .filter(Boolean)
-    .join(':');
-}
-
-function normalizeAction(value) {
-  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
-}
-
-function labelFromAction(action) {
-  return String(action || 'receipt')
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-function formatAmount(amountMinor, asset = 'roc') {
-  const clean = String(amountMinor || '').trim();
-
-  if (!clean) {
-    return '';
-  }
-
-  const suffix = String(asset || 'roc').toUpperCase();
-
-  if (/^[0-9]+$/.test(clean)) {
-    return `${clean} ${suffix}`;
-  }
-
-  return `${clean} ${suffix}`;
-}
-
-function timestampForSort(value) {
-  const raw = String(value || '').trim();
-
-  if (!raw) {
-    return 0;
-  }
-
-  if (/^[0-9]+$/.test(raw)) {
-    const n = Number(raw);
-    return n > 10_000_000_000 ? n : n * 1000;
-  }
-
-  const parsed = Date.parse(raw);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function formatTimestamp(value) {
-  const raw = String(value || '').trim();
-
-  if (!raw) {
-    return 'not returned';
-  }
-
-  if (/^[0-9]+$/.test(raw)) {
-    const n = Number(raw);
-    const millis = n > 10_000_000_000 ? n : n * 1000;
-    const date = new Date(millis);
-    return Number.isFinite(date.getTime()) ? date.toLocaleString() : raw;
-  }
-
-  const parsed = Date.parse(raw);
-
-  if (!Number.isFinite(parsed)) {
-    return raw;
-  }
-
-  return new Date(parsed).toLocaleString();
-}
-
-function classSafe(value) {
-  return String(value || 'receipt').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
 }

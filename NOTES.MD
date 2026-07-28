@@ -19777,3 +19777,4479 @@ COMPLETE / GREEN / PARKED
 
 
 ### END NOTE - JULY 15 2026 - 18:30 CST
+
+
+
+
+### BEGIN NOTE - JULY 21 2026 - 13:25 CST
+
+# IMPORTANT NOTE REGARDING IDENTITY, LOGIN, SESSION ETC - PASSPORTS:
+
+Absolutely. Here are three drop-in note blocks so the rule is reflected at the **RustyOnions substrate level**, the **CrabLink product/client level**, and the **CrabLink TV implementation level**.
+
+## 1. Main RustyOnions notes
+
+````markdown
+## Platform Identity Rule — Passport Is Wallet-Like, Not Cloud Login
+
+CrabLink / RustyOnions Passport identity must be treated as a wallet-like account model, closer to a Solflare / Phantom style account than a cloud login.
+
+This applies across the full platform surface:
+
+- RustyOnions backend/substrate
+- CrabLink desktop
+- CrabLink Android TV
+- CrabLink Android
+- CrabLink iOS
+- future CrabLink clients
+
+Core rule:
+
+```text
+CrabLink Passport = wallet-like identity/account
+````
+
+A Passport must not become:
+
+```text
+cloud login
+password account
+server-owned identity
+cloud-stored Passport secret
+backend-custodied account
+backend-issued identity pretending to be source of truth
+```
+
+The correct posture:
+
+```text
+local Passport creation/import/unlock
+offline-storable identity material
+client-owned secret custody
+backend/gateway verifies proofs/capabilities/receipts/entitlements/policy
+backend does not own or custody the Passport secret
+```
+
+RustyOnions services may verify Passport-derived proofs, enforce policy, validate capabilities, resolve receipts, verify entitlement, and serve public-facing content paths. They must not become a cloud identity custodian or store user Passport secrets.
+
+Nodes and services remain public-facing infrastructure surfaces where appropriate. The system should not drift into private cloud-account login semantics.
+
+````
+
+## 2. CrabLink notes
+
+```markdown
+## CrabLink Passport Model — Wallet-Like Local Identity
+
+CrabLink identity must be platform-wide and wallet-like.
+
+The Passport model should be understood like a Solana wallet account used through wallets such as Solflare or Phantom:
+
+```text
+Passport is created/imported/unlocked locally
+Passport secret can be stored offline
+client owns Passport custody
+backend verifies proofs and capabilities
+backend does not custody Passport secrets
+````
+
+CrabLink must not introduce a conventional cloud login model:
+
+```text
+no cloud password account
+no cloud-stored login secret
+no backend-custodied Passport
+no server-owned source-of-truth identity
+no backend-issued account identity pretending to be the Passport
+```
+
+This applies to every CrabLink client:
+
+```text
+desktop
+Android TV
+Android
+iOS
+future clients
+```
+
+The backend/gateway role is verification and service access:
+
+```text
+verify Passport-derived proof
+verify capability scope
+verify receipt truth
+verify entitlement
+verify policy/sanctions/privacy path
+serve public-facing content routes
+reject invalid or unauthorized requests
+```
+
+The backend/gateway role is not identity custody.
+
+Future wording should prefer:
+
+```text
+Passport Onboarding
+Local Passport Unlock
+Passport Import / Restore
+Read-Only Capability Review
+Device-local session posture
+Optional cross-device delegation
+```
+
+Avoid wording that implies:
+
+```text
+cloud login
+central account registration
+server-owned account
+pairing one Passport into another Passport
+backend custody of Passport secret
+```
+
+Optional cross-device delegation may exist later, but it must be explicit, scoped, reviewable, revocable, and proof/capability based. It must not replace local Passport ownership.
+
+````
+
+## 3. CrabLink TV notes
+
+```markdown
+## CrabLink TV Identity Direction — Replace Pairing With Passport-First Onboarding
+
+CrabLink TV should not drift into cloud login or cloud account pairing.
+
+The original TV build plan contains Phase 11 / Phase 12 language around pairing, challenge/session behavior, and companion approval. Before those phases are implemented, that model should be revised into a Passport-first model. The current plan’s pairing/session language should be treated as provisional and subject to rewrite. 
+
+New direction:
+
+```text
+TV Passport Onboarding
+Local Passport Unlock
+Passport Import / Restore
+Read-Only Capability Review
+Device-local session posture
+Optional cross-device delegation
+No cloud account login
+No server-custodied Passport secret
+````
+
+CrabLink TV should treat a Passport like a wallet-style account:
+
+```text
+local Passport identity
+client-side custody
+offline-storable secret material
+no cloud password account
+no backend-stored login secret
+no server-owned identity
+```
+
+The TV may create/import/unlock a local Passport, but it must not store raw Passport secrets in React state, browser storage, URLs, QR codes, logs, or diagnostics.
+
+Backend/gateway may verify:
+
+```text
+Passport proof
+capability scope
+receipt truth
+entitlement truth
+policy state
+content access rules
+```
+
+Backend/gateway must not:
+
+```text
+own the Passport
+custody the Passport secret
+issue a fake source-of-truth identity
+turn TV access into cloud login
+```
+
+Cross-device behavior, if added later, should be framed as optional delegation or review, not as “pairing” one Passport into another Passport.
+
+Implementation impact:
+
+```text
+Phase 11 should become Passport onboarding/local unlock state machine.
+Phase 12 should become Passport-backed capability/proof/session integration.
+Pairing terminology should be replaced or narrowed.
+No cloud login route should be added.
+No server-side Passport custody should be introduced.
+No backend-issued identity should pretend to be the Passport.
+```
+
+This does not block current Phase 9 work. It should be handled before starting the current plan’s Phase 11/12 identity/session phases. The TV build plan currently defines pairing/session phases, so those sections need a future rewrite before implementation.
+
+````
+
+The key phrase I would keep consistent everywhere is:
+
+```text
+CrabLink Passport is wallet-like identity, not cloud login.
+````
+
+### END NOTE - JULY 21 2026 - 13:25 CST
+
+
+### BEGIN NOTE - JULY 24 2026 - 16:35 CST
+
+Here are the **CrabLink Tauri changelog notes** for this session, ready to paste into the CrabLink crate/project notes.
+
+# CrabLink Tauri Changelog — Native Passport Phase 15F–15S Session
+
+## Session scope
+
+This session continued the Passport Native Buildplan from Phase 15E and completed the CrabLink desktop integration work through Phase 15S.
+
+Although the overall session began with the `svc-passport` Phase 15E inspection, the first CrabLink source changes began in Phase 15F.
+
+CrabLink implementation range completed during this session:
+
+```text
+Phase 15F — Real passport_status Tauri command and native-consumer dependency posture
+Phase 15J — Desktop atomic encrypted-vault store
+Phase 15K — Windows replacement semantics and app-data VaultStore wiring
+Phase 15L — macOS Keychain PlatformSealer
+Phase 15M — Windows DPAPI PlatformSealer
+Phase 15N — Linux Secret Service PlatformSealer
+Phase 15O — Runtime platform selection and AppState ownership
+Phase 15P — Truthful stored-vault status wiring
+Phase 15R — Platform-factor generation and encrypted-vault creation orchestration
+Phase 15S — Operational-factor unseal and native-only unlocked session runtime
+```
+
+CrabLink remained the desktop platform/runtime adapter.
+
+It did not become the canonical owner of Passport identity, vault crypto, proof rules, or shared state machines. Those remain in `svc-passport`.
+
+---
+
+# Files added or changed
+
+## Cargo and runtime registration
+
+```text
+apps/crablink-tauri/src-tauri/Cargo.toml
+apps/crablink-tauri/src-tauri/Cargo.lock
+apps/crablink-tauri/src-tauri/src/lib.rs
+apps/crablink-tauri/src-tauri/src/state.rs
+```
+
+## Passport commands
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/mod.rs
+apps/crablink-tauri/src-tauri/src/commands/passport.rs
+```
+
+## Passport runtime and storage modules
+
+```text
+apps/crablink-tauri/src-tauri/src/passport_vault_runtime.rs
+apps/crablink-tauri/src-tauri/src/passport_vault_store.rs
+apps/crablink-tauri/src-tauri/src/passport_platform_sealer.rs
+apps/crablink-tauri/src-tauri/src/passport_platform_sealer_windows.rs
+apps/crablink-tauri/src-tauri/src/passport_platform_sealer_linux.rs
+apps/crablink-tauri/src-tauri/src/passport_platform_runtime.rs
+apps/crablink-tauri/src-tauri/src/passport_status_runtime.rs
+apps/crablink-tauri/src-tauri/src/passport_vault_create_runtime.rs
+apps/crablink-tauri/src-tauri/src/passport_operational_unlock_runtime.rs
+```
+
+## Focused tests added
+
+```text
+apps/crablink-tauri/src-tauri/tests/phase15j_desktop_atomic_vault_store.rs
+apps/crablink-tauri/src-tauri/tests/phase15k_windows_atomic_replace_and_app_data_store_wiring.rs
+apps/crablink-tauri/src-tauri/tests/phase15l_macos_keychain_platform_sealer.rs
+apps/crablink-tauri/src-tauri/tests/phase15m_windows_dpapi_platform_sealer.rs
+apps/crablink-tauri/src-tauri/tests/phase15n_linux_secret_service_platform_sealer.rs
+apps/crablink-tauri/src-tauri/tests/phase15o_platform_sealer_runtime_selection_and_app_state_wiring.rs
+apps/crablink-tauri/src-tauri/tests/phase15p_real_stored_status_app_state_wiring.rs
+apps/crablink-tauri/src-tauri/tests/phase15r_platform_factor_and_vault_create_orchestration.rs
+apps/crablink-tauri/src-tauri/tests/phase15s_operational_unseal_and_locked_vault_unlock_runtime.rs
+```
+
+---
+
+# Phase 15F — Real `passport_status` Tauri wiring
+
+## Purpose
+
+Connected the previously defined Native Passport status contract to the real CrabLink Tauri command surface.
+
+This was the first live Native Passport command added to the desktop application.
+
+## Command added
+
+```text
+passport_status
+```
+
+The command was registered through the real Tauri invoke handler.
+
+It reused the `svc-passport` status contract and client-safe DTO projection rather than inventing a CrabLink-specific status model.
+
+## DTO behavior
+
+Added bounded serializable command result and problem DTOs suitable for the WebView boundary.
+
+The command returns safe information such as:
+
+```text
+Passport presence state
+lock state
+safe development identity label where applicable
+redacted status problem
+```
+
+It does not return:
+
+```text
+recovery phrase
+root private key
+device private key
+PIN
+vault key
+platform factor
+encrypted vault bytes
+raw proof
+raw capability
+```
+
+## Initial status posture
+
+Before real VaultStore wiring existed, the command reported a truthful no-Passport posture rather than claiming an unlocked or active Passport.
+
+## Native-consumer dependency posture
+
+The CrabLink dependency on `svc-passport` remained:
+
+```toml
+svc-passport = {
+    path = "../../../../RustyOnions/crates/svc-passport",
+    default-features = false,
+    features = ["native-passport"]
+}
+```
+
+This ensures CrabLink receives the Native Passport contracts without enabling the server-side development KMS.
+
+CrabLink did not gain `DevKms` or service-signing authority.
+
+## Phase 15F Clippy issue and repair
+
+The first strict Clippy run detected dead code because the newly added command/DTO helpers were not yet reachable from the actual Tauri invoke registry.
+
+The repair registered the real command instead of suppressing the warnings with a broad dead-code allowance.
+
+The final command path was compile-tested and remained redacted.
+
+---
+
+# Phase 15J — Desktop atomic encrypted-vault store
+
+## Added module
+
+```text
+src/passport_vault_store.rs
+```
+
+This module implements the concrete desktop `NativeVaultStore` contract defined in `svc-passport`.
+
+## Primary type
+
+```text
+DesktopAtomicVaultStore
+```
+
+## Storage behavior
+
+The store persists only `NativeEncryptedVaultV1`.
+
+It does not parse or own the plaintext Passport identity.
+
+The implementation provides:
+
+```text
+load encrypted vault
+atomically write encrypted vault
+recover interrupted write
+remove encrypted vault
+```
+
+## Atomic write posture
+
+The write path uses a temporary encrypted file and replacement flow rather than writing directly over the active vault.
+
+The sequence includes:
+
+```text
+validate encrypted-vault bounds
+create or prepare the vault directory
+write temporary encrypted bytes
+flush the temporary file
+sync as required
+replace the active vault
+clean up temporary state
+```
+
+## Interrupted-write recovery
+
+Startup recovery distinguishes between:
+
+```text
+no recovery required
+temporary file cleanup
+temporary file promotion where appropriate
+invalid interrupted state
+```
+
+The recovery logic does not expose or decrypt vault contents.
+
+## Security boundaries
+
+The store does not:
+
+```text
+write plaintext Passport material
+log encrypted-vault bytes
+parse recovery phrases
+parse keys
+unseal platform material
+perform PIN derivation
+perform encryption or decryption
+return filesystem paths to React
+```
+
+---
+
+# Phase 15K — Windows replacement semantics and app-data VaultStore wiring
+
+## Purpose
+
+Completed the desktop integration needed to use `DesktopAtomicVaultStore` from the running application.
+
+## Windows replacement behavior
+
+Windows filesystem replacement semantics differ from Unix rename behavior when the destination already exists.
+
+The VaultStore received a Windows-specific replacement path so atomic encrypted-vault updates do not rely on Unix-only assumptions.
+
+## App-data location
+
+The Native Passport vault is initialized beneath the Tauri application data directory.
+
+Startup obtains the path using the Tauri application path API rather than using:
+
+```text
+current working directory
+source repository directory
+user-selected arbitrary path
+WebView-provided path
+```
+
+## Runtime initialization
+
+Added or updated:
+
+```text
+passport_vault_runtime.rs
+lib.rs
+state.rs
+```
+
+Startup now:
+
+```text
+resolves the app-data directory
+constructs DesktopAtomicVaultStore
+runs interrupted-write recovery
+places the store in AppState
+```
+
+## AppState ownership
+
+`AppState` began owning the single initialized VaultStore instance.
+
+Commands reuse that managed runtime object rather than constructing new stores per invocation.
+
+## Initial patch repair
+
+The first Phase 15K mutation encountered an anchor mismatch because the current `lib.rs` and `state.rs` layout differed from the assumed structure.
+
+The repair used the actual current source anchors and then passed the focused Phase 15J/15K checks.
+
+---
+
+# Phase 15L — macOS Keychain PlatformSealer
+
+## Added module
+
+```text
+src/passport_platform_sealer.rs
+```
+
+This file is the macOS PlatformSealer implementation.
+
+## Cargo dependency
+
+Added the exact macOS dependency:
+
+```toml
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "=3.7.0"
+```
+
+## Primary type
+
+```text
+MacosKeychainPlatformSealer
+```
+
+## Keychain design
+
+The adapter uses:
+
+```text
+one fixed CrabLink Native Passport service namespace
+one account/reference for RecoveryRoot
+one account/reference for DeviceKey
+```
+
+The two compartments remain independent.
+
+The Keychain stores the factor material.
+
+The encrypted vault stores only the bounded opaque Keychain reference.
+
+## Supported operations
+
+```text
+seal recovery-root factor
+seal operational/device factor
+read and unseal recovery-root factor
+read and unseal operational/device factor
+create missing Keychain item
+update existing Keychain item
+```
+
+## Validation
+
+The adapter rejects:
+
+```text
+wrong platform family
+wrong security compartment
+unexpected Keychain reference
+missing Keychain material
+invalid bounded secret material
+```
+
+## Error posture
+
+Security Framework error details are mapped into redacted `NativePlatformStorageError` values.
+
+The adapter does not include secret material or raw backend details in:
+
+```text
+Debug
+Display-like problem projections
+Tauri output
+logs
+```
+
+## Test backend
+
+Focused tests use an in-memory backend abstraction to exercise create, update, reference validation, and unseal behavior without mutating the real user Keychain.
+
+---
+
+# Phase 15M — Windows DPAPI PlatformSealer
+
+## Added module
+
+```text
+src/passport_platform_sealer_windows.rs
+```
+
+## Cargo dependency
+
+Added Windows API features through:
+
+```toml
+[target.'cfg(windows)'.dependencies]
+windows-sys = {
+    version = "0.61",
+    features = [
+        "Win32_Foundation",
+        "Win32_Storage_FileSystem",
+        "Win32_Security_Cryptography"
+    ]
+}
+```
+
+## Primary type
+
+```text
+WindowsDpapiPlatformSealer
+```
+
+## DPAPI design
+
+The adapter uses Windows DPAPI to protect and unprotect platform-factor material.
+
+Unlike Keychain and Secret Service, DPAPI returns protected bytes rather than an external item reference.
+
+The resulting sealed bytes can therefore be stored inside the platform-bound vault envelope.
+
+## Compartment binding
+
+The DPAPI implementation binds each sealed value to:
+
+```text
+WindowsDpapi platform family
+RecoveryRoot or DeviceKey compartment
+expected DPAPI payload posture
+```
+
+The adapter rejects attempts to unseal the material under the wrong compartment or platform family.
+
+## Security behavior
+
+The adapter does not expose:
+
+```text
+raw Windows user key material
+reusable DPAPI master key
+plaintext factor outside NativeSecretBytes
+backend errors containing protected or plaintext bytes
+```
+
+The Windows adapter is conditionally compiled and does not become active on macOS or Linux.
+
+---
+
+# Phase 15N — Linux Secret Service PlatformSealer
+
+## Added module
+
+```text
+src/passport_platform_sealer_linux.rs
+```
+
+## Cargo dependency
+
+Added the Linux Secret Service dependency:
+
+```toml
+[target.'cfg(target_os = "linux")'.dependencies]
+secret-service = {
+    version = "=5.1.0",
+    default-features = false,
+    features = ["rt-tokio-crypto-rust"]
+}
+```
+
+The same dependency is available to the focused test configuration where required.
+
+## Primary type
+
+```text
+LinuxSecretServicePlatformSealer
+```
+
+## Secret Service design
+
+The adapter uses the Linux desktop Secret Service API, serving the same architectural role that Keychain serves on macOS.
+
+It maintains separate secure-storage entries for:
+
+```text
+RecoveryRoot
+DeviceKey / operational factor
+```
+
+The encrypted vault stores only bounded opaque references.
+
+## Behavior
+
+The adapter provides:
+
+```text
+create secure-storage item
+update secure-storage item
+read secure-storage item
+validate platform family
+validate compartment
+validate opaque reference
+map backend failure to a redacted error
+```
+
+## Security boundaries
+
+There is no plaintext filesystem fallback when Secret Service is unavailable.
+
+Failure remains failure rather than silently weakening storage.
+
+The adapter does not expose a reusable system/device secret to CrabLink or React.
+
+---
+
+# Phase 15O — Runtime platform selection and `AppState` ownership
+
+## Added module
+
+```text
+src/passport_platform_runtime.rs
+```
+
+## Shared runtime type
+
+```text
+SharedNativePlatformSealer =
+    Arc<dyn NativePlatformSealer>
+```
+
+## Runtime factory
+
+Added:
+
+```text
+new_desktop_platform_sealer
+selected_desktop_platform_family
+```
+
+The factory selects exactly one adapter at compile time:
+
+```text
+macOS   → MacosKeychainPlatformSealer
+Windows → WindowsDpapiPlatformSealer
+Linux   → LinuxSecretServicePlatformSealer
+```
+
+Unsupported or unknown platform posture is not treated as a successful secure-storage implementation.
+
+## Startup behavior
+
+Tauri startup now:
+
+```text
+initializes the app-data VaultStore
+performs interrupted-write recovery
+constructs the selected desktop PlatformSealer
+passes both runtime objects into AppState
+manages AppState once
+```
+
+## AppState after Phase 15O
+
+`AppState` owns:
+
+```text
+passport_vault_store: DesktopAtomicVaultStore
+passport_platform_sealer: SharedNativePlatformSealer
+```
+
+## Startup security boundary
+
+Constructing the runtime objects does not:
+
+```text
+seal a factor
+unseal a factor
+load or decrypt a vault
+derive a PIN key
+unlock a Passport
+touch recovery-root material
+```
+
+Startup establishes capability, not authority.
+
+---
+
+# Phase 15P — Truthful stored-vault status
+
+## Added module
+
+```text
+src/passport_status_runtime.rs
+```
+
+## Stored status model
+
+Added:
+
+```text
+StoredPassportStatus::NoPassport
+StoredPassportStatus::Locked
+```
+
+## Status inspection
+
+Added:
+
+```text
+inspect_stored_passport_status
+```
+
+The function uses the managed `NativeVaultStore`.
+
+Behavior:
+
+```text
+no stored encrypted vault
+  → NoPassport
+
+valid bounded encrypted vault exists
+  → Locked
+
+load or validation failure
+  → redacted unavailable error
+```
+
+## `passport_status` command update
+
+The live Tauri command stopped returning a hardcoded no-Passport posture and began reading the real managed VaultStore.
+
+The command reads:
+
+```text
+state.passport_vault_store
+```
+
+It deliberately does not read or call:
+
+```text
+state.passport_platform_sealer
+seal
+unseal
+decrypt
+unlock
+storage write
+capability material
+wallet or ledger
+```
+
+## Truthfulness achieved
+
+After Phase 15P:
+
+```text
+fresh installation:
+  NoPassport
+
+stored encrypted Native Passport vault:
+  Locked
+```
+
+`OperationalUnlocked` was not yet possible because no unlocked-session runtime existed until Phase 15S.
+
+---
+
+# Phase 15R — Platform-factor generation and vault-create orchestration
+
+## Cargo dependency
+
+Added direct secure-randomness access:
+
+```toml
+getrandom = "0.3"
+```
+
+## Added module
+
+```text
+src/passport_vault_create_runtime.rs
+```
+
+## Purpose
+
+Connected the shared `svc-passport` vault cryptography and platform-bound envelope to the real desktop PlatformSealer and VaultStore.
+
+This phase creates the encrypted cryptographic vault container.
+
+It does not yet create the complete Passport root/device identity payload.
+
+## Randomness abstraction
+
+Added:
+
+```text
+NativeVaultRandomSource
+OsNativeVaultRandomSource
+```
+
+Production uses:
+
+```text
+getrandom::fill
+```
+
+Focused tests inject a deterministic source.
+
+## Vault creation sequence
+
+The runtime performs:
+
+1. Load the VaultStore and reject an existing vault.
+2. Validate PIN length before randomness or platform mutation.
+3. Generate an independent recovery-root platform factor.
+4. Generate an independent operational platform factor.
+5. Generate an independent recovery-root VMK.
+6. Generate an independent operational VMK.
+7. Generate independent recovery-root and operational salts.
+8. Generate independent recovery-root and operational XChaCha nonces.
+9. Wrap the recovery-root VMK through `svc-passport`.
+10. Wrap the operational VMK through `svc-passport`.
+11. Seal the root factor through the selected PlatformSealer.
+12. Seal the operational factor through the selected PlatformSealer.
+13. Construct `NativePlatformBoundVaultV1`.
+14. Encode the platform-bound encrypted vault.
+15. Write it atomically through `NativeVaultStore`.
+16. Return a non-secret `CreatedLocked` result.
+
+## Existing-vault protection
+
+Creation refuses to overwrite an existing encrypted vault.
+
+The rejection occurs before:
+
+```text
+randomness generation
+PlatformSealer mutation
+VaultStore write
+```
+
+## PIN validation
+
+Invalid PIN length is rejected before:
+
+```text
+randomness
+factor generation
+VMK generation
+platform sealing
+vault writing
+```
+
+## Randomness-failure posture
+
+If secure OS randomness fails:
+
+```text
+no platform factor is sealed
+no encrypted vault is written
+temporary secret buffers are cleared or dropped
+the result is a generic randomness failure
+```
+
+## Platform-sealing partial-failure posture
+
+The PlatformSealer interface does not currently expose transactional rollback.
+
+If creation fails after one secure-storage compartment has been written, the encrypted vault remains absent and therefore no Passport is considered created.
+
+A retry overwrites/replaces the fixed secure-storage entries before creating the authoritative encrypted vault.
+
+Secure-storage material without the encrypted vault is non-authoritative.
+
+## Created state
+
+Successful creation returns:
+
+```text
+CreatedLocked
+```
+
+It does not create an automatically unlocked session.
+
+## Important limitation
+
+The current Phase 15R runtime creates:
+
+```text
+platform factors
+VMKs
+wrapped VMKs
+sealed-factor material/references
+platform-bound encrypted vault envelope
+```
+
+It does not yet create:
+
+```text
+recovery phrase
+root signing key
+Passport ID
+device signing key
+Device ID
+root-signed device authorization
+encrypted root identity payload
+encrypted operational identity payload
+backup acknowledgement
+```
+
+Therefore, it must not be described as a complete user-facing `passport_create_native` implementation.
+
+## Focused tests
+
+The six Phase 15R CrabLink tests proved:
+
+```text
+create-only and secret-safe posture
+two independent factors are sealed
+one platform-bound vault is persisted
+stored status becomes Locked
+operational factor can later be unsealed
+operational VMK can be recovered
+existing vault rejects before side effects
+invalid PIN rejects before side effects
+randomness failure rejects before side effects
+no public create command exists
+no root unlock exists
+no frontend secret-return surface exists
+```
+
+---
+
+# Phase 15S — Operational unseal and locked-vault unlock runtime
+
+## Added module
+
+```text
+src/passport_operational_unlock_runtime.rs
+```
+
+## Added AppState runtime owner
+
+`AppState` now also owns:
+
+```text
+passport_operational_session:
+    DesktopOperationalVaultSessionStore
+```
+
+## AppState after Phase 15S
+
+The Native Passport-related runtime objects are:
+
+```text
+DesktopAtomicVaultStore
+SharedNativePlatformSealer
+DesktopOperationalVaultSessionStore
+```
+
+## Session states
+
+Added:
+
+```text
+Locked
+Unlocking
+OperationalUnlocked
+```
+
+## Session storage
+
+The session store retains the unlocked operational VMK in:
+
+```text
+NativeSecretBytes
+```
+
+This provides:
+
+```text
+zeroization on drop
+redacted Debug
+native-only ownership
+no serialization
+```
+
+## Operational unlock sequence
+
+The runtime:
+
+1. Validates PIN bounds.
+2. Rejects an unlock already in progress.
+3. Rejects a second unlock when already operationally unlocked.
+4. Moves the in-memory session state to `Unlocking`.
+5. Loads the stored encrypted vault.
+6. Decodes `NativePlatformBoundVaultV1`.
+7. Reads the bound platform family.
+8. Selects only the operational sealed factor.
+9. Calls `unseal_native_secret` for `NativeSecureCompartment::DeviceKey`.
+10. Calls `unlock_native_operational_vmk`.
+11. Installs the zeroizing operational VMK into native session custody.
+12. Changes the state to `OperationalUnlocked`.
+
+## Root separation
+
+The runtime does not:
+
+```text
+call recovery_root_factor
+request RecoveryRoot from the PlatformSealer
+unseal the root factor
+unlock the root VMK
+create a root session
+```
+
+Ordinary operational unlock remains separate from root authority.
+
+## Failure behavior
+
+### Invalid PIN length
+
+Rejected before:
+
+```text
+VaultStore load
+platform unseal
+session mutation beyond validation
+storage write
+```
+
+### No stored vault
+
+Returns a bounded no-vault error and restores:
+
+```text
+Locked
+```
+
+### Wrong PIN
+
+Returns:
+
+```text
+UnlockRejected
+```
+
+The error does not distinguish whether the PIN, factor, ciphertext, or authentication tag caused failure.
+
+### Wrong platform factor
+
+Returns the same generic:
+
+```text
+UnlockRejected
+```
+
+### Missing secure-storage material
+
+Returns the same generic:
+
+```text
+UnlockRejected
+```
+
+### Failed unlock
+
+The session returns to:
+
+```text
+Locked
+```
+
+No operational VMK remains installed.
+
+### Duplicate unlock
+
+When already operationally unlocked, the runtime rejects a second unlock without repeating the platform unseal.
+
+### Concurrent unlock
+
+The intermediate `Unlocking` state prevents two unlock attempts from installing competing sessions.
+
+## Explicit lock behavior
+
+Added:
+
+```text
+DesktopOperationalVaultSessionStore::lock
+```
+
+Locking:
+
+```text
+replaces the session with Locked
+drops the NativeSecretBytes operational VMK
+does not modify the encrypted vault
+does not delete platform secure-storage material
+does not access recovery-root material
+```
+
+## Current command boundary
+
+Phase 15S remains an internal Rust runtime.
+
+It does not add:
+
+```text
+passport_unlock_operational Tauri command
+passport_lock Tauri command
+PIN DTO
+PIN serialization
+VMK DTO
+secret WebView output
+```
+
+The next phase must connect this runtime to commands without passing a plaintext PIN through React/Tauri serialization.
+
+## Focused tests
+
+The six Phase 15S tests proved:
+
+```text
+operational-only security posture
+successful operational unlock
+only DeviceKey factor is unsealed
+operational VMK is retained in native-only session custody
+duplicate unlock is rejected
+explicit lock drops the session VMK
+wrong PIN fails closed
+wrong platform factor fails closed
+missing platform material fails closed
+invalid PIN rejects before side effects
+absent vault rejects safely
+AppState owns the session store
+no Tauri command or secret DTO was added
+no root material is accessed
+```
+
+Final verification included:
+
+```text
+Tauri format check
+Phase 15S tests: 6 passed
+Tauri consumer cargo check
+source and authority boundary
+```
+
+---
+
+# `lib.rs` integration changes
+
+During the session, `lib.rs` was updated to register the new desktop Passport modules under desktop conditional compilation.
+
+Registered modules include:
+
+```text
+passport_vault_runtime
+passport_vault_store
+passport_platform_sealer
+passport_platform_sealer_windows
+passport_platform_sealer_linux
+passport_platform_runtime
+passport_status_runtime
+passport_vault_create_runtime
+passport_operational_unlock_runtime
+```
+
+Startup setup was updated to:
+
+```text
+resolve the app-data directory
+initialize the VaultStore
+recover interrupted vault writes
+construct the selected PlatformSealer
+construct AppState with native Passport runtime ownership
+manage the completed AppState
+```
+
+The real `passport_status` command was included in the Tauri invoke registry.
+
+No secret-producing command was registered.
+
+---
+
+# `state.rs` integration changes
+
+`AppState` now owns the persistent and in-memory Native Passport runtime surfaces.
+
+Current fields include:
+
+```text
+passport_vault_store:
+    DesktopAtomicVaultStore
+
+passport_platform_sealer:
+    SharedNativePlatformSealer
+
+passport_operational_session:
+    DesktopOperationalVaultSessionStore
+```
+
+The native Passport constructor initializes:
+
+```text
+the supplied VaultStore
+the supplied PlatformSealer
+a fresh Locked operational session
+```
+
+The session is not restored as unlocked across application restarts.
+
+Restart therefore returns to the locked posture even when an encrypted vault exists.
+
+---
+
+# Cargo changes
+
+Dependencies added or adjusted during the session include:
+
+```toml
+getrandom = "0.3"
+```
+
+macOS:
+
+```toml
+security-framework = "=3.7.0"
+```
+
+Windows:
+
+```toml
+windows-sys = {
+    version = "0.61",
+    features = [
+        "Win32_Foundation",
+        "Win32_Storage_FileSystem",
+        "Win32_Security_Cryptography"
+    ]
+}
+```
+
+Linux:
+
+```toml
+secret-service = {
+    version = "=5.1.0",
+    default-features = false,
+    features = ["rt-tokio-crypto-rust"]
+}
+```
+
+The `svc-passport` dependency remained Native Passport-only with default features disabled.
+
+CrabLink did not directly enable `dev-kms`.
+
+---
+
+# Final runtime architecture
+
+## On application startup
+
+CrabLink now:
+
+```text
+resolves its app-data directory
+initializes the atomic encrypted-vault store
+recovers interrupted vault writes
+constructs exactly one supported PlatformSealer
+initializes the operational session as Locked
+stores all three objects in AppState
+```
+
+Startup does not:
+
+```text
+prompt for PIN
+unseal platform material
+unlock the operational VMK
+unlock the root VMK
+issue a capability
+sign a proof
+mutate a wallet or ledger
+```
+
+## While no encrypted vault exists
+
+```text
+passport_status → NoPassport
+operational session → Locked
+```
+
+## After successful Phase 15R vault creation
+
+```text
+encrypted platform-bound vault exists
+passport_status → Locked
+operational session → Locked
+```
+
+## After successful Phase 15S internal unlock
+
+```text
+operational factor unsealed
+operational VMK recovered
+operational VMK held only in native memory
+operational session → OperationalUnlocked
+root factor remains sealed
+root VMK remains unavailable
+```
+
+## After explicit internal lock
+
+```text
+operational VMK dropped
+operational session → Locked
+encrypted vault remains unchanged
+platform secure-storage entries remain unchanged
+```
+
+---
+
+# Secret-custody boundary
+
+Throughout the session, CrabLink preserved the following rule:
+
+```text
+React and TypeScript never own Native Passport secrets.
+```
+
+React does not receive:
+
+```text
+PIN
+recovery phrase
+root private key
+device private key
+platform factor
+VMK
+decrypted vault payload
+raw long-lived capability
+```
+
+CrabLink Tauri does not serialize those values through command DTOs.
+
+No secret is stored in:
+
+```text
+localStorage
+sessionStorage
+indexedDB
+URL parameters
+deep links
+React state
+TypeScript module state
+```
+
+---
+
+# Authority boundaries preserved
+
+CrabLink did not become a second Passport authority.
+
+It calls into `svc-passport` for:
+
+```text
+shared platform-storage contracts
+platform-bound envelope validation
+PIN and factor KDF
+VMK wrapping
+operational VMK unlock
+safe client status projection
+```
+
+CrabLink owns only:
+
+```text
+desktop OS secure-storage calls
+desktop filesystem persistence
+runtime object construction
+AppState custody
+Tauri command integration
+future native secure-input UI
+```
+
+CrabLink did not add:
+
+```text
+duplicate Passport ID rules
+duplicate device state machines
+duplicate username acceptance rules
+duplicate proof validation
+duplicate capability issuance rules
+duplicate ron-kms key lifecycle
+wallet or ledger authority
+```
+
+---
+
+# Repairs and implementation issues encountered
+
+## Phase 15F dead-code/registration issue
+
+The first strict Clippy run detected the status command as unreachable.
+
+The correct repair was real invoke-handler registration, not an allowance.
+
+## Phase 15K source-anchor mismatch
+
+The initial app-data/AppState mutation assumed outdated source anchors.
+
+The patch was repaired against the actual `lib.rs` and `state.rs` layout.
+
+## Phase 15R platform-family compile failure
+
+The initial `svc-passport` platform encoder handled only macOS, Windows, and Linux.
+
+Because CrabLink consumes that shared enum, the Tauri build also failed until the shared V3 repair added iOS/Android codes and rejected `UnknownLocal`.
+
+No separate CrabLink source repair was required for the platform-family codec.
+
+## Verification-script arithmetic defect
+
+One intermediate verification block used invalid multiline shell arithmetic, causing the failure counter to become empty and later checks to continue.
+
+Correct form:
+
+```bash
+failure_count=$((failure_count + 1))
+```
+
+Do not reuse the broken multiline form.
+
+## Overly broad verification
+
+An earlier Phase 15Q closeout ran too many old regressions and took approximately 15–20 minutes.
+
+The workflow was changed to focused verification for normal implementation slices.
+
+---
+
+# Final green results
+
+## Phase 15R
+
+```text
+CrabLink vault-create tests: 6 passed
+platform-bound vault creation orchestration: green
+secure OS randomness: green
+sealed root factor: green
+sealed operational factor: green
+atomic encrypted-vault write: green
+created state: Locked
+```
+
+## Phase 15S
+
+```text
+CrabLink operational-unlock tests: 6 passed
+Tauri consumer cargo check: green
+source boundary: green
+operational factor unseal: green
+operational VMK unlock: green
+native-only session custody: green
+explicit lock drops VMK: green
+wrong PIN rejection: green
+wrong factor rejection: green
+missing platform material rejection: green
+```
+
+Final session marker:
+
+```text
+NATIVE_PASSPORT_PHASE15S_OPERATIONAL_UNSEAL_AND_LOCKED_VAULT_UNLOCK_RUNTIME=GREEN
+```
+
+---
+
+# Safe claims after this session
+
+Correct:
+
+```text
+CrabLink has a real desktop encrypted-vault store.
+CrabLink uses app-data storage.
+CrabLink has macOS, Windows, and Linux PlatformSealer adapters.
+CrabLink selects one platform adapter at runtime/compile target.
+AppState owns the VaultStore and PlatformSealer.
+passport_status truthfully reports NoPassport or Locked.
+CrabLink can internally create a platform-bound encrypted vault.
+CrabLink can internally unlock only the operational VMK.
+The operational VMK remains in native-only zeroizing session custody.
+Explicit native lock drops the operational VMK.
+Ordinary unlock does not unseal root material.
+```
+
+Incorrect:
+
+```text
+The full Passport UI is complete.
+passport_create_native is complete.
+A full root/device Passport identity is created.
+Recovery phrase backup exists.
+Restore/import exists.
+A public operational-unlock command exists.
+React can safely submit a PIN.
+Root unlock exists.
+Device authorization/revocation is wired.
+Proof/capability/username flows are complete.
+Phase 15 is complete.
+```
+
+---
+
+# Immediate next CrabLink work
+
+Exact next patch:
+
+```text
+NATIVE_PASSPORT_PHASE15T_OPERATIONAL_UNLOCK_COMMAND_LOCK_AND_STATUS_BRIDGE
+```
+
+## Phase 15T goals
+
+Add safe command/status integration for:
+
+```text
+passport_lock
+passport_status → OperationalUnlocked projection
+passport_unlock_operational trigger
+```
+
+## Critical PIN boundary
+
+Do not implement:
+
+```rust
+#[tauri::command]
+fn passport_unlock_operational(pin: String, ...)
+```
+
+A plaintext PIN must not cross:
+
+```text
+React
+TypeScript
+Tauri command serialization
+WebView IPC
+```
+
+The command must trigger a native secure-input surface that collects the PIN directly in native code.
+
+Tests should inject a fake secure-input provider.
+
+Production must receive `NativeSecretBytes` from the native secure-input implementation.
+
+## Safe command outputs
+
+The command bridge may return only redacted states such as:
+
+```text
+NoPassport
+Locked
+OperationalUnlocked
+AlreadyUnlocked
+UnlockRejected
+Cancelled
+Unavailable
+```
+
+It must never return:
+
+```text
+PIN
+VMK
+platform factor
+sealed factor
+vault bytes
+root key
+device key
+```
+
+## `passport_lock`
+
+The public lock command should:
+
+```text
+call DesktopOperationalVaultSessionStore::lock
+drop the operational VMK
+return a redacted result
+leave the encrypted vault unchanged
+leave platform secure-storage material unchanged
+```
+
+## Updated status projection
+
+`passport_status` should combine:
+
+```text
+persistent VaultStore presence
+in-memory operational-session state
+```
+
+Expected safe state truth:
+
+```text
+no vault → NoPassport
+vault + locked session → Locked
+vault + operational session → OperationalUnlocked
+```
+
+It must not expose or claim `RootUnlocked` before a real root session exists.
+
+---
+
+# Later CrabLink work required for Phase 15 completion
+
+After Phase 15T, CrabLink still requires:
+
+```text
+native secure PIN entry
+native PIN confirmation
+native recovery phrase display/import
+native root confirmation
+full Passport creation UI and command
+backup acknowledgement
+restore/import
+explicit root unlock session
+clear/reset
+device list/authorize/revoke commands
+proof command transport
+capability status/refresh/revoke
+username status/claim/transfer/release
+real Passport label replacement
+redacted React adapters
+desktop lifecycle UI
+restart and end-to-end acceptance
+```
+
+The full Phase 15 exit gate remains unmet until those surfaces are implemented and verified.
+
+---
+
+# Final session status
+
+```text
+CRABLINK_SESSION_START=PHASE15F
+CRABLINK_SESSION_END=PHASE15S
+DESKTOP_ATOMIC_VAULT_STORE=GREEN
+MACOS_KEYCHAIN_SEALER=GREEN
+WINDOWS_DPAPI_SEALER=GREEN
+LINUX_SECRET_SERVICE_SEALER=GREEN
+PLATFORM_RUNTIME_SELECTION=GREEN
+APP_STATE_VAULT_STORE_OWNER=GREEN
+APP_STATE_PLATFORM_SEALER_OWNER=GREEN
+APP_STATE_OPERATIONAL_SESSION_OWNER=GREEN
+REAL_STORED_STATUS=GREEN
+PLATFORM_BOUND_VAULT_CREATE_RUNTIME=GREEN
+OPERATIONAL_UNLOCK_RUNTIME=GREEN
+NATIVE_ONLY_OPERATIONAL_VMK_CUSTODY=GREEN
+PUBLIC_OPERATIONAL_UNLOCK_COMMAND=NOT_ADDED
+PUBLIC_LOCK_COMMAND=NOT_ADDED
+NATIVE_SECURE_PIN_SURFACE=NOT_ADDED
+ROOT_UNLOCK=NOT_ADDED
+FULL_PASSPORT_IDENTITY_CREATION=NOT_ADDED
+REACT_SECRET_CUSTODY=ABSENT
+WALLET_OR_LEDGER_MUTATION=ABSENT
+NEXT_PATCH=PHASE15T
+```
+
+
+### END NOTE - JULY 24 2026 - 16:35 CST
+
+
+
+
+### BEGIN NOTE - JULY 25 2026 - 23:30 CST
+
+
+Below are comprehensive carry-over notes you can paste into **CrabLink** and **RustyOnions** notes/changelog. They document the CrabLink-only work, the Phase 15 desktop Passport closeout, the live-app findings, and why the next session must start with `ONBOARDING_BUILDPLAN.md` before moving to Passport Native Phase 16. The current codebundle confirms the active repo/app surface is CrabLink desktop/Tauri plus TV sources, with the new Phase 15 Passport drawer/adapter/boundary files present in `apps/crablink-tauri`. 
+
+````markdown
+# CrabLink / RustyOnions Carry-Over + Changelog Notes
+## Session: Native Passport Desktop Closeout → Onboarding Buildplan Start
+## Scope changed this session: CrabLink only
+
+## High-level session summary
+
+This session closed the CrabLink desktop side of the Native Passport Phase 15 work and exposed the next real product problem: the Passport/native command bridge now compiles and tests green, but CrabLink still boots with development-era identity assumptions and leftover local/dev artifacts. The app can now run as a desktop Tauri app and show the Native Passport drawer, but the next necessary lane is not Android TV yet. We need a clean first-run onboarding flow before attempting Phase 16 of the Passport Native Buildplan.
+
+The new build lane is now named:
+
+`ONBOARDING_BUILDPLAN.md`
+
+This onboarding buildplan must be worked before continuing into Passport Native Phase 16 because Phase 16 is about CrabLink TV Passport integration, and we need to prove the desktop user onboarding lifecycle first. Desktop is where we can validate the new wallet-like Passport flow, remove baked dev identities, prove clean first-run state, prove user-chosen username entry, prove local Passport creation, prove recovery/PIN/profile flow, and make sure the existing Passport work actually behaves like a real user flow rather than a developer test panel.
+
+Only the CrabLink repo/app surface changed this session. RustyOnions crates such as `svc-passport` were compiled as dependencies during verification, but were not edited in this session.
+
+---
+
+## What changed in CrabLink
+
+Primary changed surface:
+
+`apps/crablink-tauri`
+
+This includes the desktop Tauri React app, the Tauri platform boundary, the Native Passport adapter, the Passport drawer, and the Phase 15 source/regression tests.
+
+Files changed or added during the session include:
+
+- `apps/crablink-tauri/src/adapters/passportAdapter.js`
+- `apps/crablink-tauri/src/adapters/passportAdapter.test.mjs`
+- `apps/crablink-tauri/src/app/shell/PassportDrawer.jsx`
+- `apps/crablink-tauri/src/app/shell/PassportDrawer.nativePassport.source.test.mjs`
+- `apps/crablink-tauri/src/app/shell/PassportDrawer.nativePassport.statusAcceptance.source.test.mjs`
+- `apps/crablink-tauri/src/app/shell/PassportDrawer.nativePassport.commandAcceptance.source.test.mjs`
+- `apps/crablink-tauri/src/app/shell/PassportDrawer.nativePassport.manualAcceptance.source.test.mjs`
+- `apps/crablink-tauri/src/app/shell/PassportDrawer.nativePassport.phase15FinalAcceptance.source.test.mjs`
+- `apps/crablink-tauri/src/platform/tauriPlatform.js`
+- `apps/crablink-tauri/src/platform/tauriPlatform.passportBoundary.source.test.mjs`
+- `ONBOARDING_BUILDPLAN.md`
+
+The Phase 15 work gave the desktop app a real, test-covered Native Passport drawer path. The drawer now uses a safe adapter rather than raw Tauri invocation. The adapter maps only fixed Native Passport commands. The React drawer has no PIN argument path, no seed phrase path, no root export path, no wallet or ledger mutation path, and no capability/username mutation path.
+
+The new root buildplan file `ONBOARDING_BUILDPLAN.md` was created to define the next product lane.
+
+---
+
+## Native Passport Phase 15 desktop status
+
+Phase 15 desktop final acceptance is green.
+
+The final Phase 15 acceptance output confirmed:
+
+- `NATIVE_PASSPORT_PHASE15_FINAL_ACCEPTANCE=GREEN`
+- `PHASE15AG_FINAL_ACCEPTANCE=GREEN`
+- `RUST_COMMAND_BRIDGE_FINAL_ACCEPTANCE=GREEN`
+- `PASSPORT_ADAPTER_FINAL_ACCEPTANCE=GREEN`
+- `PASSPORT_DRAWER_FINAL_ACCEPTANCE=GREEN`
+- `PASSPORT_DTO_SAFETY_FINAL_ACCEPTANCE=GREEN`
+- `PASSPORT_PHASE15_RUNTIME_COMMANDS=FIXED`
+- `PASSPORT_PHASE15_DRAWER_STATUS_TRUTH=GREEN`
+- `PASSPORT_PHASE15_MANUAL_ACCEPTANCE=GREEN`
+- `PASSPORT_PHASE15_REACT_BUILD=GREEN`
+- `PASSPORT_PHASE15_TAURI_CONSUMER_CHECK=GREEN`
+- `PASSPORT_PHASE15_PIN_ARGUMENTS=NO`
+- `PASSPORT_PHASE15_SECRET_CUSTODY=NO`
+- `PASSPORT_PHASE15_ROOT_EXPORT=NO`
+- `CAPABILITY_ISSUANCE=NOT_ADDED`
+- `USERNAME_MUTATION=NOT_ADDED`
+- `WALLET_OR_LEDGER_MUTATION=NO`
+
+This means the desktop Native Passport bridge is now accepted at the source/test/build level.
+
+The Rust command bridge, Tauri handler registration, JS adapter command map, Passport drawer command buttons, status truth rows, manual acceptance checklist, and redacted DTO posture are all covered by tests.
+
+The final acceptance lane also ran relevant regressions:
+
+- Phase 15AB Passport adapter regression
+- Phase 15AC drawer native command regression
+- Phase 15AD native status acceptance regression
+- Phase 15AE native command acceptance regression
+- Phase 15AF manual acceptance regression
+- Phase 15AA clear command bridge regression
+- Phase 15Z root confirmation regression
+- Phase 15Y create/status command regression
+- Phase 15T Passport command unit regression
+- React production build
+- Tauri consumer `cargo check`
+
+---
+
+## Phase 15AD completed: Native status truth rows
+
+Phase 15AD added explicit Native Passport status truth rows to the Passport drawer.
+
+What it added:
+
+- visible Native Passport status truth section
+- redacted/absent Passport identifier display
+- redacted/absent device identifier display
+- redacted/absent username handle display
+- redacted/absent capability material display
+- unsafe status flag row
+- native runtime readiness row
+- command DTO schema row
+- command safety rows
+
+Security posture:
+
+- display-only
+- no raw invoke
+- no callTauri in the drawer
+- no React PIN argument
+- no secret custody
+- no root material exposure
+- no wallet/ledger mutation
+- no username mutation
+- no capability issuance
+
+A regression issue appeared when later manual acceptance work accidentally removed the “Last native command truth” block. That was repaired and the Phase 15AD regression returned green.
+
+---
+
+## Phase 15AE completed: Native command acceptance
+
+Phase 15AE added a cross-surface command acceptance test proving the current command chain agrees from Rust to adapter to drawer.
+
+It covered:
+
+- Rust command declarations
+- Tauri handler registration
+- JS `passportAdapter.js` fixed command mapping
+- Passport drawer button wiring through adapter functions only
+- no duplicated Tauri command strings in the drawer
+- no dynamic raw command dispatch
+- no PIN/password/secret/string argument in the public command chain
+- no unsafe exports such as seed/private key/root/VMK
+- no capability issuance
+- no username mutation
+- no wallet/ledger mutation
+
+The accepted fixed command set is:
+
+- `passport_status`
+- `passport_create`
+- `passport_lock`
+- `passport_unlock_operational`
+- `passport_unlock_root`
+- `passport_clear`
+
+There were two test expectation repairs during this phase:
+
+1. The test initially looked for the wrong Phase 15AD label.
+2. The test initially looked for the wrong Rust operational unlock constant name.
+
+Both were repaired without changing runtime behavior.
+
+---
+
+## Phase 15AF completed: Manual acceptance checklist
+
+Phase 15AF added a visible manual acceptance checklist to the Passport drawer.
+
+The checklist is intended for human app testing and includes:
+
+- runtime boundary
+- create path
+- operational unlock path
+- lock path
+- root confirmation path
+- clear path
+- React secret boundary
+- outcome checkpoint
+
+The checklist explicitly reminds that:
+
+- PIN, password, recovery words, and root material are never entered in React
+- root-sensitive confirmation stays redacted
+- clear should return the drawer to `no_passport`
+- create/unlock should use native secure surfaces, not WebView inputs
+
+A source-test whitespace false positive occurred around the `nativeRuntimeAvailable ?` ternary. That was repaired by rewriting the test to allow formatting whitespace.
+
+A second regression occurred because the manual checklist insertion displaced the Phase 15AD “Last native command truth” block. That was repaired by restoring the block while preserving the manual checklist.
+
+Final Phase 15AF verification passed:
+
+- manual acceptance source tests green
+- Phase 15AD status acceptance regression green
+- Phase 15AE command acceptance regression green
+- Phase 15AC drawer native command regression green
+- Phase 15AB Passport adapter regression green
+- React build green
+- Tauri consumer check green
+
+---
+
+## Phase 15AG completed: Desktop Phase 15 final acceptance
+
+Phase 15AG added the final source-level acceptance test for the entire desktop Passport Phase 15 lane.
+
+It proves:
+
+- final acceptance files and phase labels are present
+- command chain remains fixed from Rust to adapter to drawer
+- React surfaces do not carry PINs
+- React surfaces do not call raw Tauri invoke directly
+- React surfaces do not duplicate native command authority
+- status truth rows are display-only
+- manual acceptance rows are display-only
+- Rust regression coverage anchors remain present
+- unsafe Passport commands are not exposed
+
+This was the formal closeout of Desktop Native Passport Phase 15.
+
+Result:
+
+`NATIVE_PASSPORT_PHASE15_FINAL_ACCEPTANCE=GREEN`
+
+---
+
+## Live app test observation
+
+After building/running CrabLink as a macOS desktop app, the Passport drawer appeared in the UI and showed the Native Passport runtime/status/manual acceptance surfaces. This is good: it proves the app build has the drawer and the user-visible Passport surface.
+
+However, the live app revealed a product/runtime issue: the JS CrabLink Tauri boundary policy was rejecting Native Passport commands before they reached Rust. The toasts showed errors such as:
+
+- `passport_create` not authorized by CrabLink boundary policy
+- `passport_status` not authorized by CrabLink boundary policy
+- `passport_unlock_operational` not authorized by CrabLink boundary policy
+
+This was not a Rust/native Passport failure. It was the JS `tauriPlatform.js` command boundary refusing the new fixed Passport command names.
+
+A Phase 15AH boundary-admission patch was prepared to admit the accepted fixed command set into the CrabLink boundary allowlist, with a source test:
+
+- `apps/crablink-tauri/src/platform/tauriPlatform.passportBoundary.source.test.mjs`
+
+The current codebundle includes this boundary test file. At the start of the next session, confirm whether Phase 15AH verification has already been run green. If not, run the Phase 15AH boundary admission verification and rebuild/relaunch the app before or alongside Onboarding Phase 0.
+
+The intended Phase 15AH acceptance markers are:
+
+- `NATIVE_PASSPORT_PHASE15AH_BOUNDARY_ADMISSION=GREEN`
+- `PASSPORT_NATIVE_COMMAND_BOUNDARY=GREEN`
+- `PASSPORT_NATIVE_COMMANDS_ADMITTED_FOR_APP_TEST=YES`
+- `CRABLINK_MACOS_APP_REBUILT=YES`
+- no raw invoke added
+- no PIN arguments added
+- no secret custody added
+- no capability issuance
+- no username mutation
+- no wallet/ledger mutation
+
+---
+
+## Why we are not moving to Passport Native Phase 16 yet
+
+The Passport Native Buildplan originally points next toward Phase 16, which is CrabLink TV Passport integration.
+
+We should not start Phase 16 yet.
+
+Reason: desktop has to prove the real first-run Passport/onboarding flow before we port/integrate it into Android TV.
+
+The work we just finished proves the command bridge and drawer surfaces, but it does not yet prove a clean user experience. The app still contains leftover development assumptions and visible dev artifacts. If we move straight to TV now, we risk copying the wrong behavior to Android TV:
+
+- baked dev Passports
+- baked visitor identity
+- baked/current username such as `@skinnycrabby`
+- Passport A / Passport B concepts showing as if they are user choices
+- home/dashboard booting before a real first-run identity decision
+- local proof/cache/dev data being confused with user account state
+
+The desktop app needs a real onboarding lifecycle first:
+
+1. clean first launch
+2. welcome page
+3. username entry
+4. username availability check or dev-only bypass
+5. local Passport creation
+6. recovery phrase ceremony
+7. PIN setup through native secure input
+8. profile setup or skip
+9. completion marker
+10. home handoff
+
+Once that flow works on desktop, then Phase 16 can safely adapt the same state model and Passport semantics to Android TV.
+
+---
+
+## New buildplan created: ONBOARDING_BUILDPLAN.md
+
+A new buildplan was created:
+
+`ONBOARDING_BUILDPLAN.md`
+
+Purpose:
+
+Build a clean CrabLink first-run onboarding flow, first on desktop, later portable to TV/mobile/tablet.
+
+The buildplan explicitly defines:
+
+- problem statement
+- product goal
+- identity model
+- PIN/recovery phrase security rules
+- desired first-run state machine
+- desktop first-run routing behavior
+- cleanup targets
+- expected files to touch
+- phases 0 through 12
+- manual desktop test checklist
+- what is not in scope
+
+Key security correction in the plan:
+
+The user should see a seed phrase / recovery phrase, but the raw phrase must not pass through React/WebView. The secure recovery phrase ceremony should be native/platform-handled. React should only get a redacted acknowledgement DTO such as:
+
+- `recoveryPhraseShown: true`
+- `recoveryPhraseAcknowledged: true`
+- `redacted: true`
+- optional redacted fingerprint/checksum
+
+React must not receive:
+
+- phrase words
+- seed bytes
+- root material
+- VMK
+- private key
+- PIN
+- platform sealer material
+
+---
+
+## Current onboarding problem to solve
+
+CrabLink currently has development-era identity artifacts and assumptions that must be cleaned up or quarantined before beta.
+
+Known problem examples:
+
+- dev Passport sessions
+- Passport A / Passport B
+- `passport:main:visitor-b`
+- `passport:main:dev`
+- `acct_dev`
+- current/default username like `@skinnycrabby`
+- local proof/profile/cache data being presented too much like real account state
+- home route opening before first-run onboarding completes
+- starter/local grant displays that could look like real account state
+- dev tools mixed with normal user flow
+
+These may remain for tests/dev surfaces, but must not appear as normal first-run user state.
+
+---
+
+## Desired new-user onboarding flow
+
+For a clean install or clean local state:
+
+1. User opens CrabLink.
+2. Welcome screen appears.
+3. User picks a username.
+4. App checks username availability.
+5. App provides a development-only bypass button for availability checks.
+6. User creates a local wallet-like Passport.
+7. User is shown a recovery phrase / seed phrase through a native secure recovery surface.
+8. User confirms they wrote down the recovery phrase.
+9. User is asked to set a PIN through native secure input.
+10. User can fill out basic profile info or skip.
+11. App marks onboarding complete.
+12. User is routed to `crab://home`.
+
+Important: this must be the eventual shared first-use flow for desktop, phone, tablet, TV, and future clients, but the immediate proof target is desktop.
+
+---
+
+## Onboarding buildplan phase order
+
+### Phase 0 — Inventory and baseline proof
+
+Next session should begin here.
+
+Goal: find every baked dev identity/default and add an inventory source test before mutating runtime behavior.
+
+Inventory terms include:
+
+- `skinnycrabby`
+- `passport:main:visitor`
+- `visitor-b`
+- `passport:main:dev`
+- `acct_dev`
+- Passport A
+- Passport B
+- starter grant defaults
+- dev Passport session labels
+
+Acceptance:
+
+- `ONBOARDING_PHASE0_INVENTORY=GREEN`
+- no behavior changed
+- no dev artifact removed yet
+- clear list of runtime cleanup targets printed
+
+### Phase 1 — Onboarding model foundation
+
+Add pure onboarding state machine and tests.
+
+States include:
+
+- `not_started`
+- `welcome`
+- `username_entry`
+- `username_checking`
+- `username_available`
+- `username_bypassed_for_dev`
+- `passport_create_requested`
+- `passport_created_locked`
+- `recovery_phrase_required`
+- `recovery_phrase_acknowledged`
+- `pin_setup_required`
+- `pin_setup_complete`
+- `profile_setup`
+- `profile_skipped`
+- `profile_saved`
+- `complete`
+- `blocked`
+- `error`
+
+Acceptance:
+
+- complete state requires username decision, Passport created/locked, recovery acknowledged, PIN setup complete, and profile skipped/saved
+- model never stores PIN/seed/root/private material
+- `ONBOARDING_PHASE1_MODEL=GREEN`
+
+### Phase 2 — Onboarding storage adapter
+
+Persist only safe redacted onboarding state.
+
+Acceptance:
+
+- clean install reads as not started/welcome
+- corrupted state fails safe to onboarding
+- reset clears onboarding state
+- no secret-shaped field accepted
+- `ONBOARDING_PHASE2_STORAGE=GREEN`
+
+### Phase 3 — First-run route gate
+
+Route clean installs to onboarding instead of home.
+
+Acceptance:
+
+- clean app starts on onboarding
+- completed app starts on home
+- explicit dev bypass visible and marked dev-only
+- no silent Passport A/B/visitor fallback
+- `ONBOARDING_PHASE3_ROUTE_GATE=GREEN`
+
+### Phase 4 — Welcome and username step
+
+Implement visible welcome and username selection.
+
+Acceptance:
+
+- username is user-entered, not baked in
+- `@skinnycrabby` is not defaulted
+- Passport A/B not presented as identity choices
+- bypass is clearly dev-only
+- `ONBOARDING_PHASE4_USERNAME=GREEN`
+
+### Phase 5 — Desktop Passport create handoff
+
+Connect onboarding to accepted Phase 15 native Passport create path.
+
+Acceptance:
+
+- no React PIN input
+- no create PIN argument
+- native command bridge remains fixed
+- created Passport is locked
+- redacted failure shown on cancel/unavailable
+- `ONBOARDING_PHASE5_DESKTOP_CREATE=GREEN`
+
+### Phase 6 — Recovery phrase ceremony
+
+Add one-time recovery phrase acknowledgement flow without exposing recovery material to React.
+
+Acceptance:
+
+- user can complete “write it down” acknowledgement
+- React receives only redacted acknowledgement DTO
+- no seed phrase words in React state, props, local storage, or logs
+- no root export
+- `ONBOARDING_PHASE6_RECOVERY_CEREMONY=GREEN`
+
+### Phase 7 — PIN setup confirmation
+
+Complete PIN setup as native-only step.
+
+Acceptance:
+
+- no WebView PIN input
+- native prompt path used
+- wrong/cancel/unavailable fails closed
+- completion stored only as boolean/redacted status
+- `ONBOARDING_PHASE7_PIN_SETUP=GREEN`
+
+### Phase 8 — Profile setup or skip
+
+Collect safe public profile draft fields or allow skip.
+
+Acceptance:
+
+- profile can be skipped
+- profile can be saved as local draft
+- no baked `@skinnycrabby`
+- no backend-confirmed claim without gateway truth
+- `ONBOARDING_PHASE8_PROFILE=GREEN`
+
+### Phase 9 — Completion and home handoff
+
+Complete onboarding and land on clean home.
+
+Acceptance:
+
+- clean first-run path reaches home
+- status remains honest/local until backend confirms
+- no dev identity defaults appear in normal completed flow
+- `ONBOARDING_PHASE9_HOME_HANDOFF=GREEN`
+
+### Phase 10 — Dev artifact quarantine
+
+Keep dev helpers but make them impossible to confuse with real onboarding.
+
+Acceptance:
+
+- dev fixtures still available for testing
+- new users never see Passport A/B as normal choices
+- `@skinnycrabby` not in first-run defaults
+- no automatic visitor-b
+- `ONBOARDING_PHASE10_DEV_QUARANTINE=GREEN`
+
+### Phase 11 — Desktop final acceptance
+
+Prove desktop onboarding end-to-end.
+
+Acceptance:
+
+- `ONBOARDING_DESKTOP_FINAL_ACCEPTANCE=GREEN`
+- app opens to onboarding on clean state
+- app opens to home after completion
+- no React PIN
+- no React seed phrase
+- no baked username
+- no Passport A/B normal flow
+- no wallet/ledger mutation
+- no capability issuance
+- no fake backend-confirmed username/profile
+
+### Phase 12 — Cross-platform onboarding contract
+
+Freeze portable model for TV/phone/tablet.
+
+Acceptance:
+
+- desktop behavior reusable
+- TV/mobile can implement same state machine
+- local custody invariant preserved
+- `ONBOARDING_CROSS_PLATFORM_CONTRACT=GREEN`
+
+---
+
+## Next session starting point
+
+Start next session with:
+
+`ONBOARDING_PHASE0_DEV_ARTIFACT_INVENTORY`
+
+Do not start with Phase 16 yet.
+
+Recommended first patch:
+
+1. Search/inventory baked dev identity artifacts.
+2. Add an inventory source test.
+3. Print cleanup targets.
+4. Do not mutate runtime behavior yet.
+5. Run focused tests/build.
+
+Suggested verification shape:
+
+```bash
+node --test apps/crablink-tauri/src/onboarding/onboardingDevArtifactInventory.source.test.mjs
+npm --prefix apps/crablink-tauri run build
+````
+
+Depending on whether Phase 15AH has been verified, also run or confirm:
+
+```bash
+node --test apps/crablink-tauri/src/platform/tauriPlatform.passportBoundary.source.test.mjs
+npm --prefix apps/crablink-tauri run build
+TAURI_CONFIG="$(cat apps/crablink-tauri/src-tauri/tauri.macos.dev-media.conf.json)" cargo check --manifest-path apps/crablink-tauri/src-tauri/Cargo.toml
+```
+
+---
+
+## Sequencing after onboarding
+
+The correct sequence from here is:
+
+1. Finish `ONBOARDING_BUILDPLAN.md` desktop proof.
+2. Confirm desktop first-run onboarding works in the built CrabLink app.
+3. Then return to Passport Native Buildplan Phase 16 for CrabLink TV Passport integration.
+4. After Phase 16 is finished, pause Passport Native if needed because iOS and Android app builds have not started yet.
+5. Build out iOS and Android app foundations.
+6. Return to remaining Passport Native phases after the mobile foundations exist.
+
+Rationale:
+
+* Phase 16 is TV-specific integration.
+* TV should not inherit broken desktop onboarding assumptions.
+* iOS/Android phases cannot be meaningfully completed until those app surfaces exist.
+* The shared onboarding model should be built once and then reused across desktop, TV, phone, and tablet.
+
+---
+
+## What not to do next
+
+Do not:
+
+* start Android TV Passport integration before desktop onboarding is proven
+* keep `@skinnycrabby` as a normal default
+* show Passport A/B as normal user identity choices
+* silently use visitor-b/dev Passport as a new user
+* route clean installs straight to home as if the user already exists
+* move PIN entry into React
+* show raw recovery phrase in React unless a later audited native/secure-display exception intentionally changes the rule
+* add cloud login
+* add cloud recovery
+* add server custody
+* add backend-issued Passport identity
+* add wallet/ledger mutation
+* add live settlement/mint/burn
+* add capability issuance as part of onboarding
+
+---
+
+## Crates/packages changed this session
+
+Changed:
+
+* `apps/crablink-tauri`
+
+  * npm package: `@crablink/crablink-tauri`
+  * Rust app crate under it: `crablink-tauri`
+
+Not changed directly:
+
+* `svc-passport`
+* `crablink-native-core`
+* `ron-*` crates
+* `apps/crablink-tv`
+* iOS app
+* Android phone/tablet app
+
+Important distinction:
+
+`svc-passport` and related RustyOnions crates compiled during Tauri checks because they are dependencies, but they were not edited in this session. These notes can be pasted into RustyOnions as carry-over context, but the actual code changes were CrabLink-side.
+
+---
+
+## Session outcome
+
+The session successfully moved CrabLink from “Native Passport backend/bridge exists” to “desktop app has accepted Native Passport drawer/adapter/status/manual/final acceptance surfaces.” The live app now reveals the correct next product layer: onboarding and dev artifact cleanup.
+
+The project is entering a new phase:
+
+`CrabLink Onboarding`
+
+This must be completed before Passport Native Phase 16 so the TV app receives a real, clean, wallet-like Passport onboarding model rather than inheriting development leftovers.
+
+```
+```
+
+
+
+### END NOTE - JULY 25 2026 - 23:30 CST
+
+
+### BEGIN NOTE - JULY 26 2026 - 18:15 CST
+
+Below are comprehensive carry-over notes for the next session. These are written so you can paste them into CrabLink/RustyOnions notes and resume `ONBOARDING_BUILDPLAN.md` without losing context. The attached buildplan defines the desktop-first onboarding goal: clean first-run onboarding, wallet-like local custody Passport, no cloud login/custody, no React/WebView PIN or seed phrase custody, and eventual reuse across phone/tablet/TV after desktop proof is green. 
+
+# CrabLink Onboarding Buildplan — Carry-Over Notes
+
+## Session scope
+
+This session was focused on **CrabLink desktop onboarding**, specifically `ONBOARDING_BUILDPLAN.md`.
+
+We started from **Phase 0** of the onboarding buildplan and advanced through:
+
+* Phase 0 — inventory/baseline proof
+* Phase 1 — onboarding model foundation
+* Phase 2 — onboarding storage adapter
+* Phase 3 — first-run route gate
+* Phase 4 — welcome and username step
+* Phase 5 — desktop Passport create handoff
+* Phase 6 — recovery phrase ceremony
+* Phase 6D — manual native desktop recovery ceremony acceptance
+* Phase 6E — recovery entropy guard/follow-up after low-entropy manual fixture was observed
+* Phase 7A — native PIN setup foundation
+
+We are pausing with:
+
+`ONBOARDING_PHASE6E_RECOVERY_ENTROPY_GUARD=GREEN`
+`PHASE15R_EXISTING_REGRESSION=GREEN`
+`ONBOARDING_PHASE7A_NATIVE_PIN_SETUP_FOUNDATION=REGRESSION_GREEN`
+`NEXT_PATCH=ONBOARDING_PHASE7B_PIN_SETUP_UI_AND_ROUTE`
+
+The next session should resume at:
+
+**Phase 7B — PIN setup UI and route/storage transition**
+
+## Repositories / crates changed
+
+Only **CrabLink** was changed in this session.
+
+Even though commands were often run from:
+
+`/Users/mymac/desktop/rustyonions`
+
+the actual patches targeted:
+
+`/Users/mymac/desktop/crablink/apps/crablink-tauri`
+
+Changed repo:
+
+* `crablink`
+
+Changed app/crate surfaces:
+
+* `apps/crablink-tauri`
+* `apps/crablink-tauri/src/onboarding`
+* `apps/crablink-tauri/src/adapters`
+* `apps/crablink-tauri/src-tauri`
+* `apps/crablink-tauri/src-tauri/src`
+* `apps/crablink-tauri/src-tauri/tests`
+* `apps/crablink-tauri/scripts`
+
+RustyOnions repo status:
+
+* `RUSTYONIONS_CHANGED=NO`
+* No `svc-passport` source changes were made in this onboarding session.
+* No `ron-proto`, `ron-naming`, `ron-kms`, wallet, ledger, or other RustyOnions crate changes were made in this onboarding session.
+
+## Core product/security posture preserved
+
+The onboarding buildplan remains desktop-first and wallet-like local custody.
+
+Important invariants preserved this session:
+
+* No cloud login.
+* No cloud password account.
+* No cloud-stored secrets.
+* No backend custody of Passport secrets.
+* No backend-issued identity pretending to be source of truth.
+* No React/WebView custody of PINs.
+* No React/WebView custody of recovery phrases / seed phrases.
+* No root export.
+* No VMK export.
+* No platform sealer material export.
+* No capability issuance.
+* No wallet or ledger mutation.
+* Username is a public/draft identity step, not a secret step.
+* Development-only bypasses must be visible and explicitly marked as dev-only.
+* No fake backend-confirmed username/profile claims.
+
+The recovery phrase entropy issue was explicitly elevated into a hard project invariant: recovery phrases must be real cryptographic entropy in production and must never be patterned, repeated, cosmetic, or “good enough.”
+
+## Phase 0 — Inventory and baseline proof
+
+Goal of Phase 0 was to inventory dev identity leakage without changing runtime behavior.
+
+Accomplished:
+
+* Added/used onboarding dev artifact inventory coverage.
+* Inventory searched for development-era identity artifacts such as:
+
+  * `skinnycrabby`
+  * `passport:main:visitor`
+  * `visitor-b`
+  * `passport:main:dev`
+  * `acct_dev`
+  * Passport A
+  * Passport B
+  * starter grant defaults
+  * dev Passport session labels
+* Confirmed the purpose of the phase was not to remove everything immediately, but to document leakage points and prepare later quarantine.
+* Preserved runtime behavior during inventory.
+* Established cleanup targets for later Phase 10 dev artifact quarantine.
+
+Phase posture:
+
+`ONBOARDING_PHASE0_INVENTORY=GREEN`
+
+## Phase 1 — Onboarding model foundation
+
+Goal of Phase 1 was to create the shared pure onboarding state machine.
+
+Accomplished:
+
+* Added onboarding model under:
+
+`apps/crablink-tauri/src/onboarding/onboardingModel.js`
+
+* Added state constants / transitions for the desktop onboarding flow.
+* Added redacted state shape matching the buildplan’s intended local persisted onboarding DTO.
+* Added helpers for:
+
+  * first-run/welcome state
+  * username entry
+  * username availability
+  * development availability bypass
+  * Passport create requested
+  * Passport created/locked
+  * recovery phrase required
+  * recovery phrase acknowledged
+  * PIN setup required
+  * PIN setup complete
+  * profile setup pending
+  * profile skipped/saved
+  * completion eligibility
+  * complete state
+  * blocked/error states
+* Added validation posture ensuring the model does not accept or persist secret-shaped fields.
+* Added model tests beside onboarding model.
+
+Important behavior proven:
+
+* Clean first-run can start at welcome/not-started.
+* Completion cannot happen just because a dev identity exists.
+* Completion requires:
+
+  * username decision
+  * Passport created/locked state
+  * recovery acknowledged
+  * PIN setup complete
+  * profile skipped or saved
+* Model does not persist:
+
+  * PIN
+  * password
+  * recovery phrase words
+  * seed bytes
+  * root material
+  * private key
+  * VMK
+  * platform sealer material
+
+Phase posture:
+
+`ONBOARDING_PHASE1_MODEL=GREEN`
+
+## Phase 2 — Onboarding storage adapter
+
+Goal of Phase 2 was to persist only safe redacted onboarding state.
+
+Accomplished:
+
+* Added onboarding storage adapter under:
+
+`apps/crablink-tauri/src/onboarding/onboardingStorage.js`
+
+* Added tests under:
+
+`apps/crablink-tauri/src/onboarding/onboardingStorage.test.mjs`
+
+* Implemented safe local persistence helpers:
+
+  * read onboarding state
+  * write onboarding state
+  * clear/reset onboarding state
+  * migration/normalization from absent state
+  * fail-safe handling for corrupted state
+* Added redaction checks so secret-shaped fields cannot be accepted/persisted.
+
+Important behavior proven:
+
+* Clean install reads as not-started/welcome.
+* Corrupted persisted state fails safe back into onboarding.
+* Reset clears onboarding state.
+* Storage persists only redacted boolean/status/profile-draft values.
+* Storage rejects unsafe secret-like fields.
+
+Phase posture:
+
+`ONBOARDING_PHASE2_STORAGE=GREEN`
+
+## Phase 3 — First-run route gate
+
+Goal of Phase 3 was to route clean installs into onboarding instead of silently booting home with dev identity state.
+
+Accomplished:
+
+* Added route gate logic under onboarding surfaces, including:
+
+`apps/crablink-tauri/src/onboarding/onboardingRouteGate.js`
+`apps/crablink-tauri/src/onboarding/OnboardingRouteGate.jsx`
+`apps/crablink-tauri/src/onboarding/onboardingRouteGate.css`
+`apps/crablink-tauri/src/onboarding/onboardingRouteGate.test.mjs`
+
+* Connected onboarding routing to app boot/shell behavior.
+* Added behavior for:
+
+  * incomplete onboarding routes to onboarding
+  * complete onboarding routes to normal shell/home
+  * explicit dev bypass support where appropriate
+  * no silent dev identity fallback
+* Ensured the route gate can direct created/required recovery states into the Recovery Ceremony step.
+
+Important behavior proven:
+
+* Clean state does not silently rely on `Passport A`, `Passport B`, visitor labels, or baked dev identity.
+* Home route is gated until onboarding is complete.
+* Dev bypass is not silent; it is explicit/marked dev-only.
+* Onboarding state drives routing honestly.
+
+Phase posture:
+
+`ONBOARDING_PHASE3_ROUTE_GATE=GREEN`
+
+## Phase 4 — Welcome and username step
+
+Goal of Phase 4 was to add the visible welcome/username UI.
+
+Accomplished:
+
+* Added welcome/username UI components, including:
+
+`apps/crablink-tauri/src/onboarding/WelcomeUsernameStep.jsx`
+
+* Added username availability/draft helpers, including:
+
+`apps/crablink-tauri/src/onboarding/usernameAvailability.js`
+
+* Added tests such as:
+
+`apps/crablink-tauri/src/onboarding/welcomeUsernameStep.test.mjs`
+
+* Implemented:
+
+  * welcome page
+  * username input
+  * username syntax validation
+  * availability state model
+  * development-only availability bypass
+  * no claim of confirmed username ownership from bypass alone
+
+Important behavior proven:
+
+* Username is user-entered, not baked in.
+* `@skinnycrabby` is not defaulted as the new user.
+* Passport A/B are not presented as normal identity choices in onboarding.
+* Dev availability bypass is explicit and marked dev-only.
+* Username bypass does not claim backend/registry confirmation.
+
+Phase posture:
+
+`ONBOARDING_PHASE4_USERNAME=GREEN`
+
+## Phase 5 — Desktop Passport create handoff
+
+Goal of Phase 5 was to connect onboarding to the accepted native Passport create path.
+
+Accomplished:
+
+* Added/create adapter wiring in:
+
+`apps/crablink-tauri/src/onboarding/onboardingPassportCreate.js`
+`apps/crablink-tauri/src/onboarding/PassportCreateStep.jsx`
+`apps/crablink-tauri/src/onboarding/passportCreateStep.test.mjs`
+
+* Reused existing native Passport create command bridge.
+* React calls the create adapter without a PIN argument.
+* Native secure surface owns create PIN entry.
+* On successful create, onboarding records created/locked redacted state.
+* Cancel/unavailable/failure maps to redacted UI state.
+
+Important behavior proven:
+
+* No React PIN input.
+* No create PIN argument.
+* No WebView secret material.
+* Created Passport is locked.
+* Native command bridge remains fixed.
+* Failures are redacted and fail closed.
+
+Phase posture:
+
+`ONBOARDING_PHASE5_DESKTOP_CREATE=GREEN`
+
+## Phase 6 — Recovery phrase ceremony
+
+Goal of Phase 6 was to add one-time recovery phrase acknowledgement without exposing recovery material to React.
+
+Accomplished:
+
+* Added recovery ceremony frontend adapter/model/UI under:
+
+`apps/crablink-tauri/src/onboarding/onboardingRecoveryCeremony.js`
+`apps/crablink-tauri/src/onboarding/RecoveryCeremonyStep.jsx`
+`apps/crablink-tauri/src/onboarding/recoveryCeremony.test.mjs`
+
+* Added/used Tauri/native recovery runtime surfaces under:
+
+`apps/crablink-tauri/src-tauri/src/passport_recovery_phrase_runtime.rs`
+`apps/crablink-tauri/src-tauri/src/passport_recovery_ceremony_runtime.rs`
+`apps/crablink-tauri/src-tauri/src/passport_recovery_acknowledgement_store.rs`
+
+* Added/used public command bridge regression under:
+
+`apps/crablink-tauri/src-tauri/tests/phase6b2b2b2b_public_recovery_command_wiring.rs`
+
+* React triggers the fixed no-argument native ceremony path.
+* Native/Rust surface handles the actual phrase display.
+* React receives only redacted acknowledgement truth.
+* Onboarding persists only the acknowledgement boolean/state, never the phrase.
+
+Important behavior proven:
+
+* React does not receive seed phrase words.
+* React does not persist seed phrase words.
+* React does not pass seed phrase words through props/state/localStorage/logs.
+* Recovery command is fixed/no-argument.
+* Unsafe/fake acknowledgement DTOs fail closed.
+* Repeat display is rejected after acknowledgement.
+* Clear/reset re-enables required recovery ceremony path.
+* Root export remains absent.
+
+Phase posture:
+
+`ONBOARDING_PHASE6_RECOVERY_CEREMONY=GREEN`
+
+## Phase 6D — Manual native desktop recovery ceremony acceptance
+
+Goal of Phase 6D was to manually verify the native desktop recovery dialog behavior.
+
+Accomplished:
+
+* Added/used manual acceptance script:
+
+`apps/crablink-tauri/scripts/onboarding_phase6d_desktop_native_ceremony_acceptance.sh`
+
+* Added/used ignored manual Rust test:
+
+`passport_recovery_phrase_runtime::tests::phase6d_manual_desktop_native_ceremony_first_repeat_and_clear_reset`
+
+Manual operator result:
+
+* Native dialog opened on first run.
+* Operator clicked OK/acknowledged.
+* Second run did not re-display phrase after acknowledgement.
+* After marker clear/reset, native dialog could display again as expected.
+* No words returned to WebView.
+* No root export.
+* Manual acceptance printed green.
+
+Important final markers:
+
+`ONBOARDING_PHASE6D_MANUAL_NATIVE_ACCEPTANCE=GREEN`
+`FIRST_RUN_NATIVE_DIALOG_ACCEPTANCE=GREEN`
+`SECOND_RUN_NO_DIALOG_ACCEPTANCE=GREEN`
+`PASSPORT_CLEAR_REENABLES_CEREMONY_ACCEPTANCE=GREEN`
+`WORDS_RETURNED_TO_WEBVIEW=NO`
+`ROOT_EXPORT=NO`
+
+## Phase 6E — Recovery entropy guard / low-entropy follow-up
+
+Why Phase 6E was added:
+
+During the manual recovery ceremony, the displayed recovery phrase looked visibly patterned/repeated. That was not acceptable, even if it was coming from a deterministic test fixture. We paused Phase 7 work and audited recovery entropy before moving forward.
+
+Important conclusion:
+
+* The concerning phrase came from deterministic test/manual fixture behavior, not from the production create path.
+* Production create path is now guarded as using OS CSPRNG through `getrandom::fill`.
+* The manual deterministic fixture was hardened so it no longer emits repeated-byte material that maps to visibly repeated recovery words.
+* We explicitly added tests so this does not regress.
+
+Files touched during Phase 6E:
+
+`apps/crablink-tauri/src-tauri/src/passport_recovery_phrase_runtime.rs`
+
+`apps/crablink-tauri/src-tauri/src/passport_vault_create_runtime.rs`
+
+`apps/crablink-tauri/src-tauri/tests/phase15r_platform_factor_and_vault_create_orchestration.rs`
+
+`apps/crablink-tauri/scripts/onboarding_phase6d_desktop_native_ceremony_acceptance.sh`
+
+What changed:
+
+* Deterministic test random source was changed from repeated-byte output to diversified deterministic bytes.
+* Manual fixture test added:
+
+`passport_recovery_phrase_runtime::tests::phase6e_manual_recovery_fixture_has_diverse_entropy_and_words`
+
+* Phase 15R entropy tests added:
+
+  * `phase6e_deterministic_test_random_source_is_diverse_not_repeated`
+  * `phase6e_production_create_uses_os_csprng_boundary`
+* Existing Phase 15R regression updated so it no longer expects old repeated VMK bytes.
+* Added explicit rejection of repeated-byte VMK fixture material.
+* Added guard that production create runtime contains:
+
+  * `pub struct OsNativeVaultRandomSource`
+  * `impl NativeVaultRandomSource for OsNativeVaultRandomSource`
+  * `getrandom::fill(output)`
+  * `create_desktop_native_passport_vault_with_random(&OsNativeVaultRandomSource`
+* Added manual script warnings:
+
+  * displayed phrase source is deterministic test fixture
+  * displayed phrase is not a real Passport
+  * do not use displayed recovery words
+
+Important green markers:
+
+`ONBOARDING_PHASE6E_RECOVERY_ENTROPY_GUARD=GREEN`
+`PHASE15R_EXISTING_REGRESSION=GREEN`
+`OLD_REPEATED_VMK_EXPECTATION_REMOVED=YES`
+`DIVERSE_DETERMINISTIC_VMK_EXPECTATION=GREEN`
+`MANUAL_RECOVERY_FIXTURE_REPEATED_BYTE_PATTERN_REMOVED=YES`
+`MANUAL_RECOVERY_FIXTURE_DIVERSE=YES`
+`PRODUCTION_CREATE_USES_GETRANDOM=GUARDED`
+`PRODUCTION_CSPRNG_BOUNDARY_TEST=GREEN`
+`REAL_CREATED_PASSPORT_ENTROPY_AUDIT=GREEN_FOR_CREATE_PATH`
+`WORDS_RETURNED_TO_WEBVIEW=NO`
+`ROOT_EXPORT=NO`
+`WALLET_OR_LEDGER_MUTATION=NO`
+
+Important note for next session:
+
+Do **not** undo the Phase 6E guard. Recovery phrase entropy is now a critical security invariant. Do not accept repeated-byte, patterned, deterministic, or low-entropy recovery material in any real Passport path.
+
+## Phase 7A — Native PIN setup foundation
+
+Goal of Phase 7A was to create the native-only PIN setup review/foundation before adding React UI.
+
+Accomplished:
+
+* Added PIN setup model/reviewer under:
+
+`apps/crablink-tauri/src/onboarding/onboardingPinSetup.js`
+
+* Added tests under:
+
+`apps/crablink-tauri/src/onboarding/onboardingPinSetup.test.mjs`
+
+* Reused existing operational unlock native command path:
+
+  * `passport_unlock_operational`
+  * fixed/no-argument adapter call
+  * native secure PIN prompt
+* Added pure review behavior:
+
+  * operational unlocked completes PIN setup
+  * already unlocked completes PIN setup
+  * cancelled/rejected/unavailable/no-passport fail closed
+  * unsafe success claims fail closed
+* Confirmed adapter path uses no PIN argument.
+* Confirmed React/WebView has no PIN field and no secret material.
+
+Important green markers:
+
+`ONBOARDING_PHASE7A_NATIVE_PIN_SETUP_FOUNDATION=GREEN`
+`NATIVE_OPERATIONAL_UNLOCK_REUSED=YES`
+`FIXED_NO_ARGUMENT_UNLOCK_ADAPTER=YES`
+`PIN_SETUP_REVIEWER=ADDED`
+`OPERATIONAL_UNLOCKED_COMPLETES_PIN_SETUP=YES`
+`ALREADY_UNLOCKED_COMPLETES_PIN_SETUP=YES`
+`CANCEL_REJECT_UNAVAILABLE_FAIL_CLOSED=YES`
+`UNSAFE_SUCCESS_CLAIMS_FAIL_CLOSED=YES`
+`PIN_THROUGH_WEBVIEW=NO`
+`PIN_ARGUMENT=ABSENT`
+`SECRET_MATERIAL_RETURNED=NO`
+`ROOT_EXPORT=NO`
+`WALLET_OR_LEDGER_MUTATION=NO`
+
+Current remaining Phase 7 work:
+
+`ONBOARDING_PHASE7_PIN_SETUP=NOT_YET_GREEN`
+
+Needed next:
+
+* React PIN setup UI
+* route gate wiring to PIN setup step
+* storage transition from PIN setup complete to profile setup
+* acceptance marker:
+
+`ONBOARDING_PHASE7_PIN_SETUP=GREEN`
+
+## Tests and checks that were green at pause
+
+Final green verification from the last terminal output:
+
+### Phase 6E / entropy
+
+* `ONBOARDING_PHASE6E_PHASE15R_SOURCE_BOUNDARY=GREEN`
+* `REPAIRED_PHASE15R_CREATE_TEST=GREEN`
+* `PHASE15R_EXISTING_REGRESSION=GREEN`
+* `ONBOARDING_PHASE6E_PHASE15R_ENTROPY_REGRESSION=GREEN`
+* `ONBOARDING_PHASE6E_RUNTIME_FIXTURE_REGRESSION=GREEN`
+* `ONBOARDING_PHASE6E_TAURI_CHECK=GREEN`
+
+### Phase 7A
+
+* `ONBOARDING_PHASE7A_PIN_SETUP_REGRESSION=GREEN`
+* Node tests: 6 passed
+
+  * native PIN setup accepts only native operational unlock success
+  * already unlocked completes without another native prompt
+  * cancelled/rejected/unavailable/no-passport fail closed
+  * unsafe success claims fail closed
+  * begin function calls fixed no-argument native unlock adapter
+  * source boundary has no React PIN field/argument/secret material
+
+### Phase 6C
+
+* `ONBOARDING_PHASE6C_ADAPTER_REGRESSION=GREEN`
+* Node adapter tests: 6 passed
+* `ONBOARDING_PHASE6C_RECOVERY_REGRESSION=GREEN`
+* Recovery tests: 9 passed
+
+### Phase 15R
+
+* Existing Phase 15R regression: 6 passed
+* Phase 6E Phase15R entropy tests: 2 passed
+* Old repeated VMK expectation removed.
+
+### Tauri
+
+* `cargo check --manifest-path apps/crablink-tauri/src-tauri/Cargo.toml` green under the macOS dev-media Tauri config.
+
+## Important failure history from this session
+
+Do not repeat these mistakes:
+
+### Phase 6E v1–v4 failure pattern
+
+Earlier Phase 6E patch attempts assumed wrong source shapes:
+
+* assumed `populated_vault()` had a specific `recovery_factor` binding
+* assumed repeated `vec![...; PHASE15Q_PLATFORM_FACTOR_BYTES]` shape inside CrabLink recovery runtime
+* assumed `PHASE15Q_PLATFORM_FACTOR_BYTES` was directly present in the recovery runtime file
+
+Those assumptions were wrong for the actual CrabLink source shape, causing patch aborts.
+
+### Correct diagnosis
+
+The real issue was:
+
+* `populated_vault()` used a deterministic random source.
+* That deterministic random source emitted repeated-byte material.
+* The repeated-byte material mapped into a visibly patterned recovery phrase in manual ceremony testing.
+* Production create path uses `OsNativeVaultRandomSource` and `getrandom::fill`, and now has boundary tests proving that.
+
+### Phase 15R repair failure
+
+After fixing deterministic test random output, an existing Phase 15R test still expected the old repeated VMK:
+
+`&[0x14; PHASE15Q_VAULT_MASTER_KEY_BYTES]`
+
+That assertion was updated to expect diversified deterministic bytes for seed `0x14` and to reject repeated-byte material.
+
+## Current exact next work
+
+Resume with:
+
+# Phase 7B — PIN setup UI and route/storage transition
+
+Goal:
+
+Complete Phase 7 by adding the actual React onboarding step and state transition for native-only PIN setup.
+
+Expected files to inspect/touch:
+
+* `apps/crablink-tauri/src/onboarding/onboardingPinSetup.js`
+* `apps/crablink-tauri/src/onboarding/onboardingPinSetup.test.mjs`
+* `apps/crablink-tauri/src/onboarding/onboardingModel.js`
+* `apps/crablink-tauri/src/onboarding/onboardingRouteGate.js`
+* `apps/crablink-tauri/src/onboarding/OnboardingRouteGate.jsx`
+* `apps/crablink-tauri/src/onboarding/onboardingStorage.js`
+* likely new file:
+
+  * `apps/crablink-tauri/src/onboarding/PinSetupStep.jsx`
+* likely new test:
+
+  * `apps/crablink-tauri/src/onboarding/pinSetupStep.test.mjs`
+
+What Phase 7B should implement:
+
+* Add React component for PIN setup step.
+* UI should say something like:
+
+  * “Set up your local Passport PIN”
+  * “Open native PIN prompt”
+  * “Your PIN is handled by the native secure prompt.”
+* Component calls `beginNativeOnboardingPinSetup()` or equivalent Phase 7A helper.
+* Component must not render:
+
+  * `<input type="password">`
+  * PIN text field
+  * password field
+  * seed phrase field
+  * recovery phrase field
+* Component must not accept:
+
+  * `pin`
+  * `password`
+  * VMK
+  * root factor
+  * private key
+  * seed/recovery material
+* On native operational unlock success or already-unlocked:
+
+  * record `pinSetupComplete: true`
+  * transition to `profile_setup`
+  * persist only redacted state
+* On cancel/rejected/unavailable/no-passport:
+
+  * fail closed
+  * do not mark PIN setup complete
+  * show redacted error/status only
+
+Expected Phase 7B acceptance markers:
+
+`REACT_PIN_SETUP_UI=ADDED`
+`ROUTE_GATE_PIN_STEP=ADDED`
+`STORAGE_TRANSITION_TO_PROFILE_SETUP=ADDED`
+`PIN_THROUGH_WEBVIEW=NO`
+`PIN_ARGUMENT=ABSENT`
+`SECRET_MATERIAL_RETURNED=NO`
+`ROOT_EXPORT=NO`
+`WALLET_OR_LEDGER_MUTATION=NO`
+`ONBOARDING_PHASE7_PIN_SETUP=GREEN`
+
+## Suggested first command next session
+
+Before patching Phase 7B, run a focused source inspection, not a broad workspace check:
+
+```bash
+cd /Users/mymac/desktop/crablink/apps/crablink-tauri
+
+grep -RIn \
+  -e "requirePinSetup" \
+  -e "recordPinSetupComplete" \
+  -e "beginNativeOnboardingPinSetup" \
+  -e "RecoveryCeremonyStep" \
+  -e "PassportCreateStep" \
+  -e "profile_setup" \
+  src/onboarding
+```
+
+Then patch Phase 7B based on the actual anchors.
+
+## Completion status at pause
+
+Desktop onboarding buildplan progress is roughly:
+
+* Phase 0: green
+* Phase 1: green
+* Phase 2: green
+* Phase 3: green
+* Phase 4: green
+* Phase 5: green
+* Phase 6: green
+* Phase 6D: green/manual accepted
+* Phase 6E: green/security follow-up complete
+* Phase 7A: green/foundation complete
+* Phase 7B: next
+* Phase 8: not started
+* Phase 9: not started
+* Phase 10: not started
+* Phase 11: not started
+* Phase 12: not started
+
+## Big-picture path after Phase 7B
+
+After Phase 7B:
+
+1. Finish Phase 7 acceptance:
+
+   * `ONBOARDING_PHASE7_PIN_SETUP=GREEN`
+
+2. Move to Phase 8:
+
+   * profile setup or skip
+   * public/draft fields only
+   * no backend-confirmed profile claims
+
+3. Move to Phase 9:
+
+   * complete onboarding
+   * route to `crab://home`
+   * clean home handoff
+   * honest Passport chip/drawer state
+
+4. Move to Phase 10:
+
+   * dev artifact quarantine
+   * remove Passport A/B from normal drawer path
+   * keep dev fixtures only behind explicit dev/test surfaces
+
+5. Move to Phase 11:
+
+   * desktop final acceptance
+   * React build
+   * Tauri check
+   * relevant Phase 15 regressions
+   * manual desktop onboarding test from clean state
+
+6. Move to Phase 12:
+
+   * freeze cross-platform onboarding contract for TV/mobile/tablet
+   * do not make TV companion-device pairing the default Passport model
+   * preserve local custody invariant
+
+## Critical reminders for next session
+
+* Do not move to Android TV Phase 16 until desktop onboarding is proven.
+* Do not return to Passport Native Phase 16 until this desktop onboarding flow is complete enough to prove the work on desktop first.
+* No React PIN.
+* No React seed phrase.
+* No cloud login/custody.
+* No fake backend-confirmed username/profile.
+* No wallet/ledger mutation.
+* No capability issuance.
+* Recovery phrase entropy is a hard security invariant.
+* Use small focused patches.
+* Run focused tests first.
+* Fix first failure before expanding scope.
+* Do not run broad acceptance unless the touched surface justifies it.
+
+
+### END NOTE - JULY 26 2026 - 18:15 CST
+
+
+### BEGIN NOTE - JULY 27 2026 - 00:55 CST
+
+The latest codebundle confirms the V2 handoff is present in the repository, so this is no longer a case of the patch failing to apply. 
+
+## Why the Keychain prompt is still appearing
+
+The patch added a **preferred native-memory recovery path**, but it did **not remove the old Keychain fallback**.
+
+The current recovery function does this:
+
+```text
+take pending recovery factor from AppState
+    |
+    ├─ factor exists → display phrase from native memory
+    |
+    └─ factor absent → call legacy recovery function
+                         → read recovery-root from macOS Keychain
+                         → macOS password prompt
+```
+
+That fallback remains explicitly present in the current source. When `take_pending_recovery_factor()` returns `None`, the code calls `run_desktop_recovery_ceremony_once()`, which unseals the recovery root from Keychain.
+
+Your observed timing—pressing **Retry native recovery ceremony** and immediately receiving the Keychain prompt—strongly indicates that the live recovery command found the pending-memory slot empty and entered that fallback.
+
+The two new tests passed because they directly created one `DesktopPendingRecoverySessionStore`, staged a factor into it, and passed that same object into the recovery helper. They proved the helper works in isolation, but they did **not prove the complete live Tauri sequence**:
+
+```text
+real passport_create command
+→ real managed AppState
+→ React state transition
+→ real passport_recovery_ceremony command
+→ same populated pending store
+```
+
+The live application has now shown that this command-to-command guarantee is not established.
+
+There is also a second unresolved defect: clearing a Passport removes the encrypted vault and native session state, but the command still reports `platform_material_mutated: false`. The old Keychain entries are therefore not deleted.  The macOS adapter continues using one fixed service and fixed `recovery-root` / `device-key` accounts for every development executable.  That leaves stale entries and their old access-control identity behind, which may independently contribute to the authentication prompt.
+
+The exact reason the pending slot became empty is not yet proven. The next session must distinguish between:
+
+1. the Rust/Tauri process restarting between creation and recovery;
+2. the real create command failing to retain the factor in the managed `AppState`;
+3. another path clearing or replacing the pending slot;
+4. the visible prompt actually originating from Keychain update/write behavior rather than the recovery read.
+
+Do not enter your Mac password. Select **Deny** and leave Phase 11B stopped.
+
+---
+
+# RustyOnions / CrabLink Onboarding Buildplan — Exhaustive Carry-Over Notes
+
+## 1. Active project and working directory
+
+Current project priority:
+
+```text
+ONBOARDING_BUILDPLAN.md
+```
+
+This work must be completed before returning to:
+
+```text
+Passport Native Buildplan Phase 16
+CrabLink TV
+Android app
+iOS app
+```
+
+Primary repository worked on during this session:
+
+```text
+/Users/mymac/Desktop/crablink
+```
+
+Primary application directory:
+
+```text
+/Users/mymac/Desktop/crablink/apps/crablink-tauri
+```
+
+No RustyOnions crate was changed during the onboarding work described here.
+
+Current repository-change posture:
+
+```text
+CRABLINK_CHANGED=YES
+CRABLINK_TAURI_CHANGED=YES
+RUSTYONIONS_CHANGED=NO
+CRABLINK_TV_CHANGED=NO
+SVC_PASSPORT_CHANGED=NO
+```
+
+Latest attached source snapshot:
+
+```text
+CODEBUNDLE_TAURI_APP(88).md
+Generated: 2026-07-27T05:28:22Z
+Git: 4b24497 (dirty)
+Text files: 898
+```
+
+The latest bundle includes the onboarding UI, development reset work, Phase 11 scripts, Native Passport command bridges, and the pending-recovery V2 implementation. 
+
+---
+
+## 2. Current buildplan status
+
+### Completed or accepted green
+
+```text
+Phase 0 — inventory and baseline
+Phase 1 — onboarding model
+Phase 2 — onboarding persistence
+Phase 3 — first-run route gate
+Phase 4 — welcome and username entry
+Phase 5 — local Passport creation UI/bridge
+Phase 6 — native recovery ceremony
+Phase 6D — manual deterministic native ceremony
+Phase 6E — deterministic fixture repair
+Phase 6F — production OS-CSPRNG recovery acceptance
+Phase 7 — native PIN setup
+Phase 8 — local profile setup
+Phase 9 — completion and crab://home handoff
+Phase 10 — development artifact quarantine
+Phase 11A — automated desktop final acceptance
+```
+
+### Current blocked phase
+
+```text
+Phase 11B — desktop manual acceptance
+STATUS=RED
+BLOCKED_AT=NATIVE_RECOVERY_CEREMONY
+```
+
+### Not started
+
+```text
+Phase 12 — cross-platform onboarding contract
+```
+
+The onboarding buildplan is therefore not complete.
+
+---
+
+# 3. Phase 6F production recovery entropy acceptance
+
+Before Phase 9, production recovery entropy was manually checked.
+
+A focused ignored Rust test created two temporary in-memory Passport vaults through the production OS-random wrapper. It opened two native recovery dialogs and proved the redacted fingerprints differed.
+
+Important acceptance results:
+
+```text
+TWO_TEMPORARY_OS_CSPRNG_VAULTS_CREATED=YES
+TWO_NATIVE_RECOVERY_DIALOGS_SHOWN=YES
+RECOVERY_FINGERPRINTS_DISTINCT=GREEN
+PRODUCTION_OS_RANDOM_CREATE_WRAPPER_USED=YES
+REAL_USER_VAULT_TOUCHED=NO
+MACOS_KEYCHAIN_TOUCHED=NO
+WORDS_RETURNED_TO_WEBVIEW=NO
+ROOT_EXPORT=NO
+WALLET_OR_LEDGER_MUTATION=NO
+```
+
+The displayed phrases were disposable test material. They must not be reused as real recovery phrases.
+
+Security conclusion:
+
+```text
+Production create entropy was proven non-deterministic.
+The current Phase 11B failure is not an entropy-generation failure.
+```
+
+---
+
+# 4. Phase 9 — onboarding completion and `crab://home`
+
+Phase 9 added the explicit final onboarding transition.
+
+Implemented behavior:
+
+```text
+profile_saved/profile_skipped
+→ completion screen
+→ safe local settings projection
+→ completed onboarding state
+→ crab://home
+→ normal CrabLink shell
+```
+
+New or modified surfaces included:
+
+```text
+src/onboarding/OnboardingCompletionStep.jsx
+src/onboarding/onboardingHomeHandoff.js
+src/onboarding/onboardingHomeHandoff.test.mjs
+src/onboarding/OnboardingRouteGate.jsx
+src/pages/home/HomePage.jsx
+src/app/shell/PassportChip.jsx
+```
+
+Important behavior:
+
+* The selected username is displayed as a **local draft**.
+* It is not labeled backend-confirmed.
+* Completion does not register the username.
+* Completion does not issue a capability.
+* Completion does not mutate a wallet or ledger.
+* Known development labels no longer outrank the selected onboarding username.
+* The normal completed route becomes `crab://home`.
+
+Initial Phase 9 verification found two test problems:
+
+1. A secret-surface source assertion matched security comments containing words such as PIN and recovery phrase.
+2. The Passport chip source ordering did not satisfy the local-draft priority assertion.
+
+Both were repaired.
+
+Final Phase 9 result:
+
+```text
+ONBOARDING_PHASE9_COMPLETION_TRANSITION=GREEN
+ONBOARDING_PHASE9_CRAB_HOME_ROUTE=GREEN
+ONBOARDING_PHASE9_LOCAL_USERNAME_DISPLAY=GREEN
+ONBOARDING_PHASE9_KNOWN_DEV_LABEL_HANDOFF=GREEN
+ONBOARDING_PHASE9_NO_BACKEND_CONFIRMED_CLAIM=GREEN
+ONBOARDING_PHASE9_HOME_HANDOFF=GREEN
+```
+
+The React production build passed.
+
+---
+
+# 5. Phase 10 — development artifact quarantine
+
+## Phase 10A clean defaults
+
+Phase 10A removed development identities from normal application defaults while retaining explicit development fixtures.
+
+Confirmed changes included:
+
+* JavaScript settings default to development mode off.
+* Native `AppSettings` no longer fabricate a Passport subject or wallet account.
+* Profile defaults no longer contain `@skinnycrabby`.
+* Profile gateway/public views no longer silently fall back to a development identity.
+* Tauri local storage is not presented as an HTTP-preview fallback.
+* Dedicated explicit fixtures remain in `devPassportSessions.js`.
+
+Final Phase 10A tests passed:
+
+```text
+JavaScript settings default to explicit development mode off
+Native AppSettings no longer fabricate Passport/wallet defaults
+Profile defaults contain no baked Skinnycrabby identity
+Profile views have no implicit development identity fallback
+Tauri local storage has no false HTTP-preview claim
+Explicit development fixtures remain available
+```
+
+The Phase 0 inventory was repaired so that:
+
+* separate test files are excluded;
+* embedded Rust `#[cfg(test)]` modules are excluded;
+* production source before and after embedded test modules remains scanned;
+* source line numbers remain accurate.
+
+There were shell-test-harness problems during Phase 10:
+
+```text
+[: ']' expected
+zsh: command not found: 0
+```
+
+These were summary-script defects rather than application failures. The underlying tests and builds were green.
+
+## Phase 10B drawer development gate
+
+The Passport drawer development surfaces were placed behind an explicit development gate.
+
+Current related files include:
+
+```text
+src/app/shell/passportDrawerDevGate.js
+src/app/shell/passportDrawerDevGate.test.mjs
+src/app/shell/PassportDrawer.jsx
+```
+
+The gate tests later passed 5/5.
+
+Normal presentation must not show:
+
+```text
+Creator A
+Visitor B
+passport:main:dev
+starter ROC
+automatic visitor mode
+development-only account switching
+```
+
+unless the explicit development gate is active.
+
+---
+
+# 6. Phase 11A — automated desktop final acceptance
+
+A new automated acceptance script was added:
+
+```text
+scripts/onboarding_phase11a_desktop_automated_acceptance.sh
+```
+
+It runs:
+
+* final onboarding source/model tests;
+* onboarding JavaScript regression suite;
+* Passport drawer source regressions;
+* Tauri Passport boundary tests;
+* Phase 15W create bridge;
+* Phase 15X restart acceptance;
+* Phase 15Y status/command acceptance;
+* Phase 15Z root-confirmation acceptance;
+* Phase 15AA clear bridge;
+* Phase 6 public recovery command;
+* production CSPRNG boundary;
+* Tauri `cargo check`;
+* Vite production build;
+* macOS `.app` bundle build;
+* `.app` bundle presence verification.
+
+One Phase 11A test initially read the obsolete file:
+
+```text
+src/App.jsx
+```
+
+The active application is:
+
+```text
+src/app/App.jsx
+```
+
+The test path was repaired without changing runtime code.
+
+Final Phase 11A state:
+
+```text
+ONBOARDING_PHASE11A_MODEL_RESTART_RESET=GREEN
+ONBOARDING_PHASE11A_PROFILE_SAVE_SKIP_COMPLETION=GREEN
+ONBOARDING_PHASE11A_NO_REACT_PIN_OR_RECOVERY_WORDS=GREEN
+ONBOARDING_PHASE11A_NO_BAKED_IDENTITY=GREEN
+ONBOARDING_PHASE11A_DEV_QUARANTINE=GREEN
+ONBOARDING_PHASE11A_PHASE15_REGRESSIONS=GREEN
+ONBOARDING_PHASE11A_TAURI_CONSUMER_CHECK=GREEN
+ONBOARDING_PHASE11A_MACOS_APP_BUILD=GREEN
+ONBOARDING_PHASE11A_DESKTOP_AUTOMATED_ACCEPTANCE=GREEN
+ONBOARDING_DESKTOP_FINAL_ACCEPTANCE=MANUAL_PENDING
+```
+
+Phase 11A is accepted green.
+
+---
+
+# 7. Phase 11B manual acceptance recorder
+
+The manual recorder was added at:
+
+```text
+scripts/onboarding_phase11b_desktop_manual_acceptance.sh
+```
+
+It requires human confirmation of:
+
+1. clean Welcome screen;
+2. no baked identity;
+3. username validation;
+4. truthful username availability failure;
+5. explicit development availability bypass;
+6. native PIN-based Passport creation;
+7. created-locked state;
+8. native 24-word recovery display;
+9. no recovery words or PIN in React;
+10. native operational PIN setup;
+11. profile save/skip;
+12. completion truth;
+13. `crab://home` handoff;
+14. clean normal drawer;
+15. restart persistence;
+16. Native Passport clear;
+17. onboarding reset;
+18. final clean Welcome state.
+
+It refuses to report final green unless all checkpoints are confirmed.
+
+---
+
+# 8. First Phase 11B manual failure — old Passport already existed
+
+The first manual attempt reached Passport creation and returned:
+
+```text
+already_exists
+```
+
+This proved an older encrypted Native Passport vault still existed.
+
+The user entered the development shell and observed stale display state:
+
+```text
+@crabmaster
+passport:main:dev
+@skinnycrabby route/tab
+```
+
+These came from multiple independent sources:
+
+* Native encrypted Passport vault;
+* cached public profile;
+* stored development settings;
+* stale route/tab state.
+
+The three original browser-storage cleanup keys were insufficient because they did not clear all profile and settings sources.
+
+---
+
+# 9. Phase 11B development reset work
+
+## Manual recorder clean-start repair
+
+The recorder was updated to require:
+
+```text
+NATIVE_NO_PASSPORT
+BROWSER_STATE_CLEAN
+```
+
+It also clears:
+
+```text
+crablink.onboarding.v1
+crablink.onboarding.profile-draft.v1
+crablink.storage.v1
+crablink.public_profile.v1
+```
+
+from both:
+
+```text
+localStorage
+sessionStorage
+```
+
+It resets the browser route to:
+
+```text
+crab://home
+```
+
+## Real runtime reset helper
+
+A development-only destructive reset was added:
+
+```text
+src/onboarding/onboardingDevelopmentReset.js
+src/onboarding/onboardingDevelopmentReset.test.mjs
+```
+
+The Passport drawer received a two-step control:
+
+```text
+Arm disposable onboarding reset
+Confirm clear Passport and reset onboarding
+```
+
+The reset performs:
+
+```text
+clear Native Passport vault
+verify native state = no_passport
+reset application settings
+clear public-profile cache
+clear local catalog cache
+clear recent-receipt cache
+clear profile draft
+reset onboarding state
+reset route
+reload application
+```
+
+The control is restricted to:
+
+```text
+import.meta.env.DEV
+AND
+native Passport runtime available
+```
+
+Initial source testing was brittle because it looked for one exact whitespace layout. That was repaired with a structural assertion.
+
+Final reset verification:
+
+```text
+Runtime reset tests: 6 passed
+Phase 10 development gate: 5 passed
+Native Passport drawer regressions: 22 passed
+React production build: GREEN
+```
+
+The user then successfully used the real development reset to remove the old disposable Passport and stale application display state.
+
+---
+
+# 10. Discovery of the macOS Keychain prompt
+
+After creating a new disposable Passport, macOS displayed:
+
+```text
+crablink-tauri wants to use your confidential information stored in
+“com.rustyonions.crablink.native-passport.v1”
+in your keychain
+```
+
+The dialog asks for the Mac login Keychain password, not the CrabLink Passport PIN.
+
+The user does not want to provide the Mac password.
+
+Correct action:
+
+```text
+Select Deny.
+Do not enter the Passport PIN.
+Do not select Always Allow.
+```
+
+The fixed service currently used by the macOS sealer is:
+
+```text
+com.rustyonions.crablink.native-passport.v1
+```
+
+with accounts:
+
+```text
+recovery-root
+device-key
+```
+
+The adapter uses `set_generic_password` for sealing and `generic_password` for unsealing. 
+
+---
+
+# 11. First pending-recovery handoff attempt
+
+The first patch attempted to add a native one-time recovery factor session and a separate integration-test target.
+
+It failed during its Python postwrite check because of invalid Python syntax:
+
+```text
+command_source =
+```
+
+The rollback removed the new test target and pending module.
+
+The later verification incorrectly printed a green summary because the shell failure counter used command substitution instead of arithmetic expansion.
+
+Important conclusion:
+
+```text
+FIRST_PENDING_RECOVERY_PATCH=ROLLED_BACK
+FIRST_GREEN_SUMMARY=FALSE
+```
+
+No result from that first attempt should be counted.
+
+---
+
+# 12. Pending-recovery handoff V2
+
+The corrected V2 patch successfully applied.
+
+## New file
+
+```text
+src-tauri/src/passport_pending_recovery_runtime.rs
+```
+
+It owns:
+
+```rust
+Mutex<Option<NativeSecretBytes>>
+```
+
+and provides:
+
+```text
+stage_recovery_factor
+take_pending_recovery_factor
+restore_recovery_factor
+clear_pending_recovery_factor
+has_pending_recovery_factor
+```
+
+The factor is native memory only and is not serialized or returned to React.
+
+## Modified Rust files
+
+```text
+src-tauri/src/lib.rs
+src-tauri/src/state.rs
+src-tauri/src/passport_vault_create_runtime.rs
+src-tauri/src/passport_create_command_runtime.rs
+src-tauri/src/passport_recovery_phrase_runtime.rs
+src-tauri/src/commands/passport.rs
+```
+
+## Intended behavior
+
+During creation:
+
+```text
+generate recovery factor
+→ clone into pending native-memory store
+→ seal persistent recovery factor into platform storage
+→ write encrypted vault
+→ return created_locked
+```
+
+The handoff currently happens before the two platform sealing calls and the atomic vault write. 
+
+During recovery:
+
+```text
+pending factor present
+→ derive 24 words
+→ show native recovery window
+→ no Keychain unseal
+```
+
+On cancel, unavailable, or runtime error:
+
+```text
+restore pending factor for retry
+```
+
+On acknowledgement:
+
+```text
+drop pending factor
+```
+
+On Passport clear:
+
+```text
+drop pending factor
+```
+
+On process exit:
+
+```text
+memory naturally disappears
+```
+
+## Public command wiring
+
+The public `passport_create` command now calls:
+
+```text
+create_desktop_native_passport_from_native_surface_with_pending_recovery
+```
+
+The public recovery command calls:
+
+```text
+run_desktop_recovery_ceremony_once_with_pending_recovery
+```
+
+Both receive the `passport_pending_recovery_session` field from `AppState`.
+
+## V2 automated verification
+
+The focused tests passed:
+
+```text
+phase11b_pending_recovery_avoids_platform_unseal_and_drops_after_acknowledgement
+phase11b_cancel_restores_pending_recovery_for_retry_without_platform_unseal
+```
+
+Result:
+
+```text
+2 passed
+0 failed
+```
+
+Other green regressions:
+
+```text
+Phase 15W create bridge: 4 passed
+Phase 15R vault create: 8 passed
+Phase 6 recovery command: 2 passed
+Phase 15AA clear bridge: 4 passed
+Phase 15X restart acceptance: 4 passed
+Phase 15Y command source: 4 passed
+cargo check: GREEN
+```
+
+This proves the lower-level native-memory behavior in a controlled test environment.
+
+---
+
+# 13. Current live failure after V2
+
+The user cleared the prior disposable Passport, restarted the patched application, created another Passport, and reached:
+
+```text
+Passport = created_locked
+Onboarding state = recovery_phrase_required
+Ceremony status = failure
+Redacted state = unavailable
+```
+
+Pressing:
+
+```text
+Retry native recovery ceremony
+```
+
+still produced the macOS login Keychain password prompt.
+
+The recovery words were not shown.
+
+The recovery acknowledgement was not completed.
+
+Current manual result:
+
+```text
+ONBOARDING_PHASE11B_NATIVE_PASSPORT_CREATE=PARTIAL_GREEN
+ONBOARDING_PHASE11B_CREATED_LOCKED=OBSERVED
+ONBOARDING_PHASE11B_NATIVE_RECOVERY=RED
+ONBOARDING_PHASE11B_REACT_SECRET_BOUNDARY=GREEN_SO_FAR
+ONBOARDING_DESKTOP_FINAL_ACCEPTANCE=RED
+```
+
+The current Passport must not be treated as accepted or safely recoverable because the user has never received and acknowledged its recovery phrase.
+
+---
+
+# 14. Current root-cause assessment
+
+## Proven
+
+* V2 source is present.
+* The pending store exists in `AppState`.
+* The public create and recovery commands reference that store.
+* The isolated pending-memory tests pass.
+* The live application still requests Keychain access.
+* The legacy Keychain fallback still exists.
+* Clear does not remove Keychain material.
+* The React screen fails closed and shows only `unavailable`.
+* No words were returned to React.
+
+## Strong inference
+
+The live recovery command is reaching:
+
+```rust
+pending_factor == None
+```
+
+and therefore calling:
+
+```rust
+run_desktop_recovery_ceremony_once(...)
+```
+
+which performs the Keychain unseal. The current code explicitly has this fallback.
+
+## Not yet proven
+
+Why the pending slot is empty.
+
+Possible explanations that must be tested rather than assumed:
+
+### Possibility A — process restart
+
+The Tauri Rust process may have restarted between creation and recovery.
+
+Because the pending factor is memory-only, any restart erases it.
+
+Potential restart sources:
+
+* manually quitting/relaunching;
+* Tauri development watcher restart;
+* rebuilding/recompiling while the app is running;
+* crash or runtime replacement;
+* running recovery in a different process than creation.
+
+### Possibility B — live command staging failure
+
+The real command may not be retaining the factor even though the lower-level test does.
+
+The current tests do not invoke the real Tauri command pair through one managed `AppState`.
+
+### Possibility C — unexpected clear/replacement
+
+Some production call path may be clearing the pending session before recovery.
+
+Known production clear locations must be inventoried.
+
+### Possibility D — Keychain prompt originates during write/update
+
+Because Passport clear does not delete old Keychain entries, the next creation updates fixed existing entries. macOS could request authorization while updating an entry created by another unsigned development executable.
+
+The screenshot timing favors the recovery-read explanation, but this must be instrumented.
+
+---
+
+# 15. Critical design weakness uncovered
+
+The current design divides one security ceremony across two public commands:
+
+```text
+Command 1: create Passport and stage factor
+React persistence/state transition
+Command 2: request recovery phrase
+```
+
+That creates a lifecycle gap.
+
+A recovery phrase that exists only in native memory cannot safely depend on:
+
+* React preserving timing;
+* the Tauri process staying alive;
+* development watchers not restarting;
+* no other command clearing state;
+* the next command receiving the exact same managed state.
+
+The unit tests only proved the helper behavior, not that lifecycle.
+
+The stronger design is to make creation and first recovery display one native orchestration operation.
+
+---
+
+# 16. Recommended next-session implementation order
+
+## Step 1 — add redacted runtime observability
+
+Before another architectural patch, add focused redacted facts that distinguish the paths without exposing secrets.
+
+Suggested internal facts:
+
+```text
+pending_recovery_staged
+pending_recovery_present_at_recovery_start
+pending_recovery_used
+platform_unseal_attempted
+platform_unseal_used
+process_instance_match
+recovery_source = pending_native | platform_store | none
+```
+
+These may be:
+
+* internal outcome booleans;
+* development-only redacted terminal markers;
+* test-only probes;
+* a redacted development DTO field.
+
+Never expose:
+
+```text
+factor bytes
+phrase words
+fingerprint value
+PIN
+VMK
+sealed secret
+Keychain data
+```
+
+The first focused manual check should conclusively print:
+
+```text
+CREATE_PENDING_STAGED=YES/NO
+RECOVERY_PENDING_PRESENT=YES/NO
+RECOVERY_PLATFORM_UNSEAL_ATTEMPTED=YES/NO
+```
+
+## Step 2 — test the real command-to-command path
+
+Add a focused Rust orchestration test that uses:
+
+```text
+one AppState
+one pending session store
+public create command inner logic
+public recovery command inner logic
+fake platform sealer that fails or panics if unseal is called
+```
+
+The test must prove:
+
+```text
+create command returns created_locked
+same AppState pending slot is populated
+recovery command consumes that slot
+platform unseal calls = 0
+native recovery surface calls = 1
+```
+
+The current lower-level tests are insufficient.
+
+## Step 3 — combine creation and first recovery ceremony
+
+Preferred architecture:
+
+```text
+native Passport create-and-recovery orchestration
+```
+
+One native command should own:
+
+1. native PIN request;
+2. factor and VMK generation;
+3. encrypted vault preparation;
+4. platform sealing;
+5. atomic vault persistence;
+6. immediate native phrase display;
+7. acknowledgement recording;
+8. redacted final DTO.
+
+The React side should receive one of:
+
+```text
+created_locked_and_recovery_acknowledged
+created_locked_recovery_cancelled
+created_locked_recovery_unavailable
+create_rejected
+cancelled
+unavailable
+```
+
+The first recovery phrase should not depend on a second Tauri command.
+
+The separate recovery command may remain for controlled existing-vault behavior, but it should not be the normal first-run creation path.
+
+## Step 4 — define interruption behavior
+
+The combined command must explicitly handle:
+
+```text
+user cancels phrase dialog
+native phrase surface unavailable
+application crash during ceremony
+Keychain write succeeds but vault write fails
+vault write succeeds but acknowledgement write fails
+```
+
+Do not silently leave onboarding claiming success.
+
+A safe posture may require a state such as:
+
+```text
+created_locked_recovery_pending
+```
+
+but it must be native truth, not only React state.
+
+## Step 5 — implement platform-material cleanup
+
+The current `NativePlatformSealer` interface only exposes seal/unseal.
+
+A cleanup path is required for disposable Passport deletion.
+
+Possible approaches:
+
+* extend the upstream `svc-passport` platform-storage contract with a purge operation;
+* add a CrabLink-owned platform-material lifecycle trait;
+* add a macOS-specific deletion owner alongside the sealer.
+
+Required macOS behavior:
+
+```text
+delete recovery-root Keychain entry
+delete device-key Keychain entry
+verify both absent
+then report platform_material_mutated = true
+```
+
+The clear command must not report a fully clean Passport state while Keychain compartments remain.
+
+This step may require changes in both:
+
+```text
+CrabLink
+RustyOnions svc-passport
+```
+
+That decision must be made from the current trait definitions before patching.
+
+## Step 6 — separate development and release Keychain namespaces
+
+A development executable that is rebuilt repeatedly should not collide indefinitely with production-style fixed Keychain entries.
+
+Review a separate development service identifier, for example conceptually:
+
+```text
+release service
+development service
+test service
+```
+
+Do not hardcode a final name until migration and compatibility behavior are designed.
+
+## Step 7 — rerun focused verification
+
+Minimum Rust lane:
+
+```text
+cargo fmt --manifest-path src-tauri/Cargo.toml
+
+cargo test \
+  --manifest-path src-tauri/Cargo.toml \
+  --lib \
+  'passport_recovery_phrase_runtime::tests::phase11b_'
+
+cargo test \
+  --manifest-path src-tauri/Cargo.toml \
+  --test phase15l_macos_keychain_platform_sealer
+
+cargo test \
+  --manifest-path src-tauri/Cargo.toml \
+  --test phase15w_desktop_passport_create_command_bridge
+
+cargo test \
+  --manifest-path src-tauri/Cargo.toml \
+  --test phase15aa_desktop_clear_command_bridge
+
+cargo test \
+  --manifest-path src-tauri/Cargo.toml \
+  --test phase6b2b2b2b_public_recovery_command_wiring
+
+cargo check \
+  --manifest-path src-tauri/Cargo.toml
+```
+
+Then run the new real orchestration test.
+
+## Step 8 — controlled macOS manual acceptance
+
+Only after the automated lane is green:
+
+```text
+clear disposable incomplete Passport
+verify vault absent
+verify platform compartments absent
+restart patched Tauri process
+create new disposable Passport
+enter native disposable PIN
+native 24-word window appears immediately
+no macOS login password prompt
+acknowledge phrase
+continue onboarding
+```
+
+Do not regenerate codebundles, modify Rust source, or trigger a Tauri restart between creation and the recovery ceremony during this test.
+
+---
+
+# 17. Files confirmed changed during this onboarding session
+
+## Scripts
+
+```text
+apps/crablink-tauri/scripts/onboarding_phase11a_desktop_automated_acceptance.sh
+apps/crablink-tauri/scripts/onboarding_phase11b_desktop_manual_acceptance.sh
+apps/crablink-tauri/scripts/onboarding_phase6f_os_csprng_recovery_acceptance.sh
+```
+
+## Onboarding frontend/model/tests
+
+```text
+apps/crablink-tauri/src/onboarding/OnboardingCompletionStep.jsx
+apps/crablink-tauri/src/onboarding/OnboardingRouteGate.jsx
+apps/crablink-tauri/src/onboarding/onboardingHomeHandoff.js
+apps/crablink-tauri/src/onboarding/onboardingHomeHandoff.test.mjs
+apps/crablink-tauri/src/onboarding/onboardingDesktopFinalAcceptance.test.mjs
+apps/crablink-tauri/src/onboarding/onboardingDevArtifactInventory.source.test.mjs
+apps/crablink-tauri/src/onboarding/onboardingPhase10Defaults.source.test.mjs
+apps/crablink-tauri/src/onboarding/onboardingDevelopmentReset.js
+apps/crablink-tauri/src/onboarding/onboardingDevelopmentReset.test.mjs
+apps/crablink-tauri/src/onboarding/PassportCreateStep.jsx
+apps/crablink-tauri/src/onboarding/RecoveryCeremonyStep.jsx
+```
+
+## Shell/home/profile/default cleanup
+
+```text
+apps/crablink-tauri/src/app/shell/PassportDrawer.jsx
+apps/crablink-tauri/src/app/shell/PassportChip.jsx
+apps/crablink-tauri/src/app/shell/passportDrawerDevGate.js
+apps/crablink-tauri/src/app/shell/passportDrawerDevGate.test.mjs
+apps/crablink-tauri/src/pages/home/HomePage.jsx
+apps/crablink-tauri/src/app/settings.js
+apps/crablink-tauri/src/shared/profile/publicProfileCache.js
+apps/crablink-tauri/src/shared/utils/devPassportSessions.js
+```
+
+Some default/profile cleanup may also have touched related profile and settings sources. Confirm with repository diff at the beginning of the next session rather than relying only on this reconstructed list.
+
+## Native Rust
+
+```text
+apps/crablink-tauri/src-tauri/src/passport_pending_recovery_runtime.rs
+apps/crablink-tauri/src-tauri/src/passport_vault_create_runtime.rs
+apps/crablink-tauri/src-tauri/src/passport_create_command_runtime.rs
+apps/crablink-tauri/src-tauri/src/passport_recovery_phrase_runtime.rs
+apps/crablink-tauri/src-tauri/src/commands/passport.rs
+apps/crablink-tauri/src-tauri/src/state.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+```
+
+No RustyOnions source was modified.
+
+---
+
+# 18. Security invariants that remain intact
+
+Despite the failed manual recovery ceremony, the implementation still fails closed.
+
+Confirmed posture:
+
+```text
+PIN_THROUGH_WEBVIEW=NO
+RECOVERY_WORDS_THROUGH_WEBVIEW=NO
+RECOVERY_ROOT_EXPORTED=NO
+PRIVATE_KEY_EXPORTED=NO
+VMK_EXPORTED=NO
+SECRET_LOGGING=NO
+FAKE_RECOVERY_PHRASE=NO
+FAKE_ACKNOWLEDGEMENT=NO
+USERNAME_REGISTRY_MUTATION=NO
+CAPABILITY_ISSUANCE=NO
+WALLET_MUTATION=NO
+LEDGER_MUTATION=NO
+```
+
+The React page showed only:
+
+```text
+created_locked
+recovery_phrase_required
+failure
+unavailable
+```
+
+This is the correct failure posture. The problem is usability and lifecycle integration, not a secret leak.
+
+---
+
+# 19. Known state on disk at session end
+
+There is currently a newly created test Passport in an incomplete state.
+
+Observed state:
+
+```text
+Native Passport vault = PRESENT
+Passport state = created_locked
+Onboarding state = recovery_phrase_required
+Recovery acknowledgement = NOT COMPLETE
+Recovery words = NOT SHOWN
+Ceremony = unavailable
+Keychain authorization = DENIED / NOT PROVIDED
+```
+
+Do not treat this Passport as successfully onboarded.
+
+It is disposable test material.
+
+Do not continue clicking **Retry native recovery ceremony** because the current fallback will continue requesting Keychain access.
+
+Do not enter the Mac login password.
+
+The next session should decide whether to keep this incomplete vault briefly for instrumentation or clear it before the next controlled create test.
+
+---
+
+# 20. First action for the next session
+
+Start with source inspection and runtime-path instrumentation—not another blind rewrite.
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+
+grep -RIn \
+  -e "passport_pending_recovery_session" \
+  -e "stage_recovery_factor" \
+  -e "take_pending_recovery_factor" \
+  -e "restore_recovery_factor" \
+  -e "clear_pending_recovery_factor" \
+  -e "run_desktop_recovery_ceremony_once_with_pending_recovery" \
+  -e "run_desktop_recovery_ceremony_once(" \
+  src-tauri/src
+```
+
+Then inspect the first live boundary to patch:
+
+```text
+passport_create
+→ pending slot staged?
+→ process instance unchanged?
+→ passport_recovery_ceremony
+→ pending slot present?
+→ fallback invoked?
+```
+
+The immediate next patch should add the redacted proof of that path and a command-level integration test. It should not yet claim that the Keychain prompt has been fixed.
+
+---
+
+# 21. Resume summary
+
+```text
+ACTIVE_BUILDPLAN=ONBOARDING_BUILDPLAN
+CURRENT_PHASE=11B
+PHASE11A_AUTOMATED_ACCEPTANCE=GREEN
+PHASE11B_MANUAL_ACCEPTANCE=RED
+BLOCKER=MACOS_KEYCHAIN_PROMPT_DURING_RECOVERY
+PASSPORT_CREATE=CREATED_LOCKED
+RECOVERY_PHRASE_DISPLAYED=NO
+PENDING_RECOVERY_V2_SOURCE=APPLIED
+PENDING_RECOVERY_UNIT_TESTS=GREEN
+LIVE_PENDING_RECOVERY_PATH=NOT_PROVEN
+LIVE_RUNTIME_USED_KEYCHAIN_FALLBACK=STRONGLY_INDICATED
+KEYCHAIN_PLATFORM_MATERIAL_CLEAR=NOT_IMPLEMENTED
+CURRENT_TEST_PASSPORT=INCOMPLETE_AND_DISPOSABLE
+NEXT_WORK=REDACTED_RUNTIME_INSTRUMENTATION_AND_ATOMIC_CREATE_RECOVERY_ORCHESTRATION
+PHASE12=NOT_STARTED
+RUSTYONIONS_CHANGED=NO
+```
+
+
+### END NOTE - JULY 27 2026 - 00:55 CST

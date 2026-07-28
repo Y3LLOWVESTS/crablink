@@ -1,5 +1,14 @@
-import { useState } from 'react';
+import {
+  useRef,
+  useState,
+} from 'react';
 import { invoke } from '@tauri-apps/api/core';
+
+import {
+  normalizeTvDeviceName,
+  normalizeTvPairingBeginFailure,
+  projectTvPairingBeginSuccess,
+} from './tvPairingBeginInteraction.js';
 
 import {
   projectTvPairingView,
@@ -15,6 +24,14 @@ const INITIAL_VIEW = projectTvPairingView(
   },
 );
 
+const INITIAL_BEGIN_STATE = {
+  phase: 'idle',
+  challengeHandle: null,
+  expiresAt: null,
+  code: null,
+  retryable: false,
+};
+
 export function TvPairingPanel({
   onActivity,
 }) {
@@ -24,7 +41,35 @@ export function TvPairingPanel({
   const [checkState, setCheckState] =
     useState('idle');
 
+  const [deviceName, setDeviceName] =
+    useState('CrabLink TV');
+
+  const [beginState, setBeginState] =
+    useState(INITIAL_BEGIN_STATE);
+
+  const beginInFlightRef =
+    useRef(false);
+
+  const beginIsBusy =
+    beginState.phase === 'submitting';
+
+  const beginIsWaiting =
+    beginState.phase === 'waiting';
+
+  const canBegin =
+    view.kind === 'ready' &&
+    !beginIsBusy &&
+    !beginIsWaiting;
+
   async function checkPairingReadiness() {
+    if (
+      checkState === 'checking' ||
+      beginIsBusy ||
+      beginIsWaiting
+    ) {
+      return;
+    }
+
     setCheckState('checking');
 
     onActivity?.(
@@ -48,6 +93,7 @@ export function TvPairingPanel({
 
       setView(nextView);
       setCheckState('ready');
+      setBeginState(INITIAL_BEGIN_STATE);
 
       onActivity?.(
         `${nextView.title}. ${nextView.message}`,
@@ -58,6 +104,129 @@ export function TvPairingPanel({
       onActivity?.(
         'Pairing readiness requires the native Tauri host. No pairing state was created.',
       );
+    }
+  }
+
+  async function beginPairing() {
+    if (beginInFlightRef.current) {
+      onActivity?.(
+        'A pairing request is already in progress. No duplicate request was sent.',
+      );
+
+      return;
+    }
+
+    if (view.kind !== 'ready') {
+      setBeginState({
+        ...INITIAL_BEGIN_STATE,
+        phase: 'error',
+        code:
+          'pairing_readiness_required',
+      });
+
+      onActivity?.(
+        'Check pairing readiness before requesting a backend challenge.',
+      );
+
+      return;
+    }
+
+    const normalizedDeviceName =
+      normalizeTvDeviceName(deviceName);
+
+    if (!normalizedDeviceName) {
+      setBeginState({
+        ...INITIAL_BEGIN_STATE,
+        phase: 'error',
+        code: 'device_name_invalid',
+      });
+
+      onActivity?.(
+        'The TV name must contain 1–64 UTF-8 bytes and no control characters.',
+      );
+
+      return;
+    }
+
+    beginInFlightRef.current = true;
+
+    setBeginState({
+      ...INITIAL_BEGIN_STATE,
+      phase: 'submitting',
+    });
+
+    onActivity?.(
+      'Requesting a backend-issued pairing challenge. No session has been created.',
+    );
+
+    try {
+      const rawResponse = await invoke(
+        'tv_pairing_begin',
+        {
+          deviceName:
+            normalizedDeviceName,
+        },
+      );
+
+      const projection =
+        projectTvPairingBeginSuccess(
+          view.gateway,
+          rawResponse,
+        );
+
+      if (!projection) {
+        setBeginState({
+          ...INITIAL_BEGIN_STATE,
+          phase: 'error',
+          code:
+            'pairing_begin_response_invalid',
+        });
+
+        onActivity?.(
+          'The backend pairing response failed closed. No challenge or session was accepted.',
+        );
+
+        return;
+      }
+
+      setView(projection.view);
+
+      setBeginState({
+        phase: 'waiting',
+        challengeHandle:
+          projection.response
+            .challengeHandle,
+        expiresAt:
+          projection.response.expiresAt,
+        code: null,
+        retryable: false,
+      });
+
+      onActivity?.(
+        `${projection.view.title}. ${projection.view.message}`,
+      );
+    } catch (error) {
+      const failure =
+        normalizeTvPairingBeginFailure(
+          error,
+        );
+
+      setBeginState({
+        phase: 'error',
+        challengeHandle: null,
+        expiresAt: null,
+        code: failure.code,
+        retryable:
+          failure.retryable,
+      });
+
+      onActivity?.(
+        failure.retryable
+          ? 'The pairing request is temporarily unavailable and may be retried. No session was created.'
+          : 'The pairing request was rejected. No challenge or session was accepted.',
+      );
+    } finally {
+      beginInFlightRef.current = false;
     }
   }
 
@@ -143,6 +312,15 @@ export function TvPairingPanel({
             </p>
           )}
 
+          {beginState.expiresAt ? (
+            <p className="tv-pairing-expiry">
+              Challenge expires:{' '}
+              <strong>
+                {beginState.expiresAt}
+              </strong>
+            </p>
+          ) : null}
+
           <span
             className={
               `tv-pairing-state ` +
@@ -157,17 +335,97 @@ export function TvPairingPanel({
         </article>
       </div>
 
+      <div className="tv-pairing-form">
+        <label
+          className="tv-pairing-field"
+          htmlFor="tv-pairing-device-name"
+        >
+          <span>TV name</span>
+
+          <input
+            id="tv-pairing-device-name"
+            type="text"
+            value={deviceName}
+            maxLength={64}
+            autoComplete="off"
+            spellCheck="false"
+            disabled={
+              beginIsBusy ||
+              beginIsWaiting
+            }
+            data-tv-focusable="true"
+            data-tv-focus-key="pairing-device-name"
+            onChange={(event) => {
+              setDeviceName(
+                event.target.value,
+              );
+            }}
+          />
+
+          <small>
+            Sent only as the display name for this backend
+            pairing request.
+          </small>
+        </label>
+
+        {beginState.phase === 'error' ? (
+          <p
+            className="tv-pairing-feedback tv-pairing-feedback--error"
+            role="status"
+          >
+            Pairing request failed closed:{' '}
+            <strong>
+              {beginState.code}
+            </strong>
+            {beginState.retryable
+              ? ' — retry is allowed.'
+              : ' — retry requires a new user action.'}
+          </p>
+        ) : null}
+
+        {beginState.phase === 'waiting' ? (
+          <p
+            className="tv-pairing-feedback"
+            role="status"
+          >
+            Backend challenge received. Approve the code from
+            a trusted CrabLink companion. A TV session does not
+            exist yet.
+          </p>
+        ) : null}
+      </div>
+
       <div className="tv-hero-actions">
         <button
           className="tv-action tv-action--primary"
           type="button"
           data-tv-focusable="true"
           data-tv-focus-key="pairing-readiness"
+          disabled={
+            checkState === 'checking' ||
+            beginIsBusy ||
+            beginIsWaiting
+          }
           onClick={checkPairingReadiness}
         >
           {checkState === 'checking'
             ? 'Checking…'
             : 'Check pairing readiness'}
+        </button>
+
+        <button
+          className="tv-action tv-action--primary"
+          type="button"
+          data-tv-focusable="true"
+          data-tv-focus-key="pairing-begin"
+          disabled={!canBegin}
+          onClick={beginPairing}
+        >
+          {beginIsBusy
+            ? 'Requesting challenge…'
+            : beginIsWaiting
+              ? 'Waiting for approval'
+              : 'Request pairing code'}
         </button>
 
         <button

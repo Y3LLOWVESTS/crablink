@@ -44,12 +44,12 @@ export default function ProfilePublicView({ app, route }) {
   const passportSubject = stringValue(
     app?.settings?.passportSubject,
     app?.clients?.gateway?.passportSubject,
-    'passport:main:dev',
+    '',
   );
   const walletAccount = stringValue(
     app?.settings?.walletAccount,
     app?.clients?.gateway?.walletAccount,
-    'acct_dev',
+    '',
   );
 
   const identityClient = useMemo(() => {

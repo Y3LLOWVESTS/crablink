@@ -2,9 +2,24 @@
   "name": "@crablink/core",
   "version": "0.1.0",
   "private": true,
-  "description": "Platform-neutral CrabLink React core migration target.",
+  "description": "Platform-neutral CrabLink behavior shared by desktop and TV.",
   "type": "module",
   "main": "src/index.js",
   "license": "MIT OR Apache-2.0",
-  "author": "Stevan White"
+  "author": "Stevan White",
+  "exports": {
+    ".": "./src/index.js",
+    "./crab-url": "./src/crabUrl.js",
+    "./route-metadata": "./src/routeMetadata.js",
+    "./receipt-display": "./src/receiptDisplay.js"
+  },
+  "scripts": {
+    "test": "node --test src/*.test.mjs",
+    "check:boundary": "node ../../scripts/check-crablink-core-boundary.mjs",
+    "check": "npm run test && npm run check:boundary && npm run check:route-metadata && npm run check:receipt-display",
+    "test:route-metadata": "node --test src/routeMetadata.test.mjs",
+    "test:receipt-display": "node --test src/receiptDisplay.test.mjs",
+    "check:route-metadata": "node ../../scripts/check-crablink-route-metadata-boundary.mjs",
+    "check:receipt-display": "node ../../scripts/check-crablink-receipt-display-boundary.mjs"
+  }
 }

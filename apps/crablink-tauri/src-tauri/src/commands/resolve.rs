@@ -2,9 +2,10 @@
 //! RO:WHY — Preserves proven route behavior before OAP/native-cache work.
 //! RO:INTERACTS — svc-gateway /crab/resolve?url=...
 //! RO:INVARIANTS — crab:// input is untrusted; no direct storage/index/omnigate calls.
-//! RO:SECURITY — validates length/prefix and truncates response body for display.
+//! RO:SECURITY — shared ingress validation plus bounded response preview; no route authority.
 
 use crate::state::AppState;
+use crablink_native_core::crab_url::normalize_crab_url_for_gateway;
 use serde::Serialize;
 use std::time::Duration;
 use tauri::State;
@@ -28,30 +29,12 @@ fn normalize_base_url(value: &str) -> String {
     value.trim().trim_end_matches('/').to_string()
 }
 
-fn validate_crab_url(value: &str) -> Result<String, String> {
-    let trimmed = value.trim();
-
-    if trimmed.len() > 2048 {
-        return Err("crab URL is too long".to_string());
-    }
-
-    if trimmed.contains('\n') || trimmed.contains('\r') {
-        return Err("crab URL must not contain newlines".to_string());
-    }
-
-    if !trimmed.starts_with("crab://") {
-        return Err("only crab:// URLs are accepted here".to_string());
-    }
-
-    Ok(trimmed.to_string())
-}
-
 #[tauri::command]
 pub async fn resolve_crab_url_gateway(
     state: State<'_, AppState>,
     crab_url: String,
 ) -> Result<ResolveProbe, String> {
-    let crab_url = validate_crab_url(&crab_url)?;
+    let crab_url = normalize_crab_url_for_gateway(&crab_url)?;
 
     let (base_url, timeout_ms) = {
         let settings = state

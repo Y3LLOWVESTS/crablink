@@ -7,9 +7,52 @@
 mod commands;
 mod confirmed_roc;
 mod media;
+#[cfg(all(test, desktop))]
+mod onboarding_phase11b_command_path_tests;
+#[cfg(desktop)]
+pub mod passport_clear_command_runtime;
+#[cfg(desktop)]
+pub mod passport_create_command_runtime;
+#[cfg(desktop)]
+pub mod passport_operational_command_runtime;
+#[cfg(desktop)]
+pub mod passport_operational_unlock_runtime;
+#[cfg(desktop)]
+pub mod passport_pending_operational_runtime;
+#[cfg(desktop)]
+pub mod passport_pending_recovery_runtime;
+#[cfg(desktop)]
+pub mod passport_platform_runtime;
+#[cfg(target_os = "macos")]
+pub mod passport_platform_sealer;
+#[cfg(any(target_os = "linux", test))]
+pub mod passport_platform_sealer_linux;
+#[cfg(any(target_os = "windows", test))]
+pub mod passport_platform_sealer_windows;
+pub mod passport_recovery_acknowledgement_store;
+#[cfg(desktop)]
+pub mod passport_recovery_ceremony_runtime;
+pub mod passport_recovery_phrase_runtime;
+#[cfg(desktop)]
+pub mod passport_root_confirmation_command_runtime;
+#[cfg(desktop)]
+pub mod passport_status_runtime;
+#[cfg(desktop)]
+pub mod passport_vault_create_runtime;
+#[cfg(desktop)]
+pub mod passport_vault_runtime;
+#[cfg(desktop)]
+pub mod passport_vault_store;
 mod state;
 
 use state::AppState;
+
+#[cfg(desktop)]
+use passport_platform_runtime::new_desktop_platform_sealer;
+#[cfg(desktop)]
+use passport_vault_runtime::initialize_desktop_passport_vault_store;
+#[cfg(desktop)]
+use tauri::Manager;
 
 /// Narrow native test surface for Phase 22 cross-repository integration.
 ///
@@ -64,9 +107,37 @@ pub mod phase22_test_support {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_dialog::init())
-        .manage(AppState::default())
+    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
+
+    #[cfg(desktop)]
+    let builder = builder.setup(|app| {
+        let app_data_directory = app.path().app_data_dir()?;
+
+        let initialized =
+            initialize_desktop_passport_vault_store(&app_data_directory).map_err(|_| {
+                std::io::Error::other("native Passport VaultStore initialization failed")
+            })?;
+
+        let passport_platform_sealer = new_desktop_platform_sealer();
+
+        let state =
+            AppState::with_native_passport_runtime(initialized.store, passport_platform_sealer);
+
+        if !state.passport_vault_store.root_directory().is_absolute() {
+            return Err(
+                std::io::Error::other("native Passport VaultStore root is not absolute").into(),
+            );
+        }
+
+        app.manage(state);
+
+        Ok(())
+    });
+
+    #[cfg(mobile)]
+    let builder = builder.manage(AppState::default());
+
+    builder
         .invoke_handler(tauri::generate_handler![
             commands::diagnostics::app_diagnostics,
             commands::settings::read_settings,
@@ -75,6 +146,13 @@ pub fn run() {
             commands::health::ready_check_gateway,
             commands::resolve::resolve_crab_url_gateway,
             commands::identity::identity_me_gateway,
+            commands::passport::passport_status,
+            commands::passport::passport_create,
+            commands::passport::passport_clear,
+            commands::passport::passport_lock,
+            commands::passport::passport_unlock_operational,
+            commands::passport::passport_unlock_root,
+            commands::passport::passport_recovery_ceremony,
             commands::wallet::wallet_balance_gateway,
             commands::gateway::gateway_request,
             commands::local_node::local_node_status,

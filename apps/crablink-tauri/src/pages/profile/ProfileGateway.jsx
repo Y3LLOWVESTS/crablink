@@ -96,14 +96,14 @@ export default function ProfileGateway({ app, route, draftState }) {
     settings.passportSubject,
     app?.gateway?.passportSubject,
     app?.clients?.gateway?.passportSubject,
-    'passport:main:dev',
+    '',
   );
   const walletAccount = stringValue(
     draft.walletAccount,
     settings.walletAccount,
     app?.gateway?.walletAccount,
     app?.clients?.gateway?.walletAccount,
-    'acct_dev',
+    '',
   );
 
   const usernameDisplay = backendProfile?.handle || normalizeHandle(requestedHandle) || usernameTruth.display || 'not available';
@@ -278,7 +278,7 @@ export default function ProfileGateway({ app, route, draftState }) {
           <TextInput
             value={requestedHandle}
             onChange={(event) => setRequestedHandle(normalizeHandle(event.target.value))}
-            placeholder="@skinnycrabby"
+            placeholder="@username"
             maxLength={33}
           />
         </label>
@@ -288,7 +288,7 @@ export default function ProfileGateway({ app, route, draftState }) {
           <TextInput
             value={displayName}
             onChange={(event) => setDisplayName(event.target.value)}
-            placeholder="Skinny Crabby"
+            placeholder="Public display name"
             maxLength={96}
           />
         </label>

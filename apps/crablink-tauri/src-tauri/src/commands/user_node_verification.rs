@@ -14,6 +14,7 @@ use crate::{
     },
     state::AppState,
 };
+use crablink_native_core::b3::validate_canonical_b3;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{net::IpAddr, time::Duration};
@@ -407,19 +408,8 @@ fn normalize_loopback_base_url(raw: &str, field: &str) -> Result<String, String>
 }
 
 fn validate_b3(object: &str) -> Result<(), String> {
-    let digest = object
-        .strip_prefix("b3:")
-        .ok_or_else(|| "object must use canonical b3 form".to_string())?;
-
-    if digest.len() != 64
-        || !digest
-            .bytes()
-            .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f'))
-    {
-        return Err("object must use canonical b3:<64 lowercase hex>".to_string());
-    }
-
-    Ok(())
+    validate_canonical_b3(object)
+        .map_err(|_| "object must use canonical b3:<64 lowercase hex>".to_string())
 }
 
 fn validate_identifier(field: &str, value: &str) -> Result<(), String> {

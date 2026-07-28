@@ -1,0 +1,605 @@
+/**
+ * RO:WHAT — Styling for the CrabLink first-run route gate and explicit development-only warning.
+ * RO:WHY — App Integration; Concerns: DX/SEC; incomplete onboarding must be visually distinct from the normal trusted shell.
+ * RO:INTERACTS — OnboardingRouteGate.jsx and shared CrabLink theme variables.
+ * RO:INVARIANTS — no hidden bypass; development warning remains visible while bypassed.
+ * RO:TEST — React production build and onboardingRouteGate.test.mjs source boundary.
+ */
+
+.cl-onboarding-gate {
+  min-height: 100vh;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 4vw, 3rem);
+  background:
+    radial-gradient(
+      circle at top,
+      color-mix(
+        in srgb,
+        var(--cl-accent) 12%,
+        transparent
+      ),
+      transparent 42%
+    ),
+    var(--cl-bg);
+  color: var(--cl-text);
+}
+
+.cl-onboarding-gate__card {
+  width: min(100%, 42rem);
+  box-sizing: border-box;
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  border: 1px solid var(--cl-border);
+  border-radius: 1rem;
+  background: var(--cl-card);
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 18%);
+}
+
+.cl-onboarding-gate__card h1 {
+  margin:
+    0.25rem
+    0
+    1rem;
+  font-size: clamp(2rem, 6vw, 3.25rem);
+  line-height: 1.05;
+}
+
+.cl-onboarding-gate__card p {
+  line-height: 1.6;
+}
+
+.cl-onboarding-gate__eyebrow {
+  margin: 0;
+  color: var(--cl-accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.cl-onboarding-gate__status {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1.5rem 0;
+}
+
+.cl-onboarding-gate__status div {
+  display: grid;
+  grid-template-columns:
+    minmax(7rem, 0.45fr)
+    minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 0.75rem;
+  background: var(--cl-surface);
+}
+
+.cl-onboarding-gate__status dt {
+  color: var(--cl-muted);
+  font-weight: 700;
+}
+
+.cl-onboarding-gate__status dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.cl-onboarding-gate__notice {
+  color: var(--cl-muted);
+}
+
+.cl-onboarding-gate__dev {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--cl-warning);
+  border-radius: 0.75rem;
+  background:
+    color-mix(
+      in srgb,
+      var(--cl-warning) 10%,
+      var(--cl-card)
+    );
+}
+
+.cl-onboarding-gate__dev p {
+  margin:
+    0
+    0
+    0.7rem;
+}
+
+.cl-onboarding-gate__primary,
+.cl-onboarding-gate__secondary,
+.cl-onboarding-dev-banner button {
+  min-height: 2.75rem;
+  border-radius: 0.65rem;
+  padding: 0.65rem 1rem;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.cl-onboarding-gate__primary {
+  border: 1px solid var(--cl-accent);
+  background: var(--cl-accent);
+  color: var(--cl-accent-contrast);
+}
+
+.cl-onboarding-gate__secondary {
+  border: 1px solid var(--cl-warning);
+  background: transparent;
+  color: var(--cl-text);
+}
+
+.cl-onboarding-dev-banner {
+  position: relative;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid var(--cl-warning);
+  background: var(--cl-card);
+  color: var(--cl-text);
+}
+
+.cl-onboarding-dev-banner div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.cl-onboarding-dev-banner span {
+  color: var(--cl-muted);
+  font-size: 0.86rem;
+}
+
+.cl-onboarding-dev-banner button {
+  flex: 0 0 auto;
+  border: 1px solid var(--cl-warning);
+  background: transparent;
+  color: var(--cl-text);
+}
+
+@media (max-width: 42rem) {
+  .cl-onboarding-dev-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cl-onboarding-gate__status div {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
+
+
+/* ONBOARDING_PHASE4_USERNAME_STYLES */
+
+.cl-onboarding-step__counter {
+  display: inline-flex;
+  margin:
+    0
+    0
+    0.5rem;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 999px;
+  color: var(--cl-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.cl-onboarding-step__lead {
+  margin-bottom: 1.5rem;
+  color: var(--cl-muted);
+  font-size: 1.04rem;
+}
+
+.cl-onboarding-step__facts {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.cl-onboarding-step__facts article {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.9rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 0.75rem;
+  background: var(--cl-surface);
+}
+
+.cl-onboarding-step__facts span {
+  color: var(--cl-muted);
+  line-height: 1.5;
+}
+
+.cl-onboarding-username-form {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1.5rem;
+}
+
+.cl-onboarding-username-form > label {
+  font-weight: 800;
+}
+
+.cl-onboarding-username-field {
+  display: grid;
+  grid-template-columns:
+    auto
+    minmax(0, 1fr);
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 3.25rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 0.75rem;
+  background: var(--cl-surface);
+}
+
+.cl-onboarding-username-field:focus-within {
+  border-color: var(--cl-accent);
+  box-shadow:
+    0
+    0
+    0
+    3px
+    color-mix(
+      in srgb,
+      var(--cl-accent) 22%,
+      transparent
+    );
+}
+
+.cl-onboarding-username-field > span {
+  color: var(--cl-muted);
+  font-weight: 800;
+}
+
+.cl-onboarding-username-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 3.1rem;
+  box-sizing: border-box;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--cl-text);
+  font: inherit;
+  font-size: 1.05rem;
+}
+
+.cl-onboarding-username-field input::placeholder {
+  color: var(--cl-muted);
+}
+
+.cl-onboarding-username-form__hint {
+  margin: 0;
+  color: var(--cl-muted);
+  font-size: 0.88rem;
+}
+
+.cl-onboarding-step__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.cl-onboarding-feedback {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 0.65rem;
+  line-height: 1.45;
+}
+
+.cl-onboarding-feedback--success {
+  border-color: var(--cl-success);
+}
+
+.cl-onboarding-feedback--error {
+  border-color: var(--cl-danger);
+}
+
+.cl-onboarding-feedback--warning {
+  border-color: var(--cl-warning);
+}
+
+.cl-onboarding-feedback--info {
+  color: var(--cl-muted);
+}
+
+.cl-onboarding-step__dev-warning {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  border: 1px solid var(--cl-warning);
+  border-radius: 0.65rem;
+  background:
+    color-mix(
+      in srgb,
+      var(--cl-warning) 8%,
+      var(--cl-card)
+    );
+}
+
+.cl-onboarding-username-result {
+  display: grid;
+  gap: 0.45rem;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 0.8rem;
+  background: var(--cl-surface);
+}
+
+.cl-onboarding-username-result > span {
+  color: var(--cl-muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.cl-onboarding-username-result > strong {
+  font-size: 1.45rem;
+  overflow-wrap: anywhere;
+}
+
+.cl-onboarding-username-result > p {
+  margin: 0.25rem 0 0;
+  color: var(--cl-muted);
+}
+
+.cl-onboarding-shell-dev-tools {
+  margin-top: 1.5rem;
+  padding: 0.8rem;
+  border: 1px dashed var(--cl-warning);
+  border-radius: 0.65rem;
+}
+
+.cl-onboarding-shell-dev-tools summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.cl-onboarding-shell-dev-tools p {
+  color: var(--cl-muted);
+}
+
+@media (max-width: 42rem) {
+  .cl-onboarding-step__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cl-onboarding-step__actions button {
+    width: 100%;
+  }
+}
+
+
+/* ONBOARDING_PHASE5_PASSPORT_CREATE_STYLES */
+
+.cl-onboarding-passport-create__facts {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.cl-onboarding-passport-create__facts article {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 0.75rem;
+  background: var(--cl-surface);
+}
+
+.cl-onboarding-passport-create__facts span {
+  color: var(--cl-muted);
+  line-height: 1.5;
+}
+
+[data-passport-create-status="pending"]
+.cl-onboarding-gate__card {
+  border-color: var(--cl-accent);
+}
+
+[data-passport-create-status="success"]
+.cl-onboarding-gate__card {
+  border-color: var(--cl-success);
+}
+
+[data-passport-create-status="failure"]
+.cl-onboarding-gate__card {
+  border-color: var(--cl-danger);
+}
+
+.cl-onboarding-feedback > strong {
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.cl-onboarding-feedback > p {
+  margin:
+    0.4rem
+    0
+    0;
+}
+
+.cl-onboarding-feedback code {
+  overflow-wrap: anywhere;
+}
+
+
+/* ONBOARDING_PHASE6A_RECOVERY_STYLES */
+
+.cl-onboarding-recovery__facts {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.cl-onboarding-recovery__facts article {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 0.75rem;
+  background: var(--cl-surface);
+}
+
+.cl-onboarding-recovery__facts span {
+  color: var(--cl-muted);
+  line-height: 1.5;
+}
+
+[data-recovery-ceremony-status="pending"]
+.cl-onboarding-gate__card {
+  border-color: var(--cl-accent);
+}
+
+[data-recovery-ceremony-status="failure"]
+.cl-onboarding-gate__card {
+  border-color: var(--cl-danger);
+}
+
+[data-recovery-ceremony-status="acknowledged"]
+.cl-onboarding-gate__card {
+  border-color: var(--cl-success);
+}
+
+/* ONBOARDING PHASE 8 PROFILE UI */
+
+.cl-onboarding-profile-truth {
+  display: grid;
+  gap: 0.35rem;
+  margin: 1.25rem 0;
+  padding: 1rem;
+  border: 1px solid var(--cl-border);
+  border-radius: 0.8rem;
+  background: var(--cl-surface);
+}
+
+.cl-onboarding-profile-truth > span {
+  color: var(--cl-muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.cl-onboarding-profile-truth > strong {
+  font-size: 1.35rem;
+  overflow-wrap: anywhere;
+}
+
+.cl-onboarding-profile-truth > p {
+  margin: 0.15rem 0 0;
+  color: var(--cl-muted);
+  line-height: 1.5;
+}
+
+.cl-onboarding-profile-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.cl-onboarding-profile-form > label {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.cl-onboarding-profile-form > label > span {
+  font-weight: 800;
+}
+
+.cl-onboarding-profile-form input,
+.cl-onboarding-profile-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--cl-border);
+  border-radius: 0.75rem;
+  outline: 0;
+  background: var(--cl-surface);
+  color: var(--cl-text);
+  font: inherit;
+}
+
+.cl-onboarding-profile-form input {
+  min-height: 3.2rem;
+  padding: 0 0.9rem;
+}
+
+.cl-onboarding-profile-form textarea {
+  min-height: 7rem;
+  padding: 0.8rem 0.9rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.cl-onboarding-profile-form input:focus,
+.cl-onboarding-profile-form textarea:focus {
+  border-color: var(--cl-accent);
+  box-shadow:
+    0
+    0
+    0
+    3px
+    color-mix(
+      in srgb,
+      var(--cl-accent) 22%,
+      transparent
+    );
+}
+
+.cl-onboarding-profile-form input:disabled,
+.cl-onboarding-profile-form textarea:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.cl-onboarding-profile-form small {
+  justify-self: end;
+  color: var(--cl-muted);
+}
+
+.cl-onboarding-profile-placeholder {
+  display: grid;
+  grid-template-columns:
+    auto
+    minmax(0, 1fr);
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem;
+  border: 1px dashed var(--cl-border);
+  border-radius: 0.8rem;
+  background: var(--cl-surface);
+}
+
+.cl-onboarding-profile-placeholder > span {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--cl-card);
+  font-weight: 900;
+}
+
+.cl-onboarding-profile-placeholder strong {
+  display: block;
+}
+
+.cl-onboarding-profile-placeholder p {
+  margin: 0.25rem 0 0;
+  color: var(--cl-muted);
+  line-height: 1.45;
+}

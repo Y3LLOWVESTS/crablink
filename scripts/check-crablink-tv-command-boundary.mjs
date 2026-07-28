@@ -3,7 +3,7 @@
  * RO:WHAT — Validates the narrow CrabLink TV native-command boundary.
  * RO:WHY — Prevents desktop node/operator/creator/economic authority from entering TV.
  * RO:INTERACTS — TV Tauri registry, command modules, capability, package, and config.
- * RO:INVARIANTS — exactly four read-only foundation commands; core-only permission; separate identifier.
+ * RO:INVARIANTS — exactly eight narrow client commands; core-only permission; separate identifier.
  * RO:SECURITY — rejects dangerous command names, plugins, and broad permissions.
  * RO:TEST — node scripts/check-crablink-tv-command-boundary.mjs.
  */
@@ -28,12 +28,20 @@ const files = {
     'apps/crablink-tv/src-tauri/src/lib.rs',
   commands:
     'apps/crablink-tv/src-tauri/src/commands/mod.rs',
+  assetManifest:
+    'apps/crablink-tv/src-tauri/src/commands/asset_manifest.rs',
+  catalogRead:
+    'apps/crablink-tv/src-tauri/src/commands/catalog_read.rs',
   diagnostics:
     'apps/crablink-tv/src-tauri/src/commands/diagnostics.rs',
   gateway:
     'apps/crablink-tv/src-tauri/src/commands/gateway.rs',
+  gatewayHealth:
+    'apps/crablink-tv/src-tauri/src/commands/gateway_health.rs',
   pairing:
     'apps/crablink-tv/src-tauri/src/commands/pairing.rs',
+  pairingBegin:
+    'apps/crablink-tv/src-tauri/src/commands/pairing_begin.rs',
   settings:
     'apps/crablink-tv/src-tauri/src/commands/settings.rs',
 };
@@ -78,9 +86,13 @@ const libSource = read(files.lib);
 const commandsSource = read(files.commands);
 
 const commandSources = [
+  read(files.assetManifest),
+  read(files.catalogRead),
   read(files.diagnostics),
   read(files.gateway),
+  read(files.gatewayHealth),
   read(files.pairing),
+  read(files.pairingBegin),
   read(files.settings),
 ].join('\n');
 
@@ -100,8 +112,12 @@ const capabilityData = parseJson(
 );
 
 const expectedCommands = [
+  'tv_asset_manifest_check',
+  'tv_catalog_read',
   'tv_diagnostics',
+  'tv_gateway_health',
   'tv_gateway_profile',
+  'tv_pairing_begin',
   'tv_pairing_status',
   'tv_settings_read',
 ].sort();
@@ -116,7 +132,7 @@ const registeredCommands = [
 
 const declaredCommands = [
   ...commandSources.matchAll(
-    /#\[tauri::command\]\s*pub fn\s+([a-z0-9_]+)/g,
+    /#\[tauri::command\]\s*pub(?:\s+async)?\s+fn\s+([a-z0-9_]+)/g,
   ),
 ]
   .map((match) => match[1])
@@ -141,9 +157,13 @@ if (
 }
 
 const expectedModules = [
+  'asset_manifest',
+  'catalog_read',
   'diagnostics',
   'gateway',
+  'gateway_health',
   'pairing',
+  'pairing_begin',
   'settings',
 ].sort();
 
@@ -253,7 +273,7 @@ console.log(
 );
 
 console.log(
-  'Registered commands: tv_diagnostics, tv_gateway_profile, tv_pairing_status, tv_settings_read.',
+  'Registered commands: tv_asset_manifest_check, tv_catalog_read, tv_diagnostics, tv_gateway_health, tv_gateway_profile, tv_pairing_begin, tv_pairing_status, tv_settings_read.',
 );
 
 console.log(
@@ -261,7 +281,7 @@ console.log(
 );
 
 console.log(
-  'Gateway and pairing commands are read-only foundation snapshots.',
+  'Asset manifest check uses local native-core verification; gateway health, catalog read, and pairing begin use fixed reviewed paths; pairing approval remains external.',
 );
 
 console.log(

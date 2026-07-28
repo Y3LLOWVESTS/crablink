@@ -1,5 +1,15 @@
-import { useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { useEffect, useRef, useState } from 'react';
+
+import {
+  tvAssetManifestAdapter,
+  tvDiagnosticsPort,
+  tvGatewayProfilePort,
+  tvSettingsPort,
+} from '../platform/tauriTvAdapter.js';
+
+import {
+  tvRouteLabel,
+} from '../navigation/tvRouteMetadata.js';
 
 import {
   useTvRemoteNavigation,
@@ -8,6 +18,18 @@ import {
 import {
   useTvSectionHistory,
 } from '../navigation/useTvSectionHistory.js';
+
+import {
+  TvOverlayHost,
+} from '../navigation/TvOverlayHost.jsx';
+
+import {
+  useTvOverlayController,
+} from '../navigation/useTvOverlayController.js';
+
+import {
+  useTvAndroidIntentHandoff,
+} from '../navigation/useTvAndroidIntentHandoff.js';
 
 import {
   TvPairingPanel,
@@ -21,6 +43,86 @@ import {
   useTvPreferences,
 } from '../settings/useTvPreferences.js';
 
+import {
+  useTvHomeCatalog,
+} from '../catalog/useTvHomeCatalog.js';
+
+import {
+  TvHomeCatalogPanel,
+} from '../catalog/TvHomeCatalogPanel.jsx';
+
+import {
+  TV_CATALOG_CARD_HANDOFF_KIND,
+  projectTvCatalogCardRouteHandoff,
+} from '../catalog/tvCatalogRouteHandoff.js';
+
+import {
+  useTvCreatorBrowse,
+} from '../catalog/useTvCreatorBrowse.js';
+
+import {
+  TvCreatorBrowsePanel,
+} from '../catalog/TvCreatorBrowsePanel.jsx';
+
+import {
+  TV_CREATOR_PROFILE_KIND,
+  createIdleTvCreatorProfile,
+  projectTvCreatorProfile,
+} from '../catalog/tvCreatorProfileModel.js';
+
+import {
+  TV_CREATOR_PROFILE_FOCUS_KIND,
+  TV_CREATOR_PROFILE_FOCUS_REASON,
+  createIdleTvCreatorProfileFocusRequest,
+  createTvCreatorProfileFocusRequest,
+} from '../catalog/tvCreatorProfileFocusModel.js';
+
+import {
+  TvCreatorProfilePanel,
+} from '../catalog/TvCreatorProfilePanel.jsx';
+
+import {
+  TV_LIBRARY_ASSET_DETAIL_KIND,
+  createIdleTvLibraryAssetDetail,
+  projectTvLibraryAssetDetail,
+} from '../library/tvLibraryAssetDetailModel.js';
+
+import {
+  createIdleTvLibraryVerifiedAssetRender,
+  projectTvLibraryVerifiedAssetRender,
+} from '../library/tvLibraryVerifiedAssetRenderModel.js';
+
+import {
+  createIdleTvLibraryVerifiedImageRenderSurface,
+} from '../library/tvLibraryVerifiedImageRenderSurfaceModel.js';
+
+import {
+  createIdleTvLibraryVerifiedArticleRenderSurface,
+} from '../library/tvLibraryVerifiedArticleRenderSurfaceModel.js';
+
+import {
+  TV_LIBRARY_VERIFY_UI_STATE,
+  createIdleTvLibraryVerifyUiView,
+  projectTvLibraryVerifyUiView,
+  requestTvLibraryVerifyUiView,
+} from '../library/tvLibraryVerifyUiModel.js';
+
+import {
+  tvGatewayAssetHttpTransport,
+} from '../library/tvGatewayAssetHttpTransport.js';
+
+import {
+  captureTvLibraryManualVerifyExecutionTarget,
+  createIdleTvLibraryManualVerifyExecution,
+  createRunningTvLibraryManualVerifyExecution,
+  createTvLibraryManualVerifyExecutionLock,
+  isCurrentTvLibraryManualVerifyExecutionTarget,
+} from '../library/tvLibraryManualVerifyExecution.js';
+
+import {
+  TvLibraryAssetDetailPanel,
+} from '../library/TvLibraryAssetDetailPanel.jsx';
+
 const INITIAL_NATIVE_STATUS = Object.freeze({
   state: 'idle',
   message:
@@ -30,7 +132,7 @@ const INITIAL_NATIVE_STATUS = Object.freeze({
 const TV_SECTIONS = Object.freeze([
   {
     id: 'home',
-    label: 'Home',
+    label: tvRouteLabel('home'),
     eyebrow: 'CrabLink TV',
     title: 'A remote-first window into CrabLink',
     description:
@@ -43,7 +145,7 @@ const TV_SECTIONS = Object.freeze([
   },
   {
     id: 'earn',
-    label: 'Earn ROC',
+    label: tvRouteLabel('earn'),
     eyebrow: 'Participation',
     title: 'Verification earns ROC only after confirmation',
     description:
@@ -56,7 +158,7 @@ const TV_SECTIONS = Object.freeze([
   },
   {
     id: 'library',
-    label: 'Library',
+    label: tvRouteLabel('library'),
     eyebrow: 'Verified content',
     title: 'Your CrabLink content belongs behind proof',
     description:
@@ -69,7 +171,7 @@ const TV_SECTIONS = Object.freeze([
   },
   {
     id: 'pair',
-    label: 'Pair',
+    label: tvRouteLabel('pair'),
     eyebrow: 'Companion approval',
     title: 'Pair this TV without typing account secrets',
     description:
@@ -81,16 +183,16 @@ const TV_SECTIONS = Object.freeze([
   },
   {
     id: 'settings',
-    label: 'Settings',
+    label: tvRouteLabel('settings'),
     eyebrow: 'Device posture',
     title: 'TV controls without hidden authority',
     description:
-      'Resource mode, pairing, theme, diagnostics, and micronode ' +
-      'controls will live here without exposing node administration.',
+      'Resource mode, theme, redacted gateway readiness, pairing, ' +
+      'and diagnostics live here without exposing node administration.',
     actionLabel: 'Review settings posture',
     actionMessage:
-      'Theme, resource, participation, gateway-profile, and pairing ' +
-      'readiness controls are active without economic authority.',
+      'Theme, resource, participation, redacted gateway readiness, ' +
+      'and pairing controls are active without economic authority.',
   },
 ]);
 
@@ -143,6 +245,126 @@ export function TvApp() {
     'Use the D-pad to move between controls and press Select.',
   );
 
+  const [
+    creatorProfileView,
+    setCreatorProfileView,
+  ] = useState(
+    createIdleTvCreatorProfile,
+  );
+
+  const [
+    creatorProfileFocusRequest,
+    setCreatorProfileFocusRequest,
+  ] = useState(
+    createIdleTvCreatorProfileFocusRequest,
+  );
+
+  const [
+    libraryAssetDetailView,
+    setLibraryAssetDetailView,
+  ] = useState(
+    createIdleTvLibraryAssetDetail,
+  );
+
+  const [
+    libraryVerifiedAssetRenderView,
+    setLibraryVerifiedAssetRenderView,
+  ] = useState(
+    createIdleTvLibraryVerifiedAssetRender,
+  );
+
+  const [
+    libraryVerifiedImageRenderSurfaceView,
+    setLibraryVerifiedImageRenderSurfaceView,
+  ] = useState(
+    createIdleTvLibraryVerifiedImageRenderSurface,
+  );
+
+  const [
+    libraryVerifiedArticleRenderSurfaceView,
+    setLibraryVerifiedArticleRenderSurfaceView,
+  ] = useState(
+    createIdleTvLibraryVerifiedArticleRenderSurface,
+  );
+
+  const [
+    libraryVerifyUiView,
+    setLibraryVerifyUiView,
+  ] = useState(
+    createIdleTvLibraryVerifyUiView,
+  );
+
+  const [
+    libraryManualVerifyExecutionView,
+    setLibraryManualVerifyExecutionView,
+  ] = useState(
+    createIdleTvLibraryManualVerifyExecution,
+  );
+
+  const [
+    libraryManualVerifyExecutionLock,
+  ] = useState(
+    createTvLibraryManualVerifyExecutionLock,
+  );
+
+  const libraryAssetDetailRef =
+    useRef(libraryAssetDetailView);
+
+  useEffect(
+    () => {
+      if (
+        creatorProfileFocusRequest.kind !==
+        TV_CREATOR_PROFILE_FOCUS_KIND.RETURN
+      ) {
+        return undefined;
+      }
+
+      const focusFrame =
+        window.requestAnimationFrame(
+          () => {
+            const target =
+              [
+                ...document.querySelectorAll(
+                  '[data-tv-focus-key]',
+                ),
+              ].find(
+                (element) =>
+                  element.dataset.tvFocusKey ===
+                  creatorProfileFocusRequest.focusKey,
+              );
+
+            if (
+              target &&
+              typeof target.focus === 'function'
+            ) {
+              target.focus();
+              document.documentElement.dataset.tvReturnFocusKey =
+                creatorProfileFocusRequest.focusKey;
+            }
+          },
+        );
+
+      return () => {
+        window.cancelAnimationFrame(
+          focusFrame,
+        );
+      };
+    },
+    [
+      creatorProfileFocusRequest,
+    ],
+  );
+
+  const {
+    overlayState,
+    overlayOpen,
+    focusScopeKey,
+    openDetail,
+    openProblem,
+    closeOverlay,
+    consumeBack,
+  } = useTvOverlayController();
+
   const {
     activeSectionId,
     routeDepth,
@@ -150,6 +372,7 @@ export function TvApp() {
   } = useTvSectionHistory({
     sectionIds: TV_SECTION_IDS,
     initialSectionId: 'home',
+    consumeBack,
   });
 
   const {
@@ -159,7 +382,35 @@ export function TvApp() {
     setVerificationEnabled,
   } = useTvPreferences();
 
-  useTvRemoteNavigation();
+  const {
+    catalogState,
+    loadHomeCatalog,
+    refreshHomeCatalog,
+  } = useTvHomeCatalog({
+    onActivity: setActivityMessage,
+  });
+
+  const {
+    creatorBrowseView,
+    creatorQuery,
+    setCreatorQuery,
+    clearCreatorQuery,
+  } = useTvCreatorBrowse({
+    catalogView: catalogState.view,
+  });
+
+  useTvRemoteNavigation({
+    focusScopeKey,
+  });
+
+  useTvAndroidIntentHandoff({
+    activeSectionId,
+    availableSectionIds: TV_SECTION_IDS,
+    navigateToSection,
+    openDetail,
+    openProblem,
+    setActivityMessage,
+  });
 
   const activeSection =
     TV_SECTIONS.find(
@@ -167,7 +418,11 @@ export function TvApp() {
     ) ??
     TV_SECTIONS[0];
 
-  async function checkNativeBridge() {
+  async function checkNativeBridge(event) {
+    const initiatingFocusKey =
+      event?.currentTarget?.dataset?.tvFocusKey ??
+      'native-diagnostics';
+
     setNativeStatus({
       state: 'checking',
       message:
@@ -175,7 +430,26 @@ export function TvApp() {
     });
 
     try {
-      const diagnostics = await invoke('tv_diagnostics');
+      const [
+        diagnostics,
+        gatewayProfile,
+        settingsSnapshot,
+      ] = await Promise.all([
+        tvDiagnosticsPort.getDiagnostics(),
+        tvGatewayProfilePort.readGatewayProfile(),
+        tvSettingsPort.readSettings(),
+      ]);
+
+      if (
+        diagnostics.clientOnly !== true ||
+        typeof gatewayProfile.state !== 'string' ||
+        settingsSnapshot.settingsAuthority !==
+          'local-ui-preferences-only'
+      ) {
+        throw new Error(
+          'native adapter contract rejected',
+        );
+      }
 
       setNativeStatus({
         state: 'ready',
@@ -184,11 +458,20 @@ export function TvApp() {
           `${diagnostics.profile} client-only surface.`,
       });
     } catch {
+      const message =
+        'The static shell remains available, but native diagnostics ' +
+        'require the reviewed Tauri host.';
+
       setNativeStatus({
         state: 'browser',
-        message:
-          'The static shell is available. Native diagnostics ' +
-          'require the Tauri host.',
+        message,
+      });
+
+      openProblem({
+        title: 'Native bridge unavailable',
+        body: message,
+        code: 'TV_NATIVE_BRIDGE_UNAVAILABLE',
+        returnFocusKey: initiatingFocusKey,
       });
     }
   }
@@ -209,8 +492,422 @@ export function TvApp() {
     );
   }
 
+  function clearCreatorProfile(
+    returnFocusKey =
+      'creator-profile-close',
+  ) {
+    const focusRequest =
+      createTvCreatorProfileFocusRequest({
+        returnFocusKey,
+        reason:
+          TV_CREATOR_PROFILE_FOCUS_REASON.PROFILE_CLOSED,
+      });
+
+    setCreatorProfileView(
+      createIdleTvCreatorProfile(),
+    );
+
+    setCreatorProfileFocusRequest(
+      focusRequest,
+    );
+
+    setActivityMessage(
+      `Creator profile closed. Return focus: ${focusRequest.focusKey}.`,
+    );
+  }
+
+  function refreshHomeCatalogWithProfileFocus() {
+    const focusRequest =
+      createTvCreatorProfileFocusRequest({
+        returnFocusKey:
+          creatorProfileView?.returnFocusKey ??
+          'home-catalog-refresh',
+        reason:
+          TV_CREATOR_PROFILE_FOCUS_REASON.CATALOG_REFRESH,
+        fallbackFocusKey:
+          'home-catalog-refresh',
+      });
+
+    setCreatorProfileFocusRequest(
+      focusRequest,
+    );
+
+    refreshHomeCatalog();
+
+    setActivityMessage(
+      `Home catalog refresh requested. Return focus: ${focusRequest.focusKey}.`,
+    );
+  }
+
+  function setActiveLibraryAssetDetail(
+    nextDetailView,
+  ) {
+    libraryAssetDetailRef.current =
+      nextDetailView;
+
+    setLibraryAssetDetailView(
+      nextDetailView,
+    );
+  }
+
+  function clearLibraryAssetDetail() {
+    setActiveLibraryAssetDetail(
+      createIdleTvLibraryAssetDetail(),
+    );
+
+    setLibraryVerifiedAssetRenderView(
+      createIdleTvLibraryVerifiedAssetRender(),
+    );
+
+    setLibraryVerifiedImageRenderSurfaceView(
+      createIdleTvLibraryVerifiedImageRenderSurface(),
+    );
+
+    setLibraryVerifiedArticleRenderSurfaceView(
+      createIdleTvLibraryVerifiedArticleRenderSurface(),
+    );
+
+    setLibraryVerifyUiView(
+      createIdleTvLibraryVerifyUiView(),
+    );
+
+    setLibraryManualVerifyExecutionView(
+      createIdleTvLibraryManualVerifyExecution(),
+    );
+
+    setActivityMessage(
+      'Library asset detail cleared. Choose another reviewed asset from Home.',
+    );
+  }
+
+  async function requestLibraryAssetVerification() {
+    if (
+      libraryManualVerifyExecutionLock
+        .isRunning()
+    ) {
+      setActivityMessage(
+        'Manual verification is already running for the active Library asset.',
+      );
+
+      return;
+    }
+
+    const requestedVerifyUiView =
+      requestTvLibraryVerifyUiView({
+        view:
+          libraryVerifyUiView,
+      });
+
+    setLibraryVerifyUiView(
+      requestedVerifyUiView,
+    );
+
+    if (
+      requestedVerifyUiView.state !==
+      TV_LIBRARY_VERIFY_UI_STATE.REQUESTED
+    ) {
+      setActivityMessage(
+        requestedVerifyUiView.message,
+      );
+
+      return;
+    }
+
+    const detailView =
+      libraryAssetDetailRef.current;
+
+    const target =
+      captureTvLibraryManualVerifyExecutionTarget({
+        detailView,
+      });
+
+    if (!target) {
+      const blocked =
+        createIdleTvLibraryManualVerifyExecution({
+          message:
+            'Manual verification could not bind to the active Library asset.',
+        });
+
+      setLibraryManualVerifyExecutionView(
+        blocked,
+      );
+
+      setLibraryVerifyUiView(
+        projectTvLibraryVerifyUiView({
+          detailView,
+          verifiedRenderView:
+            libraryVerifiedAssetRenderView,
+        }),
+      );
+
+      setActivityMessage(
+        blocked.message,
+      );
+
+      return;
+    }
+
+    const running =
+      createRunningTvLibraryManualVerifyExecution({
+        detailView,
+      });
+
+    setLibraryManualVerifyExecutionView(
+      running,
+    );
+
+    setActivityMessage(
+      running.message,
+    );
+
+    const result =
+      await libraryManualVerifyExecutionLock.run({
+        detailView,
+        gatewayProfilePort:
+          tvGatewayProfilePort,
+        transport:
+          tvGatewayAssetHttpTransport,
+        manifestAdapter:
+          tvAssetManifestAdapter,
+      });
+
+    if (
+      !isCurrentTvLibraryManualVerifyExecutionTarget({
+        target,
+        detailView:
+          libraryAssetDetailRef.current,
+      })
+    ) {
+      setActivityMessage(
+        'Manual verification completed for a Library asset that is no longer active. The stale result was ignored.',
+      );
+
+      return;
+    }
+
+    setLibraryManualVerifyExecutionView(
+      result,
+    );
+
+    setLibraryVerifiedAssetRenderView(
+      result.renderView,
+    );
+
+    setLibraryVerifiedImageRenderSurfaceView(
+      createIdleTvLibraryVerifiedImageRenderSurface({
+        message:
+          'Manual verification completed; image object URL execution has not started yet.',
+      }),
+    );
+
+    setLibraryVerifiedArticleRenderSurfaceView(
+      createIdleTvLibraryVerifiedArticleRenderSurface({
+        message:
+          'Manual verification completed; article text decoding has not started yet.',
+      }),
+    );
+
+    setLibraryVerifyUiView(
+      projectTvLibraryVerifyUiView({
+        detailView,
+        verifiedRenderView:
+          result.renderView,
+      }),
+    );
+
+    setActivityMessage(
+      result.message,
+    );
+  }
+
+  function inspectCatalogItem(
+    item,
+    initiatingFocusKey,
+  ) {
+    const handoff =
+      projectTvCatalogCardRouteHandoff(
+        item,
+        {
+          initiatingFocusKey,
+        },
+      );
+
+    if (
+      handoff.kind ===
+      TV_CATALOG_CARD_HANDOFF_KIND.PROBLEM
+    ) {
+      openProblem(
+        handoff.overlay,
+      );
+
+      setActivityMessage(
+        `Catalog card route rejected: ${handoff.overlay.code}.`,
+      );
+
+      return;
+    }
+
+    if (
+      item?.kind === 'creator' &&
+      handoff.route?.owner === 'site'
+    ) {
+      const nextProfile =
+        projectTvCreatorProfile(
+          item,
+          {
+            initiatingFocusKey,
+          },
+        );
+
+      if (
+        nextProfile.kind ===
+        TV_CREATOR_PROFILE_KIND.READY
+      ) {
+        navigateToSection(
+          'home',
+          initiatingFocusKey,
+        );
+
+        setCreatorProfileView(
+          nextProfile,
+        );
+
+        setCreatorProfileFocusRequest(
+          createTvCreatorProfileFocusRequest({
+            returnFocusKey:
+              'creator-profile-close',
+            reason:
+              TV_CREATOR_PROFILE_FOCUS_REASON.PROFILE_OPENED,
+            fallbackFocusKey:
+              'creator-profile-close',
+          }),
+        );
+
+        setActivityMessage(
+          `${nextProfile.title} creator profile opened from reviewed Home catalog.`,
+        );
+
+        return;
+      }
+    }
+
+    if (
+      handoff.route?.owner === 'asset'
+    ) {
+      const nextAssetDetail =
+        projectTvLibraryAssetDetail(
+          handoff,
+          {
+            initiatingFocusKey,
+          },
+        );
+
+      if (
+        nextAssetDetail.kind !==
+        TV_LIBRARY_ASSET_DETAIL_KIND.READY
+      ) {
+        openProblem({
+          title:
+            'Library asset detail unavailable',
+
+          body:
+            'The reviewed catalog handoff did not contain canonical asset identifiers.',
+
+          code:
+            nextAssetDetail.code,
+
+          returnFocusKey:
+            nextAssetDetail.returnFocusKey,
+        });
+
+        setActivityMessage(
+          `Library asset detail rejected: ${nextAssetDetail.code}.`,
+        );
+
+        return;
+      }
+
+      setActiveLibraryAssetDetail(
+        nextAssetDetail,
+      );
+
+      const nextVerifiedRenderView =
+        projectTvLibraryVerifiedAssetRender({
+          detailView:
+            nextAssetDetail,
+        });
+
+      setLibraryVerifiedAssetRenderView(
+        nextVerifiedRenderView,
+      );
+
+      setLibraryVerifiedImageRenderSurfaceView(
+        createIdleTvLibraryVerifiedImageRenderSurface({
+          message:
+            'Verified image rendering is waiting for object URL execution.',
+        }),
+      );
+
+      setLibraryVerifiedArticleRenderSurfaceView(
+        createIdleTvLibraryVerifiedArticleRenderSurface({
+          message:
+            'Verified article rendering is waiting for verified text bytes.',
+        }),
+      );
+
+      setLibraryManualVerifyExecutionView(
+        createIdleTvLibraryManualVerifyExecution({
+          message:
+            'Manual verification has not started for this Library asset.',
+        }),
+      );
+
+      setLibraryVerifyUiView(
+        projectTvLibraryVerifyUiView({
+          detailView:
+            nextAssetDetail,
+          verifiedRenderView:
+            nextVerifiedRenderView,
+        }),
+      );
+
+      navigateToSection(
+        handoff.targetSectionId,
+        initiatingFocusKey,
+      );
+
+      openDetail(
+        handoff.overlay,
+      );
+
+      setActivityMessage(
+        `${nextAssetDetail.title} opened as a reviewed Library asset detail.`,
+      );
+
+      return;
+    }
+
+    navigateToSection(
+      handoff.targetSectionId,
+      initiatingFocusKey,
+    );
+
+    openDetail(
+      handoff.overlay,
+    );
+
+    setActivityMessage(
+      `${item.title} opened from the reviewed Home catalog.`,
+    );
+  }
+
   return (
-    <main className="tv-shell">
+    <main
+      className="tv-shell"
+      data-tv-overlay-open={
+        overlayOpen ? 'true' : undefined
+      }
+    >
       <header className="tv-header">
         <div className="tv-brand">
           <div className="tv-brand-mark" aria-hidden="true">
@@ -284,10 +981,17 @@ export function TvApp() {
             type="button"
             data-tv-focusable="true"
             data-tv-focus-key="section-review"
-            onClick={() => {
+            onClick={(event) => {
               setActivityMessage(
                 activeSection.actionMessage,
               );
+
+              openDetail({
+                title: activeSection.title,
+                body: activeSection.actionMessage,
+                returnFocusKey:
+                  event.currentTarget.dataset.tvFocusKey,
+              });
             }}
           >
             {activeSection.actionLabel}
@@ -308,6 +1012,48 @@ export function TvApp() {
       {activeSectionId === 'pair' ? (
         <TvPairingPanel
           onActivity={setActivityMessage}
+        />
+      ) : null}
+
+      {activeSectionId === 'home' ? (
+        <TvHomeCatalogPanel
+          state={catalogState}
+          onLoad={loadHomeCatalog}
+          onRefresh={refreshHomeCatalogWithProfileFocus}
+          onCatalogItem={inspectCatalogItem}
+        />
+      ) : null}
+
+      {activeSectionId === 'home' ? (
+        <TvCreatorBrowsePanel
+          browseView={creatorBrowseView}
+          query={creatorQuery}
+          onQueryChange={setCreatorQuery}
+          onClearQuery={clearCreatorQuery}
+          onCreator={inspectCatalogItem}
+        />
+      ) : null}
+
+      {activeSectionId === 'home' ? (
+        <TvCreatorProfilePanel
+          profileView={creatorProfileView}
+          focusRequest={creatorProfileFocusRequest}
+          onClose={clearCreatorProfile}
+        />
+      ) : null}
+
+      {activeSectionId === 'library' ? (
+        <TvLibraryAssetDetailPanel
+          detailView={libraryAssetDetailView}
+          verifiedRenderView={libraryVerifiedAssetRenderView}
+          verifyUiView={libraryVerifyUiView}
+          manualVerifyExecutionView={
+            libraryManualVerifyExecutionView
+          }
+          imageRenderSurfaceView={libraryVerifiedImageRenderSurfaceView}
+          articleRenderSurfaceView={libraryVerifiedArticleRenderSurfaceView}
+          onVerifyAsset={requestLibraryAssetVerification}
+          onClear={clearLibraryAssetDetail}
         />
       ) : null}
 
@@ -345,8 +1091,15 @@ export function TvApp() {
               data-tv-focusable="true"
               data-tv-focus-key={`readiness-${card.id}`}
               aria-label={`${card.title}. ${card.body}`}
-              onClick={() => {
+              onClick={(event) => {
                 setActivityMessage(card.detail);
+
+                openDetail({
+                  title: card.title,
+                  body: card.detail,
+                  returnFocusKey:
+                    event.currentTarget.dataset.tvFocusKey,
+                });
               }}
             >
               <span className="tv-card-label">
@@ -399,12 +1152,17 @@ export function TvApp() {
         </div>
       </section>
 
+      <TvOverlayHost
+        state={overlayState}
+        onClose={closeOverlay}
+      />
+
       <footer className="tv-footer">
         <span>
-          TV Phase 3D · Gateway configuration and pairing
-          readiness are native, read-only truth. No challenge,
-          approval, session, reward, balance, receipt, or ledger
-          truth is fabricated by this shell.
+          TV Phase 8C · Home catalog and creator browse rows are
+          backend-derived, route-reviewed, searchable, and rendered
+          without polling. No challenge, approval, session, reward, balance,
+          receipt, or ledger truth is fabricated by this shell.
         </span>
 
         <span className="tv-route-status">

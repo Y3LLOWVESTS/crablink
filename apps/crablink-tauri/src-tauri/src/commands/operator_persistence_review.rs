@@ -5,6 +5,7 @@
 //! RO:SECURITY — credentials remain request-local; URLs are posture-validated; authority-poisoned responses reject.
 //! RO:TEST — focused unit tests below plus the persistence-review boundary checker.
 
+use crablink_native_core::b3::is_canonical_b3;
 use reqwest::{Client, Url};
 use serde::{Deserialize, Serialize};
 use std::{net::IpAddr, time::Duration};
@@ -497,17 +498,6 @@ fn validate_response_size(size: usize) -> Result<(), String> {
     }
 
     Ok(())
-}
-
-fn is_canonical_b3(value: &str) -> bool {
-    let Some(hex) = value.strip_prefix("b3:") else {
-        return false;
-    };
-
-    hex.len() == 64
-        && hex
-            .bytes()
-            .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f'))
 }
 
 fn rejection_message(status: u16, body: &[u8]) -> String {

@@ -9,7 +9,17 @@
  * RO:TEST — npm run build; manual smoke for crab://chat, crab://<hash>.chat, and existing crab://<hash>.<asset-kind>.
  */
 
-import { hasRouteKind, ROUTES } from './routeRegistry.js';
+import {
+  assetKindLabel,
+  resolveAssetRouteOwner,
+} from '../../../../packages/crablink-core/src/index.js';
+
+import {
+  BUILT_IN_ROUTE_KINDS,
+  hasRouteKind,
+  ROUTES,
+  routeKindLabel,
+} from './routeRegistry.js';
 
 const CRAB_PREFIX = 'crab://';
 const B3_RE = /^b3:([0-9a-fA-F]{64})$/;
@@ -105,7 +115,7 @@ export function parseRouteInput(input) {
       kind: noQuery,
       rawInput,
       normalizedInput: `crab://${noQuery}`,
-      title: titleForKind(noQuery),
+      title: routeKindLabel(noQuery),
     });
   }
 
@@ -114,7 +124,7 @@ export function parseRouteInput(input) {
       kind: firstSegment,
       rawInput,
       normalizedInput: `crab://${body}`,
-      title: titleForKind(firstSegment),
+      title: routeKindLabel(firstSegment),
       params: {
         path: noQuery.slice(firstSegment.length).replace(/^[/.]/, ''),
       },
@@ -145,7 +155,7 @@ export function parseRouteInput(input) {
         kind: 'chat',
         rawInput,
         normalizedInput: assetUrl,
-        title: 'Chat Room',
+        title: assetKindLabel('chat'),
         params: {
           hash,
           assetKind,
@@ -157,15 +167,17 @@ export function parseRouteInput(input) {
       });
     }
 
-    const typedRouteOwner = {
-      kind: hasRouteKind(assetKind) ? assetKind : 'asset',
-    }.kind;
+    const typedRouteOwner =
+      resolveAssetRouteOwner(
+        assetKind,
+        BUILT_IN_ROUTE_KINDS,
+      );
 
     return makeRoute({
       kind: 'asset',
       rawInput,
       normalizedInput: assetUrl,
-      title: `${titleForKind(assetKind)} Asset`,
+      title: assetKindLabel(assetKind),
       params: {
         hash,
         assetKind,
@@ -206,10 +218,3 @@ function makeRoute({
   });
 }
 
-function titleForKind(kind) {
-  return String(kind || 'page')
-    .split(/[-_]/)
-    .filter(Boolean)
-    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
-    .join(' ');
-}

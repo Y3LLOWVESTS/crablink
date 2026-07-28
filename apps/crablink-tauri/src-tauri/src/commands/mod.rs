@@ -16,6 +16,7 @@ pub mod operator_moderation_review;
 pub mod operator_node;
 pub mod operator_persistence_review;
 pub mod operator_reward_binding;
+pub mod passport;
 pub mod resolve;
 pub mod settings;
 pub mod stream;

@@ -17,6 +17,13 @@
  * RO:TEST — pay a site visit or publish a paid asset, reload extension, confirm receipt display cache remains visible.
  */
 
+import {
+  formatReceiptAmount as formatAmount,
+  normalizeReceiptAction as normalizeAction,
+  receiptActionLabel as labelFromAction,
+  receiptTimestampMillis as timestampForSort,
+} from '../../../../../packages/crablink-core/src/index.js';
+
 export const SITE_VISIT_RECEIPT_PREFIX = 'crablink.site_visit.receipt.v1';
 export const GENERIC_RECEIPTS_KEY = 'crablink.recent_receipts.v1';
 export const RECEIPTS_CHANGED_EVENT = 'crablink:recent-receipts-changed';
@@ -613,60 +620,6 @@ function titleForReceipt(action, crabUrl, amountMinor, asset) {
   return `${actionLabel}${target}`;
 }
 
-function formatAmount(amountMinor, asset = 'roc') {
-  const clean = String(amountMinor || '').trim();
-
-  if (!clean) {
-    return '';
-  }
-
-  const suffix = String(asset || 'roc').toUpperCase();
-
-  if (/^[0-9]+$/.test(clean)) {
-    return `${clean} ${suffix}`;
-  }
-
-  return `${clean} ${suffix}`;
-}
-
-function normalizeAction(value) {
-  const clean = String(value || '').trim().toLowerCase();
-
-  if (!clean) {
-    return '';
-  }
-
-  if (clean.includes('site_visit')) {
-    return 'site_visit';
-  }
-
-  if (clean.includes('image')) {
-    return 'image_publish';
-  }
-
-  if (clean.includes('post')) {
-    return 'post_publish';
-  }
-
-  if (clean.includes('comment')) {
-    return 'comment_publish';
-  }
-
-  if (clean.includes('article')) {
-    return 'article_publish';
-  }
-
-  if (clean.includes('hold')) {
-    return 'wallet_hold';
-  }
-
-  if (clean.includes('transfer')) {
-    return 'wallet_transfer';
-  }
-
-  return clean.replace(/[^a-z0-9_-]+/g, '_');
-}
-
 function firstObject(...values) {
   return values.find((value) => value && typeof value === 'object' && !Array.isArray(value)) || {};
 }
@@ -706,22 +659,6 @@ function cleanCid(value) {
   return match?.[0] || '';
 }
 
-function timestampForSort(value) {
-  const raw = String(value || '').trim();
-
-  if (!raw) {
-    return 0;
-  }
-
-  if (/^[0-9]+$/.test(raw)) {
-    const n = Number(raw);
-    return n > 10_000_000_000 ? n : n * 1000;
-  }
-
-  const parsed = Date.parse(raw);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
 function clampLimit(value) {
   const parsed = Number(value);
 
@@ -739,10 +676,3 @@ function sanitizeKeyPart(value) {
     .slice(0, 96);
 }
 
-function labelFromAction(action) {
-  return String(action || 'receipt')
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
-    .join(' ');
-}

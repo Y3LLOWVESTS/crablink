@@ -1,18 +1,26 @@
 /**
- * RO:WHAT — Receipt display-cache contract.
- * RO:WHY — Shared React can show recent receipts without inventing truth.
- * RO:INTERACTS — backend receipt DTOs, local display cache.
- * RO:INVARIANTS — cache is display-only; paid unlock requires backend receipt path.
+ * RO:WHAT — Platform-neutral recent-receipt display contract.
+ * RO:WHY — Shared UI can request receipt display models without owning receipt truth.
+ * RO:INTERACTS — desktop receipt adapter and deterministic memory receipt fixtures.
+ * RO:INVARIANTS — exactly listRecentReceipts; the port grants no acceptance or unlock authority.
+ * RO:SECURITY — receipt display is not paid entitlement, wallet, ledger, ROC, or finality proof.
+ * RO:TEST — memoryAdapters.test.mjs and the platform memory boundary.
  */
 
-export function createReceiptsPort(methods) {
-  const required = ["listRecentReceipts"];
+import {
+  createMethodPort,
+} from './portContract.js';
 
-  for (const name of required) {
-    if (typeof methods?.[name] !== "function") {
-      throw new TypeError(`receipts port missing ${name}`);
-    }
-  }
+const METHODS = Object.freeze([
+  'listRecentReceipts',
+]);
 
-  return Object.freeze({ ...methods });
+export function createReceiptsPort(
+  methods,
+) {
+  return createMethodPort(
+    'receipts port',
+    methods,
+    METHODS,
+  );
 }

@@ -57,13 +57,21 @@ function applySettingsSessionBoundary(settings) {
 }
 
 export function storageStatus(activeSession = null) {
-  const session = activeSession || (isTauriRuntime() ? null : getDevPassportSessionFromLocation());
+  const tauriRuntime = isTauriRuntime();
+
+  const session =
+    activeSession ||
+    (tauriRuntime
+      ? null
+      : getDevPassportSessionFromLocation());
 
   return {
     backend: storageBackendName(),
     chromeLocal: hasChromeLocalStorage(),
     isExtensionContext: Boolean(globalThis.chrome?.runtime?.id),
-    isDevFallback: !hasChromeLocalStorage(),
+    isDevFallback:
+      !tauriRuntime &&
+      !hasChromeLocalStorage(),
     devPassportSession: session,
     hasDevPassportSession: Boolean(session),
   };

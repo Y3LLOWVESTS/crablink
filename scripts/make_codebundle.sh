@@ -17,6 +17,7 @@ TAURI_APP_DIR="$ROOT/apps/crablink-tauri"
 TV_APP_DIR="$ROOT/apps/crablink-tv"
 TAURI_DOCS_DIR="$ROOT/docs/tauri"
 PACKAGES_DIR="$ROOT/packages"
+CRATES_DIR="$ROOT/crates"
 
 if [[ ! -d "$TAURI_APP_DIR" ]]; then
   echo "error: expected Tauri app folder at: $TAURI_APP_DIR"
@@ -303,7 +304,101 @@ selected_scripts() {
     "$ROOT/scripts/check-crablink-tv-command-boundary.mjs" \
     "$ROOT/scripts/check-crablink-tv-focus-boundary.mjs" \
     "$ROOT/scripts/check-crablink-tv-route-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-route-registry-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-overlay-back-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-overlay-ui-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-android-intent-foundation-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-android-intent-react-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-catalog-model-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-catalog-adapter-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-catalog-read-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-catalog-transport-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-catalog-interaction-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-home-catalog-react-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-catalog-route-handoff-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-creator-browse-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-creator-browse-react-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-catalog-thumbnail-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-creator-profile-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-creator-profile-focus-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-creator-profile-acceptance-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-phase8-home-catalog-acceptance-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-library-asset-detail-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-library-asset-detail-acceptance-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-verified-asset-manifest-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-asset-manifest-command-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-asset-manifest-adapter-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-library-verified-asset-render-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-gateway-asset-fetch-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-library-asset-verify-flow-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-library-verify-ui-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-library-manual-verify-execution-foundation-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-library-manual-verify-execution-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-library-verified-render-display-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-library-verified-byte-render-lifecycle-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-library-verified-object-url-handoff-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-library-verified-image-render-surface-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-library-verified-image-object-url-execution-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-library-verified-article-render-surface-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-phase9-acceptance-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-verified-media-playback-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-verified-media-playback-surface-boundary.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/tvVerifiedMediaSourceHandoffModel.js" \
+    "$ROOT/apps/crablink-tv/src/media/tvVerifiedMediaSourceHandoffModel.test.mjs" \
+    "$ROOT/scripts/check-crablink-tv-verified-media-source-handoff-boundary.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/tvVerifiedVideoPlaybackModel.js" \
+    "$ROOT/apps/crablink-tv/src/media/tvVerifiedVideoPlaybackModel.test.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/TvVerifiedVideoPlaybackSurface.jsx" \
+    "$ROOT/apps/crablink-tv/src/media/TvVerifiedVideoPlaybackSurface.source.test.mjs" \
+    "$ROOT/scripts/check-crablink-tv-verified-video-playback-boundary.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/tvVerifiedAudioPlaybackModel.js" \
+    "$ROOT/apps/crablink-tv/src/media/tvVerifiedAudioPlaybackModel.test.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/TvVerifiedAudioPlaybackSurface.jsx" \
+    "$ROOT/apps/crablink-tv/src/media/TvVerifiedAudioPlaybackSurface.source.test.mjs" \
+    "$ROOT/scripts/check-crablink-tv-verified-audio-playback-boundary.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/tvPlaybackControlsFocusModel.js" \
+    "$ROOT/apps/crablink-tv/src/media/tvPlaybackControlsFocusModel.test.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/TvPlaybackControlsFocusRail.jsx" \
+    "$ROOT/apps/crablink-tv/src/media/TvPlaybackControlsFocusRail.source.test.mjs" \
+    "$ROOT/scripts/check-crablink-tv-playback-controls-focus-boundary.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/tvMediaErrorRetryTruthModel.js" \
+    "$ROOT/apps/crablink-tv/src/media/tvMediaErrorRetryTruthModel.test.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/TvMediaErrorRetryTruthPanel.jsx" \
+    "$ROOT/apps/crablink-tv/src/media/TvMediaErrorRetryTruthPanel.source.test.mjs" \
+    "$ROOT/scripts/check-crablink-tv-media-error-retry-truth-boundary.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/tvPhase10AcceptanceBoundary.source.test.mjs" \
+    "$ROOT/scripts/check-crablink-tv-phase10-acceptance-boundary.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/tvContinueWatchingResourceModel.js" \
+    "$ROOT/apps/crablink-tv/src/media/tvContinueWatchingResourceModel.test.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/TvContinueWatchingResourcePanel.jsx" \
+    "$ROOT/apps/crablink-tv/src/media/TvContinueWatchingResourcePanel.source.test.mjs" \
+    "$ROOT/scripts/check-crablink-tv-continue-watching-resource-boundary.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/tvContinueWatchingStoreAdapterModel.js" \
+    "$ROOT/apps/crablink-tv/src/media/tvContinueWatchingStoreAdapterModel.test.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/TvContinueWatchingStoreAdapterPanel.jsx" \
+    "$ROOT/apps/crablink-tv/src/media/TvContinueWatchingStoreAdapterPanel.source.test.mjs" \
+    "$ROOT/scripts/check-crablink-tv-continue-watching-store-adapter-boundary.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/tvResourceReleaseLifecycleModel.js" \
+    "$ROOT/apps/crablink-tv/src/media/tvResourceReleaseLifecycleModel.test.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/TvResourceReleaseLifecyclePanel.jsx" \
+    "$ROOT/apps/crablink-tv/src/media/TvResourceReleaseLifecyclePanel.source.test.mjs" \
+    "$ROOT/scripts/check-crablink-tv-resource-release-lifecycle-boundary.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/tvResourceReleaseExecutorBoundaryModel.js" \
+    "$ROOT/apps/crablink-tv/src/media/tvResourceReleaseExecutorBoundaryModel.test.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/TvResourceReleaseExecutorBoundaryPanel.jsx" \
+    "$ROOT/apps/crablink-tv/src/media/TvResourceReleaseExecutorBoundaryPanel.source.test.mjs" \
+    "$ROOT/scripts/check-crablink-tv-resource-release-executor-boundary.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/tvPhase11AcceptanceBoundary.source.test.mjs" \
+    "$ROOT/scripts/check-crablink-tv-phase11-acceptance-boundary.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/tvVerifiedMediaPlaybackSurfaceModel.js" \
+    "$ROOT/apps/crablink-tv/src/media/tvVerifiedMediaPlaybackSurfaceModel.test.mjs" \
+    "$ROOT/apps/crablink-tv/src/media/TvVerifiedMediaPlaybackSurface.jsx" \
+    "$ROOT/apps/crablink-tv/src/media/TvVerifiedMediaPlaybackSurface.source.test.mjs" \
+    "$ROOT/scripts/test-crablink-tv-asset-manifest-command.sh" \
     "$ROOT/scripts/check-crablink-tv-settings-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-gateway-health-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-pairing-begin-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-network-readiness-boundary.mjs" \
     "$ROOT/scripts/check-crablink-tv-pairing-boundary.mjs" \
     "$ROOT/scripts/check-crablink-tv-android-tv-boundary.mjs" \
     "$ROOT/scripts/check-crablink-tv-debug-apk.sh" \
@@ -311,6 +406,14 @@ selected_scripts() {
     "$ROOT/scripts/check-crablink-tv-android-build-task.mjs" \
     "$ROOT/scripts/check-crablink-tv-brand-assets.mjs" \
     "$ROOT/scripts/check-crablink-tv-codebundle-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-core-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-desktop-shared-crab-url-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-route-metadata-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-receipt-display-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-platform-contracts-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-platform-catalog-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-platform-memory-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-native-core-boundary.mjs" \
     "$ROOT/scripts/make_codebundle.sh"
   do
     if [[ -f "$script" ]]; then
@@ -381,6 +484,13 @@ candidate_files() {
          -o -name coverage \
          -o -name .vite \
          -o -name .turbo \
+      \) -prune -o -type f -print 2>/dev/null
+  fi
+
+  if [[ -d "$CRATES_DIR" ]]; then
+    find "$CRATES_DIR" \
+      \( -name .git \
+         -o -name target \
       \) -prune -o -type f -print 2>/dev/null
   fi
 
@@ -521,11 +631,20 @@ binary_count="$(binary_files | count_stream)"
   echo "assets/app-logo.*"
   echo "packages/crablink-core/"
   echo "packages/crablink-platform/"
+  echo "crates/crablink-native-core/"
   echo "scripts/check-tauri.sh"
   echo "scripts/check-crablink-tv-command-boundary.mjs"
   echo "scripts/check-crablink-tv-focus-boundary.mjs"
   echo "scripts/check-crablink-tv-route-boundary.mjs"
+  echo "scripts/check-crablink-tv-route-registry-boundary.mjs"
+  echo "scripts/check-crablink-tv-overlay-back-boundary.mjs"
+  echo "scripts/check-crablink-tv-overlay-ui-boundary.mjs"
+  echo "scripts/check-crablink-tv-android-intent-foundation-boundary.mjs"
+  echo "scripts/check-crablink-tv-android-intent-react-boundary.mjs"
   echo "scripts/check-crablink-tv-settings-boundary.mjs"
+  echo "scripts/check-crablink-tv-gateway-health-boundary.mjs"
+  echo "scripts/check-crablink-tv-pairing-begin-boundary.mjs"
+  echo "scripts/check-crablink-tv-network-readiness-boundary.mjs"
   echo "scripts/check-crablink-tv-pairing-boundary.mjs"
   echo "scripts/check-crablink-tv-android-tv-boundary.mjs"
   echo "scripts/check-crablink-tv-debug-apk.sh"
@@ -533,6 +652,13 @@ binary_count="$(binary_files | count_stream)"
   echo "scripts/check-crablink-tv-android-build-task.mjs"
   echo "scripts/check-crablink-tv-brand-assets.mjs"
   echo "scripts/check-crablink-tv-codebundle-boundary.mjs"
+  echo "scripts/check-crablink-core-boundary.mjs"
+  echo "scripts/check-crablink-desktop-shared-crab-url-boundary.mjs"
+  echo "scripts/check-crablink-route-metadata-boundary.mjs"
+  echo "scripts/check-crablink-receipt-display-boundary.mjs"
+  echo "scripts/check-crablink-platform-contracts-boundary.mjs"
+  echo "scripts/check-crablink-platform-memory-boundary.mjs"
+  echo "scripts/check-crablink-native-core-boundary.mjs"
   echo "scripts/check-crablink-service-node-operator-boundary.mjs"
   echo "scripts/check-crablink-service-node-operator-ui-boundary.mjs"
   echo "scripts/check-crablink-signed-reward-binding-boundary.mjs"

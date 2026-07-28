@@ -170,3 +170,36 @@ export function chooseNextFocus(
 
   return ranked[0]?.candidate ?? null;
 }
+
+
+/**
+ * Returns the next focus index for a trapped modal scope.
+ */
+export function wrappedFocusIndex(
+  currentIndex,
+  length,
+  reverse = false,
+) {
+  if (
+    !Number.isSafeInteger(length) ||
+    length <= 0
+  ) {
+    return -1;
+  }
+
+  if (
+    !Number.isSafeInteger(currentIndex) ||
+    currentIndex < 0 ||
+    currentIndex >= length
+  ) {
+    return reverse
+      ? length - 1
+      : 0;
+  }
+
+  return (
+    currentIndex +
+    (reverse ? -1 : 1) +
+    length
+  ) % length;
+}

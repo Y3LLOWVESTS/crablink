@@ -13,6 +13,8 @@ const root = path.resolve(scriptDir, '..');
 const paths = {
   model:
     'apps/crablink-tv/src/pairing/tvPairingViewModel.js',
+  interaction:
+    'apps/crablink-tv/src/pairing/tvPairingBeginInteraction.js',
   tests:
     'apps/crablink-tv/src/pairing/tvPairingViewModel.test.mjs',
   panel:
@@ -23,6 +25,12 @@ const paths = {
     'apps/crablink-tv/src-tauri/src/commands/gateway.rs',
   pairing:
     'apps/crablink-tv/src-tauri/src/commands/pairing.rs',
+  pairingBegin:
+    'apps/crablink-tv/src-tauri/src/commands/pairing_begin.rs',
+  nativePairingDto:
+    'crates/crablink-native-core/src/pairing_dto.rs',
+  nativeSettingsProfile:
+    'crates/crablink-native-core/src/settings_profile.rs',
   commands:
     'apps/crablink-tv/src-tauri/src/commands/mod.rs',
   lib:
@@ -52,11 +60,16 @@ function read(relativePath) {
 }
 
 const model = read(paths.model);
+const interaction = read(paths.interaction);
 const tests = read(paths.tests);
 const panel = read(paths.panel);
 const app = read(paths.app);
 const gateway = read(paths.gateway);
 const pairing = read(paths.pairing);
+const pairingBegin = read(paths.pairingBegin);
+const nativePairingDto = read(paths.nativePairingDto);
+const nativeSettingsProfile =
+  read(paths.nativeSettingsProfile);
 const commands = read(paths.commands);
 const lib = read(paths.lib);
 const cargo = read(paths.cargo);
@@ -71,6 +84,7 @@ const rootPackage = JSON.parse(
 
 for (const fragment of [
   'export function normalizeTvGatewayProfile',
+  'export function normalizeTvPairingBeginResponse',
   'export function normalizeTvPairingStatus',
   'export function projectTvPairingView',
   "'blocked_unconfigured'",
@@ -89,9 +103,30 @@ for (const fragment of [
 }
 
 for (const fragment of [
+  'export function normalizeTvDeviceName',
+  'export function normalizeTvPairingBeginFailure',
+  'export function projectTvPairingBeginSuccess',
+  'MAX_DEVICE_NAME_BYTES = 64',
+  'new TextEncoder()',
+  'normalizeTvPairingBeginResponse',
+  'sessionPresent: false',
+]) {
+  if (!interaction.includes(fragment)) {
+    throw new Error(
+      `TV pairing interaction is missing: ${fragment}`,
+    );
+  }
+}
+
+for (const fragment of [
   'unconfigured gateway cannot invent a pairing code',
   'reviewed gateway can become ready without claiming pairing',
   'waiting state requires a strict code and expiry',
+  'pairing begin response accepts bounded waiting truth only',
+  'malformed pairing begin response fails closed',
+  'pairing device name is trimmed and byte bounded',
+  'pairing begin success projects waiting without session',
+  'pairing begin failure discards unknown fields',
   'paired label without native session truth fails closed',
   'normalizers discard credentials and unknown secret fields',
 ]) {
@@ -105,6 +140,12 @@ for (const fragment of [
 for (const fragment of [
   "invoke('tv_gateway_profile')",
   "invoke('tv_pairing_status')",
+  "'tv_pairing_begin'",
+  'deviceName:',
+  'beginInFlightRef.current',
+  'disabled={!canBegin}',
+  'Request pairing code',
+  "beginState.phase === 'waiting'",
   'No short code or QR challenge has been issued.',
   'Review pairing security',
   'No pairing state was created.',
@@ -138,11 +179,44 @@ for (const fragment of [
   '"development_lan_host_required"',
   'gateway_credentials_forbidden',
   'parsed.origin().ascii_serialization()',
-  '.clamp(MIN_TIMEOUT_MS, MAX_TIMEOUT_MS)',
+  'normalize_request_timeout_ms',
+  'pub struct TvGatewayHealthRequest',
+  'gateway_health_request_for_profile',
+  'review_gateway_health_response',
+  'MAX_HEALTH_RESPONSE_BYTES',
 ]) {
   if (!gateway.includes(fragment)) {
     throw new Error(
       `Native gateway review is missing: ${fragment}`,
+    );
+  }
+}
+
+for (const fragment of [
+  'pub const DEFAULT_REQUEST_TIMEOUT_MS',
+  'pub const MIN_REQUEST_TIMEOUT_MS',
+  'pub const MAX_REQUEST_TIMEOUT_MS',
+  'pub fn normalize_request_timeout_ms',
+  '.clamp(MIN_REQUEST_TIMEOUT_MS, MAX_REQUEST_TIMEOUT_MS)',
+  'request_timeout_defaults_and_clamps',
+]) {
+  if (!nativeSettingsProfile.includes(fragment)) {
+    throw new Error(
+      `Shared timeout validation is missing: ${fragment}`,
+    );
+  }
+}
+
+for (const forbidden of [
+  'fn normalize_timeout',
+  'const DEFAULT_TIMEOUT_MS',
+  'const MIN_TIMEOUT_MS',
+  'const MAX_TIMEOUT_MS',
+  '.clamp(MIN_TIMEOUT_MS, MAX_TIMEOUT_MS)',
+]) {
+  if (gateway.includes(forbidden)) {
+    throw new Error(
+      `TV gateway still owns timeout validation: ${forbidden}`,
     );
   }
 }
@@ -155,6 +229,12 @@ for (const fragment of [
   'pairing_code: None',
   'session_present: false',
   '"companion-crablink-required"',
+  'pub struct TvPairingBeginRequest',
+  'pub struct TvPairingBeginResponse',
+  'review_pairing_begin_response',
+  'deny_unknown_fields',
+  'MAX_PAIRING_BEGIN_RESPONSE_BYTES',
+  'INITIAL_TV_SESSION_SCOPES',
 ]) {
   if (!pairing.includes(fragment)) {
     throw new Error(
@@ -164,8 +244,49 @@ for (const fragment of [
 }
 
 for (const fragment of [
+  'pub async fn tv_pairing_begin',
+  'perform_pairing_begin',
+  'pairing_begin_request_for_gateway',
+  'review_pairing_begin_response',
+  'MAX_PAIRING_BEGIN_RESPONSE_BYTES',
+  'SystemTime::now()',
+  '.post(url)',
+  '.json(&request)',
+  'reqwest::redirect::Policy::none()',
+  '.no_proxy()',
+  'response.chunk()',
+  'local_pairing_begin_posts_fixed_request_and_accepts_challenge',
+  'declared_oversize_pairing_response_is_rejected',
+  'transient_pairing_status_is_retryable',
+]) {
+  if (!pairingBegin.includes(fragment)) {
+    throw new Error(
+      `Native pairing-begin operation is missing: ${fragment}`,
+    );
+  }
+}
+
+for (const fragment of [
+  'pub struct TvPairingBeginRequest',
+  'pub struct TvPairingBeginResponse',
+  'pub struct TvPairingContractError',
+  'deny_unknown_fields',
+  'pub fn build_pairing_begin_request',
+  'pub fn review_pairing_begin_response',
+  'INITIAL_TV_SESSION_SCOPES',
+  'MAX_PAIRING_BEGIN_RESPONSE_BYTES',
+]) {
+  if (!nativePairingDto.includes(fragment)) {
+    throw new Error(
+      `Shared native pairing DTO is missing: ${fragment}`,
+    );
+  }
+}
+
+for (const fragment of [
   'pub(crate) mod gateway;',
   'pub(crate) mod pairing;',
+  'pub(crate) mod pairing_begin;',
 ]) {
   if (!commands.includes(fragment)) {
     throw new Error(
@@ -176,6 +297,7 @@ for (const fragment of [
 
 for (const fragment of [
   'commands::gateway::tv_gateway_profile',
+  'commands::pairing_begin::tv_pairing_begin',
   'commands::pairing::tv_pairing_status',
 ]) {
   if (!lib.includes(fragment)) {
@@ -191,11 +313,19 @@ if (!cargo.includes('url = "2"')) {
   );
 }
 
+if (!cargo.includes('serde_json = "1"')) {
+  throw new Error(
+    'TV Rust host is missing strict pairing DTO JSON support.',
+  );
+}
+
 const combined = [
   model,
+  interaction,
   panel,
   gateway,
   pairing,
+  pairingBegin,
   app,
 ].join('\n');
 
@@ -205,7 +335,6 @@ for (const forbidden of [
   'localStorage.setItem("pairing',
   'sessionStorage.setItem("pairing',
   "fetch(",
-  "invoke('tv_pairing_begin')",
   "invoke('wallet",
   "invoke('ledger",
   "invoke('reward",
@@ -267,15 +396,27 @@ console.log(
 );
 
 console.log(
+  'Request-timeout validation owner: crablink-native-core.',
+);
+
+console.log(
   'Gateway profiles: release HTTPS or explicit private development LAN.',
 );
 
 console.log(
-  'Pairing state: read-only readiness; no locally generated challenge.',
+  'Pairing UI: validated device name, duplicate-request lock, and backend-issued challenge projection.',
+);
+
+console.log(
+  'Gateway health: fixed-path bounded GET; pairing begin: fixed-path bounded POST.',
 );
 
 console.log(
   'Approval authority: trusted desktop or mobile CrabLink companion.',
+);
+
+console.log(
+  'Native DTO owner: crablink-native-core; TV pairing commands remain thin adapters.',
 );
 
 console.log(

@@ -13,6 +13,7 @@ import { Component, Suspense } from 'react';
 import { AppContextProvider, useAppContext } from './appContext.js';
 import { useRouteState } from './appState.js';
 import { getRouteComponent } from './router.js';
+import OnboardingRouteGate from '../onboarding/OnboardingRouteGate.jsx';
 import Shell from './shell/Shell.jsx';
 import LoadingState from '../shared/components/LoadingState.jsx';
 import ThemeProvider from '../shared/theme/ThemeProvider.jsx';
@@ -20,11 +21,13 @@ import ThemeProvider from '../shared/theme/ThemeProvider.jsx';
 export default function App() {
   return (
     <ThemeProvider>
-      <AppContextProvider>
-        <CrabLinkErrorBoundary>
-          <AppFrame />
-        </CrabLinkErrorBoundary>
-      </AppContextProvider>
+      <CrabLinkErrorBoundary>
+        <OnboardingRouteGate>
+          <AppContextProvider>
+            <AppFrame />
+          </AppContextProvider>
+        </OnboardingRouteGate>
+      </CrabLinkErrorBoundary>
     </ThemeProvider>
   );
 }

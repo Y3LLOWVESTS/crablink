@@ -1,18 +1,26 @@
 /**
- * RO:WHAT — Diagnostics adapter contract.
- * RO:WHY — Shared UI can display runtime status without leaking secrets.
- * RO:INTERACTS — Tauri diagnostics command, Chrome health proof.
- * RO:INVARIANTS — redacted display-only diagnostics.
+ * RO:WHAT — Platform-neutral diagnostics adapter contract.
+ * RO:WHY — Shared UI needs redacted host facts without importing platform APIs.
+ * RO:INTERACTS — desktop diagnostics adapter, TV diagnostics adapter, memory adapter later.
+ * RO:INVARIANTS — exactly getDiagnostics; construction performs no call or fallback.
+ * RO:SECURITY — diagnostics are display facts, not node, wallet, ledger, or finality authority.
+ * RO:TEST — adapterContracts.test.mjs.
  */
 
-export function createDiagnosticsPort(methods) {
-  const required = ["getDiagnostics"];
+import {
+  createMethodPort,
+} from './portContract.js';
 
-  for (const name of required) {
-    if (typeof methods?.[name] !== "function") {
-      throw new TypeError(`diagnostics port missing ${name}`);
-    }
-  }
+const METHODS = Object.freeze([
+  'getDiagnostics',
+]);
 
-  return Object.freeze({ ...methods });
+export function createDiagnosticsPort(
+  methods,
+) {
+  return createMethodPort(
+    'diagnostics port',
+    methods,
+    METHODS,
+  );
 }

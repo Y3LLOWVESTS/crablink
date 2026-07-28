@@ -1,18 +1,59 @@
 /**
- * RO:WHAT — Gateway adapter contract.
- * RO:WHY — Shared React must stay gateway-first without owning transport details.
- * RO:INTERACTS — Chrome/Tauri gateway adapters and svc-gateway public routes.
- * RO:INVARIANTS — no direct wallet, ledger, storage, index, or omnigate calls.
+ * RO:WHAT — Platform-neutral gateway request and gateway-profile contracts.
+ * RO:WHY — Shared UI needs narrow gateway operations without arbitrary transport authority.
+ * RO:INTERACTS — desktop gateway adapter, TV gateway-profile adapter, memory adapters later.
+ * RO:INVARIANTS — request port is health/ready/resolve only; profile port is read-only.
+ * RO:SECURITY — contracts perform no fetch, URL construction, credential handling, or paid unlock.
+ * RO:TEST — adapterContracts.test.mjs.
  */
 
-export function createGatewayPort(methods) {
-  const required = ["health", "ready", "resolveCrabUrl"];
+import {
+  createMethodPort,
+} from './portContract.js';
 
-  for (const name of required) {
-    if (typeof methods?.[name] !== "function") {
-      throw new TypeError(`gateway port missing ${name}`);
-    }
-  }
+const GATEWAY_METHODS =
+  Object.freeze([
+    'health',
+    'ready',
+    'resolveCrabUrl',
+  ]);
 
-  return Object.freeze({ ...methods });
+const GATEWAY_HEALTH_METHODS =
+  Object.freeze([
+    'checkGatewayHealth',
+  ]);
+
+const GATEWAY_PROFILE_METHODS =
+  Object.freeze([
+    'readGatewayProfile',
+  ]);
+
+export function createGatewayPort(
+  methods,
+) {
+  return createMethodPort(
+    'gateway port',
+    methods,
+    GATEWAY_METHODS,
+  );
+}
+
+export function createGatewayHealthPort(
+  methods,
+) {
+  return createMethodPort(
+    'gateway health port',
+    methods,
+    GATEWAY_HEALTH_METHODS,
+  );
+}
+
+export function createGatewayProfilePort(
+  methods,
+) {
+  return createMethodPort(
+    'gateway profile port',
+    methods,
+    GATEWAY_PROFILE_METHODS,
+  );
 }

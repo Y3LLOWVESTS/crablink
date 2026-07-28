@@ -19,6 +19,10 @@ const files = {
     'apps/crablink-tv/src/focus/useTvRemoteNavigation.js',
   app:
     'apps/crablink-tv/src/app/TvApp.jsx',
+  networkPanel:
+    'apps/crablink-tv/src/network/TvNetworkReadinessPanel.jsx',
+  tvMetadata:
+    'apps/crablink-tv/src/navigation/tvRouteMetadata.js',
   css:
     'apps/crablink-tv/src/styles/tv.css',
   tvPackage:
@@ -43,6 +47,10 @@ const graph = read(files.graph);
 const graphTests = read(files.graphTests);
 const hook = read(files.hook);
 const app = read(files.app);
+const networkPanel =
+  read(files.networkPanel);
+const tvMetadata =
+  read(files.tvMetadata);
 const css = read(files.css);
 
 const tvPackage = JSON.parse(
@@ -62,6 +70,7 @@ const requiredGraphFragments = [
   'lanePenalty',
   'anglePenalty',
   'return ranked[0]?.candidate ?? null',
+  'export function wrappedFocusIndex',
 ];
 
 for (const fragment of requiredGraphFragments) {
@@ -79,6 +88,8 @@ const requiredTestFragments = [
   'rejects candidates outside the requested direction',
   'returns deterministic first-source ordering for ties',
   'rejects unknown directions without guessing',
+  'modal Tab focus advances and wraps',
+  'modal Shift+Tab focus reverses and wraps',
 ];
 
 for (const fragment of requiredTestFragments) {
@@ -100,6 +111,9 @@ const requiredHookFragments = [
   'scrollIntoView({',
   "'keydown'",
   'preservesNativeArrowBehavior',
+  'ACTIVE_FOCUS_SCOPE_SELECTOR',
+  "event.key === 'Tab'",
+  'wrappedFocusIndex(',
 ];
 
 for (const fragment of requiredHookFragments) {
@@ -111,11 +125,11 @@ for (const fragment of requiredHookFragments) {
 }
 
 const requiredAppFragments = [
-  'useTvRemoteNavigation();',
+  'useTvRemoteNavigation({',
   'data-tv-focusable="true"',
   'data-tv-autofocus=',
   'aria-current=',
-  'Earn ROC',
+  "tvRouteLabel('earn')",
   'Confirmed value only',
   'No placeholder balance',
   'No reward ',
@@ -126,6 +140,43 @@ for (const fragment of requiredAppFragments) {
   if (!app.includes(fragment)) {
     throw new Error(
       `TV shell focus boundary is missing: ${fragment}`,
+    );
+  }
+}
+
+const requiredNetworkPanelFragments = [
+  'data-tv-focusable="true"',
+  'data-tv-focus-key="settings-network-check"',
+  'disabled=',
+  'Check connection',
+  'Check again',
+];
+
+for (
+  const fragment of
+  requiredNetworkPanelFragments
+) {
+  if (!networkPanel.includes(fragment)) {
+    throw new Error(
+      `TV network panel focus boundary is missing: ${fragment}`,
+    );
+  }
+}
+
+const requiredTvMetadataFragments = [
+  'routeKindLabel',
+  'TV_ROUTE_LABEL_OVERRIDES',
+  "earn: 'Earn ROC'",
+  'export function tvRouteLabel',
+];
+
+for (
+  const fragment of
+  requiredTvMetadataFragments
+) {
+  if (!tvMetadata.includes(fragment)) {
+    throw new Error(
+      `TV shared route-label boundary is missing: ${fragment}`,
     );
   }
 }
@@ -161,7 +212,8 @@ for (const fragment of forbiddenFragments) {
   if (
     graph.includes(fragment) ||
     hook.includes(fragment) ||
-    app.includes(fragment)
+    app.includes(fragment) ||
+    networkPanel.includes(fragment)
   ) {
     throw new Error(
       `Forbidden TV focus behavior found: ${fragment}`,
@@ -225,4 +277,7 @@ console.log(
 );
 console.log(
   'ROC posture: display-only and confirmation-bound.',
+);
+console.log(
+  'Phase 6 network action: settings-network-check is remote-focusable and disabled while busy.',
 );

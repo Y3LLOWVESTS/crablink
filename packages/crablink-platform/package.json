@@ -6,5 +6,24 @@
   "type": "module",
   "main": "src/index.js",
   "license": "MIT OR Apache-2.0",
-  "author": "Stevan White"
+  "author": "Stevan White",
+  "exports": {
+    ".": "./src/index.js",
+    "./diagnostics": "./src/contracts/diagnosticsPort.js",
+    "./gateway": "./src/contracts/gatewayPort.js",
+    "./settings": "./src/contracts/settingsPort.js",
+    "./catalog": "./src/contracts/catalogPort.js",
+    "./receipts": "./src/contracts/receiptsPort.js",
+    "./memory": "./src/memory/index.js"
+  },
+  "scripts": {
+    "test": "node --test src/contracts/adapterContracts.test.mjs",
+    "test:catalog": "node --test src/contracts/catalogPort.test.mjs",
+    "test:memory": "node --test src/memory/memoryAdapters.test.mjs",
+    "check:boundary": "node ../../scripts/check-crablink-platform-contracts-boundary.mjs",
+    "check:catalog-boundary": "node ../../scripts/check-crablink-platform-catalog-boundary.mjs",
+    "check:memory-boundary": "node ../../scripts/check-crablink-platform-memory-boundary.mjs",
+    "check:memory": "npm run test:memory && npm run check:memory-boundary",
+    "check": "npm run test && npm run test:catalog && npm run check:boundary && npm run check:catalog-boundary && npm run check:memory"
+  }
 }

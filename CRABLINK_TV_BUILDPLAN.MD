@@ -1,8 +1,8 @@
 ---
 title: CRABLINK_TV_BUILD_PLAN
-version: 0.1.0
+version: 0.1.1
 status: active-build-plan
-last-updated: 2026-07-15
+last-updated: 2026-07-21
 audience: contributors, CrabLink app engineers, RustyOnions service owners, security reviewers, private-beta testers
 repo-target: crablink
 primary-app-target: apps/crablink-tv
@@ -15,19 +15,19 @@ hardware-target: Android TV box, RK3528-class, 4 GB RAM, 32 GB storage
 
 RO:WHAT — Active implementation plan for a remote-first CrabLink TV client built as a sibling Tauri Android application inside the existing CrabLink repository.
 
-RO:WHY — CrabLink needs a lightweight television client for browsing `crab://` content, playing verified media, using existing purchases, pairing with a trusted CrabLink device, and displaying backend-confirmed receipts without importing desktop node/operator behavior into an Android TV device.
+RO:WHY — CrabLink needs a lightweight television client for browsing `crab://` content, playing verified media, using existing purchases, using a local wallet-like CrabLink Passport, and displaying backend-confirmed receipts without importing desktop node/operator behavior into an Android TV device.
 
 RO:INTERACTS — `apps/crablink-tv`, `apps/crablink-tauri`, `packages/crablink-core`, `packages/crablink-platform`, future `packages/crablink-tv-ui`, future shared native CrabLink crate, `svc-gateway`, `omnigate`, `svc-passport`, `ron-auth`, `ron-proto`, `svc-storage`, `svc-index`, `svc-wallet`, `ron-ledger`, `ron-policy`, Android TV, Tauri 2.
 
-RO:INVARIANTS — Same repository, separate TV application; client-only posture; remote-only navigation; backend-derived identity, entitlement, receipt, and ROC truth; no local node, operator mode, wallet keys, direct ledger mutation, fake receipt, fake balance, silent spend, direct-provider privacy fallback, ROX/Solana runtime, or service-node administration.
+RO:INVARIANTS — Same repository, separate TV application; client-only posture; remote-only navigation; client-custodied Passport identity with backend-verified entitlement, receipt, and ROC truth; no local node, operator mode, wallet keys, direct ledger mutation, fake receipt, fake balance, silent spend, direct-provider privacy fallback, ROX/Solana runtime, or service-node administration.
 
-RO:METRICS — App launch, route open, focus-navigation failure, gateway readiness, pairing result, media start/failure/buffer, entitlement result, receipt refresh, B3 verification result, cache integrity, and redacted error class.
+RO:METRICS — App launch, route open, focus-navigation failure, gateway readiness, Passport onboarding/unlock result, media start/failure/buffer, entitlement result, receipt refresh, B3 verification result, cache integrity, and redacted error class.
 
-RO:CONFIG — TV application identifier, gateway URL, pairing URL, request timeout, environment profile, release HTTPS policy, development LAN profile, cache quota, media limits, feature flags, and Android-specific permissions.
+RO:CONFIG — TV application identifier, gateway URL, Passport proof/capability endpoint, request timeout, environment profile, release HTTPS policy, development LAN profile, cache quota, media limits, feature flags, and Android-specific permissions.
 
-RO:SECURITY — React owns display and user intent only. Tauri Rust owns privileged network, secure-session, integrity, and native-device operations. The TV stores only minimum device-bound session material. No seed phrase, private wallet key, unrestricted capability, operator credential, or reward authority may enter React state, browser storage, URLs, logs, QR codes, or error messages.
+RO:SECURITY — React owns display and user intent only. Tauri Rust owns privileged network, local Passport custody boundaries, capability proof review, integrity, and native-device operations. CrabLink Passport identity is wallet-like: local/offline-storable, client-custodied, and not a cloud login. No cloud password account, cloud-stored Passport secret, server-custodied Passport secret, unrestricted capability, operator credential, or reward authority may enter React state, browser storage, URLs, logs, QR codes, or error messages.
 
-RO:TEST — Pure JavaScript route/focus tests, React build checks, Rust command/unit tests, boundary scripts, Android compile/build checks, ADB launch and key-event tests, target-device media tests, pairing expiry/revocation tests, entitlement/receipt truth tests, privacy/error tests, soak tests, and a reproducible TV acceptance runner.
+RO:TEST — Pure JavaScript route/focus tests, React build checks, Rust command/unit tests, boundary scripts, Android compile/build checks, ADB launch and key-event tests, target-device media tests, Passport proof/capability expiry/revocation tests, entitlement/receipt truth tests, privacy/error tests, soak tests, and a reproducible TV acceptance runner.
 
 ---
 
@@ -43,6 +43,27 @@ CrabLink TV posture: sibling Android/Tauri client, not a node and not an operato
 The current CrabLink desktop and RustyOnions Phase 22 work must not be restarted or rewritten for TV. Finish the existing Phase 22 acceptance failure first, then begin TV Phase 0 from a known-green desktop baseline.
 
 The TV plan is implementation-oriented. Each phase must add real behavior, focused tests, compile/build checks, and fixes before the next phase expands scope.
+
+### Platform identity rule
+
+CrabLink Passport identity is wallet-like, not cloud-login-based.
+
+```text
+CrabLink Passport = wallet-like identity/account
+```
+
+This applies across desktop, Android TV, Android, iOS, and future clients. A Passport may be created, imported, restored, and unlocked locally. Backend and gateway services verify proofs, capabilities, receipts, entitlements, and policy; they must not own, custody, or cloud-store Passport secrets.
+
+Forbidden identity drift:
+
+```text
+cloud login
+password account
+server-owned identity
+cloud-stored Passport secret
+backend-custodied account
+backend-issued identity pretending to be the Passport source of truth
+```
 
 ---
 
@@ -63,8 +84,8 @@ play video, music, streams, and podcasts
 use already-approved paid entitlements
 show receipt history
 show confirmed ROC from durable backend receipts
-pair with desktop/mobile CrabLink
-retain minimal device-bound session state
+create/import/unlock a local CrabLink Passport
+retain minimum device-local Passport/capability state
 ```
 
 ### 1.2 What CrabLink TV is not
@@ -134,7 +155,7 @@ apps/crablink-tv
   ten-foot shell
   remote navigation
   browse and playback
-  pairing
+  Passport onboarding/unlock
   read-only receipts and confirmed ROC
   narrow TV settings
   no node/operator/creator-authority surfaces
@@ -178,7 +199,7 @@ Ownership:
   Tauri adapter
   memory/test adapter
   future Chrome compatibility adapter
-  settings, gateway, pairing, receipts, diagnostics ports
+  settings, gateway, Passport onboarding/proof, receipts, diagnostics ports
 
 @crablink/tv-ui
   TV focus engine
@@ -192,7 +213,7 @@ crablink-native-core
   pure Rust shared validation
   canonical crab:// and B3 validation
   receipt/confirmed-ROC projection validation
-  pairing/session DTO validation
+  Passport proof/capability DTO validation
   bounded gateway request helpers where platform-neutral
   no Tauri dependency
   no Android dependency
@@ -240,9 +261,9 @@ request backend entitlement checks
 request media URLs or bounded media sessions
 request receipt history
 request confirmed ROC display projection
-initiate pairing
-store a device-bound session
-clear/revoke its local session
+create/import/unlock a local Passport
+request Passport proof/capability review
+lock/clear local Passport or capability state
 maintain a verified display cache
 ```
 
@@ -256,7 +277,7 @@ trust local cache as entitlement truth
 treat pending evidence as confirmed ROC
 create fake receipts or balances
 silently spend
-approve its own pairing
+self-issue or self-escalate Passport capabilities
 issue unrestricted capabilities
 run or control micronode/macronode
 expose Service Node operator commands
@@ -281,9 +302,11 @@ tv_resolve_crab_url
 tv_fetch_view
 tv_fetch_asset_manifest
 tv_fetch_small_verified_asset
-tv_pairing_begin
-tv_pairing_poll
-tv_pairing_cancel
+tv_passport_status
+tv_passport_onboarding_begin
+tv_passport_unlock
+tv_passport_lock
+tv_capability_review
 tv_session_status
 tv_session_clear
 tv_receipts_list
@@ -308,6 +331,8 @@ creator publish commands
 raw shell/process commands
 arbitrary URL fetch
 raw capability export
+cloud login commands
+Passport secret export commands
 wallet mutation commands
 ledger mutation commands
 ```
@@ -343,7 +368,7 @@ crab://profile/...
 crab://library
 crab://receipts
 crab://settings
-crab://pair
+crab://passport
 crab://<site-name>
 crab://<hash>.image
 crab://<hash>.video
@@ -399,10 +424,10 @@ Failure flow:
 open content
 → entitlement unavailable/expired/denied
 → content remains locked
-→ show pairing/companion approval guidance
+→ show Passport/capability review guidance
 ```
 
-A later phase may add companion-approved purchasing, but the TV must still not hold wallet keys or silently spend.
+A later phase may add Passport-authorized purchasing, but the TV must still not hold wallet keys or silently spend.
 
 ---
 
@@ -599,7 +624,7 @@ tv-dev-lan
 private-beta
   authenticated HTTPS
   pinned/approved environment identity
-  pairing required
+  Passport proof/capability required
   no arbitrary endpoint editing by default
 
 release
@@ -642,8 +667,9 @@ FetchSmallAsset
 CheckEntitlement
 ListReceipts
 FetchConfirmedRoc
-BeginPairing
-PollPairing
+PassportStatus
+PassportUnlock
+CapabilityReview
 ```
 
 ---
@@ -723,27 +749,69 @@ Do not persist signed media URLs, raw capabilities, or unrestricted tokens.
 
 ---
 
-## 9. Pairing and Session Model
+## 9. Passport Onboarding and Local Custody Model
 
-### 9.1 Pairing UX
+### 9.1 Platform identity rule
 
-First-run pairing:
+CrabLink Passport identity is wallet-like, not cloud-login-based.
+
+This applies across every CrabLink platform:
 
 ```text
-1. TV requests a pairing challenge.
-2. TV displays a QR code and short code.
-3. User opens trusted desktop/mobile CrabLink.
-4. Companion device reviews TV name, environment, expiry, and requested scopes.
-5. Companion device approves or denies.
-6. TV polls using a one-time challenge handle.
-7. Backend issues a narrow device-bound session.
-8. TV stores minimum session material in secure native storage.
-9. TV clears challenge material.
+desktop
+Android TV
+Android
+iOS
+future clients
 ```
 
-### 9.2 Pairing scope
+Core rule:
 
-Initial session scopes:
+```text
+CrabLink Passport = wallet-like identity/account
+```
+
+A Passport must not become:
+
+```text
+cloud login
+password account
+server-owned identity
+cloud-stored Passport secret
+backend-custodied account
+backend-issued identity pretending to be source of truth
+```
+
+The correct posture is closer to Solflare / Phantom style wallet identity:
+
+```text
+local Passport creation/import/unlock
+offline-storable identity material
+client-owned secret custody
+backend/gateway verifies proofs/capabilities/receipts/entitlements/policy
+backend does not own or custody the Passport secret
+```
+
+### 9.2 TV Passport UX
+
+First-run TV identity UX should be Passport-first:
+
+```text
+1. TV starts with no cloud login.
+2. User creates a new local Passport or imports/restores an existing Passport.
+3. Tauri/native custody handles secret material.
+4. React receives only redacted Passport status, display label, and safe account posture.
+5. TV requests gateway/backend access using Passport-derived proofs or scoped capabilities.
+6. Backend verifies proof, capability, receipt, entitlement, and policy.
+7. Backend never owns the Passport secret.
+8. User may lock, clear, or rotate local Passport/capability state.
+```
+
+Optional cross-device help may exist later, but it must be framed as explicit delegation/review, not as pairing one Passport into another Passport.
+
+### 9.3 Passport capability posture
+
+Initial TV capability posture:
 
 ```text
 identity.read
@@ -752,7 +820,7 @@ content.read
 entitlement.read
 receipts.read
 confirmed_roc.read
-session.revoke_self
+capability.revoke_self
 ```
 
 Not granted:
@@ -766,87 +834,98 @@ node.control
 operator.admin
 content.publish
 capability.delegate_unbounded
+Passport secret export
+cloud login
 ```
 
-### 9.3 Secure storage
+### 9.4 Secure local custody
 
-Use native secure storage. Tauri Stronghold is a candidate because it supports Android, but it must be integrated with a TV-specific threat review and a device-local key derivation/storage strategy.
+Use native secure storage or platform keystore behavior for local Passport custody. Tauri Stronghold is a candidate where appropriate, but it must be integrated with a TV-specific threat review and a device-local key derivation/storage strategy.
 
-React receives only session status and redacted account display data.
+React receives only safe status and redacted account display data.
 
 React must not receive:
 
 ```text
-refresh token
+seed phrase
+Passport private key
 raw capability
-private key
+refresh token
 Stronghold password/material
+unlock secret
 pairing secret
 ```
 
-### 9.4 Session lifecycle
+### 9.5 Local Passport lifecycle
 
 Implement and test:
 
 ```text
-challenge expiry
-approval denial
-poll timeout
-single-use challenge
-session expiry
+new local Passport
+Passport import/restore
+local unlock
+local lock
+local clear
+capability proof issuance
+capability expiry
+capability revocation
+wrong environment
+wrong device binding where device-bound capability is used
+scope escalation rejection
 refresh failure
-remote revocation
-local unpair
 clock skew handling
-network loss during pairing
+network loss during proof/capability review
 reinstall behavior
 account switch
+secret redaction
 ```
 
 ---
 
-## 10. Backend Work Required for Pairing
+## 10. Backend Work Required for Passport Proofs and Capability
 
-CrabLink TV should reuse existing content, identity, wallet-display, and receipt routes wherever possible.
+CrabLink TV should reuse existing content, identity-display, wallet-display, receipt, and entitlement routes wherever possible.
 
-New backend behavior should be limited to missing pairing/session functionality.
+New backend behavior should be limited to Passport proof verification, scoped capability validation, entitlement truth, and revocation behavior. Backend services must not become Passport custodians.
 
 Likely owners:
 
 ```text
 ron-proto
-  strict pairing challenge/request/status/session DTOs
+  strict Passport proof, capability, and access-review DTOs
 
 ron-auth
-  narrow device capability/session validation
+  Passport proof validation and narrow capability/session validation
 
 svc-passport
-  challenge issuance, approval binding, device session issue/revoke
+  Passport public identity views, proof challenge verification, capability issue/revoke when needed
 
 ron-policy
-  allowed TV session scopes and expiry limits
+  allowed TV scopes, expiry limits, policy gates, and denial reasons
 
 svc-gateway
   public client route exposure and limits
 
 omnigate
-  typed pairing orchestration/view hydration where needed
+  typed Passport/capability orchestration and view hydration where needed
 
 ron-audit
-  redacted pairing/session lifecycle audit records
+  redacted Passport proof/capability lifecycle audit records
 ```
 
 Explicit non-owners:
 
 ```text
-CrabLink React does not issue sessions.
-CrabLink TV Rust does not self-approve pairing.
-svc-wallet does not own device identity.
-ron-ledger does not own pairing.
+CrabLink React does not issue capabilities.
+CrabLink TV Rust does not self-approve scopes.
+svc-wallet does not own Passport identity.
+ron-ledger does not own Passport onboarding.
 svc-storage and svc-index do not issue capabilities.
+No service stores Passport private keys, seed phrases, or cloud login secrets.
 ```
 
-No backend pairing mutation is required for the first bootable-shell phases. Add pairing backend work only after remote navigation, gateway readiness, and content routing are green.
+No backend Passport mutation is required for the first bootable-shell phases. Add Passport proof/capability backend work only after remote navigation, gateway readiness, and content routing are green.
+
 
 ---
 
@@ -969,7 +1048,7 @@ operator credentials
 unbounded media
 unverified bytes labeled verified
 receipt-based entitlement authority
-private pairing challenge after completion
+Passport secret, unlock material, or completed proof challenge
 ```
 
 ### 13.2 Cache integrity
@@ -1247,7 +1326,7 @@ crab_url
 b3
 confirmed_roc
 receipt
-pairing_dto
+passport_proof_dto
 error
 ```
 
@@ -1288,7 +1367,7 @@ autoplay preference
 captions preference
 privacy mode
 cache quota
-clear local session
+lock/clear local Passport state
 ```
 
 ### Work
@@ -1442,74 +1521,86 @@ No resource leak/crash appears during repeated playback.
 
 ---
 
-## TV Phase 11 — Pairing DTOs and Local Pairing UI
+## TV Phase 11 — Passport DTOs and Local Passport UI
 
 ### Goal
 
-Build the TV pairing state machine and UI against a deterministic local/mock adapter before backend mutation.
+Build the TV Passport onboarding/unlock state machine and UI against deterministic local/mock adapters before backend proof/capability mutation.
 
 ### Work
 
 ```text
-- Define strict pairing DTOs in shared JS/Rust layers.
-- Implement PairingIdle/Waiting/Approved/Denied/Expired/Cancelled/Error states.
-- Display QR code and short code without embedding secrets beyond the one-time public challenge.
-- Add countdown and cancel.
+- Define strict Passport status, onboarding, unlock, proof, and capability DTOs in shared JS/Rust layers.
+- Implement PassportAbsent/Creating/Importing/Locked/Unlocking/Unlocked/ProofReady/Denied/Expired/Cancelled/Error states.
+- Add local Passport create/import/restore shell without cloud login semantics.
+- Add local unlock and lock actions.
+- Add read-only capability review surfaces.
 - Add memory adapter tests.
-- Add focus-safe pairing screen.
+- Add focus-safe Passport screen.
+- Prove no seed phrase, private key, raw capability, unlock secret, or cloud login token is rendered or logged.
 ```
 
 ### Exit gate
 
 ```text
-Every pairing state is deterministic and tested.
-No raw session token is rendered or logged.
+Every Passport onboarding/unlock state is deterministic and tested.
+No raw Passport secret, seed phrase, private key, raw capability, or cloud login token is rendered or logged.
+No cloud account login route exists.
 ```
 
 ---
 
-## TV Phase 12 — Backend Pairing and Secure Device Session
+## TV Phase 12 — Backend Passport Proof and Capability Integration
 
 ### Goal
 
-Connect the TV pairing state machine to real RustyOnions identity/session behavior.
+Connect the TV Passport state machine to real RustyOnions proof, capability, policy, entitlement, and receipt behavior without introducing backend custody of Passport secrets.
 
 ### Work order
 
 ```text
-ron-proto strict DTOs
-→ ron-auth validation
-→ svc-passport challenge/session behavior
-→ ron-policy scope/expiry gates
+ron-proto strict Passport proof/capability DTOs
+→ ron-auth Passport proof validation
+→ svc-passport public identity/proof/capability behavior
+→ ron-policy scope/expiry/policy gates
 → gateway/omnigate routes
-→ CrabLink desktop/mobile approval surface
-→ CrabLink TV polling and secure storage
+→ CrabLink TV Passport proof and capability review
+→ secure local Passport/capability storage posture
 ```
 
 ### Required tests
 
 ```text
-approval happy path
+local Passport happy path
+import/restore happy path
+unlock/lock
+capability proof happy path
 denial
 expiry
-replay of challenge
+proof replay rejection
 wrong environment
-wrong device binding
-scope escalation
+wrong device binding where device-bound capability is used
+scope escalation rejection
 revocation
 refresh failure
-unpair
+local clear
+account switch
 secret redaction
+no cloud login
+no server-custodied Passport secret
 ```
 
 ### Exit gate
 
 ```text
-TV pairs with a trusted CrabLink device.
-Session survives app restart.
-Remote revocation and local unpair work.
+TV can use a locally created/imported/unlocked Passport.
+Backend verifies Passport-derived proof/capability without owning the Passport secret.
+Capability survives app restart only in the approved device-local posture.
+Remote revocation and local clear work.
 TV has read-only scopes only.
+No cloud login or backend-custodied Passport secret exists.
 ```
+
 
 ---
 
@@ -1517,14 +1608,14 @@ TV has read-only scopes only.
 
 ### Goal
 
-Show paired-user library, real receipts, and confirmed ROC using shared validation.
+Show Passport-backed library, real receipts, and confirmed ROC using shared validation.
 
 ### Work
 
 ```text
 - Add library view.
 - Add recent receipt view.
-- Add account summary.
+- Add Passport account summary.
 - Add confirmed ROC projection validation through shared Rust crate.
 - Add privacy-mode redaction.
 - Add refresh and stale/unavailable states.
@@ -1565,7 +1656,7 @@ Allow playback/viewing of already-approved paid content without adding TV wallet
 - Add entitlement-check operation.
 - Add locked/entitled/expired/unavailable/denied states.
 - Use backend entitlement on every paid open.
-- Add companion-device approval handoff message for non-entitled content.
+- Add Passport/capability review guidance for non-entitled content.
 - Keep local receipt/cache non-authoritative.
 ```
 
@@ -1670,7 +1761,7 @@ Create one local acceptance runner that proves the complete TV Alpha behavior.
 11. Confirm gateway ready.
 12. Open real creator/content route.
 13. Play media smoke.
-14. Run pairing/session smoke.
+14. Run Passport unlock/proof/capability smoke.
 15. Run receipt/confirmed-ROC smoke.
 16. Run entitlement-denial smoke.
 17. Run corrupt-B3 rejection smoke.
@@ -1714,20 +1805,20 @@ Prepare a small controlled-device beta after Alpha is green.
 - Produce reproducible signed APK/AAB.
 - Add version/update-channel policy.
 - Add crash/diagnostic export with redaction.
-- Add session/device management UI on companion CrabLink.
-- Add multiple-TV device revocation.
+- Add Passport/capability management UI where appropriate.
+- Add local Passport/capability revocation and multi-device capability review.
 - Add beta support runbook.
 - Review Android target SDK and local-network permission behavior.
 - Review TV app quality requirements.
 - Run supply-chain and dependency audit.
-- Run security review of pairing and secure storage.
+- Run security review of local Passport custody, capability proofs, and secure storage.
 ```
 
 ### Exit gate
 
 ```text
 Signed private-beta artifact installs cleanly.
-Device pairing/revocation works across the beta environment.
+Passport unlock/proof/capability revocation works across the beta environment.
 No debug endpoint, cleartext exception, dev token, or broad permission remains in the beta build.
 ```
 
@@ -1747,8 +1838,8 @@ TV app quality review
 content recommendations/home-screen channels
 search/voice integration
 native Media3 promotion if still needed
-companion-approved purchase flow
-mobile CrabLink pairing companion
+Passport-authorized purchase flow
+mobile CrabLink Passport import/delegation companion
 offline entitlement design
 broader codec/subtitle/audio-track support
 ```
@@ -1767,7 +1858,7 @@ route registry allow/deny
 focus graph movement
 focus restoration
 Back stack
-pairing state machine
+Passport onboarding/unlock state machine
 receipt display normalization
 settings validation
 cache index behavior
@@ -1795,7 +1886,7 @@ B3 vectors
 confirmed-ROC rejection matrix
 origin allowlist
 settings/profile validation
-pairing DTO validation
+Passport proof DTO validation
 secret redaction
 ```
 
@@ -1822,12 +1913,12 @@ remote-only navigation
 Back behavior
 focus restore
 LAN gateway access
-pairing
+Passport unlock/proof
 media
 resume/background
 network loss
 cache corruption
-session expiry/revocation
+capability expiry/revocation
 ```
 
 ## 15.6 Cross-repository
@@ -1906,7 +1997,7 @@ crates/crablink-native-core/
     crab_url.rs
     b3.rs
     confirmed_roc.rs
-    pairing.rs
+    passport.rs
 ```
 
 Generated Android files must not be guessed before `tauri android init`; inspect the generated source and patch exact files.
@@ -1963,8 +2054,8 @@ CrabLink TV Alpha is complete only when all of the following are true:
 [ ] renders a real B3-backed image or publication
 [ ] rejects corrupt B3 content
 [ ] plays a real video and audio asset
-[ ] pairs with a trusted CrabLink companion device
-[ ] stores only a narrow device-bound session securely
+[ ] creates/imports/unlocks a local CrabLink Passport
+[ ] stores only approved local Passport/capability material securely
 [ ] displays real receipt history
 [ ] displays confirmed ROC only from valid wallet/ledger receipt projection
 [ ] opens already-entitled paid content only after backend confirmation
@@ -1985,8 +2076,10 @@ local micronode runtime on TV
 public Service Node runtime on TV
 Service Node Operator Mode
 reward issuance or planning
-wallet private-key custody
-seed phrase entry
+server/cloud Passport custody
+cloud login
+cloud-stored Passport secret
+seed phrase or private-key exposure outside approved local Passport custody
 unilateral wallet spend
 silent spend
 ledger mutation
@@ -2014,7 +2107,7 @@ Create the smallest host-buildable apps/crablink-tv shell.
 Run desktop and TV focused checks.
 Initialize Android.
 Build and sideload the first launcher-visible debug APK.
-Fix the first demonstrated failure before expanding into shared packages or backend pairing.
+Fix the first demonstrated failure before expanding into shared packages or backend Passport proof/capability work.
 ```
 
 That is the correct high-momentum starting point for CrabLink TV.

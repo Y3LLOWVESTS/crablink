@@ -14,11 +14,14 @@ import { useAppContext } from '../appContext.js';
 import PassportActions from './PassportActions.jsx';
 import PassportSummary, { buildPassportView } from './PassportSummary.jsx';
 import {
-  DEFAULT_DEV_STARTER_GRANT_MINOR,
   getDevPassportSession,
-  listDevPassportSessions,
   sessionLabel,
 } from '../../shared/utils/devPassportSessions.js';
+import {
+  explicitPassportDrawerStarterGrantMinor,
+  isExplicitPassportDrawerDevSurface,
+  listExplicitPassportDrawerDevSessions,
+} from './passportDrawerDevGate.js';
 import {
   readPublicProfileCache,
   subscribePublicProfileCache,
@@ -31,6 +34,17 @@ import {
   readLocalCatalog,
   subscribeLocalCatalog,
 } from '../../shared/catalog/localCatalog.js';
+import {
+  clearNativePassport,
+  confirmNativePassportRoot,
+  createNativePassport,
+  lockNativePassport,
+  readNativePassportStatus,
+  unlockNativePassportOperational,
+} from '../../adapters/passportAdapter.js';
+import {
+  resetDisposableOnboardingDevelopmentState,
+} from '../../onboarding/onboardingDevelopmentReset.js';
 
 const EMPTY_REFRESH_STATE = Object.freeze({
   status: 'idle',
@@ -43,6 +57,11 @@ const EMPTY_REFRESH_STATE = Object.freeze({
 
 const DEV_PASSPORT_SUBJECT = 'passport:main:dev';
 const DEV_WALLET_ACCOUNT = 'acct_dev';
+const NATIVE_PASSPORT_PHASE15AD_LABEL =
+  'NATIVE_PASSPORT_PHASE15AD_DRAWER_NATIVE_STATUS_ACCEPTANCE';
+const NATIVE_PASSPORT_PHASE15AF_LABEL =
+  'NATIVE_PASSPORT_PHASE15AF_DESKTOP_PASSPORT_NATIVE_MANUAL_ACCEPTANCE';
+
 
 export default function PassportDrawer({ id, navigation, onClose }) {
   const context = useAppContext();
@@ -53,15 +72,47 @@ export default function PassportDrawer({ id, navigation, onClose }) {
   const [publicProfileCache, setPublicProfileCache] = useState(() => readPublicProfileCache());
   const [recentReceipts, setRecentReceipts] = useState(() => readRecentReceipts());
   const [localCatalog, setLocalCatalog] = useState(() => readLocalCatalog());
+  const [nativePassportState, setNativePassportState] = useState(EMPTY_REFRESH_STATE);
+  const [nativePassportCommand, setNativePassportCommand] = useState('');
+  const [onboardingResetArmed, setOnboardingResetArmed] = useState(false);
+  const [onboardingResetBusy, setOnboardingResetBusy] = useState(false);
+
+  const nativePassportAvailable = isTauriRuntime();
+  const onboardingDevelopmentResetAvailable =
+    Boolean(
+      import.meta.env.DEV &&
+        nativePassportAvailable,
+    );
 
   useEffect(() => subscribePublicProfileCache(setPublicProfileCache), []);
   useEffect(() => subscribeRecentReceipts(setRecentReceipts), []);
   useEffect(() => subscribeLocalCatalog(setLocalCatalog), []);
 
+  useEffect(() => {
+    if (!nativePassportAvailable) {
+      return;
+    }
+
+    refreshNativePassportStatus({ silent: true });
+  }, [nativePassportAvailable]);
+
   const identityState = context.identityState || localIdentityState;
   const walletState = context.walletState || localWalletState;
-  const activeDevSession = context.storage?.devPassportSession || null;
-  const devSessions = useMemo(() => listDevPassportSessions(), []);
+  const drawerDevSurfaceEnabled =
+    isExplicitPassportDrawerDevSurface({
+      buildDev: import.meta.env.DEV,
+      settings: context.settings,
+    });
+  const activeDevSession = drawerDevSurfaceEnabled
+    ? context.storage?.devPassportSession || null
+    : null;
+  const devSessions = useMemo(
+    () =>
+      listExplicitPassportDrawerDevSessions({
+        enabled: drawerDevSurfaceEnabled,
+      }),
+    [drawerDevSurfaceEnabled],
+  );
 
   const view = useMemo(
     () =>
@@ -78,16 +129,173 @@ export default function PassportDrawer({ id, navigation, onClose }) {
   const activePassportSubject = String(context.settings?.passportSubject || view?.passportSubject || '').trim();
   const activeWalletAccount = String(context.settings?.walletAccount || view?.walletAccount || '').trim();
   const activeStarterGrantMinor =
-    String(activeDevSession?.starterGrantMinor || '').trim() || DEFAULT_DEV_STARTER_GRANT_MINOR;
+    explicitPassportDrawerStarterGrantMinor({
+      enabled: drawerDevSurfaceEnabled,
+      activeSession: activeDevSession,
+    });
 
   const canUseDevLabels = Boolean(
-    context.settings?.devMode !== false &&
+    drawerDevSurfaceEnabled &&
       (!context.settings?.passportSubject || !context.settings?.walletAccount),
   );
-  const canBootstrapStarter = Boolean(activePassportSubject && activeWalletAccount);
+  const canBootstrapStarter = Boolean(
+    drawerDevSurfaceEnabled &&
+      activeDevSession &&
+      activePassportSubject &&
+      activeWalletAccount,
+  );
   const profileConfirmed = Boolean(publicProfileCache?.profile?.backendConfirmed);
   const catalogCount = countCatalogEntries(localCatalog);
   const receiptCount = Array.isArray(recentReceipts) ? recentReceipts.length : 0;
+  const nativePassportBusy =
+    nativePassportState.status === 'checking' || Boolean(nativePassportCommand);
+  const nativePassportStatusLabel = nativePassportAvailable
+    ? nativePassportState.data?.state || nativePassportState.status || 'not_checked'
+    : 'unavailable_outside_tauri';
+  const nativePassportCommandLabel =
+    nativePassportState.response?.state || nativePassportState.command || 'none';
+  const nativePassportStatusRows = nativePassportStatusRowsFromDto(
+    nativePassportState.data,
+  );
+  const nativePassportCommandRows = nativePassportCommandRowsFromDto(
+    nativePassportState.response,
+  );
+  const nativePassportManualAcceptanceRows =
+    nativePassportManualAcceptanceRowsFromState(
+      nativePassportAvailable,
+      nativePassportState.data,
+      nativePassportState.response,
+    );
+
+  async function refreshNativePassportStatus({ silent = false } = {}) {
+    if (!nativePassportAvailable) {
+      const next = {
+        ...EMPTY_REFRESH_STATE,
+        status: 'error',
+        checkedAt: new Date().toISOString(),
+        error: new Error('Native Passport commands are available only inside Tauri.'),
+      };
+
+      setNativePassportState(next);
+      return next;
+    }
+
+    const checking = {
+      status: 'checking',
+      checkedAt: new Date().toISOString(),
+      account: '',
+      data: nativePassportState.data,
+      response: nativePassportState.response,
+      error: null,
+    };
+
+    setNativePassportState(checking);
+
+    try {
+      const status = await readNativePassportStatus();
+      const next = {
+        status: 'ok',
+        checkedAt: new Date().toISOString(),
+        account: '',
+        data: status,
+        response: null,
+        error: null,
+      };
+
+      setNativePassportState(next);
+
+      if (!silent) {
+        context.notify?.({
+          title: 'Native Passport status refreshed',
+          message: `Native Passport is ${status.state}.`,
+          tone: 'success',
+        });
+      }
+
+      return next;
+    } catch (error) {
+      const next = {
+        status: 'error',
+        checkedAt: new Date().toISOString(),
+        account: '',
+        data: null,
+        response: null,
+        error,
+      };
+
+      setNativePassportState(next);
+
+      if (!silent) {
+        context.notify?.({
+          title: 'Native Passport status unavailable',
+          message: error?.message || String(error),
+          tone: 'warning',
+        });
+      }
+
+      return next;
+    }
+  }
+
+  async function runNativePassportCommand(command, label) {
+    if (!nativePassportAvailable || nativePassportBusy) {
+      return null;
+    }
+
+    setNativePassportCommand(label);
+    setNativePassportState({
+      status: 'checking',
+      checkedAt: new Date().toISOString(),
+      account: '',
+      data: nativePassportState.data,
+      response: nativePassportState.response,
+      error: null,
+    });
+
+    try {
+      const commandResult = await command();
+      const status = await readNativePassportStatus();
+      const next = {
+        status: 'ok',
+        checkedAt: new Date().toISOString(),
+        account: '',
+        data: status,
+        response: commandResult,
+        command: label,
+        error: null,
+      };
+
+      setNativePassportState(next);
+      context.notify?.({
+        title: `Native Passport ${label}`,
+        message: `${commandResult.commandName || 'passport command'} returned ${commandResult.state}.`,
+        tone: commandResult.state === 'unavailable' ? 'warning' : 'success',
+      });
+
+      return next;
+    } catch (error) {
+      const next = {
+        status: 'error',
+        checkedAt: new Date().toISOString(),
+        account: '',
+        data: nativePassportState.data,
+        response: null,
+        command: label,
+        error,
+      };
+
+      setNativePassportState(next);
+      context.notify?.({
+        title: `Native Passport ${label} failed`,
+        message: error?.message || String(error),
+        tone: 'warning',
+      });
+
+      return next;
+    } finally {
+      setNativePassportCommand('');
+    }
+  }
 
   async function refreshIdentity() {
     if (typeof context.refreshIdentity === 'function') {
@@ -216,6 +424,16 @@ export default function PassportDrawer({ id, navigation, onClose }) {
   }
 
   async function bootstrapStarterGrant() {
+    if (!drawerDevSurfaceEnabled) {
+      context.notify?.({
+        title: 'Development surface disabled',
+        message:
+          'Starter ROC controls require an explicit development build and dev mode.',
+        tone: 'warning',
+      });
+      return null;
+    }
+
     const client = context.clients?.identity;
 
     if (!client?.bootstrapPassport) {
@@ -294,6 +512,16 @@ export default function PassportDrawer({ id, navigation, onClose }) {
   }
 
   async function useDevLabels() {
+    if (!drawerDevSurfaceEnabled) {
+      context.notify?.({
+        title: 'Development surface disabled',
+        message:
+          'Dev labels require an explicit development build and dev mode.',
+        tone: 'warning',
+      });
+      return null;
+    }
+
     if (typeof context.updateSettings !== 'function') {
       context.notify?.({
         title: 'Settings unavailable',
@@ -319,6 +547,16 @@ export default function PassportDrawer({ id, navigation, onClose }) {
   }
 
   async function openSession(sessionId) {
+    if (!drawerDevSurfaceEnabled) {
+      context.notify?.({
+        title: 'Development surface disabled',
+        message:
+          'Creator and visitor fixtures require an explicit development build and dev mode.',
+        tone: 'warning',
+      });
+      return null;
+    }
+
     const session = getDevPassportSession(sessionId);
 
     if (!session) {
@@ -369,6 +607,62 @@ export default function PassportDrawer({ id, navigation, onClose }) {
       });
     } finally {
       setOpeningSessionId('');
+    }
+  }
+
+  async function runOnboardingDevelopmentReset() {
+    if (
+      !onboardingDevelopmentResetAvailable ||
+      !onboardingResetArmed ||
+      onboardingResetBusy
+    ) {
+      return null;
+    }
+
+    setOnboardingResetBusy(true);
+
+    try {
+      const result =
+        await resetDisposableOnboardingDevelopmentState({
+          enabled:
+            onboardingDevelopmentResetAvailable,
+
+          resetSettingsToDefaults:
+            context.resetSettingsToDefaults,
+        });
+
+      context.notify?.({
+        title:
+          'Disposable onboarding state cleared',
+
+        message:
+          'Native status was verified as no_passport. Settings, cached profile identity, onboarding progress, and local display memory were reset.',
+
+        tone: 'success',
+      });
+
+      onClose?.();
+
+      globalThis.location?.reload?.();
+
+      return result;
+    } catch (error) {
+      context.notify?.({
+        title:
+          'Onboarding reset did not complete',
+
+        message:
+          error?.message ||
+          String(error),
+
+        tone: 'warning',
+      });
+
+      setOnboardingResetArmed(false);
+
+      return null;
+    } finally {
+      setOnboardingResetBusy(false);
     }
   }
 
@@ -435,6 +729,189 @@ export default function PassportDrawer({ id, navigation, onClose }) {
         </section>
       )}
 
+      <section className="cl-passport-truth" aria-label="Native Passport runtime">
+        <header className="cl-drawer-panel-head">
+          <div>
+            <strong>Local Native Passport</strong>
+            <p>
+              Wallet-like local custody commands run through the reviewed Tauri adapter only. No PIN or
+              recovery material is accepted by this React drawer. Root confirmation remains redacted.
+            </p>
+          </div>
+        </header>
+
+        <dl className="cl-passport-rows">
+          <div>
+            <dt>Native runtime</dt>
+            <dd>{nativePassportAvailable ? 'Available in Tauri' : 'Unavailable outside Tauri'}</dd>
+          </div>
+          <div>
+            <dt>Native status</dt>
+            <dd>{nativePassportStatusLabel}</dd>
+          </div>
+          <div>
+            <dt>Last command</dt>
+            <dd>{nativePassportCommandLabel}</dd>
+          </div>
+          <div>
+            <dt>Checked</dt>
+            <dd>{nativePassportState.checkedAt || 'Not checked in this drawer'}</dd>
+          </div>
+        </dl>
+
+        <div className="cl-passport-actions">
+          <button
+            type="button"
+            onClick={() => refreshNativePassportStatus()}
+            disabled={!nativePassportAvailable || nativePassportBusy}
+          >
+            {nativePassportState.status === 'checking' && !nativePassportCommand
+              ? 'Checking native status…'
+              : 'Refresh native status'}
+          </button>
+          <button
+            type="button"
+            onClick={() => runNativePassportCommand(createNativePassport, 'create')}
+            disabled={!nativePassportAvailable || nativePassportBusy}
+          >
+            {nativePassportCommand === 'create' ? 'Creating…' : 'Create local Passport'}
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              runNativePassportCommand(unlockNativePassportOperational, 'unlock operational')
+            }
+            disabled={!nativePassportAvailable || nativePassportBusy}
+          >
+            {nativePassportCommand === 'unlock operational'
+              ? 'Unlocking…'
+              : 'Unlock operational'}
+          </button>
+          <button
+            type="button"
+            onClick={() => runNativePassportCommand(lockNativePassport, 'lock')}
+            disabled={!nativePassportAvailable || nativePassportBusy}
+          >
+            {nativePassportCommand === 'lock' ? 'Locking…' : 'Lock'}
+          </button>
+          <button
+            type="button"
+            onClick={() => runNativePassportCommand(confirmNativePassportRoot, 'root confirm')}
+            disabled={!nativePassportAvailable || nativePassportBusy}
+            title="Redacted root-sensitive confirmation bridge only; no root material is returned."
+          >
+            {nativePassportCommand === 'root confirm'
+              ? 'Confirming…'
+              : 'Confirm root action'}
+          </button>
+          <button
+            type="button"
+            onClick={() => runNativePassportCommand(clearNativePassport, 'clear')}
+            disabled={!nativePassportAvailable || nativePassportBusy}
+            title="Drops native session material and removes the local encrypted vault."
+          >
+            {nativePassportCommand === 'clear' ? 'Clearing…' : 'Clear local Passport'}
+          </button>
+        </div>
+
+        <section aria-label="Native Passport status truth">
+          <h3>Native Passport status truth</h3>
+          <p>
+            Phase {NATIVE_PASSPORT_PHASE15AD_LABEL} renders normalized status and command DTO
+            facts only. Identifiers remain absent or redacted; unsafe flags must stay NO.
+          </p>
+          <dl className="cl-passport-rows">
+            {nativePassportStatusRows.map((row) => (
+              <div key={`native-status-${row.label}`}>
+                <dt>{row.label}</dt>
+                <dd>{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <h3>Last native command truth</h3>
+          <dl className="cl-passport-rows">
+            {nativePassportCommandRows.map((row) => (
+              <div key={`native-command-${row.label}`}>
+                <dt>{row.label}</dt>
+                <dd>{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <section aria-label="Native Passport manual acceptance">
+            <h3>Native Passport manual acceptance</h3>
+            <p>
+              Phase {NATIVE_PASSPORT_PHASE15AF_LABEL} is the human verification checklist for the
+              local Native Passport drawer. Run it only in the desktop Tauri shell.
+            </p>
+            <ol className="cl-passport-manual-acceptance">
+              {nativePassportManualAcceptanceRows.map((row) => (
+                <li key={`native-manual-${row.label}`}>
+                  <strong>{row.label}</strong>
+                  <span>{row.value}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </section>
+
+        {nativePassportState.status === 'error' && (
+          <p className="cl-passport-inline-warning">
+            {nativePassportState.error?.message || 'Native Passport command unavailable.'}
+          </p>
+        )}
+      </section>
+
+      {onboardingDevelopmentResetAvailable && (
+        <section
+          className="cl-passport-truth"
+          aria-label="Disposable onboarding development reset"
+          data-onboarding-development-reset="available"
+        >
+          <strong>
+            Disposable onboarding test reset
+          </strong>
+
+          <p>
+            Development build only. This permanently deletes the local encrypted
+            Native Passport vault and clears local CrabLink onboarding, username,
+            profile-cache, receipt, catalog, and settings display state. Use it
+            only for disposable test material.
+          </p>
+
+          <div className="cl-passport-actions">
+            <button
+              type="button"
+              disabled={onboardingResetBusy}
+              onClick={() => {
+                setOnboardingResetArmed(
+                  (armed) => !armed,
+                );
+              }}
+            >
+              {onboardingResetArmed
+                ? 'Disarm onboarding reset'
+                : 'Arm disposable onboarding reset'}
+            </button>
+
+            {onboardingResetArmed ? (
+              <button
+                type="button"
+                disabled={onboardingResetBusy}
+                onClick={() => {
+                  void runOnboardingDevelopmentReset();
+                }}
+              >
+                {onboardingResetBusy
+                  ? 'Clearing and verifying…'
+                  : 'Confirm clear Passport and reset onboarding'}
+              </button>
+            ) : null}
+          </div>
+        </section>
+      )}
+
       <PassportSummary
         view={view}
         identityState={identityState}
@@ -470,7 +947,8 @@ export default function PassportDrawer({ id, navigation, onClose }) {
         </div>
       </section>
 
-      <section className="cl-passport-truth" aria-label="Starter ROC bootstrap">
+      {drawerDevSurfaceEnabled && (
+        <section className="cl-passport-truth" aria-label="Starter ROC bootstrap">
         <header className="cl-drawer-panel-head">
           <div>
             <strong>Starter ROC bootstrap</strong>
@@ -510,7 +988,8 @@ export default function PassportDrawer({ id, navigation, onClose }) {
             {fallbackAwareMessage(bootstrapState.error, context.storage)}
           </p>
         )}
-      </section>
+        </section>
+      )}
 
       {devSessions.length > 0 && (
         <details className="cl-passport-truth" aria-label="Multi-passport dev testing">
@@ -549,7 +1028,7 @@ export default function PassportDrawer({ id, navigation, onClose }) {
         canUseDevLabels={canUseDevLabels}
       />
 
-      {context.storage?.isDevFallback && (
+      {drawerDevSurfaceEnabled && context.storage?.isDevFallback && (
         <section className="cl-passport-truth" aria-label="HTTP preview boundary">
           <strong>HTTP test mode</strong>
           <p>
@@ -595,6 +1074,181 @@ function unwrapGatewayData(response) {
   }
 
   return response;
+}
+
+
+function nativePassportStatusRowsFromDto(status) {
+  if (!status || typeof status !== 'object') {
+    return [
+      ['Status DTO schema', 'not_loaded'],
+      ['Native state', 'not_checked'],
+      ['Redacted', 'YES'],
+      ['Read only', 'YES'],
+      ['Native runtime ready', 'NO'],
+      ['Passport identifier', 'ABSENT'],
+      ['Device identifier', 'ABSENT'],
+      ['Username handle', 'ABSENT'],
+      ['Capability material', 'ABSENT'],
+      ['Unsafe status flags', 'NO'],
+    ].map(nativePassportRow);
+  }
+
+  return [
+    ['Status DTO schema', safeNativePassportDisplayValue(status.schema)],
+    ['Native state', safeNativePassportDisplayValue(status.state)],
+    ['Capability state', safeNativePassportDisplayValue(status.capabilityState)],
+    ['Redacted', safeBooleanLabel(status.redacted)],
+    ['Read only', safeBooleanLabel(status.readOnly)],
+    ['Native runtime ready', safeBooleanLabel(status.nativeRuntimeReady)],
+    ['Passport identifier', safeNativePassportDisplayValue(status.passportIdentifier)],
+    ['Device identifier', safeNativePassportDisplayValue(status.deviceIdentifier)],
+    ['Username handle', safeNativePassportDisplayValue(status.usernameHandle)],
+    ['Capability material', safeNativePassportDisplayValue(status.capabilityMaterial)],
+    [
+      'Unsafe status flags',
+      status.unlockPerformed === true ||
+      status.platformSealerAccessed === true ||
+      status.runtimeIoPerformed === true ||
+      status.storageMutated === true ||
+      status.walletOrLedgerMutated === true
+        ? 'YES'
+        : 'NO',
+    ],
+  ].map(nativePassportRow);
+}
+
+function nativePassportCommandRowsFromDto(command) {
+  if (!command || typeof command !== 'object') {
+    return [
+      ['Command DTO schema', 'not_loaded'],
+      ['Command name', 'none'],
+      ['Command state', 'none'],
+      ['Native secure input requested', 'NO'],
+      ['PIN from WebView', 'NO'],
+      ['Secret material returned', 'NO'],
+      ['Session changed', 'NO'],
+      ['Encrypted vault mutated', 'NO'],
+      ['Platform material mutated', 'NO'],
+      ['Recovery root unsealed', 'NO'],
+      ['Wallet or ledger mutated', 'NO'],
+    ].map(nativePassportRow);
+  }
+
+  return [
+    ['Command DTO schema', safeNativePassportDisplayValue(command.schema)],
+    ['Command name', safeNativePassportDisplayValue(command.commandName)],
+    ['Command state', safeNativePassportDisplayValue(command.state)],
+    [
+      'Native secure input requested',
+      safeBooleanLabel(command.nativeSecureInputRequested),
+    ],
+    ['PIN from WebView', safeBooleanLabel(command.pinReceivedFromWebview)],
+    ['Secret material returned', safeBooleanLabel(command.secretMaterialReturned)],
+    ['Session changed', safeBooleanLabel(command.sessionChanged)],
+    ['Encrypted vault mutated', safeBooleanLabel(command.encryptedVaultMutated)],
+    ['Platform material mutated', safeBooleanLabel(command.platformMaterialMutated)],
+    ['Recovery root unsealed', safeBooleanLabel(command.recoveryRootUnsealed)],
+    ['Wallet or ledger mutated', safeBooleanLabel(command.walletOrLedgerMutated)],
+  ].map(nativePassportRow);
+}
+
+
+function nativePassportManualAcceptanceRowsFromState(
+  nativeRuntimeAvailable,
+  status,
+  command,
+) {
+  const statusState = status?.state || 'not_checked';
+  const commandState = command?.state || 'none';
+
+  return [
+    [
+      'Manual acceptance phase',
+      NATIVE_PASSPORT_PHASE15AF_LABEL,
+    ],
+    [
+      'Runtime boundary',
+      nativeRuntimeAvailable
+        ? 'Available in Tauri; unavailable in browser preview.'
+        : 'Unavailable outside the Tauri desktop shell.',
+    ],
+    [
+      'Create path',
+      'Use Create local Passport and confirm the native secure prompt appears.',
+    ],
+    [
+      'Operational unlock path',
+      'Use Unlock operational and confirm status reaches operational_unlocked only after native input.',
+    ],
+    [
+      'Lock path',
+      'Use Lock and confirm in-memory operational material is dropped.',
+    ],
+    [
+      'Root confirmation path',
+      'Root-sensitive confirmation stays redacted and returns no root material.',
+    ],
+    [
+      'Clear path',
+      'Use Clear local Passport and confirm Clear returns the drawer to no_passport.',
+    ],
+    [
+      'React secret boundary',
+      'PIN, password, recovery words, and root material are never entered in React.',
+    ],
+    [
+      'Outcome checkpoint',
+      `Current status: ${safeNativePassportDisplayValue(statusState)}; last command: ${safeNativePassportDisplayValue(commandState)}.`,
+    ],
+  ].map(nativePassportRow);
+}
+
+function nativePassportRow([label, value]) {
+  return {
+    label,
+    value,
+  };
+}
+
+function safeNativePassportDisplayValue(value) {
+  if (typeof value !== 'string') {
+    return 'ABSENT';
+  }
+
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return 'ABSENT';
+  }
+
+  if (normalized === 'ABSENT' || normalized === 'REDACTED') {
+    return normalized;
+  }
+
+  if (
+    normalized.startsWith('crablink.native-passport.') ||
+    normalized.startsWith('passport_') ||
+    normalized === 'available' ||
+    normalized === 'unavailable' ||
+    normalized === 'no_passport' ||
+    normalized === 'stored_locked' ||
+    normalized === 'operational_unlocked' ||
+    normalized === 'absent' ||
+    normalized === 'created_locked' ||
+    normalized === 'already_exists' ||
+    normalized === 'create_rejected' ||
+    normalized === 'cancelled' ||
+    normalized === 'cleared' ||
+    normalized === 'locked'
+  ) {
+    return normalized;
+  }
+
+  return 'REDACTED';
+}
+
+function safeBooleanLabel(value) {
+  return value === true ? 'YES' : 'NO';
 }
 
 function fallbackAwareMessage(error, storage) {

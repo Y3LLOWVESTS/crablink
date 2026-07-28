@@ -11,6 +11,10 @@
 
 import { lazy } from 'react';
 
+import {
+  routeKindLabel as sharedRouteKindLabel,
+} from '../../../../packages/crablink-core/src/index.js';
+
 export const ROUTES = Object.freeze({
   home: lazy(() => import('../pages/home/HomePage.jsx')),
   library: lazy(() => import('../pages/library/LibraryPage.jsx')),
@@ -99,32 +103,5 @@ export function hasRouteKind(kind) {
   return Object.prototype.hasOwnProperty.call(ROUTES, String(kind || ''));
 }
 
-export function routeKindLabel(kind) {
-  const value = String(kind || '').trim();
-
-  if (!value) {
-    return 'Unknown';
-  }
-
-  if (value === 'notFound') {
-    return 'Not Found';
-  }
-
-  if (value === 'podcasts') {
-    return 'Podcasts';
-  }
-
-  if (value === 'chat') {
-    return 'Chat';
-  }
-
-  if (value === 'make') {
-    return 'Make Studio';
-  }
-
-  return value
-    .split(/[-_]/)
-    .filter(Boolean)
-    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
-    .join(' ');
-}
+export const routeKindLabel =
+  sharedRouteKindLabel;

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 
 import {
   chooseNextFocus,
+  wrappedFocusIndex,
 } from './focusGraph.js';
 
 const FOCUS_SELECTOR = [
@@ -9,6 +10,9 @@ const FOCUS_SELECTOR = [
   ':not([disabled])',
   ':not([aria-disabled="true"])',
 ].join('');
+
+const ACTIVE_FOCUS_SCOPE_SELECTOR =
+  '[data-tv-focus-scope="active"]';
 
 const KEY_DIRECTIONS = Object.freeze({
   ArrowUp: 'up',
@@ -64,17 +68,29 @@ function preservesNativeArrowBehavior(target) {
   ].includes(target.tagName);
 }
 
-export function useTvRemoteNavigation() {
+function activeFocusRoot() {
+  return (
+    document.querySelector(
+      ACTIVE_FOCUS_SCOPE_SELECTOR,
+    ) ??
+    document
+  );
+}
+
+export function useTvRemoteNavigation({
+  focusScopeKey = 'root',
+} = {}) {
   useEffect(() => {
-    function focusableElements() {
+    function focusableElements(root = activeFocusRoot()) {
       return [
-        ...document.querySelectorAll(FOCUS_SELECTOR),
+        ...root.querySelectorAll(FOCUS_SELECTOR),
       ].filter(isVisible);
     }
 
     const initialFocusFrame = window.requestAnimationFrame(
       () => {
-        const elements = focusableElements();
+        const root = activeFocusRoot();
+        const elements = focusableElements(root);
 
         const initial =
           elements.find(
@@ -83,13 +99,46 @@ export function useTvRemoteNavigation() {
           ) ??
           elements[0];
 
-        if (initial && !elements.includes(document.activeElement)) {
+        if (
+          initial &&
+          !elements.includes(document.activeElement)
+        ) {
           focusElement(initial);
         }
       },
     );
 
     function handleRemoteKey(event) {
+      const root = activeFocusRoot();
+      const elements = focusableElements(root);
+
+      if (
+        event.key === 'Tab' &&
+        root !== document
+      ) {
+        if (elements.length === 0) {
+          return;
+        }
+
+        const currentIndex =
+          elements.indexOf(document.activeElement);
+
+        const nextIndex = wrappedFocusIndex(
+          currentIndex,
+          elements.length,
+          event.shiftKey,
+        );
+
+        if (nextIndex < 0) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        focusElement(elements[nextIndex]);
+        return;
+      }
+
       const direction = KEY_DIRECTIONS[event.key];
 
       if (
@@ -102,8 +151,6 @@ export function useTvRemoteNavigation() {
       ) {
         return;
       }
-
-      const elements = focusableElements();
 
       if (elements.length === 0) {
         return;
@@ -162,5 +209,5 @@ export function useTvRemoteNavigation() {
         true,
       );
     };
-  }, []);
+  }, [focusScopeKey]);
 }

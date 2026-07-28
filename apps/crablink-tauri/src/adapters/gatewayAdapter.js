@@ -1,16 +1,47 @@
 /**
- * RO:WHAT — Frontend gateway adapter placeholder for Tauri.
- * RO:WHY — Keeps route calls gateway-first during migration.
- * RO:INTERACTS — Tauri commands health_check_gateway and resolve_crab_url_gateway.
- * RO:INVARIANTS — no direct wallet, ledger, storage, index, or omnigate calls from React.
+ * RO:WHAT — Desktop gateway adapter implementing the shared gateway request port.
+ * RO:WHY — Desktop React needs reviewed gateway operations without raw command naming.
+ * RO:INTERACTS — @crablink/platform and fixed desktop Tauri gateway commands.
+ * RO:INVARIANTS — health, ready, and crab resolution only; no direct service or arbitrary URL calls.
+ * RO:SECURITY — no wallet, ledger, receipt, entitlement, or finality authority.
+ * RO:TEST — check-crablink-platform-contracts-boundary.mjs.
  */
 
-import { callTauri } from "../platform/tauriPlatform.js";
+import {
+  createGatewayPort,
+} from '../../../../packages/crablink-platform/src/index.js';
+
+import {
+  callTauri,
+} from '../platform/tauriPlatform.js';
 
 export function healthCheckGateway() {
-  return callTauri("health_check_gateway");
+  return callTauri(
+    'health_check_gateway',
+  );
 }
 
-export function resolveCrabUrlGateway(crabUrl) {
-  return callTauri("resolve_crab_url_gateway", { crabUrl });
+export function readyCheckGateway() {
+  return callTauri(
+    'ready_check_gateway',
+  );
 }
+
+export function resolveCrabUrlGateway(
+  crabUrl,
+) {
+  return callTauri(
+    'resolve_crab_url_gateway',
+    {
+      crabUrl,
+    },
+  );
+}
+
+export const gatewayPort =
+  createGatewayPort({
+    health: healthCheckGateway,
+    ready: readyCheckGateway,
+    resolveCrabUrl:
+      resolveCrabUrlGateway,
+  });

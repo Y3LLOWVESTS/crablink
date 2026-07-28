@@ -1,10 +1,14 @@
 /**
  * Pure route-state behavior for CrabLink TV.
  *
- * Browser history and DOM focus are handled by the React hook. This module
- * owns validation, depth changes, Back-key recognition, and restoration order
- * so those rules can be tested without a WebView.
+ * Shared CrabLink input parsing and normalized crab:// route truth come from
+ * @crablink/core. Browser history, DOM focus, Back handling, and section-depth
+ * behavior remain TV-specific and are handled by this model and its React hook.
  */
+
+import {
+  parseCrabInput,
+} from '../../../../packages/crablink-core/src/index.js';
 
 export const TV_ROUTE_KIND =
   'crablink-tv-route-v1';
@@ -19,7 +23,10 @@ const TV_BACK_KEYS = new Set([
 function normalizeDepth(value) {
   const depth = Number(value);
 
-  if (!Number.isSafeInteger(depth) || depth < 0) {
+  if (
+    !Number.isSafeInteger(depth) ||
+    depth < 0
+  ) {
     return 0;
   }
 
@@ -43,23 +50,95 @@ function normalizeFocusKey(value) {
   return trimmed;
 }
 
+function normalizeSectionIds(sectionIds) {
+  if (!Array.isArray(sectionIds)) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      sectionIds.filter(
+        (sectionId) =>
+          typeof sectionId === 'string' &&
+          sectionId.length > 0,
+      ),
+    ),
+  ];
+}
+
 export function normalizeTvSectionId(
   sectionIds,
   candidate,
   initialSectionId,
 ) {
+  const normalizedSectionIds =
+    normalizeSectionIds(sectionIds);
+
   if (
     typeof candidate === 'string' &&
-    sectionIds.includes(candidate)
+    normalizedSectionIds.includes(candidate)
   ) {
     return candidate;
   }
 
-  if (sectionIds.includes(initialSectionId)) {
+  if (
+    normalizedSectionIds.includes(
+      initialSectionId,
+    )
+  ) {
     return initialSectionId;
   }
 
-  return sectionIds[0] ?? 'home';
+  return normalizedSectionIds[0] ?? 'home';
+}
+
+export function normalizeTvCrabRoute(
+  candidate,
+  sectionIds,
+  initialSectionId = 'home',
+) {
+  const normalizedSectionIds =
+    normalizeSectionIds(sectionIds);
+
+  const fallbackSectionId =
+    normalizeTvSectionId(
+      normalizedSectionIds,
+      initialSectionId,
+      initialSectionId,
+    );
+
+  const builtIns = [
+    ...new Set([
+      ...normalizedSectionIds,
+      fallbackSectionId,
+    ]),
+  ];
+
+  const parsed = parseCrabInput(
+    candidate,
+    {
+      builtIns,
+    },
+  );
+
+  if (
+    parsed.kind === 'builtin' &&
+    builtIns.includes(parsed.routeKind)
+  ) {
+    return parseCrabInput(
+      parsed.normalized,
+      {
+        builtIns,
+      },
+    );
+  }
+
+  return parseCrabInput(
+    `crab://${fallbackSectionId}`,
+    {
+      builtIns,
+    },
+  );
 }
 
 export function createInitialTvRoute(
@@ -75,6 +154,11 @@ export function createInitialTvRoute(
   return {
     kind: TV_ROUTE_KIND,
     sectionId,
+    crabRoute: normalizeTvCrabRoute(
+      sectionId,
+      sectionIds,
+      initialSectionId,
+    ),
     focusKey: `nav-${sectionId}`,
     depth: 0,
   };
@@ -109,6 +193,11 @@ export function normalizeTvRouteState(
   return {
     kind: TV_ROUTE_KIND,
     sectionId,
+    crabRoute: normalizeTvCrabRoute(
+      sectionId,
+      sectionIds,
+      initialSectionId,
+    ),
     focusKey:
       normalizeFocusKey(value.focusKey) ??
       `nav-${sectionId}`,
@@ -136,13 +225,21 @@ export function createNextTvRoute(
       initialSectionId,
     );
 
-  if (normalizedSectionId === current.sectionId) {
+  if (
+    normalizedSectionId ===
+    current.sectionId
+  ) {
     return null;
   }
 
   return {
     kind: TV_ROUTE_KIND,
     sectionId: normalizedSectionId,
+    crabRoute: normalizeTvCrabRoute(
+      normalizedSectionId,
+      sectionIds,
+      initialSectionId,
+    ),
     focusKey:
       normalizeFocusKey(initiatingFocusKey) ??
       `nav-${normalizedSectionId}`,

@@ -8,6 +8,7 @@
 #![forbid(unsafe_code)]
 
 use crate::state::AppState;
+use crablink_native_core::b3::normalize_canonical_b3;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
@@ -546,25 +547,11 @@ fn is_loopback_host(host: &str) -> bool {
 }
 
 fn normalize_b3_object(raw: &str) -> Result<String, String> {
-    let clean = raw.trim();
-
-    let digest = clean.strip_prefix("b3:").ok_or_else(|| {
+    normalize_canonical_b3(raw).map_err(|_| {
         "OAP object must use canonical \
              b3:<64 lowercase hex> form"
             .to_string()
-    })?;
-
-    if digest.len() != 64
-        || !digest
-            .bytes()
-            .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f'))
-    {
-        return Err("OAP object must use canonical \
-             b3:<64 lowercase hex> form"
-            .to_string());
-    }
-
-    Ok(format!("b3:{digest}"))
+    })
 }
 
 fn next_correlation_id() -> u64 {

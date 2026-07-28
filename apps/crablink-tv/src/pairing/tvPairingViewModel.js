@@ -148,6 +148,95 @@ export function normalizeTvGatewayProfile(
   };
 }
 
+function safeChallengeHandle(value) {
+  const handle = safeString(value, 128);
+
+  if (
+    !handle ||
+    handle.length < 8 ||
+    !/^[A-Za-z0-9_-]+$/.test(handle)
+  ) {
+    return null;
+  }
+
+  return handle;
+}
+
+function safeFuturePairingExpiry(
+  value,
+  nowMs,
+) {
+  const expiry = safeString(value, 20);
+
+  if (
+    !expiry ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(
+      expiry,
+    )
+  ) {
+    return null;
+  }
+
+  const expiryMs = Date.parse(expiry);
+
+  if (
+    !Number.isFinite(expiryMs) ||
+    expiryMs <= nowMs
+  ) {
+    return null;
+  }
+
+  return expiry;
+}
+
+export function normalizeTvPairingBeginResponse(
+  value,
+  nowMs = Date.now(),
+) {
+  const challengeHandle =
+    safeChallengeHandle(
+      value?.challengeHandle,
+    );
+
+  const pairingCode =
+    safePairingCode(value?.pairingCode);
+
+  const expiresAt =
+    safeFuturePairingExpiry(
+      value?.expiresAt,
+      nowMs,
+    );
+
+  const valid =
+    value?.schema ===
+      'crablink.tv.pairing-begin-response.v1' &&
+    value?.state === 'waiting' &&
+    Boolean(challengeHandle) &&
+    Boolean(pairingCode) &&
+    Boolean(expiresAt) &&
+    value?.approvalAuthority ===
+      'companion-crablink-required';
+
+  return {
+    schema:
+      'crablink.tv.pairing-begin-response.v1',
+    state: valid ? 'waiting' : 'error',
+    challengeHandle:
+      valid ? challengeHandle : null,
+    pairingCode:
+      valid ? pairingCode : null,
+    expiresAt:
+      valid ? expiresAt : null,
+    sessionPresent: false,
+    approvalAuthority:
+      'companion-crablink-required',
+    errorCode:
+      valid
+        ? null
+        : 'pairing_begin_response_invalid',
+  };
+}
+
 export function normalizeTvPairingStatus(
   value,
 ) {

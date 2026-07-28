@@ -44,7 +44,7 @@ const EMPTY_CATALOG = Object.freeze({
 export default function HomePage({ app }) {
   const settings = app?.settings || {};
   const gatewayUrl = settings.gatewayUrl || settings.baseUrl || 'http://127.0.0.1:8090';
-  const passport = settings.passportSubject || 'not configured';
+  const passport = onboardingIdentityLabel(settings);
   const wallet = settings.walletAccount || 'not configured';
 
   const [catalog, setCatalog] = useState(() => safeReadCatalog());
@@ -222,6 +222,48 @@ export default function HomePage({ app }) {
         </Card>
       </section>
     </section>
+  );
+}
+
+function onboardingIdentityLabel(settings = {}) {
+  const status =
+    String(settings.usernameStatus || '')
+      .trim()
+      .toLowerCase();
+
+  const confirmedHandle =
+    String(settings.handle || '')
+      .trim();
+
+  if (
+    confirmedHandle &&
+    status === 'confirmed'
+  ) {
+    return `${confirmedHandle} backend confirmed`;
+  }
+
+  const requestedHandle =
+    String(
+      settings.requestedHandle ||
+      settings.requestedUsername ||
+      '',
+    )
+      .replace(/^@?/, '@')
+      .trim();
+
+  if (requestedHandle !== '@') {
+    return `${requestedHandle} local draft`;
+  }
+
+  const passportSubject =
+    String(
+      settings.passportSubject || '',
+    )
+      .trim();
+
+  return (
+    passportSubject ||
+    'not configured'
   );
 }
 
