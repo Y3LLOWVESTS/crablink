@@ -24253,3 +24253,1726 @@ RUSTYONIONS_CHANGED=NO
 
 
 ### END NOTE - JULY 27 2026 - 00:55 CST
+
+
+
+### BEGIN NOTE - JULY 27 2026 - 23:15 CST
+
+
+# CrabLink Onboarding Buildplan — Exhaustive Carry-Over Notes
+
+**Session date:** July 27–28, 2026  
+**Primary repository changed:** `/Users/mymac/Desktop/crablink/apps/crablink-tauri`  
+**Primary plan:** `ONBOARDING_BUILDPLAN.md`  
+**Current posture:** Desktop onboarding is functionally green, but Phase 11 still needs formal closeout and platform-secret deletion. Phase 12 is not complete.  
+**Do not return to Passport Native Phase 16 yet.**
+
+---
+
+## 1. Executive status
+
+This session converted CrabLink desktop onboarding into a real native-backed local-custody Passport lifecycle:
+
+```text
+clean launch
+→ username draft
+→ native Passport create
+→ native PIN
+→ native recovery phrase
+→ acknowledgement
+→ native PIN confirmation
+→ optional profile
+→ home
+→ quit
+→ reopen
+→ shell stays closed while Passport is locked
+→ native PIN prompt
+→ operational unlock confirmed
+→ shell opens
+```
+
+Implemented behavior now includes:
+
+- user-entered local username draft;
+- no baked `@skinnycrabby`, Passport A/B, or visitor identity in the normal flow;
+- native-only Passport PIN creation;
+- real native recovery-phrase display;
+- one-time recovery acknowledgement;
+- native-only PIN confirmation;
+- optional public profile draft or skip;
+- handoff to `crab://home`;
+- a restart lock gate that prevents the normal CrabLink shell from mounting until the native Passport is operationally unlocked;
+- a stable locally signed macOS app for Keychain acceptance testing;
+- an isolated signed-acceptance username-availability bypass that does not expose the broad development shell.
+
+The difficult core behavior is in place. Remaining work is formal closure, platform-secret cleanup, and cross-platform contract extraction.
+
+---
+
+## 2. Buildplan status
+
+### Phases 0–10
+
+Treat Phases 0–10 as implemented/green unless a new regression proves otherwise.
+
+These cover:
+
+- dev artifact inventory and quarantine;
+- onboarding state model;
+- redacted persisted onboarding state;
+- clean-start route gate;
+- username entry and syntax validation;
+- desktop Passport creation handoff;
+- recovery ceremony;
+- native PIN confirmation;
+- profile save/skip;
+- completion and home handoff;
+- removal/quarantine of baked development identities from normal user flow.
+
+### Phase 11 — Desktop final acceptance
+
+**Current status: functionally green, not formally closed.**
+
+Do not print or document:
+
+```text
+ONBOARDING_DESKTOP_FINAL_ACCEPTANCE=GREEN
+```
+
+until both are complete:
+
+1. Passport clear deletes app-owned platform secret material, not only the encrypted vault and memory sessions.
+2. One final signed end-to-end acceptance records the full clean-create-restart-unlock-clear-clean sequence.
+
+### Phase 12 — Cross-platform onboarding contract
+
+**Current status: not completed.**
+
+Phase 12 must freeze the shared onboarding contract for desktop, Android TV, Android, iOS, tablet, and future clients.
+
+Acceptance remains:
+
+```text
+ONBOARDING_CROSS_PLATFORM_CONTRACT=GREEN
+```
+
+The whole onboarding buildplan is not complete until Phase 12 is green.
+
+---
+
+## 3. Repository and crate scope
+
+### Repository changed
+
+Only the CrabLink repository was intentionally changed, primarily:
+
+```text
+/Users/mymac/Desktop/crablink/apps/crablink-tauri
+```
+
+### RustyOnions
+
+RustyOnions crates were compiled as dependencies, including `svc-passport`, but were not intentionally modified.
+
+Repeated patch banners reported:
+
+```text
+RUSTYONIONS_CHANGED=NO
+```
+
+Verify this next session with repository status rather than relying only on the banner.
+
+### Machine-local changes outside Git
+
+The following were changed on the development Mac and are not repository files:
+
+- self-signed code-signing certificate created in the macOS login Keychain;
+- certificate Code Signing trust set to Always Trust;
+- `/usr/bin/codesign` granted persistent private-key access with **Always Allow**;
+- stale CrabLink Keychain Passport items manually deleted during testing.
+
+These machine-local changes do not travel through GitHub.
+
+---
+
+## 4. Important source changes
+
+Inspect the final Git diff next session, but these files were created or changed.
+
+### Native/Rust
+
+#### `src-tauri/src/onboarding_phase11b_command_path_tests.rs`
+
+Added focused command-path proofs using one managed `AppState`.
+
+Tests prove:
+
+- create and recovery use the same process and native state;
+- recovery material is staged in native memory;
+- recovery display consumes pending recovery material without platform unseal;
+- missing pending recovery fails closed;
+- missing pending recovery does not enter Keychain fallback;
+- first-run operational PIN confirmation uses pending operational material;
+- first-run operational PIN confirmation does not read Keychain.
+
+Important markers:
+
+```text
+CREATE_PENDING_STAGED=YES
+CREATE_OPERATIONAL_PENDING_STAGED=YES
+RECOVERY_PENDING_PRESENT=YES
+RECOVERY_PENDING_USED=YES
+RECOVERY_PLATFORM_UNSEAL_ATTEMPTED=NO
+OPERATIONAL_PENDING_PRESENT=YES
+OPERATIONAL_PENDING_USED=YES
+OPERATIONAL_PLATFORM_UNSEAL_ATTEMPTED=NO
+```
+
+#### `src-tauri/src/passport_recovery_phrase_runtime.rs`
+
+Interrupted recovery changed from:
+
+```text
+pending recovery absent
+→ fallback to platform unseal
+→ unsigned debug app asks Keychain for recovery-root
+```
+
+to:
+
+```text
+pending recovery absent
+→ fail closed as unavailable
+→ no platform unseal
+→ no recovery-root Keychain prompt
+```
+
+Added redacted markers:
+
+```text
+RECOVERY_PROCESS_ID
+RECOVERY_PENDING_PRESENT
+RECOVERY_PENDING_USED
+RECOVERY_PLATFORM_UNSEAL_ATTEMPTED
+RECOVERY_INTERRUPTED_HANDOFF
+```
+
+A release-only unused-variable warning was repaired.
+
+#### `src-tauri/src/passport_pending_operational_runtime.rs`
+
+New native-only process-memory store for the operational platform factor created during first-run Passport creation.
+
+Responsibilities:
+
+- stage operational factor;
+- take pending operational factor;
+- restore factor after failed PIN attempt;
+- clear factor;
+- report only boolean presence;
+- never serialize or return secret material to React.
+
+Security posture:
+
+- process memory only;
+- no WebView custody;
+- no local storage;
+- no secret-byte logs;
+- cleared on success, clear, replacement, or process exit.
+
+#### `src-tauri/src/passport_vault_create_runtime.rs`
+
+Added create path that hands off both generated platform factors:
+
+- recovery-root factor;
+- operational/device-key factor.
+
+The path still seals both into platform storage for restart persistence while retaining first-run copies in native memory.
+
+#### `src-tauri/src/passport_create_command_runtime.rs`
+
+Added create command path using both pending stores.
+
+Current first-run posture:
+
+```text
+native create PIN
+→ create real encrypted vault
+→ stage recovery factor
+→ stage operational factor
+→ seal persistent factors
+→ return redacted created_locked status
+```
+
+Added:
+
+```text
+CREATE_OPERATIONAL_PENDING_STAGED
+```
+
+#### `src-tauri/src/passport_operational_unlock_runtime.rs`
+
+Added operational unlock using a native-only retained operational factor directly.
+
+This allows same-process first-run PIN confirmation without rereading Keychain.
+
+The normal post-restart platform-sealer unlock remains available.
+
+#### `src-tauri/src/passport_operational_command_runtime.rs`
+
+Added orchestration that:
+
+- requests PIN from native surface;
+- checks for pending operational factor;
+- uses it when present;
+- falls back to platform storage after restart;
+- restores pending factor after rejected/wrong PIN;
+- returns only redacted DTO state.
+
+Added:
+
+```text
+OPERATIONAL_UNLOCK_PROCESS_ID
+OPERATIONAL_PENDING_PRESENT
+OPERATIONAL_PENDING_USED
+OPERATIONAL_PLATFORM_UNSEAL_ATTEMPTED
+```
+
+#### `src-tauri/src/commands/passport.rs`
+
+Updated public command wiring so:
+
+- Passport create uses both pending stores;
+- operational unlock uses pending operational memory when available;
+- Passport clear drops pending recovery and pending operational memory.
+
+Platform-secret deletion is still not integrated into clear.
+
+#### `src-tauri/src/state.rs`
+
+Added pending operational session store to managed `AppState`.
+
+#### `src-tauri/src/lib.rs`
+
+Registered the new native module and focused Phase 11B tests.
+
+### Existing native files that remain central
+
+#### `src-tauri/src/passport_pending_recovery_runtime.rs`
+
+Native-only recovery-factor store.
+
+Do not weaken:
+
+- no serialization;
+- no React;
+- no raw secret output;
+- consume on acknowledgement;
+- restore on safe ceremony cancellation;
+- clear on Passport clear.
+
+#### `src-tauri/src/passport_platform_sealer.rs`
+
+Current macOS Keychain adapter.
+
+Known service/accounts:
+
+```text
+service:
+com.rustyonions.crablink.native-passport.v1
+
+accounts:
+recovery-root
+device-key
+```
+
+Current backend supports:
+
+```text
+set_secret
+get_secret
+```
+
+It does not yet support real delete/purge behavior.
+
+This is the largest remaining Phase 11 gap.
+
+### React/onboarding
+
+#### `src/onboarding/startupPassportUnlockGate.js`
+
+New pure model/orchestration layer.
+
+Behavior:
+
+- read native Passport status;
+- if already operationally unlocked, admit shell;
+- if locked/stored_locked, call fixed no-argument native unlock;
+- reread native status;
+- admit shell only after confirmed `operational_unlocked`;
+- fail closed on cancellation, rejection, malformed DTO, no Passport, or unavailable state.
+
+#### `src/onboarding/StartupPassportUnlockGate.jsx`
+
+New visual/runtime gate.
+
+Completed onboarding no longer automatically mounts the shell.
+
+```text
+completed onboarding
+→ startup native status check
+→ locked triggers native PIN prompt
+→ shell remains unmounted
+→ post-unlock status reread
+→ shell mounts only after operational_unlocked
+```
+
+Contains no PIN input.
+
+Uses a shared in-flight attempt guard so React Strict Mode does not create duplicate native prompts.
+
+#### `src/onboarding/startupPassportUnlockGate.test.mjs`
+
+Proves:
+
+- already-unlocked status skips prompt;
+- locked status invokes one unlock;
+- unlock requires unlocked-status reread;
+- cancel fails closed;
+- unsafe DTOs fail closed;
+- React has no PIN input or dynamic invoke;
+- completed onboarding wraps shell with startup gate.
+
+#### `src/onboarding/OnboardingRouteGate.jsx`
+
+Completed onboarding changed from direct `children` return to:
+
+```jsx
+<StartupPassportUnlockGate>
+  {children}
+</StartupPassportUnlockGate>
+```
+
+Also gained explicit signed-acceptance username flag.
+
+#### `src/onboarding/WelcomeUsernameStep.jsx`
+
+Separated:
+
+1. username-availability bypass;
+2. broad development-shell bypass.
+
+Signed acceptance may expose only username availability bypass.
+
+Broad shell bypass remains development-only.
+
+#### `src/onboarding/signedUsernameAcceptanceFlag.test.mjs`
+
+Proves:
+
+- `VITE_CRABLINK_SIGNED_ONBOARDING_ACCEPTANCE` is explicit;
+- signed flag may enable username availability bypass;
+- signed flag does not enable development shell;
+- official builds without flag are unchanged.
+
+---
+
+## 5. Problems encountered and resolutions
+
+### A. Tauri Cargo checks failed before Rust compilation
+
+Observed error:
+
+```text
+The tauri dependency features do not match tauri.conf.json.
+Run tauri dev/build or remove macos-private-api.
+```
+
+Cause:
+
+- `macos-private-api` enabled;
+- direct Cargo command used base config;
+- macOS overlay enabling `app.macOSPrivateApi` omitted.
+
+Correct pattern:
+
+```bash
+TAURI_CONFIG="$(
+  cat src-tauri/tauri.macos.dev-media.conf.json
+)" cargo check   --manifest-path src-tauri/Cargo.toml
+```
+
+Use same environment for direct Cargo tests/checks.
+
+Do not call this a Rust compiler failure; it occurs in Tauri’s build script first.
+
+### B. Old incomplete Passport caused recovery Keychain prompt
+
+Markers:
+
+```text
+RECOVERY_PENDING_PRESENT=NO
+RECOVERY_PENDING_USED=NO
+RECOVERY_PLATFORM_UNSEAL_ATTEMPTED=YES
+```
+
+Cause:
+
+- Passport created before pending-memory handoff or app restarted;
+- one-time recovery factor absent;
+- runtime fell back to Keychain.
+
+Resolution:
+
+- removed Keychain recovery redisplay fallback;
+- missing pending recovery fails closed;
+- tests prove no platform unseal.
+
+Future UX:
+
+Replace misleading “Retry native recovery ceremony” with interrupted-setup/reset guidance when factor is gone.
+
+### C. First-run PIN confirmation caused device-key Keychain prompt
+
+Cause:
+
+- creation retained only recovery factor;
+- PIN confirmation entered normal post-restart unlock path;
+- device-key read from Keychain.
+
+Resolution:
+
+- added pending operational memory;
+- create stages both factors;
+- first-run PIN confirmation consumes retained operational factor;
+- wrong PIN restores it;
+- no first-run platform unseal.
+
+### D. Post-restart unlock showed authenticity warning
+
+Runtime after restart correctly showed:
+
+```text
+OPERATIONAL_PENDING_PRESENT=NO
+OPERATIONAL_PENDING_USED=NO
+OPERATIONAL_PLATFORM_UNSEAL_ATTEMPTED=YES
+```
+
+Persistent platform storage is expected after restart.
+
+The problem was:
+
+```text
+The authenticity of "crablink-tauri" cannot be verified.
+```
+
+Diagnosis:
+
+```text
+0 valid code-signing identities
+debug binary unsigned
+release app unsigned
+no Tauri signing identity
+```
+
+Resolution:
+
+- created local self-signed Code Signing identity;
+- trusted it;
+- signed release `.app`;
+- verified stable designated requirement.
+
+### E. Completed onboarding opened shell before PIN unlock
+
+Cause:
+
+- completion state admitted normal shell;
+- native operational session reset to locked after restart;
+- route gate did not require `operational_unlocked`.
+
+Resolution:
+
+- startup Passport unlock gate;
+- completed onboarding no longer directly mounts shell;
+- native status/unlock checked first.
+
+### F. Signed release hid username dev bypass
+
+Cause:
+
+- `import.meta.env.DEV` is false in release;
+- live username availability not connected;
+- normal release correctly hid bypass.
+
+Resolution:
+
+```text
+VITE_CRABLINK_SIGNED_ONBOARDING_ACCEPTANCE=1
+```
+
+This enables only username availability bypass, not development shell.
+
+### G. Initial signed-acceptance patch failed but build continued
+
+Failure:
+
+```text
+WELCOME_DEVELOPMENT_SHELL_ALLOWED_REPLACEMENTS:
+EXPECTED=2
+FOUND=3
+```
+
+Patch aborted transactionally.
+
+Evidence:
+
+```text
+signedUsernameAcceptanceFlag.test.mjs missing
+```
+
+Subsequent build was old source.
+
+Resolution:
+
+- corrected patch for all three occurrences;
+- added post-write checks;
+- user confirmed signed acceptance bypass worked.
+
+Lesson:
+
+```text
+Never continue to build after patch says RED.
+```
+
+Verify expected file/marker before interpreting build success.
+
+---
+
+## 6. Verification results achieved
+
+### Recovery no-fallback
+
+```text
+RECOVERY_PENDING_PRESENT=NO
+RECOVERY_PENDING_USED=NO
+RECOVERY_PLATFORM_UNSEAL_ATTEMPTED=NO
+RECOVERY_INTERRUPTED_HANDOFF=YES
+```
+
+### Same-process recovery
+
+```text
+CREATE_PENDING_STAGED=YES
+RECOVERY_PENDING_PRESENT=YES
+RECOVERY_PENDING_USED=YES
+RECOVERY_PLATFORM_UNSEAL_ATTEMPTED=NO
+```
+
+### Same-process operational confirmation
+
+```text
+CREATE_OPERATIONAL_PENDING_STAGED=YES
+OPERATIONAL_PENDING_PRESENT=YES
+OPERATIONAL_PENDING_USED=YES
+OPERATIONAL_PLATFORM_UNSEAL_ATTEMPTED=NO
+```
+
+### Native regressions passed
+
+- Phase 11B pending recovery tests;
+- Phase 11B command-path test;
+- missing-pending fail-closed test;
+- Phase 15V operational unlock acceptance;
+- Phase 15W Passport create bridge;
+- Phase 15AA clear bridge;
+- public recovery command wiring;
+- Tauri Cargo check with correct config;
+- release Cargo check with correct config.
+
+### React regressions passed
+
+- startup unlock gate;
+- onboarding route gate;
+- Passport adapter;
+- welcome/username;
+- PIN React boundary;
+- production Vite build;
+- signed-acceptance Vite build.
+
+### Signed app verification
+
+Path:
+
+```text
+/Users/mymac/Desktop/crablink/apps/crablink-tauri/
+src-tauri/target/release/bundle/macos/CrabLink.app
+```
+
+Verified:
+
+```text
+Identifier=com.rustyonions.crablink
+Authority=CrabLink Local Development Code Signing
+valid on disk
+satisfies Designated Requirement
+```
+
+Designated requirement:
+
+```text
+identifier "com.rustyonions.crablink"
+and certificate root =
+43cd01d5bca527b6943066e44255083f63a5df8e
+```
+
+Notarization skipped because this is local development; expected.
+
+---
+
+## 7. Machine-local certificate details
+
+### Identity
+
+```text
+CrabLink Local Development Code Signing
+```
+
+Fingerprint:
+
+```text
+43CD01D5BCA527B6943066E44255083F63A5DF8E
+```
+
+### Location
+
+macOS **login** Keychain.
+
+Not stored in repository.
+
+### Trust/access
+
+- Code Signing trust: Always Trust.
+- `/usr/bin/codesign` private-key access: Always Allow.
+
+Expected build prompt:
+
+```text
+codesign wants to sign using key
+"CrabLink Local Development Code Signing"
+```
+
+Bad runtime prompt:
+
+```text
+crablink-tauri wants to use confidential information...
+authenticity cannot be verified
+```
+
+### GitHub safety
+
+Certificate/private key will not be uploaded unless manually exported into repo.
+
+Never export into project:
+
+```text
+.p12
+.pfx
+.pem
+.key
+private key files
+```
+
+Identity name and Vite flag are not secrets.
+
+Other contributors can run unsigned builds or use their own local certificate.
+
+### Remove later
+
+Do not remove during remaining Phase 11 acceptance.
+
+When no longer needed:
+
+1. Keychain Access.
+2. login Keychain.
+3. My Certificates.
+4. Delete `CrabLink Local Development Code Signing` and associated private key.
+5. Verify `security find-identity -v -p codesigning` no longer lists it.
+
+### Official release later
+
+Before public distribution:
+
+- Apple Developer account;
+- Developer ID Application or App Store signing;
+- intentional hardened runtime/entitlements;
+- notarization;
+- staple where appropriate;
+- update identity continuity;
+- no signed-acceptance Vite flag in official commands;
+- never ship self-signed build as official app.
+
+Users must never create certificates or configure Keychain Access.
+
+---
+
+## 8. Commands
+
+### Unsigned development
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+npm run tauri:dev:mac-media
+```
+
+Use for rapid development, not final Keychain identity restart acceptance.
+
+### Direct Cargo check
+
+```bash
+TAURI_CONFIG="$(
+  cat src-tauri/tauri.macos.dev-media.conf.json
+)" cargo check   --manifest-path src-tauri/Cargo.toml
+```
+
+Release:
+
+```bash
+TAURI_CONFIG="$(
+  cat src-tauri/tauri.macos.dev-media.conf.json
+)" cargo check   --release   --manifest-path src-tauri/Cargo.toml
+```
+
+### Signed acceptance build
+
+```bash
+VITE_CRABLINK_SIGNED_ONBOARDING_ACCEPTANCE=1 APPLE_SIGNING_IDENTITY="CrabLink Local Development Code Signing" npm run tauri:build --   --config src-tauri/tauri.macos.dev-media.conf.json   --bundles app
+```
+
+### Launch exact signed bundle
+
+```bash
+open -na   "/Users/mymac/Desktop/crablink/apps/crablink-tauri/src-tauri/target/release/bundle/macos/CrabLink.app"
+```
+
+### Verify identity
+
+```bash
+/usr/bin/security find-identity -v -p codesigning
+```
+
+### Verify app
+
+```bash
+/usr/bin/codesign   --verify   --deep   --strict   --verbose=4   "/Users/mymac/Desktop/crablink/apps/crablink-tauri/src-tauri/target/release/bundle/macos/CrabLink.app"
+```
+
+---
+
+## 9. Security invariants
+
+### Local custody
+
+- no cloud login;
+- no cloud-stored Passport secret;
+- no server custody;
+- no backend-issued identity as source of truth.
+
+### PIN
+
+- no React PIN input;
+- no PIN WebView command argument;
+- native secure surface only;
+- React receives redacted state only.
+
+### Recovery
+
+- real entropy is critical;
+- no deterministic/patterned/repeated real phrases;
+- words remain native-only;
+- React does not receive/store/log/render words;
+- one-time display;
+- interrupted display cannot silently unseal recovery-root;
+- missing pending recovery fails closed.
+
+### Operational unlock
+
+- first-run same-process uses pending operational memory;
+- post-restart uses platform storage;
+- shell unmounted until native `operational_unlocked`;
+- cancellation/rejection/malformed DTO remains locked.
+
+### Platform storage
+
+- keep Keychain;
+- do not allow arbitrary apps;
+- stable signing fixes identity;
+- clear must purge app-owned platform items.
+
+### Signed acceptance flag
+
+```text
+VITE_CRABLINK_SIGNED_ONBOARDING_ACCEPTANCE=1
+```
+
+- local acceptance only;
+- username availability bypass only;
+- no development shell;
+- absent from official production builds;
+- does not claim username ownership.
+
+### Authority boundaries
+
+Onboarding must not perform:
+
+- wallet calls;
+- ledger mutation;
+- ROC mint/burn;
+- capability issuance;
+- paid access;
+- backend-confirmed username/profile claims.
+
+---
+
+## 10. Remaining Phase 11 work
+
+### Priority 1 — Real platform-secret deletion
+
+Current clear removes:
+
+- encrypted local vault;
+- operational session;
+- pending recovery;
+- pending operational;
+- onboarding/display state through reset flow.
+
+It does not yet prove removal of:
+
+```text
+service:
+com.rustyonions.crablink.native-passport.v1
+
+accounts:
+recovery-root
+device-key
+```
+
+Manual deletion was used during acceptance; that is not final product behavior.
+
+#### Implementation posture
+
+Inspect code first. Do not guess whether deletion belongs in:
+
+- `NativePlatformSealer`;
+- CrabLink-local cleanup trait;
+- dedicated platform-material store;
+- extended backend.
+
+Prefer smallest design that:
+
+- keeps authority clean;
+- supports macOS now;
+- has truthful Windows/Linux posture;
+- does not fake success when unsupported;
+- lets Passport clear own lifecycle.
+
+#### Tests required
+
+1. Both entries present and deleted.
+2. Both already absent; idempotent.
+3. Recovery-root deletion succeeds, device-key fails.
+4. Device-key succeeds, recovery-root fails.
+5. Backend error redacted.
+6. No secret/reference bytes in errors/debug.
+7. Deliberate clear ordering.
+8. Public DTO redacted.
+9. Final native status follows chosen safe contract.
+10. Signed macOS acceptance verifies both accounts absent.
+
+#### Partial-failure contract must be decided
+
+Questions:
+
+- If vault removed but Keychain delete fails, public state?
+- Can clear retry only remaining items?
+- Delete before or after vault removal?
+- What is safe state under partial deletion?
+
+Do not claim all-or-nothing across independent OS operations without proof.
+
+### Priority 2 — Formal Phase 11 acceptance
+
+After deletion is green:
+
+1. Confirm signed bundle/identity.
+2. Confirm stale vault absent.
+3. Confirm both Keychain items absent.
+4. Launch signed acceptance app.
+5. Welcome.
+6. No baked username.
+7. No Passport A/B.
+8. No visitor-b.
+9. Enter disposable username.
+10. Use explicit signed availability bypass.
+11. Broad development shell absent.
+12. Create Passport.
+13. Native create PIN.
+14. Native recovery phrase.
+15. Record disposable phrase/fingerprint.
+16. Acknowledge.
+17. Native PIN confirmation.
+18. Save/skip profile.
+19. Home.
+20. Quit.
+21. Reopen exact signed app.
+22. Shell hidden.
+23. Native PIN automatically.
+24. Correct PIN.
+25. No authenticity warning.
+26. Status operational unlocked.
+27. Shell opens.
+28. Clear via app.
+29. Vault absent.
+30. recovery-root Keychain item absent.
+31. device-key item absent.
+32. Pending sessions dropped.
+33. Ack reset.
+34. Welcome again.
+35. Final tests/build/check.
+36. Only then:
+
+```text
+ONBOARDING_DESKTOP_FINAL_ACCEPTANCE=GREEN
+```
+
+### Priority 3 — Interrupted-recovery UX
+
+Safe behavior is correct, label is misleading.
+
+Future message:
+
+```text
+Recovery setup was interrupted.
+This recovery phrase cannot be redisplayed.
+Clear this incomplete Passport and create a new one.
+```
+
+Do not reintroduce recovery-root unseal for Retry.
+
+---
+
+## 11. Phase 12 plan
+
+After formal Phase 11 closeout, begin Phase 12.
+
+### Goal
+
+Freeze portable onboarding model for:
+
+- desktop;
+- Android TV;
+- Android;
+- iOS/iPadOS;
+- future clients.
+
+### Shared contract candidates
+
+```text
+welcome
+username_entry
+username_review
+passport_create_pending
+passport_created_locked
+recovery_required
+recovery_acknowledged
+pin_confirmation_required
+profile_optional
+completion_pending
+completed_locked
+completed_operational_unlocked
+blocked
+```
+
+Reuse actual current names where possible. Do not create a duplicate state machine.
+
+### Shared DTOs
+
+Freeze:
+
+- username syntax/review;
+- Passport create result;
+- recovery result;
+- operational unlock result;
+- native status;
+- profile draft;
+- completion;
+- clear/reset.
+
+Forbid:
+
+- PIN;
+- recovery words;
+- raw factors;
+- VMKs;
+- root material;
+- wallet/ledger claims;
+- fake backend authority.
+
+### Platform responsibilities
+
+#### Shared
+
+- local custody;
+- transitions;
+- redacted results;
+- fail closed;
+- recovery acknowledgement;
+- restart lock;
+- clear/reset lifecycle.
+
+#### Desktop
+
+- native modal PIN;
+- native recovery surface;
+- Keychain/DPAPI/Secret Service;
+- shell gate.
+
+#### TV
+
+- remote-friendly username;
+- remote focus model;
+- local create/import/unlock;
+- no default companion-device pairing;
+- QR/import optional later;
+- no cloud login.
+
+#### Mobile/tablet
+
+- OS secure storage;
+- native secure input;
+- lifecycle/background lock;
+- local import/restore;
+- mobile-safe recovery display.
+
+### Tests
+
+- shared transition tests;
+- DTO schema tests;
+- secret-field rejection;
+- platform-adapter contract;
+- restart lock;
+- clear/reset;
+- TV remote input;
+- no companion-pairing default;
+- no cloud/server custody.
+
+Acceptance:
+
+```text
+ONBOARDING_CROSS_PLATFORM_CONTRACT=GREEN
+```
+
+---
+
+## 12. Deferred work
+
+Not part of current closure unless explicitly added:
+
+- live username availability;
+- production username registry mutation;
+- backend-confirmed username/profile;
+- real avatar upload;
+- cloud login/recovery;
+- server custody;
+- capability issuance;
+- wallet/ledger operations;
+- ROC mint/burn;
+- paid access;
+- Android TV UI implementation;
+- Android UI;
+- iOS UI;
+- public Apple signing/notarization.
+
+Avatar is placeholder/future-gated, not completed upload.
+
+---
+
+## 13. Sequence after onboarding
+
+1. Complete Phase 11.
+2. Complete Phase 12.
+3. Declare onboarding buildplan complete.
+4. Update CrabLink notes/changelog.
+5. Update cross-project notes.
+6. Regenerate latest CrabLink codebundle.
+7. Return to Passport Native Phase 16.
+8. Integrate shared Passport model into CrabLink TV.
+9. Pause Passport Native if mobile surfaces do not exist.
+10. Build Android/iOS foundations.
+11. Return to remaining Passport Native phases.
+12. Later return to remaining CrabLink TV work.
+
+Do not skip to TV before shared contract freeze.
+
+---
+
+## 14. Pitfalls
+
+- Always use `TAURI_CONFIG` for direct Cargo.
+- Do not use unsigned `tauri dev` for final Keychain restart acceptance.
+- Distinguish expected codesign prompt from bad runtime authenticity prompt.
+- Do not enter Mac password in bad runtime prompt.
+- Do not continue after patch RED.
+- Verify new file/marker before build.
+- Vite env flags are compile-time; rebuild required.
+- Quit stale app before opening rebuilt bundle.
+- Do not clear non-disposable Passport.
+- Do not remove Keychain to hide prompts.
+
+---
+
+## 15. Recommended next-session opening
+
+Confirm pushed repo and current source:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri || return 1
+
+git status --short
+
+for path in   src/onboarding/startupPassportUnlockGate.js   src/onboarding/StartupPassportUnlockGate.jsx   src/onboarding/startupPassportUnlockGate.test.mjs   src/onboarding/signedUsernameAcceptanceFlag.test.mjs   src-tauri/src/passport_pending_operational_runtime.rs   src-tauri/src/onboarding_phase11b_command_path_tests.rs
+do
+  if [ -f "$path" ]; then
+    printf 'PRESENT=%s
+' "$path"
+  else
+    printf 'MISSING=%s
+' "$path"
+  fi
+done
+
+grep -R -n   -E 'RECOVERY_INTERRUPTED_HANDOFF|CREATE_OPERATIONAL_PENDING_STAGED|OPERATIONAL_PENDING_USED|StartupPassportUnlockGate|VITE_CRABLINK_SIGNED_ONBOARDING_ACCEPTANCE'   src   src-tauri/src || true
+```
+
+Focused baseline:
+
+```bash
+node --test   src/onboarding/startupPassportUnlockGate.test.mjs   src/onboarding/signedUsernameAcceptanceFlag.test.mjs   src/onboarding/onboardingRouteGate.test.mjs   src/onboarding/welcomeUsernameStep.test.mjs
+
+npm run build
+
+TAURI_CONFIG="$(
+  cat src-tauri/tauri.macos.dev-media.conf.json
+)" cargo check   --release   --manifest-path src-tauri/Cargo.toml
+```
+
+If green, inspect platform sealer and clear command before patching deletion.
+
+---
+
+## 16. Default next patch
+
+```text
+ONBOARDING_PHASE11_PLATFORM_SECRET_CLEAR
+```
+
+Strategy:
+
+1. Inventory platform-sealer trait and OS implementations.
+2. Inventory clear command ordering.
+3. Decide partial-failure contract.
+4. Add macOS Keychain delete.
+5. Add focused in-memory backend tests.
+6. Wire deletion into public clear.
+7. Keep DTO redacted.
+8. Preserve authority boundaries.
+9. Run focused tests.
+10. Build signed app.
+11. Perform final signed clear/absence acceptance.
+
+Do not start Phase 12 until Phase 11 is closed.
+
+---
+
+## 17. Final checkpoint
+
+```text
+ONBOARDING_PHASES_0_TO_10=GREEN
+ONBOARDING_PHASE11_CORE_DESKTOP_FLOW=FUNCTIONALLY_GREEN
+ONBOARDING_PHASE11_STARTUP_PIN_GATE=GREEN
+ONBOARDING_PHASE11_SIGNED_LOCAL_APP=GREEN
+ONBOARDING_PHASE11_SIGNED_USERNAME_BYPASS=USER_CONFIRMED_GREEN
+ONBOARDING_PHASE11_PLATFORM_SECRET_CLEAR=REMAINING
+ONBOARDING_DESKTOP_FINAL_ACCEPTANCE=NOT_YET_FORMALLY_GREEN
+ONBOARDING_PHASE12_CROSS_PLATFORM_CONTRACT=REMAINING
+ENTIRE_ONBOARDING_BUILDPLAN=NOT_COMPLETE
+RUSTYONIONS_CHANGED_IN_THIS_SESSION=NO
+NEXT_ACTION=IMPLEMENT_PLATFORM_SECRET_CLEAR_AND_RUN_FINAL_SIGNED_PHASE11_ACCEPTANCE
+```
+
+---
+
+## 18. Handoff statement
+
+Continue `ONBOARDING_BUILDPLAN.md`, not Passport Native Phase 16.
+
+Verify the pushed CrabLink checkout and source markers. Then implement real platform-secret deletion for Passport clear, including macOS Keychain `recovery-root` and `device-key` removal, idempotent absence handling, partial-failure behavior, redaction tests, and public clear wiring. Rebuild the locally signed acceptance app and run the full clean onboarding → home → restart automatic native PIN gate → unlock → clear → Keychain absence → clean Welcome walkthrough. Only then declare Phase 11 green. Next complete Phase 12 by freezing the shared cross-platform onboarding state/DTO contract. After the onboarding buildplan is fully green, regenerate notes/codebundle and return to Passport Native Phase 16 for CrabLink TV integration.
+
+
+# SECONDARY NOTE:
+Yes—your instinct about the broad order is right, with one important correction:
+
+**We will not be starting CrabNodes from scratch.** The User Node and Service Node architecture, local reward loop, operator mode, hardening, and private-beta readiness work in `BUILD_PLAN_Z` are already complete and parked. The next node chapter is bringing those parked components into a real, multi-device, end-to-end system and seeing whether they behave outside focused tests. 
+
+## The likely road from here
+
+### 1. Finish desktop onboarding
+
+The immediate path remains:
+
+```text
+platform-secret deletion
+→ final signed desktop acceptance
+→ Phase 12 shared onboarding contract
+→ ONBOARDING_BUILDPLAN complete
+```
+
+That gives us one authoritative Passport/onboarding model before copying it into other apps.
+
+### 2. Resume Passport Native and CrabLink TV
+
+After onboarding:
+
+```text
+Passport Native Phase 16
+→ CrabLink TV Passport integration
+→ finish remaining CrabLink TV phases
+→ install and exercise the Android TV build on hardware
+```
+
+The TV app should inherit the same wallet-like model:
+
+```text
+local Passport
+native/local secret custody
+no cloud login
+no server-owned identity
+no required companion-device pairing
+```
+
+The existing project notes already establish that desktop onboarding had to be proven before Phase 16 so TV would not inherit the old development identity assumptions. 
+
+### 3. Build Android and iOS properly
+
+Then we need real application foundations for:
+
+```text
+Android phone/tablet
+iPhone/iPad
+```
+
+This is more than recompiling the desktop app. Each platform needs:
+
+* secure platform storage;
+* native PIN or biometric surface;
+* process/background locking;
+* recovery display;
+* Passport create/import/restore;
+* deep-link handling;
+* app lifecycle handling;
+* signed release packaging;
+* platform-specific tests.
+
+Once those app shells exist, we return to the remaining Passport Native phases and complete the mobile adapters against real application code.
+
+### 4. Cross-platform product convergence
+
+Before moving deeply into network economics, we should prove one Passport behaves consistently across all four product classes:
+
+```text
+desktop
+Android TV
+Android
+iOS
+```
+
+That acceptance should cover:
+
+```text
+create
+restore/import
+lock/unlock
+restart
+profile
+crab:// routing
+content viewing
+receipts
+local node status
+safe reset
+```
+
+This becomes the first genuinely recognizable **CrabLink beta client family**.
+
+---
+
+# Then: CrabNodes
+
+This is where the project stops being “a polished app with an enormous backend” and starts behaving like the actual network.
+
+The node architecture is already defined as two public products:
+
+```text
+CrabLink User Node
+CrabLink Service Node
+```
+
+The User Node is private, passive, outbound-first, amnesia-first, and CrabLink-managed. The Service Node is headless-first, CLI-manageable, content-serving, moderation-aware, persistence-aware, evidence-producing, reward-recipient-bound, and incapable of minting alone. 
+
+So the next node work is not another giant architecture rewrite. It is a **real bring-up and integration campaign**.
+
+## CrabNode bring-up stage
+
+### User Node integration
+
+Prove that an ordinary CrabLink installation can:
+
+```text
+start its private User Node safely
+verify fetched b3 content
+verify receipts/economic replay
+remain non-serving
+remain loopback-only
+hide residential IP information
+stop cleanly
+respect resource limits
+```
+
+This should be nearly invisible to ordinary users. They should not feel like they are administering a server.
+
+### Service Node integration
+
+Prove that a headless Service Node can:
+
+```text
+install on a second machine or VPS
+initialize a node identity
+bind rewards to a Passport/@ account
+serve real test content
+publish availability evidence
+repair content
+moderate/block/prune content
+restart without losing approved persistent state
+operate completely through crabnode CLI
+optionally attach to CrabLink Operator Mode
+```
+
+The service-node posture is already explicitly CLI-first and UI-optional; the daemon must not depend on CrabLink, a browser, or a desktop environment. 
+
+### First real private network
+
+I would aim for at least:
+
+```text
+2–3 Service Nodes
+2–5 CrabLink User Nodes
+multiple physical machines
+at least two different networks
+one intentionally unreliable node
+one intentionally malicious/faulty test posture
+```
+
+Then exercise:
+
+```text
+content publish
+discovery
+fetch
+b3 verification
+cache
+provider failure
+repair
+moderation
+pruning
+receipt generation
+reward binding
+quorum evidence
+restart recovery
+network partition
+```
+
+That is where we will discover whether the system is merely green in isolation or genuinely coherent.
+
+---
+
+# Then: prove QuickChain for real
+
+QuickChain is also **not starting from zero**. A large amount of DTO, boundary, replay, validator, bond, external-posture, and client integration work is already green and parked.
+
+However, much of the currently parked CrabLink QuickChain surface is intentionally display-only and explicitly does not claim live DA truth, archive authority, validator finality, pruning authority, external settlement, or ROX/Solana behavior. 
+
+So after CrabNodes are running, the correct QuickChain progression is:
+
+## 1. Deterministic roots from real data
+
+Start with actual internal data produced by the running private network:
+
+```text
+ledger state
+wallet receipts
+usage events
+reward manifests
+registry state
+service-node evidence
+```
+
+Then construct deterministic:
+
+```text
+receipt roots
+account-state roots
+registry roots
+accounting roots
+reward-manifest roots
+epoch roots
+```
+
+The project doctrine is already correct:
+
+```text
+determinism before distribution
+DTOs before roots
+roots before validators
+proofs before pruning
+internal ROC before external anchors
+```
+
+
+
+## 2. Local checkpoint and offline quorum
+
+Do not jump immediately into a complicated network consensus implementation.
+
+First:
+
+```text
+one deterministic checkpoint
+→ static validator set
+→ offline signatures
+→ quorum verification
+→ replay rejection
+→ fork detection
+```
+
+This proves that multiple independent Service Nodes calculate and attest to the same state.
+
+## 3. Private replicated committee
+
+Once roots are stable:
+
+```text
+proposal broadcast
+signature collection
+quorum certificate
+conflicting proposal evidence
+validator exclusion
+challenge handling
+epoch transition
+```
+
+Then test:
+
+* one node offline;
+* one node lagging;
+* one node producing mismatched roots;
+* duplicate/replayed votes;
+* invalid validator-set membership;
+* registry rotation;
+* reward-recipient rotation;
+* partial network partitions.
+
+## 4. Real private ROC loop
+
+Only after that should we perform the full private value-plane demonstration:
+
+```text
+Service Node serves content
+→ User Nodes verify
+→ evidence is collected
+→ accounting seals a window
+→ reward plan is produced
+→ quorum approves the epoch
+→ svc-wallet commits the reward intent
+→ ron-ledger records durable truth
+→ receipt is returned
+→ CrabLink displays confirmed ROC only from the receipt
+```
+
+No Service Node should be able to issue rewards alone, and no QuickChain UI should fabricate balances or finality.
+
+This will be the moment when we learn how well QuickChain actually works as a system rather than as a set of carefully bounded crates.
+
+---
+
+# Then: finish ROX Anchor on private Solana testnet
+
+Your proposed order is good here: **prove the internal network first, then finish the external anchor path.**
+
+ROX Anchor is already through BUILD_PLAN4 Phase 9. Phases 0–9 are green, leaving Phases 10–15. The remaining lane is primarily actual private-testnet failure testing, authority drills, RustyOnions handoff, CrabLink display, and final private-testnet closeout—not building the project from nothing. 
+
+The likely remaining progression is:
+
+```text
+Phase 10:
+actual negative drills against deployed testnet state
+
+Phase 11:
+halt, recovery, authority separation,
+key-rotation and upgrade-authority drills
+
+Phase 12:
+RustyOnions dry-run handoff
+
+Phase 13:
+CrabLink display-only private-testnet status
+
+later phases:
+full reconciliation, final acceptance,
+parking of private/testnet posture
+```
+
+Then run the complete controlled demonstration:
+
+## ROC → ROX test-only path
+
+```text
+internal ROC-side intent/evidence
+→ deterministic proof package
+→ ROX Anchor proof validation
+→ coordinator decision
+→ relayer simulation
+→ explicitly approved capped testnet send
+→ Solana test-only mint/account change
+→ RPC readback
+→ redacted receipt reconciliation
+```
+
+## ROX → ROC test-only path
+
+```text
+test-only ROX burn/finalization evidence
+→ RPC proof
+→ deterministic review
+→ coordinator decision
+→ dry-run ROC release intent
+→ no direct internal ROC mutation
+```
+
+The key separation remains:
+
+```text
+RustyOnions:
+internal ROC economy and ledger truth
+
+ROX Anchor:
+controlled ROC ↔ ROX proof and Solana state path
+```
+
+The existing plans explicitly keep the private beta free of a public bridge, staking, liquidity, exchange behavior, or public mint/burn. A later production-launch plan is still required for mainnet, public bridge settlement, official ROX mint/burn, audits, monitoring, and authority controls. 
+
+---
+
+# What “beta” should mean
+
+There are really three increasingly strong beta milestones.
+
+## Beta A — Product beta
+
+```text
+desktop works
+TV works
+Android works
+iOS works
+Passport works
+onboarding works
+content routes work
+local profile works
+receipts display truthfully
+```
+
+We are genuinely close to this.
+
+## Beta B — Decentralized private beta
+
+```text
+real User Nodes
+real Service Nodes
+multi-machine content serving
+verification and repair
+privacy controls
+moderation
+reward binding
+internal ROC receipt loop
+small controlled operator group
+```
+
+A lot of the code exists, but this still needs field integration and soak testing.
+
+## Beta C — Full private economic/testnet demonstration
+
+```text
+CrabNodes running
+QuickChain checkpoint/quorum working
+internal ROC loop working
+ROX Anchor on private Solana testnet
+test-only ROC ↔ ROX evidence flows
+negative and recovery drills green
+```
+
+That would be the first demonstration of almost the entire vision operating together.
+
+---
+
+# My recommended master sequence
+
+```text
+1. Finish Onboarding Phase 11
+2. Finish Onboarding Phase 12
+3. Passport Native Phase 16
+4. Finish CrabLink TV
+5. Build Android app
+6. Build iOS app
+7. Finish remaining Passport Native mobile phases
+8. Cross-platform CrabLink acceptance
+9. Activate User Node integration
+10. Activate Service Node/crabnode integration
+11. Run multi-machine CrabNode private network
+12. Feed real node/receipt data into QuickChain roots
+13. Bring up static quorum and checkpoints
+14. Run private ROC reward loop end to end
+15. Run QuickChain chaos/partition/replay drills
+16. Finish ROX Anchor Phases 10–15
+17. Deploy/run test-only private Solana testnet flows
+18. Connect CrabLink display-only status
+19. Run full-system private beta acceptance
+20. Invite a small controlled beta cohort
+```
+
+## Are we close?
+
+**Yes, but in a specific sense.**
+
+You are very close to a convincing **CrabLink product beta**. The onboarding video is evidence of that: people can now see an actual product lifecycle instead of only architecture documents and terminal tests.
+
+The remaining work before the broader decentralized beta is not “invent everything.” Much of the node stack, QuickChain scaffolding, internal ROC path, and ROX Anchor path already exists and is parked. The next stage is integration, real deployment, adversarial testing, and discovering where independently green pieces disagree.
+
+That is exciting because the project is approaching the point where progress becomes much more visible:
+
+```text
+not another crate becoming green
+but multiple machines actually behaving like CrabLink
+```
+
+That is when the whole thing will start to feel real.
+
+
+
+### END NOTE - JULY 27 2026 - 23:15 CST
