@@ -2,6 +2,7 @@ package com.rustyonions.crablink.tv
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.KeyEvent
 import android.webkit.WebView
 import androidx.activity.enableEdgeToEdge
 import java.util.ArrayDeque
@@ -31,7 +32,145 @@ private const val MAX_HANDOFF_ATTEMPTS =
 private const val HANDOFF_RETRY_MS =
   250L
 
+private val PASSPORT_NATIVE_PIN_REQUEST_KEY_CODES =
+  setOf(
+    KeyEvent.KEYCODE_MENU,
+    KeyEvent.KEYCODE_F1,
+  )
+
+private val PASSPORT_NATIVE_EXPLICIT_LOCK_KEY_CODES =
+  setOf(
+    KeyEvent.KEYCODE_INFO,
+    KeyEvent.KEYCODE_F2,
+  )
+
 class MainActivity : TauriActivity() {
+  private val tvPassportKeystoreBridge by
+    lazy {
+      TvPassportKeystoreBridge()
+    }
+
+  internal fun passportKeystoreBridgeForNativeRuntime():
+    TvPassportKeystoreBridge =
+    tvPassportKeystoreBridge
+
+  private val tvPassportDeviceMaterialStore by
+    lazy {
+      TvPassportDeviceMaterialStore(
+        applicationContext,
+      )
+    }
+
+  private val tvPassportAuthorizationReplayStore by
+    lazy {
+      TvPassportAuthorizationReplayStore(
+        applicationContext,
+      )
+    }
+
+  private val tvPassportDeviceMaterialBridge by
+    lazy {
+      TvPassportDeviceMaterialBridge(
+        keystoreBridge =
+          tvPassportKeystoreBridge,
+
+        store =
+          tvPassportDeviceMaterialStore,
+
+        replayStore =
+          tvPassportAuthorizationReplayStore,
+      )
+    }
+
+  internal fun passportDeviceMaterialBridgeForNativeRuntime():
+    TvPassportDeviceMaterialBridge =
+    tvPassportDeviceMaterialBridge
+
+  private val tvPassportDelegatedAuthorityStore by
+    lazy {
+      TvPassportDelegatedAuthorityStore(
+        applicationContext,
+      )
+    }
+
+  private val tvPassportDelegatedAuthorityBridge by
+    lazy {
+      TvPassportDelegatedAuthorityBridge(
+        keystoreBridge =
+          tvPassportKeystoreBridge,
+
+        store =
+          tvPassportDelegatedAuthorityStore,
+      )
+    }
+
+  internal fun passportDelegatedAuthorityBridgeForNativeRuntime():
+    TvPassportDelegatedAuthorityBridge =
+    tvPassportDelegatedAuthorityBridge
+
+  private val tvPassportNativePinPrompt by
+    lazy {
+      TvPassportNativePinPrompt(
+        activity =
+          this,
+      )
+    }
+
+  internal fun passportNativePinPromptForNativeRuntime():
+    TvPassportNativePinPrompt =
+    tvPassportNativePinPrompt
+
+  private val tvPassportNativePinVerifierStore by
+    lazy {
+      TvPassportNativePinVerifierStore(
+        context =
+          applicationContext,
+
+        keystoreBridge =
+          tvPassportKeystoreBridge,
+      )
+    }
+
+  internal fun passportNativePinVerifierStoreForNativeRuntime():
+    TvPassportNativePinVerifierStore =
+    tvPassportNativePinVerifierStore
+
+  private val tvPassportOperationalUnlockBridge by
+    lazy {
+      TvPassportOperationalUnlockBridge(
+        verifierStore =
+          tvPassportNativePinVerifierStore,
+
+        deviceMaterialBridge =
+          tvPassportDeviceMaterialBridge,
+
+        delegatedAuthorityBridge =
+          tvPassportDelegatedAuthorityBridge,
+      )
+    }
+
+  internal fun passportOperationalUnlockBridgeForNativeRuntime():
+    TvPassportOperationalUnlockBridge =
+    tvPassportOperationalUnlockBridge
+
+  private val tvPassportNativePinCoordinator by
+    lazy {
+      TvPassportNativePinCoordinator(
+        prompt =
+          tvPassportNativePinPrompt,
+
+        verifierStore =
+          tvPassportNativePinVerifierStore,
+
+        operationalUnlockBridge =
+          tvPassportOperationalUnlockBridge,
+      )
+    }
+
+  internal fun passportNativePinCoordinatorForNativeRuntime():
+    TvPassportNativePinCoordinator =
+    tvPassportNativePinCoordinator
+
   private var tvWebView: WebView? = null
 
   private val pendingCrabIntents =
@@ -45,6 +184,13 @@ class MainActivity : TauriActivity() {
   ) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+
+    tvPassportDeviceMaterialBridge
+      .hydrateStoredPublicRecord()
+
+    tvPassportDelegatedAuthorityBridge
+      .hydrateStoredDelegatedAuthorityOnStartupForNative()
+
     enqueueCrabIntent(intent)
   }
 
@@ -62,6 +208,77 @@ class MainActivity : TauriActivity() {
     super.onNewIntent(intent)
     setIntent(intent)
     enqueueCrabIntent(intent)
+  }
+
+  override fun dispatchKeyEvent(
+    event:
+      KeyEvent,
+  ):
+    Boolean {
+    val keyCode =
+      event.keyCode
+
+    if (
+      keyCode in
+      PASSPORT_NATIVE_PIN_REQUEST_KEY_CODES
+    ) {
+      if (
+        event.action ==
+        KeyEvent.ACTION_UP &&
+        event.repeatCount ==
+        0
+      ) {
+        tvPassportNativePinCoordinator
+          .requestExplicitEnrollmentOrUnlock()
+      }
+
+      return true
+    }
+
+    if (
+      keyCode in
+      PASSPORT_NATIVE_EXPLICIT_LOCK_KEY_CODES
+    ) {
+      if (
+        event.action ==
+        KeyEvent.ACTION_UP &&
+        event.repeatCount ==
+        0
+      ) {
+        tvPassportNativePinCoordinator
+          .requestExplicitLock()
+      }
+
+      return true
+    }
+
+    return super.dispatchKeyEvent(
+      event,
+    )
+  }
+
+  override fun onPause() {
+    tvPassportNativePinCoordinator
+      .failClosedOnLifecycleBoundary()
+
+    super.onPause()
+  }
+
+  override fun onStop() {
+    tvPassportNativePinCoordinator
+      .failClosedOnLifecycleBoundary()
+
+    super.onStop()
+  }
+
+  override fun onDestroy() {
+    tvPassportNativePinCoordinator
+      .failClosedOnLifecycleBoundary()
+
+    tvWebView =
+      null
+
+    super.onDestroy()
   }
 
   override fun onResume() {

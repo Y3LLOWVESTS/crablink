@@ -1,20 +1,53 @@
 /**
- * RO:WHAT — React scaffold component for extensions/chrome/src/shared/components/EmptyState.jsx.
- * RO:WHY — CrabLink refactor; gives this UI surface a single clear owner.
- * RO:INTERACTS — App shell, route registry, shared components, and page-local CSS.
- * RO:INVARIANTS — no fake backend truth; no silent ROC spend; no direct internal-service calls.
- * RO:METRICS — none yet.
- * RO:CONFIG — app context/settings when wired.
- * RO:SECURITY — render trusted UI only; untrusted crab content belongs in sandboxed surfaces.
- * RO:TEST — component and route smoke tests once implemented.
+ * RO:WHAT — Shared user-facing empty-state component.
+ * RO:WHY — FINAL_BETA Phase 2; replaces scaffold text with a reusable, meaningful no-content pattern.
+ * RO:INTERACTS — route pages, shared Button actions, and designSystemFoundation.css.
+ * RO:INVARIANTS — no invented content or backend truth; actions are caller-owned.
+ * RO:METRICS — none.
+ * RO:CONFIG — title, copy, icon, actions, compact, and className.
+ * RO:SECURITY — trusted React content only; no HTML injection or authority.
+ * RO:TEST — designSystemFoundation.test.mjs and route-level visual smoke.
  */
 
-export default function EmptyState() {
+export default function EmptyState({
+  title = 'Nothing here yet',
+  copy = '',
+  icon = '○',
+  actions = null,
+  compact = false,
+  className = '',
+}) {
+  const classes = [
+    'cl-state',
+    'cl-state-empty',
+    compact ? 'cl-state-compact' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <section className="cl-card cl-scaffold-card">
-      <p className="cl-eyebrow">Scaffold</p>
-      <h1>EmptyState</h1>
-      <p>extensions/chrome/src/shared/components/EmptyState.jsx</p>
+    <section className={classes}>
+      <span
+        className="cl-state-icon"
+        aria-hidden="true"
+      >
+        {icon}
+      </span>
+
+      <h2>{title}</h2>
+
+      {copy && (
+        <p className="cl-state-copy">
+          {copy}
+        </p>
+      )}
+
+      {actions && (
+        <div className="cl-state-actions">
+          {actions}
+        </div>
+      )}
     </section>
   );
 }

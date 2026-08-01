@@ -1,27 +1,62 @@
 /*
- * RO:WHAT — Dark theme token overrides for CrabLink.
- * RO:WHY — Provides a true black neutral dark mode instead of a dark-blue mode.
- * RO:INTERACTS — themeTokens.css and ThemeProvider.
- * RO:INVARIANTS — readable contrast; black/gray dark mode; no blue default theme.
- * RO:TEST — visual/manual theme smoke.
+ * RO:WHAT — Canonical dark-theme semantic palette for CrabLink Desktop.
+ * RO:WHY — FINAL_BETA Phase 2; gives normal pages one true-neutral dark visual language.
+ * RO:INTERACTS — themeTokens.css, ThemeProvider, designSystemFoundation.css, and page CSS.
+ * RO:INVARIANTS — semantic tokens only; readable contrast; no blue-black default; no page-owned palette.
+ * RO:TEST — designSystemFoundation.test.mjs and manual dark-theme smoke.
  */
 
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --cl-bg: #000000;
-  --cl-surface: #050505;
-  --cl-card: #0b0b0b;
-  --cl-text: #f4f4f4;
-  --cl-muted: #a3a3a3;
-  --cl-border: #2a2a2a;
+  --cl-bg: #090b0f;
+  --cl-surface: #0d1117;
+  --cl-surface-raised: #131820;
+  --cl-card: #131820;
+  --cl-card-muted: #191f29;
 
-  --cl-accent: #f4f4f4;
-  --cl-accent-contrast: #000000;
+  --cl-text: #edf0f5;
+  --cl-text-strong: #ffffff;
+  --cl-muted: #a8b1bf;
+  --cl-subtle: #818b99;
 
-  --cl-danger: #ff6b6b;
-  --cl-warning: #f59e0b;
-  --cl-success: #4ade80;
+  --cl-border: #2a323e;
+  --cl-border-strong: #3c4654;
 
-  --cl-ad-bg: #050505;
+  --cl-accent: #ff7a59;
+  --cl-accent-hover: #ff987f;
+  --cl-accent-pressed: #e86444;
+  --cl-accent-soft: #2b1712;
+  --cl-accent-contrast: #1a0904;
+
+  --cl-danger: #ff7d73;
+  --cl-danger-soft: #2d1718;
+  --cl-warning: #f7b955;
+  --cl-warning-soft: #2a2112;
+  --cl-success: #65d58b;
+  --cl-success-soft: #14271b;
+  --cl-info: #80baf0;
+  --cl-info-soft: #142333;
+
+  --cl-disabled-bg: #171c24;
+  --cl-disabled-text: #687281;
+  --cl-overlay: rgba(0, 0, 0, 0.72);
+
+  --cl-shadow-xs:
+    0 1px 2px
+    rgba(0, 0, 0, 0.4);
+
+  --cl-shadow-sm:
+    0 4px 14px
+    rgba(0, 0, 0, 0.48);
+
+  --cl-shadow-md:
+    0 16px 42px
+    rgba(0, 0, 0, 0.56);
+
+  --cl-shadow-lg:
+    0 28px 82px
+    rgba(0, 0, 0, 0.68);
+
+  --cl-ad-bg: var(--cl-card-muted);
 }

@@ -1,0 +1,28 @@
+{
+  "name": "@crablink/crablink-android",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Touch-first adaptive CrabLink client for Android phones and tablets.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 1440",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 1440",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "check:frontend": "vite build",
+    "check:rust": "cargo check --manifest-path src-tauri/Cargo.toml",
+    "check": "npm run check:frontend && npm run check:rust"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@vitejs/plugin-react": "^4.3.0",
+    "vite": "^5.4.0"
+  }
+}

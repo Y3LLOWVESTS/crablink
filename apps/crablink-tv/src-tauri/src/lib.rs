@@ -6,6 +6,25 @@
 //! RO:TEST — command unit tests and check-crablink-tv-command-boundary.mjs.
 
 mod commands;
+pub mod passport_android_keystore;
+#[cfg(any(test, target_os = "android"))]
+mod passport_tv_authorization_replay;
+pub mod passport_tv_device_material;
+mod passport_tv_pairing_runtime;
+
+#[cfg(any(test, target_os = "android"))]
+mod passport_tv_authority_runtime;
+#[cfg(any(test, target_os = "android"))]
+mod passport_tv_delegated_authority;
+#[cfg(any(test, target_os = "android"))]
+mod passport_tv_native_pin_lifecycle;
+#[cfg(any(test, target_os = "android"))]
+mod passport_tv_operational_unlock;
+
+#[cfg(target_os = "android")]
+mod passport_android_jni;
+#[cfg(target_os = "android")]
+mod passport_android_operational_material_port;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

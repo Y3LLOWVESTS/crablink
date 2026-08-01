@@ -1,13 +1,20 @@
-//! RO:WHAT — Implements the macOS Native Passport PlatformSealer through Keychain generic-password entries.
-//! RO:WHY — Phase 15L binds recovery-root and device-key material to macOS without exposing it to the vault or WebView.
-//! RO:INTERACTS — svc-passport NativePlatformSealer, Apple Security Framework, and future desktop Passport runtime wiring.
-//! RO:INVARIANTS — fixed service and compartment accounts; secret bytes enter Keychain only; sealed output is a non-secret fixed reference; backend errors are redacted.
-//! RO:SECURITY — no secret logging, serialization, filesystem storage, WebView DTO, PIN handling, vault decryption, signing, capability issuance, wallet, or ledger mutation.
+//! RO:WHAT — Implements macOS Native Passport Keychain seal, unseal, and app-owned material deletion.
+//! RO:WHY — Phase 15L seals material and Onboarding Phase 11 clears it without exposing secrets to the vault or WebView.
+//! RO:INTERACTS — svc-passport NativePlatformSealer, local platform-clear contract, Apple Security Framework, and Passport clear runtime.
+//! RO:INVARIANTS — fixed service/accounts; both deletes are attempted; absent is idempotent; references and errors remain redacted.
+//! RO:SECURITY — no secret logging, serialization, WebView DTO, PIN handling, signing, capability issuance, wallet, or ledger mutation.
 //! RO:TEST — module tests plus tests/phase15l_macos_keychain_platform_sealer.rs.
 
 use std::{fmt, sync::Arc};
 
-use security_framework::passwords::{generic_password, set_generic_password, PasswordOptions};
+use crate::passport_platform_material_clear_runtime::{
+    DesktopPlatformMaterialClearReview, DesktopPlatformMaterialClearer,
+    DesktopPlatformMaterialEntryClearState,
+};
+use security_framework::passwords::{
+    delete_generic_password, generic_password, set_generic_password, PasswordOptions,
+};
+use security_framework_sys::base::errSecItemNotFound;
 use svc_passport::native::{
     NativePlatformFamily, NativePlatformSealer, NativePlatformStorageError,
     NativePlatformStorageOperation, NativeSealedMaterialV1, NativeSecretBytes,
@@ -27,10 +34,18 @@ const PHASE15L_RECOVERY_ROOT_REFERENCE: &[u8] = b"crablink-keychain:v1:recovery-
 
 const PHASE15L_DEVICE_KEY_REFERENCE: &[u8] = b"crablink-keychain:v1:device-key";
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MacosKeychainDeleteState {
+    Removed,
+    AlreadyAbsent,
+}
+
 trait MacosKeychainBackend: Send + Sync {
     fn set_secret(&self, service: &str, account: &str, secret: &[u8]) -> Result<(), ()>;
 
     fn get_secret(&self, service: &str, account: &str) -> Result<Vec<u8>, ()>;
+
+    fn delete_secret(&self, service: &str, account: &str) -> Result<MacosKeychainDeleteState, ()>;
 }
 
 #[derive(Debug, Default)]
@@ -43,6 +58,16 @@ impl MacosKeychainBackend for SystemMacosKeychainBackend {
 
     fn get_secret(&self, service: &str, account: &str) -> Result<Vec<u8>, ()> {
         generic_password(PasswordOptions::new_generic_password(service, account)).map_err(|_| ())
+    }
+
+    fn delete_secret(&self, service: &str, account: &str) -> Result<MacosKeychainDeleteState, ()> {
+        match delete_generic_password(service, account) {
+            Ok(()) => Ok(MacosKeychainDeleteState::Removed),
+            Err(error) if error.code() == errSecItemNotFound => {
+                Ok(MacosKeychainDeleteState::AlreadyAbsent)
+            }
+            Err(_) => Err(()),
+        }
     }
 }
 
@@ -138,6 +163,22 @@ impl NativePlatformSealer for MacosKeychainPlatformSealer {
     }
 }
 
+impl DesktopPlatformMaterialClearer for MacosKeychainPlatformSealer {
+    fn clear_platform_material(&self) -> DesktopPlatformMaterialClearReview {
+        let recovery_root = self
+            .backend
+            .delete_secret(PHASE15L_KEYCHAIN_SERVICE, PHASE15L_RECOVERY_ROOT_ACCOUNT);
+        let device_key = self
+            .backend
+            .delete_secret(PHASE15L_KEYCHAIN_SERVICE, PHASE15L_DEVICE_KEY_ACCOUNT);
+
+        DesktopPlatformMaterialClearReview {
+            recovery_root: map_delete_result(recovery_root),
+            device_key: map_delete_result(device_key),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MacosKeychainPlatformSealerPosture {
     pub phase_label: &'static str,
@@ -181,6 +222,18 @@ pub fn macos_keychain_platform_sealer_posture() -> MacosKeychainPlatformSealerPo
     }
 }
 
+fn map_delete_result(
+    result: Result<MacosKeychainDeleteState, ()>,
+) -> DesktopPlatformMaterialEntryClearState {
+    match result {
+        Ok(MacosKeychainDeleteState::Removed) => DesktopPlatformMaterialEntryClearState::Removed,
+        Ok(MacosKeychainDeleteState::AlreadyAbsent) => {
+            DesktopPlatformMaterialEntryClearState::AlreadyAbsent
+        }
+        Err(()) => DesktopPlatformMaterialEntryClearState::Failed,
+    }
+}
+
 fn keychain_account(compartment: NativeSecureCompartment) -> &'static str {
     match compartment {
         NativeSecureCompartment::RecoveryRoot => PHASE15L_RECOVERY_ROOT_ACCOUNT,
@@ -214,6 +267,8 @@ mod tests {
         entries: Mutex<HashMap<String, Vec<u8>>>,
         fail_set: bool,
         fail_get: bool,
+        fail_delete_recovery_root: bool,
+        fail_delete_device_key: bool,
     }
 
     impl MemoryKeychainBackend {
@@ -247,6 +302,31 @@ mod tests {
                 .get(&Self::key(service, account))
                 .cloned()
                 .ok_or(())
+        }
+
+        fn delete_secret(
+            &self,
+            service: &str,
+            account: &str,
+        ) -> Result<MacosKeychainDeleteState, ()> {
+            if (account == PHASE15L_RECOVERY_ROOT_ACCOUNT && self.fail_delete_recovery_root)
+                || (account == PHASE15L_DEVICE_KEY_ACCOUNT && self.fail_delete_device_key)
+            {
+                return Err(());
+            }
+
+            let removed = self
+                .entries
+                .lock()
+                .expect("memory keychain lock")
+                .remove(&Self::key(service, account))
+                .is_some();
+
+            Ok(if removed {
+                MacosKeychainDeleteState::Removed
+            } else {
+                MacosKeychainDeleteState::AlreadyAbsent
+            })
         }
     }
 
@@ -379,5 +459,112 @@ mod tests {
 
         assert!(debug.contains("REDACTED"));
         assert!(!debug.contains("must-not-appear"));
+    }
+
+    #[test]
+    fn onboarding_phase11c1_deletes_present_entries_and_accepts_absence() {
+        let sealer =
+            MacosKeychainPlatformSealer::with_backend(Arc::new(MemoryKeychainBackend::default()));
+
+        for compartment in [
+            NativeSecureCompartment::RecoveryRoot,
+            NativeSecureCompartment::DeviceKey,
+        ] {
+            let secret = NativeSecretBytes::new(format!("phase11-{compartment:?}").into_bytes())
+                .expect("bounded phase11 secret");
+            sealer.seal(compartment, &secret).expect("phase11 seal");
+        }
+
+        let first = sealer.clear_platform_material();
+
+        assert_eq!(
+            first.recovery_root,
+            DesktopPlatformMaterialEntryClearState::Removed
+        );
+        assert_eq!(
+            first.device_key,
+            DesktopPlatformMaterialEntryClearState::Removed
+        );
+        assert!(first.is_complete());
+        assert!(first.any_mutated());
+
+        let second = sealer.clear_platform_material();
+
+        assert_eq!(
+            second.recovery_root,
+            DesktopPlatformMaterialEntryClearState::AlreadyAbsent
+        );
+        assert_eq!(
+            second.device_key,
+            DesktopPlatformMaterialEntryClearState::AlreadyAbsent
+        );
+        assert!(second.is_complete());
+        assert!(!second.any_mutated());
+    }
+
+    #[test]
+    fn onboarding_phase11c1_attempts_both_deletes_under_partial_failure() {
+        for (fail_root, fail_device, expected_root, expected_device) in [
+            (
+                false,
+                true,
+                DesktopPlatformMaterialEntryClearState::Removed,
+                DesktopPlatformMaterialEntryClearState::Failed,
+            ),
+            (
+                true,
+                false,
+                DesktopPlatformMaterialEntryClearState::Failed,
+                DesktopPlatformMaterialEntryClearState::Removed,
+            ),
+        ] {
+            let sealer =
+                MacosKeychainPlatformSealer::with_backend(Arc::new(MemoryKeychainBackend {
+                    fail_delete_recovery_root: fail_root,
+                    fail_delete_device_key: fail_device,
+                    ..Default::default()
+                }));
+
+            for compartment in [
+                NativeSecureCompartment::RecoveryRoot,
+                NativeSecureCompartment::DeviceKey,
+            ] {
+                let secret =
+                    NativeSecretBytes::new(format!("phase11-{compartment:?}").into_bytes())
+                        .expect("bounded phase11 secret");
+                sealer.seal(compartment, &secret).expect("phase11 seal");
+            }
+
+            let review = sealer.clear_platform_material();
+
+            assert_eq!(review.recovery_root, expected_root);
+            assert_eq!(review.device_key, expected_device);
+            assert!(!review.is_complete());
+            assert!(review.any_mutated());
+        }
+    }
+
+    #[test]
+    fn onboarding_phase11c1_delete_failure_is_redacted() {
+        let sealer = MacosKeychainPlatformSealer::with_backend(Arc::new(MemoryKeychainBackend {
+            fail_delete_recovery_root: true,
+            fail_delete_device_key: true,
+            ..Default::default()
+        }));
+
+        let review = sealer.clear_platform_material();
+        let debug = format!("{review:?}");
+
+        assert!(!review.is_complete());
+        assert!(!review.any_mutated());
+
+        for forbidden in [
+            PHASE15L_KEYCHAIN_SERVICE,
+            PHASE15L_RECOVERY_ROOT_ACCOUNT,
+            PHASE15L_DEVICE_KEY_ACCOUNT,
+            "crablink-keychain:v1",
+        ] {
+            assert!(!debug.contains(forbidden));
+        }
     }
 }

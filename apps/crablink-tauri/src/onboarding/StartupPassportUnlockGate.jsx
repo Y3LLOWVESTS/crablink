@@ -1,9 +1,9 @@
 /**
  * RO:WHAT — Startup gate that verifies or obtains native operational Passport unlock before mounting the completed CrabLink shell.
  * RO:WHY — Completed onboarding alone must not bypass the native locked-vault boundary after an application restart.
- * RO:INTERACTS — passportAdapter.js, startupPassportUnlockGate.js, and OnboardingRouteGate.jsx.
- * RO:INVARIANTS — native status is rechecked after unlock; React supplies no PIN or secret argument; cancelled/rejected/unavailable states fail closed.
- * RO:TEST — startupPassportUnlockGate.test.mjs and the React production build.
+ * RO:INTERACTS — passportAdapter.js, startupPassportUnlockGate.js, onboardingPassportAbsenceReset.js, and OnboardingRouteGate.jsx.
+ * RO:INVARIANTS — native status is rechecked after unlock; React supplies no PIN or secret argument; failed unlocks remain closed; confirmed Passport absence can reset only redacted local onboarding state.
+ * RO:TEST — startupPassportUnlockGate.test.mjs, onboardingPassportAbsenceReset.test.mjs, and the React production build.
  */
 
 import {
@@ -18,16 +18,16 @@ import {
 } from '../adapters/passportAdapter.js';
 
 import {
+  resetCompletedOnboardingAfterNativePassportAbsence,
+} from './onboardingPassportAbsenceReset.js';
+
+import {
   STARTUP_PASSPORT_GATE_CODES,
   STARTUP_PASSPORT_GATE_STATES,
   createStartupPassportGateFailure,
   runStartupPassportUnlockAttempt,
 } from './startupPassportUnlockGate.js';
 
-/*
- * Development Strict Mode may mount the component twice.
- * Sharing one in-flight attempt prevents duplicate native PIN prompts.
- */
 let sharedStartupUnlockAttempt = null;
 
 function beginSharedStartupUnlockAttempt() {
@@ -104,6 +104,59 @@ export default function StartupPassportUnlockGate({
       [],
     );
 
+  const resetAbsentPassportOnboarding =
+    useCallback(
+      async () => {
+        setGateReview({
+          gateState:
+            STARTUP_PASSPORT_GATE_STATES
+              .CHECKING,
+
+          code:
+            STARTUP_PASSPORT_GATE_CODES
+              .CHECKING,
+
+          message:
+            'Resetting redacted local onboarding state after confirmed Passport absence.',
+        });
+
+        try {
+          await resetCompletedOnboardingAfterNativePassportAbsence();
+
+          resetSharedStartupUnlockAttempt();
+
+          const reload =
+            globalThis.location?.reload;
+
+          if (
+            typeof reload !==
+            'function'
+          ) {
+            throw new Error(
+              'Browser reload is unavailable.',
+            );
+          }
+
+          reload.call(
+            globalThis.location,
+          );
+        } catch (_error) {
+          setGateReview({
+            gateState:
+              STARTUP_PASSPORT_GATE_STATES
+                .BLOCKED,
+
+            code:
+              'passport_absence_reset_failed',
+
+            message:
+              'CrabLink could not reset the completed onboarding record. Native Passport custody remains absent and the shell remains closed.',
+          });
+        }
+      },
+      [],
+    );
+
   useEffect(() => {
     void runAttempt();
   }, [runAttempt]);
@@ -120,6 +173,13 @@ export default function StartupPassportUnlockGate({
     gateReview.gateState ===
     STARTUP_PASSPORT_GATE_STATES
       .CHECKING;
+
+  const passportAbsenceResetAvailable =
+    gateReview.code ===
+      STARTUP_PASSPORT_GATE_CODES
+        .NO_PASSPORT ||
+    gateReview.code ===
+      'passport_absence_reset_failed';
 
   return (
     <main
@@ -206,7 +266,30 @@ export default function StartupPassportUnlockGate({
           </div>
         </dl>
 
-        {!checking ? (
+        {!checking &&
+        passportAbsenceResetAvailable ? (
+          <>
+            <p className="cl-onboarding-gate__notice">
+              Native Passport custody is already
+              absent. This action clears only
+              local settings, profile drafts,
+              caches, and completed onboarding
+              display state before returning to
+              Welcome.
+            </p>
+
+            <button
+              className="cl-onboarding-gate__primary"
+              type="button"
+              data-onboarding-passport-absence-reset="available"
+              onClick={() => {
+                void resetAbsentPassportOnboarding();
+              }}
+            >
+              Reset completed onboarding and return to Welcome
+            </button>
+          </>
+        ) : !checking ? (
           <button
             className="cl-onboarding-gate__primary"
             type="button"

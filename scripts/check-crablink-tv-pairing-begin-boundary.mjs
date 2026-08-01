@@ -126,8 +126,8 @@ requireFragments(
     '"entitlement.read"',
     '"receipts.read"',
     '"confirmed_roc.read"',
-    '"session.revoke_self"',
-    '"companion-crablink-required"',
+    '"capability.revoke_self"',
+    '"root-admin-device-required"',
     'session_present: false',
   ],
 );
@@ -268,7 +268,7 @@ requireFragments(
     'safeChallengeHandle',
     'safeFuturePairingExpiry',
     '/^[A-Z2-9]{6}$/',
-    "'companion-crablink-required'",
+    "'root-admin-device-required'",
     'sessionPresent: false',
   ],
 );
@@ -331,7 +331,7 @@ console.log(
 );
 
 console.log(
-  'Challenge authority: backend only; approval authority: trusted companion only.',
+  'Challenge authority: backend only; approval authority: root-admin device only.',
 );
 
 console.log(

@@ -1,20 +1,96 @@
 /**
- * RO:WHAT — React scaffold component for extensions/chrome/src/shared/components/Toggle.jsx.
- * RO:WHY — CrabLink refactor; gives this UI surface a single clear owner.
- * RO:INTERACTS — App shell, route registry, shared components, and page-local CSS.
- * RO:INVARIANTS — no fake backend truth; no silent ROC spend; no direct internal-service calls.
- * RO:METRICS — none yet.
- * RO:CONFIG — app context/settings when wired.
- * RO:SECURITY — render trusted UI only; untrusted crab content belongs in sandboxed surfaces.
- * RO:TEST — component and route smoke tests once implemented.
+ * RO:WHAT — Shared accessible controlled switch for CrabLink preferences and explicit user choices.
+ * RO:WHY — FINAL_BETA Phase 2B1; replaces the legacy scaffold with a real keyboard-operable control.
+ * RO:INTERACTS — caller-owned settings state, form labels, and designSystemFoundation.css.
+ * RO:INVARIANTS — controlled input only; changing it invokes only the supplied callback.
+ * RO:METRICS — none.
+ * RO:CONFIG — checked, onChange, label, description, disabled, name, value, id, and className.
+ * RO:SECURITY — no persistence, network request, Passport change, wallet action, or hidden authority.
+ * RO:TEST — phase2bInteractivePrimitives.test.mjs and focused frontend build.
+ * FINAL_BETA_PHASE2B1_INTERACTIVE_PRIMITIVES_V1
  */
 
-export default function Toggle() {
+import {
+  useId,
+} from 'react';
+
+export default function Toggle({
+  checked = false,
+  onChange = null,
+  label = '',
+  description = '',
+  disabled = false,
+  name = '',
+  value = 'on',
+  id = '',
+  className = '',
+}) {
+  const generatedId = useId();
+
+  const controlId =
+    id || generatedId;
+
+  const descriptionId =
+    description
+      ? `${controlId}-description`
+      : undefined;
+
   return (
-    <section className="cl-card cl-scaffold-card">
-      <p className="cl-eyebrow">Scaffold</p>
-      <h1>Toggle</h1>
-      <p>extensions/chrome/src/shared/components/Toggle.jsx</p>
-    </section>
+    <label
+      className={[
+        'cl-toggle',
+        checked ? 'is-checked' : '',
+        disabled ? 'is-disabled' : '',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      htmlFor={controlId}
+    >
+      <input
+        id={controlId}
+        className="cl-toggle-input"
+        type="checkbox"
+        role="switch"
+        name={name || undefined}
+        value={value}
+        checked={Boolean(checked)}
+        disabled={disabled}
+        aria-checked={Boolean(checked)}
+        aria-describedby={descriptionId}
+        onChange={(event) => {
+          onChange?.(
+            event.target.checked,
+            event,
+          );
+        }}
+      />
+
+      <span
+        className="cl-toggle-track"
+        aria-hidden="true"
+      >
+        <span className="cl-toggle-thumb" />
+      </span>
+
+      {(label || description) && (
+        <span className="cl-toggle-copy">
+          {label && (
+            <span className="cl-toggle-label">
+              {label}
+            </span>
+          )}
+
+          {description && (
+            <span
+              id={descriptionId}
+              className="cl-toggle-description"
+            >
+              {description}
+            </span>
+          )}
+        </span>
+      )}
+    </label>
   );
 }

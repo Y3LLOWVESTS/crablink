@@ -14,6 +14,8 @@ pub mod crab_url;
 pub mod gateway_profile;
 pub mod pairing_dto;
 pub mod settings_profile;
+pub mod tv_passport_authorization;
+pub mod tv_passport_pairing;
 
 pub use asset_manifest::{
     compute_tv_asset_content_cid, review_tv_asset_manifest, verify_tv_asset_bytes,

@@ -54,7 +54,7 @@ test('reviewed gateway can become ready without claiming pairing', () => {
       gatewayState: 'ready',
       sessionPresent: false,
       approvalAuthority:
-        'companion-crablink-required',
+        'root-admin-device-required',
     },
   );
 
@@ -117,7 +117,7 @@ test('pairing begin response accepts bounded waiting truth only', () => {
         expiresAt:
           '2030-01-02T03:04:05Z',
         approvalAuthority:
-          'companion-crablink-required',
+          'root-admin-device-required',
 
         // Unknown input fields are never copied into the
         // normalized frontend projection.
@@ -153,7 +153,7 @@ test('pairing begin response accepts bounded waiting truth only', () => {
 
   assert.equal(
     response.approvalAuthority,
-    'companion-crablink-required',
+    'root-admin-device-required',
   );
 
   assert.equal(
@@ -227,7 +227,7 @@ test('malformed pairing begin response fails closed', () => {
         expiresAt:
           '2020-01-02T03:04:05Z',
         approvalAuthority:
-          'companion-crablink-required',
+          'root-admin-device-required',
       },
       Date.parse(
         '2026-07-16T22:00:00Z',
@@ -292,7 +292,7 @@ test('pairing begin success projects waiting without session', () => {
         expiresAt:
           '2030-01-02T03:04:05Z',
         approvalAuthority:
-          'companion-crablink-required',
+          'root-admin-device-required',
       },
       Date.parse(
         '2026-07-17T00:00:00Z',

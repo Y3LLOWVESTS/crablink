@@ -1,12 +1,13 @@
 /**
- * RO:WHAT — Shared CrabLink button component.
- * RO:WHY — App Integration; Concerns: DX; keeps actions visually consistent across route-owned pages.
- * RO:INTERACTS — pages/* and shared UI components.
- * RO:INVARIANTS — no side effects beyond caller-provided events; disabled means no action.
+ * RO:WHAT — Shared CrabLink button with standardized visual, disabled, and busy states.
+ * RO:WHY — FINAL_BETA Phase 2B2; adopts the shared interaction system while preserving caller-owned actions.
+ * RO:INTERACTS — route pages, dialogs, state components, CopyButton, and designSystemFoundation.css.
+ * RO:INVARIANTS — no side effects beyond caller-provided events; disabled or busy means no action.
  * RO:METRICS — none.
- * RO:CONFIG — variant and size props.
- * RO:SECURITY — no backend or wallet action internally.
- * RO:TEST — visual/manual component smoke.
+ * RO:CONFIG — variant, size, busy, busyLabel, disabled, type, and standard button props.
+ * RO:SECURITY — no backend, Passport, wallet, receipt, or ledger authority internally.
+ * RO:TEST — phase2bSharedStates.test.mjs and focused frontend build.
+ * FINAL_BETA_PHASE2B2_SHARED_STATES_V1
  */
 
 export default function Button({
@@ -15,15 +16,41 @@ export default function Button({
   variant = 'primary',
   size = 'md',
   type = 'button',
+  busy = false,
+  busyLabel = 'Working…',
+  disabled = false,
   ...props
 }) {
-  const classes = ['cl-button', `cl-button-${variant}`, `cl-button-${size}`, className]
+  const classes = [
+    'cl-button',
+    `cl-button-${variant}`,
+    `cl-button-${size}`,
+    busy ? 'is-busy' : '',
+    className,
+  ]
     .filter(Boolean)
     .join(' ');
 
   return (
-    <button className={classes} type={type} {...props}>
-      {children}
+    <button
+      className={classes}
+      type={type}
+      disabled={disabled || busy}
+      aria-busy={busy || undefined}
+      {...props}
+    >
+      {busy && (
+        <span
+          className="cl-button-busy-mark"
+          aria-hidden="true"
+        />
+      )}
+
+      <span className="cl-button-label">
+        {busy
+          ? busyLabel
+          : children}
+      </span>
     </button>
   );
 }

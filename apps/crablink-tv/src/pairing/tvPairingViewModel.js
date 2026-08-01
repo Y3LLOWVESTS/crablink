@@ -215,7 +215,7 @@ export function normalizeTvPairingBeginResponse(
     Boolean(pairingCode) &&
     Boolean(expiresAt) &&
     value?.approvalAuthority ===
-      'companion-crablink-required';
+      'root-admin-device-required';
 
   return {
     schema:
@@ -229,7 +229,7 @@ export function normalizeTvPairingBeginResponse(
       valid ? expiresAt : null,
     sessionPresent: false,
     approvalAuthority:
-      'companion-crablink-required',
+      'root-admin-device-required',
     errorCode:
       valid
         ? null
@@ -274,9 +274,9 @@ export function normalizeTvPairingStatus(
       value?.sessionPresent === true,
     approvalAuthority:
       value?.approvalAuthority ===
-      'companion-crablink-required'
+      'root-admin-device-required'
         ? value.approvalAuthority
-        : 'companion-crablink-required',
+        : 'root-admin-device-required',
     message:
       safeString(value?.message, 320) ??
       'No pairing status message was provided.',
@@ -365,7 +365,7 @@ export function projectTvPairingView(
       kind: 'waiting',
       title: 'Approve this TV from CrabLink',
       message:
-        'Enter the short code in a trusted desktop or mobile CrabLink companion.',
+        'Enter the short code in a root-admin desktop or mobile CrabLink device.',
       gateway,
       pairing,
       pairingCode: pairing.pairingCode,

@@ -1,13 +1,26 @@
 /**
- * RO:WHAT — Truthful placeholder adapter for CrabLink username availability checks.
- * RO:WHY — App Integration; Concerns: DX/SEC/RES; onboarding needs a stable adapter contract before a gateway availability route is connected.
- * RO:INTERACTS — WelcomeUsernameStep.jsx and onboardingModel.js.
- * RO:INVARIANTS — the default adapter never claims availability or username ownership; only an injected checker may return available/unavailable.
- * RO:METRICS — none.
- * RO:CONFIG — optional injected check function.
- * RO:SECURITY — username is public draft data; no Passport, wallet, capability, registry mutation, or secret material.
- * RO:TEST — welcomeUsernameStep.test.mjs.
+ * RO:WHAT — Gateway-backed username availability hint adapter for CrabLink onboarding.
+ * RO:WHY — FINAL_BETA Phase 1; release onboarding must use an existing public gateway read instead of a hidden development bypass.
+ * RO:INTERACTS — WelcomeUsernameStep.jsx, onboardingModel.js, app/settings.js, gatewayClient.js, identityClient.js, and GET /identity/passport/profile/:username.
+ * RO:INVARIANTS — only an exact profile_not_found 404 becomes an available hint; an existing profile is unavailable; every other failure fails closed; availability never claims ownership.
+ * RO:METRICS — gateway requests retain the existing correlation-id behavior.
+ * RO:CONFIG — configured CrabLink gateway settings and request timeout.
+ * RO:SECURITY — read-only gateway lookup; no username claim, Passport mutation, wallet/ledger mutation, secret material, arbitrary URL, or direct internal-service call.
+ * RO:TEST — welcomeUsernameStep.test.mjs and usernameAvailabilityGateway.test.mjs.
+ * FINAL_BETA_PHASE1D_RELEASE_USERNAME_AVAILABILITY_V1
  */
+
+import {
+  loadAppSettings,
+} from '../app/settings.js';
+
+import {
+  createGatewayClient,
+} from '../shared/api/gatewayClient.js';
+
+import {
+  createIdentityClient,
+} from '../shared/api/identityClient.js';
 
 import {
   validateOnboardingUsername,
@@ -23,6 +36,90 @@ export const USERNAME_AVAILABILITY_CHECK_STATUS =
     UNAVAILABLE: 'unavailable',
     ERROR: 'error',
   });
+
+export function createGatewayUsernameAvailabilityCheck({
+  loadSettings = loadAppSettings,
+  createGateway = createGatewayClient,
+  createIdentity = createIdentityClient,
+} = {}) {
+  requireFunction(
+    loadSettings,
+    'loadSettings',
+  );
+
+  requireFunction(
+    createGateway,
+    'createGateway',
+  );
+
+  requireFunction(
+    createIdentity,
+    'createIdentity',
+  );
+
+  return async function checkUsernameThroughGateway(
+    username,
+  ) {
+    const loaded = await loadSettings();
+
+    const settings =
+      loaded?.settings &&
+      typeof loaded.settings === 'object'
+        ? loaded.settings
+        : loaded || {};
+
+    const gateway =
+      createGateway(settings);
+
+    const identity =
+      createIdentity(gateway);
+
+    if (
+      !identity ||
+      typeof identity.getPassportProfile !==
+        'function'
+    ) {
+      throw new TypeError(
+        'Username availability requires the gateway-backed public profile reader.',
+      );
+    }
+
+    try {
+      await identity.getPassportProfile(
+        username,
+        {
+          label:
+            'Username availability hint',
+        },
+      );
+
+      return Object.freeze({
+        available: false,
+        reason:
+          'username_profile_exists',
+      });
+    } catch (error) {
+      const status = Number(
+        error?.status || 0,
+      );
+
+      const reason =
+        backendReason(error);
+
+      if (
+        status === 404 &&
+        reason === 'profile_not_found'
+      ) {
+        return Object.freeze({
+          available: true,
+          reason: 'profile_not_found',
+        });
+      }
+
+      throw error;
+    }
+  };
+}
 
 export function createUsernameAvailabilityAdapter({
   check,
@@ -124,8 +221,14 @@ export function createUsernameAvailabilityAdapter({
   });
 }
 
+const gatewayUsernameAvailabilityCheck =
+  createGatewayUsernameAvailabilityCheck();
+
 export const usernameAvailabilityAdapter =
-  createUsernameAvailabilityAdapter();
+  createUsernameAvailabilityAdapter({
+    check:
+      gatewayUsernameAvailabilityCheck,
+  });
 
 export function checkUsernameAvailability(
   username,
@@ -152,6 +255,18 @@ function freezeResult({
   });
 }
 
+function backendReason(error) {
+  const value =
+    error?.reason ||
+    error?.data?.code ||
+    error?.data?.reason ||
+    '';
+
+  return String(value)
+    .trim()
+    .toLowerCase();
+}
+
 function normalizeReason(
   value,
   fallback,
@@ -166,4 +281,15 @@ function normalizeReason(
   return value
     .trim()
     .slice(0, 120);
+}
+
+function requireFunction(
+  value,
+  label,
+) {
+  if (typeof value !== 'function') {
+    throw new TypeError(
+      `${label} must be a function.`,
+    );
+  }
 }

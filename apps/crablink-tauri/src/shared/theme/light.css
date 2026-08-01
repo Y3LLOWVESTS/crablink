@@ -1,27 +1,43 @@
 /*
- * RO:WHAT — Light theme token overrides for CrabLink.
- * RO:WHY — Light mode is the default user-facing mode with a neutral black/white paper feel.
- * RO:INTERACTS — themeTokens.css and ThemeProvider.
- * RO:INVARIANTS — readable contrast; no blue default theme; no page-specific global hacks.
- * RO:TEST — visual/manual theme smoke.
+ * RO:WHAT — Canonical light-theme semantic palette for CrabLink Desktop.
+ * RO:WHY — FINAL_BETA Phase 2; gives normal pages one readable warm-neutral visual language.
+ * RO:INTERACTS — themeTokens.css, ThemeProvider, designSystemFoundation.css, and page CSS.
+ * RO:INVARIANTS — semantic tokens only; readable contrast; warm CrabLink accent; no page-owned palette.
+ * RO:TEST — designSystemFoundation.test.mjs and manual light-theme smoke.
  */
 
 [data-theme='light'] {
   color-scheme: light;
 
-  --cl-bg: #f5f4f1;
-  --cl-surface: #fbfaf7;
+  --cl-bg: #f5f6f8;
+  --cl-surface: #fafbfc;
+  --cl-surface-raised: #ffffff;
   --cl-card: #ffffff;
-  --cl-text: #111111;
-  --cl-muted: #626262;
-  --cl-border: #d9d6cf;
+  --cl-card-muted: #f0f2f5;
 
-  --cl-accent: #111111;
+  --cl-text: #17191d;
+  --cl-text-strong: #0c0d0f;
+  --cl-muted: #5b6472;
+  --cl-subtle: #7a8492;
+
+  --cl-border: #d8dde5;
+  --cl-border-strong: #b9c1cc;
+
+  --cl-accent: #d94b2b;
+  --cl-accent-hover: #b93c21;
+  --cl-accent-pressed: #963019;
+  --cl-accent-soft: #fff0eb;
   --cl-accent-contrast: #ffffff;
 
   --cl-danger: #b42318;
+  --cl-danger-soft: #fff0ef;
   --cl-warning: #8a4b00;
+  --cl-warning-soft: #fff6e6;
   --cl-success: #166534;
+  --cl-success-soft: #edf9f0;
+  --cl-info: #315f8c;
+  --cl-info-soft: #eef5fc;
 
-  --cl-ad-bg: #efede7;
+  --cl-overlay: rgba(15, 18, 24, 0.52);
+  --cl-ad-bg: var(--cl-card-muted);
 }

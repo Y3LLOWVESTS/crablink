@@ -7,7 +7,8 @@
 
 use crate::{
     passport_clear_command_runtime::{
-        DesktopNativePassportClearCommandState, NATIVE_PASSPORT_PHASE15AA_LABEL,
+        clear_desktop_native_passport_with_platform_material_and_recovery_acknowledgement,
+        DesktopNativePassportClearCommandState, ONBOARDING_PHASE11C2B_PLATFORM_SECRET_CLEAR_LABEL,
     },
     passport_create_command_runtime::{
         create_desktop_native_passport_from_native_surface_with_pending_factors,
@@ -354,31 +355,24 @@ pub fn passport_status(
     build_passport_status(facts)
 }
 
-/// Clear the local desktop Native Passport vault and drop native-only session material.
+/// Clear all local desktop Native Passport custody material.
+///
+/// Native-only sessions are dropped first. Platform material must then be
+/// completely absent before the encrypted vault and recovery acknowledgement
+/// may be removed. Partial platform deletion remains retryable because the
+/// encrypted vault is preserved.
 #[tauri::command]
 pub fn passport_clear(
     state: State<'_, AppState>,
 ) -> Result<PassportOperationalCommandDtoV1, PassportStatusProblemV1> {
-    let passport_operational_session = &state.passport_operational_session;
-
-    let outcome =
-        crate::passport_clear_command_runtime::
-            clear_desktop_native_passport_with_recovery_acknowledgement(
-                &state.passport_vault_store,
-                passport_operational_session,
-                &state
-                    .passport_recovery_acknowledgement_store,
-            );
-
-    let pending_recovery_session_dropped = state
-        .passport_pending_recovery_session
-        .clear_pending_recovery_factor()
-        .map_err(|_| unavailable_problem())?;
-
-    let pending_operational_session_dropped = state
-        .passport_pending_operational_session
-        .clear_pending_operational_factor()
-        .map_err(|_| unavailable_problem())?;
+    let outcome = clear_desktop_native_passport_with_platform_material_and_recovery_acknowledgement(
+        &state.passport_vault_store,
+        &state.passport_operational_session,
+        &state.passport_pending_recovery_session,
+        &state.passport_pending_operational_session,
+        state.passport_platform_material_clearer.as_ref(),
+        &state.passport_recovery_acknowledgement_store,
+    );
 
     let state_label = match outcome.state {
         DesktopNativePassportClearCommandState::Cleared => "cleared",
@@ -389,17 +383,15 @@ pub fn passport_clear(
     Ok(PassportOperationalCommandDtoV1 {
         schema: PASSPORT_CLEAR_DTO_SCHEMA_V1,
         command_name: PASSPORT_CLEAR_COMMAND,
-        source_phase_label: NATIVE_PASSPORT_PHASE15AA_LABEL,
+        source_phase_label: ONBOARDING_PHASE11C2B_PLATFORM_SECRET_CLEAR_LABEL,
         state: state_label,
         redacted: true,
         native_secure_input_requested: false,
         pin_received_from_webview: false,
         secret_material_returned: false,
-        session_changed: outcome.session_dropped
-            || pending_recovery_session_dropped
-            || pending_operational_session_dropped,
+        session_changed: outcome.session_changed(),
         encrypted_vault_mutated: outcome.encrypted_vault_removed,
-        platform_material_mutated: false,
+        platform_material_mutated: outcome.platform_material_mutated,
         recovery_root_unsealed: false,
         wallet_or_ledger_mutated: false,
     })

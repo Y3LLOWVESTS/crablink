@@ -9,6 +9,11 @@ use std::sync::Arc;
 
 use svc_passport::native::{NativePlatformFamily, NativePlatformSealer};
 
+use crate::passport_platform_material_clear_runtime::SharedDesktopPlatformMaterialClearer;
+
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+use crate::passport_platform_material_clear_runtime::UnavailableDesktopPlatformMaterialClearer;
+
 #[cfg(target_os = "linux")]
 use crate::passport_platform_sealer_linux::LinuxSecretServicePlatformSealer;
 
@@ -107,6 +112,23 @@ pub fn new_desktop_platform_sealer() -> SharedNativePlatformSealer {
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux",)))]
     {
         compile_error!("Native Passport desktop PlatformSealer requires macOS, Windows, or Linux");
+    }
+}
+
+pub fn new_desktop_platform_material_clearer() -> SharedDesktopPlatformMaterialClearer {
+    #[cfg(target_os = "macos")]
+    {
+        Arc::new(MacosKeychainPlatformSealer::new())
+    }
+
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    {
+        Arc::new(UnavailableDesktopPlatformMaterialClearer)
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux",)))]
+    {
+        compile_error!("Native Passport platform material clear requires macOS, Windows, or Linux");
     }
 }
 

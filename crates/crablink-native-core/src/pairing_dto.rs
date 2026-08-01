@@ -19,7 +19,7 @@ pub const MAX_PAIRING_BEGIN_RESPONSE_BYTES: usize = 8 * 1_024;
 
 pub const MAX_DEVICE_NAME_BYTES: usize = 64;
 
-pub const APPROVAL_AUTHORITY: &str = "companion-crablink-required";
+pub const APPROVAL_AUTHORITY: &str = "root-admin-device-required";
 
 const MIN_CHALLENGE_HANDLE_BYTES: usize = 8;
 
@@ -32,7 +32,7 @@ pub const INITIAL_TV_SESSION_SCOPES: [&str; 7] = [
     "entitlement.read",
     "receipts.read",
     "confirmed_roc.read",
-    "session.revoke_self",
+    "capability.revoke_self",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -215,7 +215,7 @@ pub fn build_pairing_begin_request(
 
     Ok(TvPairingBeginRequest {
         schema: PAIRING_BEGIN_REQUEST_SCHEMA,
-        device_class: "android-tv",
+        device_class: "tv_read_only",
         device_name,
         environment_profile,
         requested_scopes: INITIAL_TV_SESSION_SCOPES.to_vec(),
@@ -315,7 +315,7 @@ mod tests {
             "challengeHandle":"challenge_12345678",
             "pairingCode":"ABC234",
             "expiresAt":"2030-01-02T03:04:05Z",
-            "approvalAuthority":"companion-crablink-required"
+            "approvalAuthority":"root-admin-device-required"
         }"#;
 
     #[test]
@@ -389,7 +389,7 @@ mod tests {
             "challengeHandle":"challenge_12345678",
             "pairingCode":"ABC234",
             "expiresAt":"2030-01-02T03:04:05Z",
-            "approvalAuthority":"companion-crablink-required",
+            "approvalAuthority":"root-admin-device-required",
             "sessionToken":"forbidden"
         }"#;
 
@@ -425,7 +425,7 @@ mod tests {
             "challengeHandle":"challenge_12345678",
             "pairingCode":"ABC10I",
             "expiresAt":"2030-01-02T03:04:05Z",
-            "approvalAuthority":"companion-crablink-required"
+            "approvalAuthority":"root-admin-device-required"
         }"#;
 
         assert_eq!(
@@ -441,7 +441,7 @@ mod tests {
             "challengeHandle":"challenge_12345678",
             "pairingCode":"ABC234",
             "expiresAt":"2020-01-02T03:04:05Z",
-            "approvalAuthority":"companion-crablink-required"
+            "approvalAuthority":"root-admin-device-required"
         }"#;
 
         assert_eq!(

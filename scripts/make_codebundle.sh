@@ -390,6 +390,29 @@ selected_scripts() {
     "$ROOT/scripts/check-crablink-tv-resource-release-executor-boundary.mjs" \
     "$ROOT/apps/crablink-tv/src/media/tvPhase11AcceptanceBoundary.source.test.mjs" \
     "$ROOT/scripts/check-crablink-tv-phase11-acceptance-boundary.mjs" \
+    "$ROOT/apps/crablink-tv/src/passport/tvNativePassportPhase16Successor.source.test.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16-successor-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16c1-pairing-request-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16c2-root-authorization-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16c3-pairing-runtime-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16c4a-startup-hydration-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16c4b-durable-replay-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16d1-authority-record-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16d2-sealed-authority-store-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16d3-authority-runtime-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16e1-pin-lifecycle-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16e2-android-pin-prompt-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16e3a-operational-unlock-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16e3b1-pin-verifier-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16e3b2a-verified-ticket-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16e3b2b1-keystore-unseal-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16e3b2b2a-global-runtime-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16e3b2b2b-jni-material-port-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16e3b2b2c-redacted-jni-export-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16e3b3a-pin-coordinator-boundary.mjs" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16e3b3b-explicit-request-lifecycle-lock-boundary.mjs" \
+    "$ROOT/scripts/run-crablink-tv-native-passport-phase16e3b3c-device-runtime-acceptance.sh" \
+    "$ROOT/scripts/check-crablink-tv-native-passport-phase16e3b3c-device-runtime-acceptance-boundary.mjs" \
     "$ROOT/apps/crablink-tv/src/media/tvVerifiedMediaPlaybackSurfaceModel.js" \
     "$ROOT/apps/crablink-tv/src/media/tvVerifiedMediaPlaybackSurfaceModel.test.mjs" \
     "$ROOT/apps/crablink-tv/src/media/TvVerifiedMediaPlaybackSurface.jsx" \

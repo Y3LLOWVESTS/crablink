@@ -17,11 +17,17 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+zeroize = "1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
 tauri = { version = "2", features = [] }
 url = "2"
 crablink-native-core = { path = "../../../crates/crablink-native-core" }
+svc-passport = { path = "../../../../RustyOnions/crates/svc-passport", default-features = false, features = ["native-passport"] }
 
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"

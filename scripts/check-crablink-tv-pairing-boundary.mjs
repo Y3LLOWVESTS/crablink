@@ -149,7 +149,8 @@ for (const fragment of [
   'No short code or QR challenge has been issued.',
   'Review pairing security',
   'No pairing state was created.',
-  'companion',
+  'Passport TV authorization',
+  'root-admin device',
 ]) {
   if (!panel.includes(fragment)) {
     throw new Error(
@@ -228,7 +229,7 @@ for (const fragment of [
   '"ready_to_begin"',
   'pairing_code: None',
   'session_present: false',
-  '"companion-crablink-required"',
+  '"root-admin-device-required"',
   'pub struct TvPairingBeginRequest',
   'pub struct TvPairingBeginResponse',
   'review_pairing_begin_response',
@@ -255,7 +256,7 @@ for (const fragment of [
   'reqwest::redirect::Policy::none()',
   '.no_proxy()',
   'response.chunk()',
-  'local_pairing_begin_posts_fixed_request_and_accepts_challenge',
+  'local_pairing_begin_posts_native_request_and_accepts_matching_challenge',
   'declared_oversize_pairing_response_is_rejected',
   'transient_pairing_status_is_retryable',
 ]) {
@@ -412,7 +413,7 @@ console.log(
 );
 
 console.log(
-  'Approval authority: trusted desktop or mobile CrabLink companion.',
+  'Approval authority: root-admin desktop or mobile CrabLink device.',
 );
 
 console.log(

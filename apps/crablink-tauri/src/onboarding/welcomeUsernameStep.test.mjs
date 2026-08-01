@@ -2,7 +2,7 @@
  * RO:WHAT — Focused Phase 4 tests for visible welcome, username validation, truthful availability, and development bypass.
  * RO:WHY — Proves the first visible onboarding step contains no baked identity and never fabricates username ownership.
  * RO:INTERACTS — onboardingModel.js, usernameAvailability.js, WelcomeUsernameStep.jsx, OnboardingRouteGate.jsx.
- * RO:INVARIANTS — username is user-entered; default adapter is unconfigured; development bypass is explicit.
+ * RO:INVARIANTS — username is user-entered; unconfigured adapters remain truthful; the release adapter uses a fail-closed gateway hint; development bypass is explicit.
  * RO:TEST — node --test welcomeUsernameStep.test.mjs.
  */
 
@@ -27,7 +27,6 @@ import {
 import {
   USERNAME_AVAILABILITY_CHECK_SCHEMA,
   USERNAME_AVAILABILITY_CHECK_STATUS,
-  checkUsernameAvailability,
   createUsernameAvailabilityAdapter,
 } from './usernameAvailability.js';
 
@@ -91,12 +90,16 @@ test(
 );
 
 test(
-  'default availability adapter truthfully reports not configured',
+  'unconfigured availability adapter truthfully reports not configured',
   async () => {
+    const adapter =
+      createUsernameAvailabilityAdapter();
+
     const result =
-      await checkUsernameAvailability(
-        'fresh_crab',
-      );
+      await adapter
+        .checkUsernameAvailability(
+          'fresh_crab',
+        );
 
     assert.deepEqual(result, {
       schema:

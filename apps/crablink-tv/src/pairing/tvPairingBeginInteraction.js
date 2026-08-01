@@ -95,7 +95,7 @@ export function projectTvPairingBeginSuccess(
       approvalAuthority:
         response.approvalAuthority,
       message:
-        'Waiting for trusted companion approval.',
+        'Waiting for root-admin device authorization.',
     },
   );
 

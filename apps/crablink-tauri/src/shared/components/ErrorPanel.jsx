@@ -1,56 +1,128 @@
 /**
- * RO:WHAT — Shared explicit error panel for route-owned React pages.
- * RO:WHY — CrabLink refactor; prevents protected route failures from becoming blank screens or fake success states.
- * RO:INTERACTS — AssetResolver, ProblemPage, future gateway-backed pages.
- * RO:INVARIANTS — failure is visible; no fake backend truth; no secret rendering.
- * RO:METRICS — none.
- * RO:CONFIG — title/copy/error/actions props.
- * RO:SECURITY — redacts token-like JSON through JsonPreview; no untrusted HTML.
- * RO:TEST — manual offline gateway smoke and not-found route smoke.
+ * RO:WHAT — Compatibility error panel composed from canonical ErrorState and collapsed developer disclosure.
+ * RO:WHY — FINAL_BETA Phase 2B2; keeps normal failure language readable while preserving redacted advanced diagnostics.
+ * RO:INTERACTS — AssetResolver, ProblemPage, ErrorState, DeveloperDisclosure, JsonPreview, and route-owned actions.
+ * RO:INVARIANTS — failure remains visible; caller actions remain intact; diagnostics stay collapsed; no fake success.
+ * RO:METRICS — correlation identifiers remain visible when supplied.
+ * RO:CONFIG — title, copy, error, actions, and className.
+ * RO:SECURITY — no untrusted HTML; advanced data continues through the existing redacting JsonPreview boundary.
+ * RO:TEST — phase2bSharedStates.test.mjs and focused frontend build.
+ * FINAL_BETA_PHASE2B2_SHARED_STATES_V1
  */
 
-import Button from './Button.jsx';
-import Card from './Card.jsx';
+import DeveloperDisclosure from './DeveloperDisclosure.jsx';
+import ErrorState from './ErrorState.jsx';
 import JsonPreview from './JsonPreview.jsx';
 
 export default function ErrorPanel({
   title = 'Something went wrong',
-  copy = 'CrabLink could not complete this route.',
+  copy =
+    'CrabLink could not complete this route.',
   error = null,
   actions = null,
   className = '',
 }) {
   const problem = normalizeError(error);
 
+  const publicCopy = [
+    copy,
+    problem.message,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <Card eyebrow="Problem" title={title} className={['cl-error-panel', className].filter(Boolean).join(' ')}>
-      {copy && <p>{copy}</p>}
+    <div
+      className={[
+        'cl-error-panel-shell',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <ErrorState
+        title={title}
+        copy={publicCopy}
+        reason={
+          problem.reason ||
+          (
+            problem.status
+              ? `HTTP ${problem.status}`
+              : ''
+          )
+        }
+        correlationId={
+          problem.correlationId
+        }
+        retryLabel="Reload page"
+        onRetry={
+          actions
+            ? null
+            : () => window.location.reload()
+        }
+        secondaryAction={actions}
+      />
 
-      {problem.message && <p className="cl-error-message">{problem.message}</p>}
+      <DeveloperDisclosure
+        title="Technical details"
+        summary={
+          problem.retryable
+            ? 'Retry may succeed'
+            : 'Advanced diagnostic record'
+        }
+      >
+        <div
+          className="cl-error-facts"
+          aria-label="Error facts"
+        >
+          <Fact
+            label="Reason"
+            value={
+              problem.reason || 'unknown'
+            }
+          />
 
-      <div className="cl-error-facts" aria-label="Error facts">
-        <Fact label="Reason" value={problem.reason || 'unknown'} />
-        <Fact label="HTTP" value={problem.status ? String(problem.status) : 'n/a'} />
-        <Fact label="Retryable" value={problem.retryable ? 'yes' : 'no'} />
-        <Fact label="Correlation" value={problem.correlationId || 'n/a'} />
-      </div>
+          <Fact
+            label="HTTP"
+            value={
+              problem.status
+                ? String(problem.status)
+                : 'n/a'
+            }
+          />
 
-      {actions || null}
+          <Fact
+            label="Retryable"
+            value={
+              problem.retryable
+                ? 'yes'
+                : 'no'
+            }
+          />
 
-      <JsonPreview label="Error details" data={problem} />
-
-      {!actions && (
-        <div className="cl-error-default-actions">
-          <Button variant="secondary" onClick={() => window.location.reload()}>
-            Reload page
-          </Button>
+          <Fact
+            label="Reference"
+            value={
+              problem.correlationId ||
+              'n/a'
+            }
+          />
         </div>
-      )}
-    </Card>
+
+        <JsonPreview
+          label="Redacted error record"
+          data={problem}
+          initiallyOpen={false}
+        />
+      </DeveloperDisclosure>
+    </div>
   );
 }
 
-function Fact({ label, value }) {
+function Fact({
+  label,
+  value,
+}) {
   return (
     <div>
       <span>{label}</span>
@@ -71,19 +143,52 @@ function normalizeError(error) {
   }
 
   return {
-    name: String(error.name || 'Error'),
-    message: String(error.message || error),
-    reason: String(error.reason || error.target?.assetKind || ''),
-    status: Number(error.status || error.fallbackError?.status || error.primaryError?.status || 0),
-    retryable: Boolean(error.retryable || error.fallbackError?.retryable || error.primaryError?.retryable),
+    name: String(
+      error.name || 'Error',
+    ),
+
+    message: String(
+      error.message || error,
+    ),
+
+    reason: String(
+      error.reason ||
+      error.target?.assetKind ||
+      '',
+    ),
+
+    status: Number(
+      error.status ||
+      error.fallbackError?.status ||
+      error.primaryError?.status ||
+      0,
+    ),
+
+    retryable: Boolean(
+      error.retryable ||
+      error.fallbackError?.retryable ||
+      error.primaryError?.retryable,
+    ),
+
     correlationId: String(
       error.correlationId ||
-        error.fallbackError?.correlationId ||
-        error.primaryError?.correlationId ||
-        '',
+      error.fallbackError?.correlationId ||
+      error.primaryError?.correlationId ||
+      '',
     ),
-    target: error.target || null,
-    attempts: Array.isArray(error.attempts) ? error.attempts : [],
-    data: error.data || error.fallbackError?.data || error.primaryError?.data || null,
+
+    target:
+      error.target || null,
+
+    attempts:
+      Array.isArray(error.attempts)
+        ? error.attempts
+        : [],
+
+    data:
+      error.data ||
+      error.fallbackError?.data ||
+      error.primaryError?.data ||
+      null,
   };
 }

@@ -145,21 +145,24 @@ fn phase6b2b2b2b_public_clear_command_resets_native_ack_marker() {
     }
 
     for required in [
-        "clear_desktop_native_passport_with_recovery_acknowledgement",
+        "clear_desktop_native_passport_with_platform_material_and_recovery_acknowledgement",
         "&state.passport_vault_store",
         "passport_operational_session",
+        "passport_pending_recovery_session",
+        "passport_pending_operational_session",
+        "passport_platform_material_clearer",
         "passport_recovery_acknowledgement_store",
         "schema: PASSPORT_CLEAR_DTO_SCHEMA_V1",
         "command_name: PASSPORT_CLEAR_COMMAND",
         "source_phase_label:",
-        "NATIVE_PASSPORT_PHASE15AA_LABEL",
+        "ONBOARDING_PHASE11C2B_PLATFORM_SECRET_CLEAR_LABEL",
         "redacted: true",
         "native_secure_input_requested: false",
         "pin_received_from_webview: false",
         "secret_material_returned: false",
         "encrypted_vault_mutated:",
         "outcome.encrypted_vault_removed",
-        "platform_material_mutated: false",
+        "outcome.platform_material_mutated",
         "recovery_root_unsealed: false",
         "wallet_or_ledger_mutated: false",
     ] {

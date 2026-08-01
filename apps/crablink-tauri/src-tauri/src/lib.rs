@@ -22,6 +22,8 @@ pub mod passport_pending_operational_runtime;
 #[cfg(desktop)]
 pub mod passport_pending_recovery_runtime;
 #[cfg(desktop)]
+pub mod passport_platform_material_clear_runtime;
+#[cfg(desktop)]
 pub mod passport_platform_runtime;
 #[cfg(target_os = "macos")]
 pub mod passport_platform_sealer;
@@ -48,7 +50,9 @@ mod state;
 use state::AppState;
 
 #[cfg(desktop)]
-use passport_platform_runtime::new_desktop_platform_sealer;
+use passport_platform_runtime::{
+    new_desktop_platform_material_clearer, new_desktop_platform_sealer,
+};
 #[cfg(desktop)]
 use passport_vault_runtime::initialize_desktop_passport_vault_store;
 #[cfg(desktop)]
@@ -120,8 +124,13 @@ pub fn run() {
 
         let passport_platform_sealer = new_desktop_platform_sealer();
 
-        let state =
-            AppState::with_native_passport_runtime(initialized.store, passport_platform_sealer);
+        let passport_platform_material_clearer = new_desktop_platform_material_clearer();
+
+        let state = AppState::with_native_passport_runtime(
+            initialized.store,
+            passport_platform_sealer,
+            passport_platform_material_clearer,
+        );
 
         if !state.passport_vault_store.root_directory().is_absolute() {
             return Err(

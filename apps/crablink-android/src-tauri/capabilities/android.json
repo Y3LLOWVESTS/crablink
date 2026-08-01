@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "android",
+  "description": "Minimal CrabLink Android host capability set.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

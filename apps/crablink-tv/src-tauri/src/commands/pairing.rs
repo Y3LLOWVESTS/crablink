@@ -135,7 +135,7 @@ mod tests {
         let request = pairing_begin_request_for_gateway(&gateway, "Living Room TV")
             .expect("reviewed gateway must produce pairing intent");
 
-        assert_eq!(request.device_class, "android-tv",);
+        assert_eq!(request.device_class, "tv_read_only",);
 
         assert_eq!(request.device_name, "Living Room TV",);
 
@@ -162,7 +162,7 @@ mod tests {
             "challengeHandle":"challenge_12345678",
             "pairingCode":"ABC234",
             "expiresAt":"2030-01-02T03:04:05Z",
-            "approvalAuthority":"companion-crablink-required"
+            "approvalAuthority":"root-admin-device-required"
         }"#;
 
         let response = review_pairing_begin_response(201, body, "2026-07-16T22:00:00Z")
@@ -193,7 +193,7 @@ mod tests {
             "challengeHandle":"challenge_12345678",
             "pairingCode":"ABC234",
             "expiresAt":"2030-01-02T03:04:05Z",
-            "approvalAuthority":"companion-crablink-required",
+            "approvalAuthority":"root-admin-device-required",
             "token":"forbidden"
         }"#;
 
@@ -212,7 +212,7 @@ mod tests {
             "challengeHandle":"challenge_12345678",
             "pairingCode":"ABC10I",
             "expiresAt":"2030-01-02T03:04:05Z",
-            "approvalAuthority":"companion-crablink-required"
+            "approvalAuthority":"root-admin-device-required"
         }"#;
 
         let code_error = review_pairing_begin_response(200, bad_code, "2026-07-16T22:00:00Z")
@@ -226,7 +226,7 @@ mod tests {
             "challengeHandle":"challenge_12345678",
             "pairingCode":"ABC234",
             "expiresAt":"2020-01-02T03:04:05Z",
-            "approvalAuthority":"companion-crablink-required"
+            "approvalAuthority":"root-admin-device-required"
         }"#;
 
         let expiry_error = review_pairing_begin_response(200, expired, "2026-07-16T22:00:00Z")
@@ -253,6 +253,6 @@ mod tests {
 
         assert!(!status.session_present,);
 
-        assert_eq!(status.approval_authority, "companion-crablink-required",);
+        assert_eq!(status.approval_authority, "root-admin-device-required",);
     }
 }

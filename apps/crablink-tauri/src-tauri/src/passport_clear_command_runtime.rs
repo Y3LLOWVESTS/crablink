@@ -9,10 +9,19 @@ use svc_passport::native::{
     remove_native_encrypted_vault, NativeVaultRemovalOutcome, NativeVaultStore,
 };
 
-use crate::passport_operational_unlock_runtime::DesktopOperationalVaultSessionStore;
+use crate::{
+    passport_operational_unlock_runtime::DesktopOperationalVaultSessionStore,
+    passport_pending_operational_runtime::DesktopPendingOperationalSessionStore,
+    passport_pending_recovery_runtime::DesktopPendingRecoverySessionStore,
+    passport_platform_material_clear_runtime::DesktopPlatformMaterialClearer,
+    passport_recovery_acknowledgement_store::DesktopRecoveryAcknowledgementStorePort,
+};
 
 pub const NATIVE_PASSPORT_PHASE15AA_LABEL: &str =
     "NATIVE_PASSPORT_PHASE15AA_DESKTOP_CLEAR_COMMAND_BRIDGE";
+
+pub const ONBOARDING_PHASE11C2B_PLATFORM_SECRET_CLEAR_LABEL: &str =
+    "ONBOARDING_PHASE11C2B_PLATFORM_SECRET_CLEAR";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DesktopNativePassportClearCommandState {
@@ -26,6 +35,26 @@ pub struct DesktopNativePassportClearCommandOutcome {
     pub state: DesktopNativePassportClearCommandState,
     pub session_dropped: bool,
     pub encrypted_vault_removed: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DesktopNativePassportCompleteClearOutcome {
+    pub state: DesktopNativePassportClearCommandState,
+    pub operational_session_dropped: bool,
+    pub pending_recovery_session_dropped: bool,
+    pub pending_operational_session_dropped: bool,
+    pub platform_material_clear_completed: bool,
+    pub platform_material_mutated: bool,
+    pub encrypted_vault_removed: bool,
+    pub recovery_acknowledgement_cleared: bool,
+}
+
+impl DesktopNativePassportCompleteClearOutcome {
+    pub fn session_changed(self) -> bool {
+        self.operational_session_dropped
+            || self.pending_recovery_session_dropped
+            || self.pending_operational_session_dropped
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -127,6 +156,136 @@ where
             session_dropped: outcome.session_dropped,
             encrypted_vault_removed: outcome.encrypted_vault_removed,
         },
+    }
+}
+
+pub fn clear_desktop_native_passport_with_platform_material_and_recovery_acknowledgement<V, A, P>(
+    store: &V,
+    session_store: &DesktopOperationalVaultSessionStore,
+    pending_recovery_store: &DesktopPendingRecoverySessionStore,
+    pending_operational_store: &DesktopPendingOperationalSessionStore,
+    platform_material_clearer: &P,
+    acknowledgement_store: &A,
+) -> DesktopNativePassportCompleteClearOutcome
+where
+    V: NativeVaultStore + ?Sized,
+    A: DesktopRecoveryAcknowledgementStorePort + ?Sized,
+    P: DesktopPlatformMaterialClearer + ?Sized,
+{
+    let operational_session_dropped = match session_store.lock() {
+        Ok(dropped) => dropped,
+        Err(_) => {
+            return DesktopNativePassportCompleteClearOutcome {
+                state: DesktopNativePassportClearCommandState::Unavailable,
+                operational_session_dropped: false,
+                pending_recovery_session_dropped: false,
+                pending_operational_session_dropped: false,
+                platform_material_clear_completed: false,
+                platform_material_mutated: false,
+                encrypted_vault_removed: false,
+                recovery_acknowledgement_cleared: false,
+            };
+        }
+    };
+
+    let pending_recovery_session_dropped =
+        match pending_recovery_store.clear_pending_recovery_factor() {
+            Ok(dropped) => dropped,
+            Err(_) => {
+                return DesktopNativePassportCompleteClearOutcome {
+                    state: DesktopNativePassportClearCommandState::Unavailable,
+                    operational_session_dropped,
+                    pending_recovery_session_dropped: false,
+                    pending_operational_session_dropped: false,
+                    platform_material_clear_completed: false,
+                    platform_material_mutated: false,
+                    encrypted_vault_removed: false,
+                    recovery_acknowledgement_cleared: false,
+                };
+            }
+        };
+
+    let pending_operational_session_dropped =
+        match pending_operational_store.clear_pending_operational_factor() {
+            Ok(dropped) => dropped,
+            Err(_) => {
+                return DesktopNativePassportCompleteClearOutcome {
+                    state: DesktopNativePassportClearCommandState::Unavailable,
+                    operational_session_dropped,
+                    pending_recovery_session_dropped,
+                    pending_operational_session_dropped: false,
+                    platform_material_clear_completed: false,
+                    platform_material_mutated: false,
+                    encrypted_vault_removed: false,
+                    recovery_acknowledgement_cleared: false,
+                };
+            }
+        };
+
+    let platform_review = platform_material_clearer.clear_platform_material();
+
+    let platform_material_mutated = platform_review.any_mutated();
+
+    if !platform_review.is_complete() {
+        return DesktopNativePassportCompleteClearOutcome {
+            state: DesktopNativePassportClearCommandState::Unavailable,
+            operational_session_dropped,
+            pending_recovery_session_dropped,
+            pending_operational_session_dropped,
+            platform_material_clear_completed: false,
+            platform_material_mutated,
+            encrypted_vault_removed: false,
+            recovery_acknowledgement_cleared: false,
+        };
+    }
+
+    let (cleared_state, encrypted_vault_removed) = match remove_native_encrypted_vault(store) {
+        Ok(NativeVaultRemovalOutcome::Removed) => {
+            (DesktopNativePassportClearCommandState::Cleared, true)
+        }
+        Ok(NativeVaultRemovalOutcome::NotFound) => {
+            (DesktopNativePassportClearCommandState::NoPassport, false)
+        }
+        Err(_) => {
+            return DesktopNativePassportCompleteClearOutcome {
+                state: DesktopNativePassportClearCommandState::Unavailable,
+                operational_session_dropped,
+                pending_recovery_session_dropped,
+                pending_operational_session_dropped,
+                platform_material_clear_completed: true,
+                platform_material_mutated,
+                encrypted_vault_removed: false,
+                recovery_acknowledgement_cleared: false,
+            };
+        }
+    };
+
+    let recovery_acknowledgement_cleared =
+        match acknowledgement_store.clear_recovery_acknowledgement() {
+            Ok(cleared) => cleared,
+            Err(_) => {
+                return DesktopNativePassportCompleteClearOutcome {
+                    state: DesktopNativePassportClearCommandState::Unavailable,
+                    operational_session_dropped,
+                    pending_recovery_session_dropped,
+                    pending_operational_session_dropped,
+                    platform_material_clear_completed: true,
+                    platform_material_mutated,
+                    encrypted_vault_removed,
+                    recovery_acknowledgement_cleared: false,
+                };
+            }
+        };
+
+    DesktopNativePassportCompleteClearOutcome {
+        state: cleared_state,
+        operational_session_dropped,
+        pending_recovery_session_dropped,
+        pending_operational_session_dropped,
+        platform_material_clear_completed: true,
+        platform_material_mutated,
+        encrypted_vault_removed,
+        recovery_acknowledgement_cleared,
     }
 }
 

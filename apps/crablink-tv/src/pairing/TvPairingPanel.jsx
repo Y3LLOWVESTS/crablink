@@ -237,7 +237,7 @@ export function TvPairingPanel({
     >
       <div className="tv-section-heading">
         <p className="tv-card-label">
-          Companion pairing
+          Passport TV authorization
         </p>
 
         <h2 id="tv-pairing-title">
@@ -246,9 +246,10 @@ export function TvPairingPanel({
 
         <p className="tv-pairing-intro">
           Pairing must be issued by the reviewed CrabLink
-          gateway and approved from a trusted desktop or mobile
-          companion. The television does not generate its own
-          approval, wallet key, password, or confirmed session.
+          gateway and authorized from a root-capable desktop or
+          mobile root-admin device. The television does not
+          generate its own approval, wallet key, password, or
+          confirmed session.
         </p>
       </div>
 
@@ -388,8 +389,8 @@ export function TvPairingPanel({
             className="tv-pairing-feedback"
             role="status"
           >
-            Backend challenge received. Approve the code from
-            a trusted CrabLink companion. A TV session does not
+            Public pairing request accepted. Verify the code
+            on a root-admin CrabLink device. A TV session does not
             exist yet.
           </p>
         ) : null}
@@ -435,7 +436,7 @@ export function TvPairingPanel({
           data-tv-focus-key="pairing-contract"
           onClick={() => {
             onActivity?.(
-              'Pairing approval must come from a trusted CrabLink companion. No seed phrase, wallet key, operator credential, reward authority, or ledger authority may enter the TV.',
+              'Pairing authorization must come from a root-admin CrabLink device. No recovery phrase, root key, wallet key, operator credential, reward authority, or ledger authority may enter the TV.',
             );
           }}
         >

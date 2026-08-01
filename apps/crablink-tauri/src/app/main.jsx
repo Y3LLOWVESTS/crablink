@@ -22,6 +22,7 @@ import '../shared/styles/forms.css';
 import '../shared/styles/cards.css';
 import '../shared/styles/modals.css';
 import '../shared/styles/developer.css';
+import '../shared/styles/designSystemFoundation.css';
 
 const root = document.getElementById('root');
 

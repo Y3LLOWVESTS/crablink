@@ -11676,3 +11676,2670 @@ CURRENT SAFE NEXT COMMANDS:
 We are resuming CrabLink TV after Phase 11 complete/green. Do not run the old Phase12A
 
 ### END NOTE - JULY 22 2026 - 00:25 CST
+
+
+
+
+### BEGIN NOTE - JULY 31 2026 - 20:30 CST
+
+
+
+The notes below consolidate the original CrabLink TV build history, the Passport Native Phase 16 work, the latest verified APK, and the newly added device-acceptance runner. The latest runner is statically green but physical execution remains blocked by unavailable hardware.  The preceding fresh ARMv7 APK build and package inspection were fully green.  Earlier Android TV and Passport carry-over records establish the broader phase history and security boundaries.  
+
+# RustyOnions / CrabLink Comprehensive Carry-Over Notes
+
+## CrabLink TV — Android TV Application and Native Passport Integration
+
+### Session wrap-up: July 31, 2026 — 20:18 Central Time
+
+---
+
+# 1. Purpose of these notes
+
+These notes preserve the complete CrabLink TV implementation history from the beginning of the dedicated Android TV application through the current Native Passport Phase 16 stopping point.
+
+They are intended to allow a later session to resume without reconstructing:
+
+* Why CrabLink TV exists as a separate application.
+* Which television-specific foundations have been implemented.
+* Which product phases are green.
+* Which approaches were attempted and rolled back.
+* Which native Passport security invariants are mandatory.
+* Which Rust, Kotlin, JNI, Android Keystore, Tauri, and React surfaces now exist.
+* Which APK is the latest verified build.
+* Why the project is paused.
+* What must be tested on the physical Android TV box.
+* What remains in Phase 16F.
+* What commands and workflow rules must be used when work resumes.
+
+These notes cover only:
+
+```text
+apps/crablink-tv
+CrabLink TV Android project
+CrabLink TV Native Passport Phase 16
+Android TV physical-device acceptance
+```
+
+They do not begin or replace the future regular Android phone/tablet application.
+
+---
+
+# 2. Current high-level status
+
+CrabLink TV is near the finish line.
+
+The application foundation, television navigation, catalog browsing, verified asset handling, media playback, lifecycle/resource behavior, and almost all Native Passport implementation work are present and compile-tested.
+
+Current honest posture:
+
+```text
+CRABLINK_TV_APPLICATION_FOUNDATION=GREEN
+CRABLINK_TV_CONTENT_AND_MEDIA_SURFACES=GREEN
+PASSPORT_NATIVE_PHASE16_IMPLEMENTATION=NEAR_COMPLETE
+PASSPORT_NATIVE_PHASE16E3B3B=GREEN
+PASSPORT_NATIVE_PHASE16E3B3C_RUNNER=GREEN
+PASSPORT_NATIVE_PHASE16E3B3C_DEVICE_EXECUTION=NOT_RUN
+PASSPORT_NATIVE_PHASE16F=NOT_STARTED
+PHYSICAL_ANDROID_TV_HARDWARE=NOT_CURRENTLY_AVAILABLE
+PHASE16_COMPLETE=NO
+ANDROID_TV_BUILD_FORMALLY_COMPLETE=NO
+ESTIMATED_IMPLEMENTATION_COMPLETION=90_TO_95_PERCENT
+```
+
+The remaining work is important but comparatively narrow:
+
+1. Run the physical Phase 16E3B3C prompt/lifecycle acceptance.
+2. Build the final Phase 16F redacted Passport/status surface.
+3. Prove operational unlock and proof use on the actual device.
+4. Prove revocation and forbidden-authority behavior.
+5. Run final APK and Android TV acceptance.
+6. Regenerate the codebundle at the final milestone.
+7. Mark Phase 16 and the Android TV Passport path complete only after truthful device evidence.
+
+The project is paused because the television and Android TV box are not presently available—not because of a compiler failure or unresolved static implementation defect.
+
+---
+
+# 3. Repository and application identity
+
+Primary repository:
+
+```text
+/Users/mymac/Desktop/crablink
+```
+
+CrabLink TV application:
+
+```text
+/Users/mymac/Desktop/crablink/apps/crablink-tv
+```
+
+Tauri/Rust application:
+
+```text
+/Users/mymac/Desktop/crablink/apps/crablink-tv/src-tauri
+```
+
+Owned Android project:
+
+```text
+/Users/mymac/Desktop/crablink/apps/crablink-tv/src-tauri/gen/android
+```
+
+Application identity:
+
+```text
+NPM_PACKAGE=@crablink/crablink-tv
+ANDROID_APPLICATION_ID=com.rustyonions.crablink.tv
+VERSION_NAME=0.1.0
+VERSION_CODE=1000
+MIN_SDK=24
+TARGET_SDK=36
+```
+
+Current APK type:
+
+```text
+DEBUG_APK=YES
+SIGNATURE_SCHEME=APK_V2
+TARGET_ABI=armeabi-v7a
+```
+
+---
+
+# 4. Platform-lane separation
+
+CrabLink TV is a dedicated television application. It must remain separate from the future regular Android application.
+
+Current lane:
+
+```text
+apps/crablink-tv
+ANDROID_TV_NOTES.md
+```
+
+Future regular Android lane:
+
+```text
+apps/crablink-android
+ANDROID_NOTES.md
+```
+
+Future iOS work must receive its own application and notes/buildplan lane.
+
+The regular Android application may share protocol models, Rust/core behavior, Passport contracts, and client adapters, but it must not directly reuse the television layout.
+
+CrabLink TV is:
+
+* Remote-first.
+* D-pad-first.
+* Ten-foot-interface oriented.
+* Landscape oriented.
+* Leanback-launcher integrated.
+* Designed to work without a touchscreen.
+* Focus-management heavy.
+* Conservative about prompts and background behavior.
+* A delegated/read-only client rather than a root administrative client.
+
+The regular Android application will later require:
+
+* Touch-first interaction.
+* Responsive phone and tablet layouts.
+* Mobile lifecycle semantics.
+* WorkManager/background constraints.
+* Foreground-service declarations where legitimately required.
+* Mobile approval/companion behavior.
+* Separate UX and acceptance tests.
+
+Do not mix those concerns into `apps/crablink-tv`.
+
+---
+
+# 5. Core product and authority boundaries
+
+## 5.1 Client-only posture
+
+CrabLink TV is a client surface.
+
+It must never become:
+
+* A wallet authority.
+* A ledger authority.
+* A ROC minting or issuance authority.
+* A reward payout authority.
+* A settlement authority.
+* A bridge authority.
+* A staking or liquidity authority.
+* A username mutation authority.
+* A creator publishing authority.
+* A service-node operator console.
+* A moderation authority.
+* A root Passport administrative device.
+* A source of fake balances, receipts, finality, entitlements, or ownership.
+
+React owns:
+
+```text
+display
+focus
+navigation
+user intent
+redacted status projection
+```
+
+Tauri/Rust/Kotlin own:
+
+```text
+native privilege
+device-local secret handling
+Android Keystore interaction
+PIN prompt and PIN verification
+JNI boundaries
+local proof/runtime state
+fail-closed lifecycle behavior
+```
+
+RustyOnions/backend services own:
+
+```text
+durable network truth
+authorization truth
+capability truth
+receipt truth
+entitlement truth
+confirmed ROC truth
+revocation truth
+policy enforcement
+```
+
+## 5.2 ROC boundary
+
+CrabLink TV may display only confirmed/backend-derived ROC state.
+
+It must not:
+
+* Create placeholder balances.
+* Locally increment rewards.
+* Fabricate confirmed ROC.
+* Fabricate receipts.
+* Unlock paid content from cache alone.
+* Claim settlement from a local UI transition.
+* Mutate wallet or ledger state.
+* Expose direct reward-claim authority.
+
+## 5.3 Micronode boundary
+
+CrabLink clients are intended eventually to participate in bounded verification/micronode behavior, but the current TV application does not yet:
+
+* Start a production micronode.
+* Attach a production micronode.
+* Produce reward-authoritative evidence.
+* Claim rewards.
+* Change balances.
+* Mutate receipts.
+* Write ledger state.
+
+Existing settings may represent local scheduling intent only.
+
+They must not claim that a verifier or micronode is attached unless native/backend truth confirms it.
+
+## 5.4 Passport identity model
+
+The project moved away from cloud-login identity semantics.
+
+Current identity rule:
+
+```text
+CrabLink Passport = wallet-like, locally custodied identity/account
+```
+
+This applies across:
+
+```text
+desktop
+Android TV
+regular Android
+iOS
+future CrabLink clients
+```
+
+A Passport must not become:
+
+* A cloud username/password account.
+* A backend-owned identity.
+* A server-custodied Passport secret.
+* A cloud-stored recovery secret.
+* A backend-issued identity pretending to be the source of truth.
+
+The backend/gateway may verify:
+
+```text
+proofs
+authorizations
+capabilities
+receipts
+entitlements
+policy
+revocation state
+```
+
+It must not own the Passport secret.
+
+---
+
+# 6. Android TV delegated Passport security model
+
+The TV is not a root Passport device.
+
+Its intended posture is:
+
+```text
+DELEGATED=YES
+REVOCABLE=YES
+READ_ONLY=YES
+DEVICE_BOUND=YES
+ROOT_ADMIN=NO
+```
+
+The TV may eventually possess only:
+
+* Its own locally generated device key.
+* A root-signed TV device authorization.
+* A narrowly scoped read capability.
+* Device-local sealed material needed to use those items.
+* A local PIN verifier/wrapping posture.
+* Redacted public status suitable for UI display.
+
+The TV must never receive or store:
+
+* Passport recovery phrase.
+* Passport recovery root.
+* Root-admin private key.
+* Root signing authority.
+* Unrestricted delegation.
+* Wallet spending authority.
+* Username claim/transfer/release authority.
+* Publishing authority.
+* Node/operator authority.
+* Raw unrestricted capabilities.
+* Secrets in React state.
+* Secrets in WebView JavaScript.
+* Secrets in `localStorage`.
+* Secrets in `sessionStorage`.
+* Secrets in IndexedDB.
+* PIN strings.
+* PIN bytes passed into public Tauri commands.
+
+Mandatory non-disclosure posture:
+
+```text
+RAW_DEVICE_KEY_RETURNED_TO_KOTLIN_CALLER=NO
+RAW_CAPABILITY_RETURNED_TO_KOTLIN_CALLER=NO
+RAW_DEVICE_KEY_RETURNED_TO_WEBVIEW=NO
+RAW_CAPABILITY_RETURNED_TO_WEBVIEW=NO
+PRIVATE_MATERIAL_EXPORTED=NO
+PIN_RETURNED_TO_WEBVIEW=NO
+PIN_BYTES_CROSS_JNI=NO
+```
+
+---
+
+# 7. Android environment and known physical device
+
+Known development toolchain:
+
+```text
+TAURI_CLI=2.11.4
+ANDROID_COMMAND_LINE_TOOLS=20.0
+ANDROID_API=36
+ANDROID_BUILD_TOOLS=36.0.0_AND_35.0.0
+ANDROID_NDK=29.0.14206865
+GRADLE=8.14.3
+ANDROID_GRADLE_PLUGIN=8.11.0
+KOTLIN=1.9.25
+JAVA=17
+NODE_OBSERVED=22.16.0
+```
+
+Installed Rust Android targets include:
+
+```text
+aarch64-linux-android
+armv7-linux-androideabi
+i686-linux-android
+x86_64-linux-android
+```
+
+Known Android TV device:
+
+```text
+OS=Android 14
+BUILD=rk3539_box_32-user 14 UTT2.241219.001
+INSTALLATION_METHOD=USB
+ADB_AVAILABLE_FOR_WORKFLOW=NO
+SUPPORTED_APPLICATION_ABI=32_BIT_ARMV7
+```
+
+Important hardware result:
+
+* An ARM64 APK was previously rejected.
+* An ARMv7 APK installed and launched successfully.
+* Therefore, the target device workflow must use `armeabi-v7a`.
+* Do not treat the device as ARM64-capable for application packaging merely because its SoC may theoretically support 64-bit hardware.
+* The application/userspace evidence says ARMv7 is the working target.
+
+---
+
+# 8. Android project and launcher posture
+
+The Android project has been configured for television use.
+
+Confirmed posture includes:
+
+* Internet permission.
+* Leanback feature required.
+* Touchscreen feature not required.
+* Standard launcher category.
+* Leanback launcher category.
+* Landscape orientation.
+* TV banner.
+* Dedicated CrabLink TV identifier.
+* Debug signing for current development APKs.
+* No broad filesystem or operator permissions.
+* No wallet or secret-management permission surfaced to React.
+
+Application theme support:
+
+```text
+dark
+light
+system
+```
+
+Default first-run theme:
+
+```text
+dark
+```
+
+The initial HTML/bootstrap applies the theme early to prevent a bright first-render flash.
+
+---
+
+# 9. Android BuildTask repair that must be preserved
+
+The generated Tauri Android `BuildTask.kt` initially attempted to invoke a bare `tauri` binary.
+
+It was repaired to use the application-local JavaScript CLI:
+
+```text
+../node_modules/@tauri-apps/cli/tauri.js
+```
+
+Resolved local CLI path:
+
+```text
+/Users/mymac/Desktop/crablink/apps/crablink-tv/node_modules/@tauri-apps/cli/tauri.js
+```
+
+Do not casually regenerate or overwrite the Android project without verifying that this repair remains present.
+
+The build currently prints a Gradle deprecation warning for the Java `exec` API, but the build remains green.
+
+---
+
+# 10. CrabLink TV implementation history
+
+## 10.1 Phase 0 — repository and architecture baseline
+
+Phase 0 established that CrabLink TV should be:
+
+* A sibling application to desktop CrabLink.
+* Built inside the same repository.
+* Tauri-first.
+* Remote-first.
+* Client-only.
+* Truthful about absent network/backend state.
+* Isolated from wallet, ledger, operator, reward, bridge, and publishing authority.
+
+It also established the separation between:
+
+```text
+apps/crablink-tauri
+apps/crablink-tv
+future apps/crablink-android
+```
+
+Status:
+
+```text
+PHASE0=COMPLETE
+```
+
+## 10.2 Phase 1 — television application shell
+
+The dedicated TV application shell was created.
+
+Core application surfaces included:
+
+```text
+apps/crablink-tv/index.html
+apps/crablink-tv/package.json
+apps/crablink-tv/vite.config.js
+apps/crablink-tv/src/main.jsx
+apps/crablink-tv/src/app/TvApp.jsx
+apps/crablink-tv/src/styles/tv.css
+apps/crablink-tv/src-tauri/
+```
+
+The shell established:
+
+* Television layout.
+* Ten-foot typography.
+* TV-safe spacing.
+* Dark/light/system theme support.
+* Section-based navigation.
+* Basic settings and diagnostics.
+* Tauri native command ownership.
+* No wallet/ledger authority.
+
+Status:
+
+```text
+PHASE1=COMPLETE
+```
+
+## 10.3 Phase 2 — Android TV project and hardware acceptance
+
+The owned Android project was generated and repaired.
+
+Work included:
+
+* Package identity.
+* Leanback manifest configuration.
+* Banner and icon generation.
+* Landscape orientation.
+* No-touchscreen declaration.
+* ARM target builds.
+* APK integrity/signature/ABI checks.
+* Physical installation testing.
+
+Two architecture paths were explored:
+
+```text
+arm64-v8a
+armeabi-v7a
+```
+
+Physical evidence:
+
+* ARM64 rejected by the device.
+* ARMv7 installed.
+* ARMv7 launched.
+* CrabLink TV rendered on the physical box.
+
+This was the project’s first successful Android application launch.
+
+Status:
+
+```text
+PHASE2=COMPLETE
+HARDWARE_ACCEPTED_ABI=armeabi-v7a
+```
+
+## 10.4 Phase 3 — native diagnostics, settings, gateway, and pairing foundations
+
+Phase 3 established native Tauri command surfaces for television diagnostics and reviewed network posture.
+
+Implemented areas included:
+
+* Diagnostics snapshot.
+* Settings snapshot.
+* Gateway profile validation.
+* Pairing readiness.
+* Fixed reviewed origins.
+* Safe DTO projection.
+* Strict request bounds.
+* No arbitrary caller-controlled URLs.
+* No ambient proxy use.
+* No credential disclosure.
+* No raw response-body disclosure.
+
+Gateway-health posture:
+
+```text
+METHOD=GET
+PATH=/healthz
+TIMEOUT=BOUNDED
+RESPONSE_SIZE=BOUNDED
+REDIRECTS=DISABLED
+ARBITRARY_URLS=ABSENT
+CREDENTIALS=ABSENT
+```
+
+Pairing-begin posture:
+
+```text
+METHOD=POST
+PATH=/v1/tv/pairing
+DEVICE_NAME=VALIDATED
+SCOPES=FIXED_READ_ONLY
+DUPLICATE_REQUEST=BLOCKED
+CHALLENGE_AUTHORITY=BACKEND
+APPROVAL_AUTHORITY=TRUSTED_COMPANION
+```
+
+Important historical note:
+
+The early pairing model used companion approval language. Later Passport work corrected the broader identity model to wallet-like local custody and delegated device authorization. Existing pairing code should be interpreted as bounded authorization/delegation—not as a cloud login.
+
+Status:
+
+```text
+PHASE3=COMPLETE
+```
+
+## 10.5 Phase 4 — shared JavaScript/core extraction
+
+Shared client behavior was extracted so that desktop and TV did not independently invent incompatible route or platform rules.
+
+The work included shared:
+
+* `crab://` normalization.
+* Route metadata.
+* Platform contracts.
+* Receipt display boundaries.
+* Core route labels.
+* Shared client behavior that belongs outside presentation layers.
+
+The intent was to ensure:
+
+```text
+desktop presentation != TV presentation
+shared protocol truth = one implementation
+```
+
+Status:
+
+```text
+PHASE4=COMPLETE
+```
+
+## 10.6 Phase 5 — client/platform contract hardening
+
+The TV application and shared packages were hardened so that:
+
+* React remained display/user-intent only.
+* Tauri commands remained fixed and reviewed.
+* Receipt and ROC display remained backend-derived.
+* Platform capabilities remained explicit.
+* Memory or placeholder adapters could not silently become production authority.
+* Node/operator/wallet/ledger responsibilities remained absent.
+
+Status:
+
+```text
+PHASE5=COMPLETE
+```
+
+## 10.7 Phase 6 — visible network readiness
+
+Phase 6 built the visible network-readiness experience.
+
+Implemented behavior included:
+
+* Gateway readiness projection.
+* Manual health retry.
+* Duplicate-request lock.
+* Truthful offline/error states.
+* No automatic success.
+* No fake session.
+* Bounded health request behavior.
+* TV-safe status presentation.
+
+Earlier Phase 6 work briefly stopped before the final visible panel slice, but the missing slice was subsequently completed before Phase 7.
+
+Status:
+
+```text
+PHASE6=COMPLETE
+```
+
+## 10.8 Phase 7 — routing, overlays, Back priority, and Android intent intake
+
+Phase 7 established the robust television navigation model.
+
+Implemented behavior included:
+
+### Route policy
+
+```text
+APPROVED_ROUTE_POLICY=EXPLICIT
+IMMUTABLE_ROUTE_STACK=ADDED
+ROUTE_STACK_LIMIT=32
+SHARED_CRAB_PARSER_REUSED=YES
+```
+
+### TV route behavior
+
+* Shared `crab://` normalization.
+* TV-local route registry.
+* Explicit section history.
+* Unsupported routes fail closed.
+* Typed problem/error routes.
+* Overlay ownership.
+* Overlay-before-route Back priority.
+* Root Back not trapped by WebView.
+* Recorded focus restoration.
+* Fallback focus to section tab, then Home.
+
+### Android intents
+
+* Android intent intake.
+* Intent-to-route handoff.
+* Reviewed route allowlist.
+* Destination focus projection.
+* No arbitrary route authority.
+
+Known verification counts included:
+
+```text
+ANDROID_INTENT_TESTS=7
+ROUTE_REGISTRY_REGRESSION_TESTS=11
+PRODUCTION_BUILD=GREEN
+```
+
+Status:
+
+```text
+PHASE7=COMPLETE
+```
+
+## 10.9 Phase 8 — home catalog and creator browsing
+
+Phase 8 added real read-only catalog and creator discovery surfaces.
+
+### Phase 8A — catalog read boundary
+
+Implemented:
+
+* Native catalog read.
+* Fixed reviewed request path.
+* Bounded response.
+* Redirects disabled.
+* Caller-controlled arbitrary URL absent.
+* Raw body disclosure absent.
+
+Known focused test count:
+
+```text
+NATIVE_CATALOG_READ_TESTS=5
+```
+
+### Tauri catalog transport
+
+Implemented:
+
+```text
+tvCatalogPort
+readCatalog
+tv_catalog_read
+```
+
+The transport reached green after repair iterations.
+
+### Phase 8B — catalog card route handoff
+
+Catalog cards were connected to reviewed route handoff.
+
+Known test count:
+
+```text
+CARD_ROUTE_HANDOFF_TESTS=6
+```
+
+### Phase 8C — creator browse
+
+Implemented:
+
+* Creator browse model.
+* Creator browse interaction.
+* Creator browse React panel.
+* Safe catalog-derived creator projection.
+
+Known tests:
+
+```text
+CREATOR_BROWSE_MODEL_TESTS=7
+CREATOR_BROWSE_REACT_TESTS=4
+```
+
+### Phase 8D — bounded thumbnails
+
+Implemented:
+
+* Bounded thumbnail projection.
+* Safe fallback state.
+* No caller-controlled arbitrary fetch path.
+* No unbounded image behavior.
+
+Known tests:
+
+```text
+THUMBNAIL_TESTS=4
+```
+
+### Phase 8E — creator profile
+
+Implemented creator profile page and redacted/read-only creator information.
+
+### Phase 8F — focus return
+
+Returning from profile/detail views restores meaningful TV focus.
+
+### Phase 8G — polish
+
+Television spacing, navigation, loading, empty, and error states were hardened.
+
+### Phase 8H — acceptance
+
+The full Phase 8 acceptance passed.
+
+Status:
+
+```text
+PHASE8=COMPLETE
+```
+
+## 10.10 Phase 9 — library, verified assets, and byte lifecycle
+
+Phase 9 built the library and verified asset display pipeline.
+
+Implemented behavior included:
+
+* Library asset detail boundary.
+* Manifest/evidence review.
+* Gateway fetch with reviewed paths and bounds.
+* B3/content verification.
+* Corrupt or mismatched bytes rejected.
+* Verified display projection.
+* Object URL ownership and release.
+* No render-before-verification.
+* No cache-only entitlement authority.
+* No raw uncontrolled body exposure.
+
+Important implementation history:
+
+* A manifest command approach was attempted and rolled back twice.
+* The baseline was restored rather than leaving partial command authority.
+* An early verified-render attempt was rolled back.
+* The gateway fetch approach was repaired and reached green.
+* Successor/checker repairs were required.
+* The verified display boundary was eventually integrated.
+* Byte render lifecycle passed.
+* Object URL handoff and release behavior were completed in the later Phase 9 slices.
+* Final Phase 9 acceptance was green before media playback work proceeded.
+
+Known milestones included:
+
+```text
+PHASE9A_DETAIL_BOUNDARY=GREEN
+PHASE9B_ACCEPTANCE=GREEN
+PHASE9E_ADAPTER=GREEN
+PHASE9G_GATEWAY_FETCH=GREEN
+PHASE9J_SUCCESSOR_REPAIR=GREEN
+PHASE9K_VERIFIED_DISPLAY_BOUNDARY=APPLIED
+PHASE9L_BYTE_RENDER_LIFECYCLE=GREEN
+PHASE9=COMPLETE
+```
+
+Status:
+
+```text
+PHASE9=COMPLETE
+```
+
+## 10.11 Phase 10 — verified media playback
+
+Phase 10 implemented real verified media playback surfaces.
+
+### Phase 10A — playback model
+
+Media playback model and syntax checks reached green.
+
+### Phase 10B — playback surface shell
+
+A television playback shell was added.
+
+### Phase 10C — verified source handoff
+
+Only verified media sources are handed into playback.
+
+### Phase 10D — video playback
+
+Verified video playback reached green.
+
+### Phase 10E — audio playback
+
+Verified audio playback reached green.
+
+### Phase 10F — remote control focus
+
+Implemented:
+
+* TV-focusable playback controls.
+* Remote play/pause behavior.
+* Predictable focus rail.
+* Ten-foot UI controls.
+
+### Phase 10G — error and retry truth
+
+Playback errors remain truthful.
+
+Retry does not imply:
+
+* Verification success.
+* Entitlement success.
+* Receipt success.
+* Network success.
+
+### Phase 10H — acceptance
+
+Full Phase 10 acceptance passed.
+
+Status:
+
+```text
+PHASE10=COMPLETE
+```
+
+## 10.12 Phase 11 — Continue Watching and resource release
+
+Phase 11 added the playback continuation and cleanup lifecycle.
+
+Implemented surfaces included:
+
+* Continue Watching state model.
+* Continue Watching panel.
+* Continue Watching persistence adapter model.
+* Resource release lifecycle model.
+* Resource release execution boundary.
+* Object URL and media resource cleanup.
+* Error/retry integration.
+* Phase 11 acceptance boundary.
+
+The emphasis was on preventing:
+
+* Leaked object URLs.
+* Stale verified bytes.
+* Orphaned playback resources.
+* False continuation state.
+* Local continuation state becoming entitlement or ownership truth.
+
+Status:
+
+```text
+PHASE11=COMPLETE
+```
+
+## 10.13 Transition from TV media work to Native Passport Phase 16
+
+After the original TV content/media foundation was sufficiently mature, work returned to the Passport Native Buildplan.
+
+Desktop Phase 15 and the separate onboarding buildplan were completed first because the Passport model needed to be proven on desktop before integrating it into Android TV.
+
+Desktop onboarding ultimately reached:
+
+```text
+ENTIRE_ONBOARDING_BUILDPLAN=GREEN
+NEXT_WORK=RETURN_TO_PASSPORT_NATIVE_PHASE16_CRABLINK_TV
+```
+
+Only then did active implementation return to CrabLink TV Native Passport integration.
+
+---
+
+# 11. Native Passport Phase 16 overview
+
+Phase 16’s purpose is to make the Android TV device a real delegated Passport client without giving it root authority.
+
+The original five-part finish direction was:
+
+```text
+Patch 1 — Phase 16B3B
+Android JNI Keystore sealer and atomic device-material store
+
+Patch 2 — Phase 16C
+Pairing/authorization acquisition and durable replay-safe state
+
+Patch 3 — Phase 16D
+Root-signed authorization, narrow capability, authority runtime, proof use
+
+Patch 4 — Phase 16E
+Native PIN, lock/unlock, restart, background, suspension, fail-closed lifecycle
+
+Patch 5 — Phase 16F
+Redacted UI, revocation enforcement, forbidden-authority matrix, device acceptance
+```
+
+The implementation grew into smaller focused subpatches, but the architectural sequence remained the same.
+
+---
+
+# 12. Phase 16A — delegated Passport contract
+
+## 12.1 Phase 16A1 — authoritative successor alignment
+
+Completed and green.
+
+This aligned the buildplan so that the authoritative successor path actually led into the Android TV delegated Passport implementation.
+
+No disconnected placeholder phase was allowed to remain the source of truth.
+
+## 12.2 Phase 16A2 — delegated read-only contract foundation
+
+Completed and green.
+
+Canonical schema:
+
+```text
+crablink.tv.delegated-passport.v1
+```
+
+Canonical device class:
+
+```text
+tv_read_only
+```
+
+The contract established:
+
+* Device-bound identity.
+* Root-signed authorization.
+* Narrow read capability.
+* Revocation.
+* Expiry.
+* Fixed allowed scopes.
+* No root authority.
+* No wallet authority.
+* No publishing authority.
+* No username mutation.
+* No operator authority.
+
+Status:
+
+```text
+PHASE16A1=GREEN
+PHASE16A2=GREEN
+```
+
+---
+
+# 13. Phase 16B — Android Keystore, JNI, and atomic material storage
+
+Phase 16B built the native material-storage foundation.
+
+Important Rust/Tauri surfaces include:
+
+```text
+apps/crablink-tv/src-tauri/src/passport_android_keystore.rs
+apps/crablink-tv/src-tauri/src/passport_tv_device_material.rs
+apps/crablink-tv/src-tauri/src/passport_android_jni.rs
+```
+
+Important Android/Kotlin surfaces were added under:
+
+```text
+apps/crablink-tv/src-tauri/gen/android/app/src/main/java/com/rustyonions/crablink/tv/
+```
+
+Implemented behavior included:
+
+* Android Keystore-backed sealing.
+* Native device key storage.
+* Narrow capability storage.
+* Atomic replacement behavior.
+* JNI bridge ownership.
+* Secret array clearing.
+* Rust-side zeroization.
+* No raw material returned to WebView.
+* No public Tauri secret command.
+
+## 13.1 JNI lifetime repair history
+
+The first Android ARMv7 build exposed a JNI lifetime mismatch.
+
+Several focused repairs were attempted:
+
+* Initial repair applied.
+* A narrow transform failed.
+* A revised transform applied.
+* A post-write lifetime check failed and restored source.
+* Whitespace/anchor repair was applied.
+* The JNI source was eventually preserved in a compile-safe form.
+* No public Tauri command was added.
+* No React secret surface was added.
+
+Final posture:
+
+```text
+ANDROID_ARMV7_JNI_COMPILE=GREEN
+PUBLIC_TAURI_COMMAND_ADDED=NO
+REACT_SECRET_SURFACE_ADDED=NO
+```
+
+---
+
+# 14. Phase 16C — production JNI scan, pairing state, replay, and hydration
+
+Phase 16C hardened production JNI and state hydration.
+
+## 14.1 Production JNI scan and denylist
+
+Implemented:
+
+* Production JNI code scan.
+* Test fixtures excluded from production scan.
+* Defensive secret identifier denylist.
+* Pairing runtime secret identifiers forbidden.
+* Reviewed JNI secret-use exceptions kept narrow.
+* Stale companion-panel requirement removed from checker.
+
+Important posture:
+
+```text
+JNI_PRODUCTION_CODE_SCAN=ADDED
+TEST_FIXTURES_EXCLUDED=YES
+PRODUCTION_SECRET_SEED_IDENTIFIER=FORBIDDEN
+PAIRING_RUNTIME_SECRET_IDENTIFIER=FORBIDDEN
+```
+
+## 14.2 Startup hydration boundary
+
+Implemented startup hydration of redacted public state.
+
+Required false-state defaults were enforced:
+
+```text
+AUTHORIZATION_PRESENT_FALSE_REQUIRED=YES
+CAPABILITY_PRESENT_FALSE_REQUIRED=YES
+SESSION_PRESENT_FALSE_REQUIRED=YES
+```
+
+Hydration posture:
+
+```text
+HYDRATED_MATERIAL=REDACTED_PUBLIC_RECORD_ONLY
+CORRUPT_STORE_POSTURE=FAIL_CLOSED
+CHANGED_DEVICE_KEY_INVALIDATES_PENDING_REQUEST=YES
+```
+
+## 14.3 Replay-safe durable state
+
+The Phase 16C path also established replay-safe pairing/authorization record behavior.
+
+Replay or mismatched state must not become accepted authorization.
+
+The project’s proof and authority invariants require rejecting mismatches involving:
+
+* Device key.
+* Root/authorization binding.
+* Capability binding.
+* Request identity.
+* Operation identity.
+* Nonce.
+* Expiry.
+* Revocation.
+* Scope.
+
+Status:
+
+```text
+PHASE16C=GREEN_AT_IMPLEMENTED_BOUNDARIES
+```
+
+---
+
+# 15. Phase 16D — delegated authority runtime and proof boundaries
+
+Phase 16D built the delegated authority runtime.
+
+Important Rust surface:
+
+```text
+apps/crablink-tv/src-tauri/src/passport_tv_authority_runtime.rs
+```
+
+Implemented behavior included:
+
+* Root-signed authorization hydration.
+* Narrow delegated capability hydration.
+* Expiry enforcement.
+* Revocation enforcement.
+* Scope allowlist enforcement.
+* Proof request expiry ceilings.
+* Invalid hydration clearing.
+* Device proof port abstraction.
+* No raw authorization returned.
+* No raw capability returned.
+* No session fabricated.
+* No production signing bypass.
+
+## 15.1 Phase 16D3 authority runtime
+
+The initial D3 verification correctly failed because the runtime and checker did not yet exist.
+
+The implementation patch then added:
+
+* Rust authority runtime.
+* Android startup authority hydration.
+* Device proof port.
+* Explicit posture that production signing remained locked until the appropriate later phase.
+
+A test fixture syntax defect was repaired without broadening scope.
+
+Focused tests passed:
+
+```text
+DISCOVERED_TEST_COUNT=5
+```
+
+Host verification confirmed:
+
+```text
+REVOCATION_BLOCKS_PROOF=YES
+EXPIRY_BLOCKS_PROOF=YES
+PROOF_SCOPE_ALLOWLIST=ENFORCED
+PROOF_EXPIRY_CEILINGS=ENFORCED
+INVALID_HYDRATION_CLEARS_RUNTIME=GREEN
+```
+
+A fresh Android build completed with warnings only.
+
+Final D3 posture:
+
+```text
+PHASE16D3_GREEN=YES
+EXPIRED_AUTHORITY_PROOF_USE=BLOCKED
+FORBIDDEN_SCOPE_PROOF_USE=BLOCKED
+RAW_AUTHORIZATION_RETURNED=NO
+RAW_CAPABILITY_RETURNED=NO
+SESSION_CREATED=NO
+PUBLIC_TAURI_COMMAND_COUNT=8
+```
+
+Status:
+
+```text
+PHASE16D1=GREEN
+PHASE16D2=GREEN
+PHASE16D3=GREEN
+```
+
+---
+
+# 16. Phase 16E — native PIN and lifecycle unlock
+
+Phase 16E built the device-local PIN and operational unlock chain.
+
+Important Rust surfaces include:
+
+```text
+apps/crablink-tv/src-tauri/src/passport_tv_native_pin_lifecycle.rs
+apps/crablink-tv/src-tauri/src/passport_tv_operational_unlock.rs
+apps/crablink-tv/src-tauri/src/passport_android_operational_material_port.rs
+apps/crablink-tv/src-tauri/src/passport_android_jni.rs
+```
+
+Important Kotlin surfaces include:
+
+```text
+MainActivity.kt
+TvPassportNativePinCoordinator.kt
+TvPassportNativePinPrompt.kt
+TvPassportNativePinVerifierStore.kt
+TvPassportOperationalUnlockBridge.kt
+```
+
+## 16.1 Core native PIN invariants
+
+The PIN is:
+
+```text
+DEVICE_LOCAL=YES
+ROOT_SECRET=NO
+CLOUD_PASSWORD=NO
+WEBVIEW_INPUT=NO
+TAURI_ARGUMENT=NO
+```
+
+Enrollment requirements:
+
+* Explicit user action.
+* Two-entry confirmation.
+* Constant-time comparison over character arrays.
+* No conversion to `String`.
+* Clear both PIN arrays.
+* Do not automatically unlock after enrollment.
+* Do not expose PIN material to WebView or Rust.
+
+Unlock requirements:
+
+* Explicit user action.
+* Native prompt.
+* Local verifier check.
+* One-use 32-byte verified ticket.
+* Clear PIN material before JNI handoff.
+* JNI receives the verified-ticket path—not the PIN.
+* Wrong PIN must not invoke native unseal.
+* Cancellation must not invoke native unseal.
+* Concurrent prompts must be blocked.
+* Invalid result must fail closed.
+* Missing verifier must fail closed.
+* Prompt unavailable must fail closed.
+* JNI exception or panic must fail closed.
+
+Lifecycle requirements:
+
+* Restart begins locked.
+* Background fails closed.
+* Suspension fails closed.
+* Explicit lock fails closed.
+* Invalid hydration fails closed.
+* Revocation blocks use.
+* No automatic prompt on startup.
+* No automatic unlock on startup.
+* No automatic prompt on resume.
+
+## 16.2 Global operational runtime
+
+The operational runtime was connected through focused subphases.
+
+Implemented surfaces included:
+
+* Global operational runtime foundation.
+* Verified PIN ticket consumption.
+* Android Keystore material unseal ports.
+* Device key unseal.
+* Narrow capability unseal.
+* Redacted JNI receipt.
+* Global fail-closed lock.
+* Panic containment.
+* Pending JNI exception clearing.
+* Secret array zeroization.
+* Rust `Zeroizing<Vec<u8>>` use.
+
+Important posture:
+
+```text
+VERIFIED_PIN_TICKET=CONSUMED_ONCE_BEFORE_UNSEAL
+JAVA_SECRET_ARRAYS=ZEROIZED
+RUST_SECRET_BUFFERS=ZEROIZING
+SUCCESS_RECEIPT=REDACTED
+FAILURE_RECEIPT=REDACTED_FAILED_CLOSED
+JNI_PANIC_CONTAINMENT=ADDED
+JNI_PENDING_EXCEPTION_CLEAR=ADDED
+```
+
+## 16.3 Phase 16E3B3A — PIN coordinator
+
+Phase 16E3B3A completed the PIN coordinator.
+
+Verified behavior:
+
+```text
+PIN_ENROLLMENT=TWO_ENTRY_EXPLICIT_NATIVE_FLOW
+PIN_CONFIRMATION=CONSTANT_TIME_CHAR_ARRAY_COMPARISON
+PIN_CONVERTED_TO_STRING=NO
+ENROLLMENT_AUTOMATIC_UNLOCK=NO
+CORRECT_PIN_JNI_UNLOCK=CONNECTED_IN_COORDINATOR
+WRONG_PIN_JNI_UNLOCK=BLOCKED
+CANCEL_JNI_UNLOCK=BLOCKED
+CONCURRENT_PROMPT=BLOCKED
+FAIL_CLOSED_LOCK_HOOK=ADDED
+```
+
+At B3A, the coordinator existed but the Activity request surface and lifecycle callbacks were intentionally not yet connected.
+
+Status:
+
+```text
+PHASE16E3B3A=GREEN
+```
+
+## 16.4 Phase 16E3B3B — explicit request and lifecycle lock
+
+Phase 16E3B3B connected the coordinator to reviewed native controls and Android lifecycle callbacks.
+
+Explicit controls:
+
+```text
+MENU_OR_F1=PIN_ENROLLMENT_OR_UNLOCK
+INFO_OR_F2=EXPLICIT_OPERATIONAL_LOCK
+```
+
+The F1/F2 fallback exists so a USB keyboard can test the path if the remote does not expose MENU/INFO key codes.
+
+MainActivity behavior:
+
+* `dispatchKeyEvent` owns the reviewed key codes.
+* Action occurs only on key-up.
+* Repeated key events do not duplicate the action.
+* Owned key events are consumed.
+* Other key events delegate to the superclass.
+
+Lifecycle behavior:
+
+```text
+onPause -> failClosedOnLifecycleBoundary
+onStop -> failClosedOnLifecycleBoundary
+onDestroy -> failClosedOnLifecycleBoundary
+```
+
+`onDestroy` also releases the stored WebView reference.
+
+No prompt was added to:
+
+```text
+onCreate
+onResume
+```
+
+### B3B implementation and repair history
+
+The first B3B apply rolled back because the mutation patch used a brittle regular expression against the Phase 16E3B3A predecessor checker.
+
+Exact failure:
+
+```text
+Phase 16E3B3A successor-guard match count was 0, expected 1
+```
+
+A narrow repair made the B3A checker successor-aware using stable markers rather than the brittle regular expression.
+
+That repair:
+
+* Changed one checker file.
+* Preserved pre-successor rejection.
+* Did not mutate MainActivity.
+* Did not add the B3B boundary yet.
+
+The revised B3B apply then completed:
+
+```text
+PHASE16E3B3B_APPLY=APPLIED
+CHANGED_FILE_COUNT=5
+```
+
+The first B3B verification then found a checker false positive:
+
+```text
+Activity secret boundary contains forbidden fragment: evaluateJavascript(
+```
+
+The issue was not introduced by B3B. `MainActivity.kt` already contained an unrelated reviewed `evaluateJavascript` path elsewhere in the file.
+
+A narrow checker repair changed the scan from the entire Activity to only the B3B-owned methods:
+
+```text
+dispatchKeyEvent
+onPause
+onStop
+onDestroy
+```
+
+The secret boundary remained enforced within those methods.
+
+After that repair, full verification passed.
+
+### B3B final verification
+
+Green checks included:
+
+* Rustfmt.
+* Boundary script syntax.
+* B3B boundary.
+* B3A predecessor.
+* B2B2C predecessor.
+* B2B2B predecessor.
+* B2B2A predecessor.
+* Public Tauri command boundary.
+* Host `cargo check`.
+* Host Clippy with `-D warnings`.
+* Removal of stale Android artifacts.
+* Fresh ARMv7 Android build.
+* APK acceptance.
+* Native-library byte matching.
+* DEX marker inspection.
+
+Final B3B posture:
+
+```text
+NATIVE_PASSPORT_PHASE16E3B3B_EXPLICIT_REQUEST_AND_LIFECYCLE_LOCK=GREEN
+PHASE16E3B3B_GREEN=YES
+ANDROID_TARGET_RUST_COMPILE=GREEN
+ANDROID_KOTLIN_COMPILE=GREEN
+ANDROID_ARMV7_APK_BUILD=GREEN
+EXPLICIT_NATIVE_REQUEST=MENU_OR_F1
+EXPLICIT_NATIVE_LOCK=INFO_OR_F2
+AUTOMATIC_STARTUP_PROMPT=NO
+AUTOMATIC_STARTUP_UNLOCK=NO
+BACKGROUND_LOCK=CONNECTED
+SUSPENSION_LOCK=CONNECTED
+DESTROY_LOCK=CONNECTED
+PIN_BYTES_CROSS_JNI=NO
+WRONG_PIN_JNI_UNLOCK=BLOCKED
+CANCEL_JNI_UNLOCK=BLOCKED
+CONCURRENT_PROMPT=BLOCKED
+PUBLIC_TAURI_COMMAND_COUNT=8
+```
+
+Status:
+
+```text
+PHASE16E3B3B=GREEN
+```
+
+## 16.5 Phase 16E3B3C — physical-device acceptance runner
+
+Phase 16E3B3C could not be physically executed because the television and Android TV box were unavailable.
+
+Instead of falsely marking the phase green, a truthful device-acceptance runner was added.
+
+Added files:
+
+```text
+scripts/run-crablink-tv-native-passport-phase16e3b3c-device-runtime-acceptance.sh
+scripts/check-crablink-tv-native-passport-phase16e3b3c-device-runtime-acceptance-boundary.mjs
+```
+
+Added package scripts:
+
+```text
+check:native-passport-phase16e3b3c-device-runtime-acceptance
+accept:native-passport-phase16e3b3c-device-runtime
+
+tv:native-passport:phase16e3b3c:device-runtime:check
+tv:native-passport:phase16e3b3c:device-runtime:accept
+```
+
+The runner:
+
+* Requires the current ARMv7 APK.
+* Checks ZIP integrity.
+* Confirms `armeabi-v7a`.
+* Rejects unexpected ARM64 packaging.
+* Records the APK SHA-256.
+* Prints the exact device plan.
+* Requires manual `PASS` or `FAIL` for each observation.
+* Does not default to pass.
+* Does not auto-install.
+* Does not use ADB.
+* Records the first failed observation.
+* Does not claim Phase 16F operational proof.
+* Does not claim revocation proof.
+* Does not claim forbidden-authority proof.
+
+### Plan-only mode
+
+The runner supports:
+
+```text
+--plan
+```
+
+Plan-only mode truthfully emits:
+
+```text
+NATIVE_PASSPORT_PHASE16E3B3C_DEVICE_RUNTIME_ACCEPTANCE=NOT_RUN
+ANDROID_RUNTIME_EXECUTION=NOT_RUN
+PLAN_ONLY=YES
+NO_RUNTIME_CLAIM=YES
+```
+
+### Static runner verification
+
+The acceptance runner and checker passed:
+
+* Runner presence.
+* Executable bit.
+* Shell syntax.
+* Checker syntax.
+* Codebundle script syntax.
+* Package wiring.
+* Future codebundle selection.
+* Boundary check.
+* Root package boundary entry.
+* Plan-only execution.
+* B3B predecessor.
+* B3A predecessor.
+* Public Tauri command boundary.
+
+Final runner posture:
+
+```text
+NATIVE_PASSPORT_PHASE16E3B3C_DEVICE_RUNTIME_ACCEPTANCE_RUNNER=GREEN
+PHASE16E3B3C_RUNNER_VERIFICATION=GREEN
+PHASE16E3B3C_RUNNER_STATE=APPLIED_AND_STATICALLY_VERIFIED
+PHASE16E3B3C_GREEN=NOT_YET_CLAIMED
+PHYSICAL_DEVICE_ACCEPTANCE=NOT_RUN
+ANDROID_RUNTIME_EXECUTION=NOT_RUN
+```
+
+Status:
+
+```text
+PHASE16E3B3C_RUNNER=GREEN
+PHASE16E3B3C_PHYSICAL_ACCEPTANCE=PENDING_HARDWARE
+```
+
+---
+
+# 17. Latest verified APK
+
+Current latest APK:
+
+```text
+/Users/mymac/Desktop/crablink/apps/crablink-tv/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
+```
+
+Build time observed:
+
+```text
+July 31, 2026 at approximately 19:58 local time
+```
+
+Artifact properties:
+
+```text
+APK_ABI=armeabi-v7a
+APK_SIZE_BYTES=208194028
+APK_APPROXIMATE_SIZE=199_MIB
+APK_SHA256=61c4683d2e4db2350a702ba940e2292e23b375a0c88429236b186eaf76532467
+```
+
+Native library:
+
+```text
+NATIVE_LIBRARY_SIZE_BYTES=200517128
+NATIVE_LIBRARY_SHA256=f2a1a35f35fa00ccde28eb9a5df8994d507aa46c7e6f5e87b4101c7328bcde02
+NATIVE_LIBRARY_FORMAT=ELF_32_BIT_ARM
+```
+
+Packaging verification:
+
+```text
+TARGET_AND_PACKAGED_NATIVE_LIBRARY_MATCH=YES
+PACKAGED_AND_APK_NATIVE_LIBRARY_MATCH=YES
+APK_ZIP_INTEGRITY=GREEN
+APK_ALIGNMENT=GREEN
+APK_SIGNING=GREEN
+APK_ABIS=armeabi-v7a
+```
+
+Application verification:
+
+```text
+APPLICATION_ID=com.rustyonions.crablink.tv
+VERSION_NAME=0.1.0
+VERSION_CODE=1000
+MIN_SDK=24
+TARGET_SDK=36
+DEBUGGABLE=true
+LEANBACK_REQUIRED=true
+TOUCHSCREEN_REQUIRED=false
+ORIENTATION=landscape
+TV_BANNER=present
+```
+
+Debug signing:
+
+```text
+SIGNATURE_SCHEME_V2=YES
+SIGNER=Android Debug
+```
+
+Packaged native markers confirmed:
+
+```text
+Java_com_rustyonions_crablink_tv_TvPassportOperationalUnlockBridge_unlockAfterVerifiedNativePin
+consumeVerifiedPinTicketForNative
+unsealStoredDeviceKeyForNative
+unsealStoredNarrowCapabilityForNative
+operationally_unlocked
+failed_closed
+native_panic_blocked
+```
+
+Packaged DEX markers confirmed:
+
+```text
+MainActivity
+TvPassportNativePinCoordinator
+dispatchKeyEvent
+requestExplicitEnrollmentOrUnlock
+requestExplicitLock
+failClosedOnLifecycleBoundary
+requestEnrollmentPin
+requestEnrollmentConfirmation
+TvPassportOperationalUnlockBridge
+unlockAfterVerifiedNativePin
+consumeVerifiedPinTicketForNative
+```
+
+This APK is build-verified and package-verified.
+
+It is not yet physically verified for the new PIN/lifecycle behavior.
+
+Do not write:
+
+```text
+ANDROID_RUNTIME_EXECUTION=GREEN
+```
+
+until the runner has been completed on the physical device.
+
+---
+
+# 18. Public Tauri command boundary
+
+The public TV command allowlist remains exactly eight commands:
+
+```text
+tv_asset_manifest_check
+tv_catalog_read
+tv_diagnostics
+tv_gateway_health
+tv_gateway_profile
+tv_pairing_begin
+tv_pairing_status
+tv_settings_read
+```
+
+Current posture:
+
+```text
+PUBLIC_TAURI_COMMAND_COUNT=8
+PUBLIC_PASSPORT_TAURI_COMMAND_ADDED=NO
+```
+
+No public Tauri command was added for:
+
+* PIN enrollment.
+* PIN verification.
+* PIN unlock.
+* Device key return.
+* Capability return.
+* Raw authorization return.
+* Secret export.
+* Passport root operations.
+
+The native Passport path remains Android-owned through Kotlin/JNI and private Rust runtime surfaces.
+
+---
+
+# 19. Important files now involved
+
+## 19.1 Rust/Tauri Passport files
+
+```text
+apps/crablink-tv/src-tauri/Cargo.toml
+apps/crablink-tv/src-tauri/Cargo.lock
+apps/crablink-tv/src-tauri/src/lib.rs
+
+apps/crablink-tv/src-tauri/src/passport_android_jni.rs
+apps/crablink-tv/src-tauri/src/passport_android_keystore.rs
+apps/crablink-tv/src-tauri/src/passport_android_operational_material_port.rs
+
+apps/crablink-tv/src-tauri/src/passport_tv_authority_runtime.rs
+apps/crablink-tv/src-tauri/src/passport_tv_authorization_replay.rs
+apps/crablink-tv/src-tauri/src/passport_tv_delegated_authority.rs
+apps/crablink-tv/src-tauri/src/passport_tv_device_material.rs
+apps/crablink-tv/src-tauri/src/passport_tv_native_pin_lifecycle.rs
+apps/crablink-tv/src-tauri/src/passport_tv_operational_unlock.rs
+apps/crablink-tv/src-tauri/src/passport_tv_pairing_runtime.rs
+```
+
+## 19.2 Kotlin/Android Passport files
+
+Exact directory:
+
+```text
+apps/crablink-tv/src-tauri/gen/android/app/src/main/java/com/rustyonions/crablink/tv/
+```
+
+Important files include:
+
+```text
+MainActivity.kt
+TvPassportNativePinCoordinator.kt
+TvPassportNativePinPrompt.kt
+TvPassportNativePinVerifierStore.kt
+TvPassportOperationalUnlockBridge.kt
+```
+
+Additional authority, hydration, storage, and JNI bridge Kotlin files may exist in the same directory and should be inspected from the repository rather than reconstructed from memory.
+
+## 19.3 Core TV React areas
+
+```text
+apps/crablink-tv/src/app/
+apps/crablink-tv/src/catalog/
+apps/crablink-tv/src/focus/
+apps/crablink-tv/src/library/
+apps/crablink-tv/src/media/
+apps/crablink-tv/src/navigation/
+apps/crablink-tv/src/network/
+apps/crablink-tv/src/pairing/
+apps/crablink-tv/src/platform/
+apps/crablink-tv/src/settings/
+apps/crablink-tv/src/styles/
+```
+
+## 19.4 Phase 16 scripts/checkers
+
+There are many sequential Phase 16 checker files under:
+
+```text
+scripts/
+```
+
+The latest added Phase 16E files are:
+
+```text
+scripts/check-crablink-tv-native-passport-phase16e3b3a-pin-coordinator-boundary.mjs
+scripts/check-crablink-tv-native-passport-phase16e3b3b-explicit-request-lifecycle-lock-boundary.mjs
+scripts/check-crablink-tv-native-passport-phase16e3b3c-device-runtime-acceptance-boundary.mjs
+scripts/run-crablink-tv-native-passport-phase16e3b3c-device-runtime-acceptance.sh
+```
+
+## 19.5 Package and codebundle wiring
+
+Changed wiring includes:
+
+```text
+apps/crablink-tv/package.json
+package.json
+scripts/make_codebundle.sh
+```
+
+The new runner/checker are included in future codebundle selection.
+
+The codebundle itself was not regenerated after the latest patches.
+
+---
+
+# 20. Codebundle posture
+
+The latest previously generated codebundle predates the final Phase 16E3B3B and E3B3C work.
+
+Current truth:
+
+```text
+CODEBUNDLE_REGENERATED=NO
+LATEST_CODEBUNDLE_IS_STALE_RELATIVE_TO_FINAL_SESSION_PATCHES=YES
+SOURCE_OF_TRUTH=REPOSITORY
+```
+
+Do not treat the older codebundle as containing the final:
+
+* MainActivity key integration.
+* Lifecycle lock integration.
+* B3B boundary repair.
+* B3C device runner.
+* B3C boundary checker.
+* New package scripts.
+
+When the project reaches a meaningful next milestone—preferably after physical acceptance and Phase 16F completion—regenerate the codebundle.
+
+Do not regenerate it merely to satisfy an intermediate patch ritual.
+
+---
+
+# 21. Known non-blocking warnings
+
+The fresh Android build emitted Rust dead-code warnings in surfaces intentionally prepared for later runtime use.
+
+Examples include:
+
+```text
+TV_DEVICE_PROOF_PORT_SCHEMA never used
+LOWER_HEX_ID_BYTES never used
+TvDeviceProofPortRequestV1 never constructed
+TvDeviceProofPortReceiptV1 never constructed
+TvDeviceProofPort trait never used
+request_device_proof never used
+validate_proof_request never used
+validate_proof_receipt never used
+valid_lower_hex_id never used
+```
+
+Some enum variants were also not yet constructed in production:
+
+```text
+ScopeDenied
+ProofRequestInvalid
+ProofRequestBeyondAuthority
+RuntimeLocked
+ProofReceiptInvalid
+
+Cancelled
+WrongPin
+PromptUnavailable
+
+Background
+Suspension
+```
+
+These warnings were non-blocking in the Android target build.
+
+Host Clippy with:
+
+```text
+-D warnings
+```
+
+passed.
+
+The generated Android build also prints:
+
+```text
+BuildTask.kt exec API is deprecated
+Gradle deprecated features used
+future Gradle 9 incompatibility warning
+```
+
+These warnings did not block the Gradle 8.14.3 APK build.
+
+Do not spend time cleaning these warnings before the device acceptance unless one becomes the first actual failure.
+
+---
+
+# 22. Work completed specifically in the final July 31 session
+
+This final session completed the following sequence:
+
+1. Began from a green Phase 16E3B3A PIN coordinator.
+2. Attempted the Phase 16E3B3B explicit request/lifecycle patch.
+3. The first apply rolled back because of a brittle predecessor-checker regex.
+4. Added a narrow successor-awareness repair to the B3A checker.
+5. Re-ran the revised B3B apply.
+6. Added:
+
+   * MENU/F1 explicit enrollment/unlock.
+   * INFO/F2 explicit lock.
+   * `onPause` fail-close.
+   * `onStop` fail-close.
+   * `onDestroy` fail-close.
+   * B3B boundary checker.
+   * Package scripts.
+   * Future codebundle selection.
+7. First B3B verification failed because the checker scanned an unrelated existing `evaluateJavascript` call elsewhere in MainActivity.
+8. Narrowed the secret scan to the four B3B-owned methods.
+9. Re-ran B3B verification.
+10. Passed all predecessor checks.
+11. Passed command boundary.
+12. Passed host Cargo check.
+13. Passed host Clippy.
+14. Deleted stale native/APK artifacts.
+15. Built a fresh ARMv7 APK.
+16. Passed APK acceptance.
+17. Proved target, packaged, and APK native libraries were byte-identical.
+18. Proved required native and DEX markers were packaged.
+19. Marked Phase 16E3B3B green.
+20. Added the Phase 16E3B3C physical-device acceptance runner.
+21. Added a boundary ensuring:
+
+    * No automatic pass.
+    * No false runtime claim.
+    * No ADB requirement.
+    * No Phase 16F proof claim.
+22. Verified the runner and plan-only mode.
+23. Stopped because no television or Android TV box was available.
+24. Did not regenerate the codebundle.
+25. Did not mutate RustyOnions.
+
+Session-end truth:
+
+```text
+PHASE16E3B3B=GREEN
+PHASE16E3B3C_RUNNER=GREEN
+PHASE16E3B3C_DEVICE_EXECUTION=BLOCKED_BY_HARDWARE_AVAILABILITY
+PHASE16F=NOT_STARTED
+```
+
+---
+
+# 23. Exact physical-device acceptance that remains
+
+When the television and Android TV box are available, use the latest ARMv7 APK.
+
+Install manually by USB:
+
+```text
+/Users/mymac/Desktop/crablink/apps/crablink-tv/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
+```
+
+Then run from the CrabLink repository:
+
+```bash
+npm run tv:native-passport:phase16e3b3c:device-runtime:accept
+```
+
+The runner asks for explicit `PASS` or `FAIL`.
+
+Do not pipe synthetic input into it.
+
+Do not mark an item `PASS` unless the behavior was directly observed.
+
+Required observations:
+
+## 23.1 Installation and startup
+
+Confirm:
+
+* This exact APK was installed from USB.
+* It launched on the recorded Android TV.
+* No automatic PIN prompt appeared on startup.
+* No silent automatic unlock occurred.
+* The application remained stable.
+
+## 23.2 First enrollment
+
+Use:
+
+```text
+MENU remote key
+or
+F1 on a USB keyboard
+```
+
+Confirm:
+
+* A native Android PIN enrollment prompt appears.
+* No WebView PIN form appears.
+* The first PIN entry is accepted only as the first enrollment step.
+* A second confirmation entry is required.
+* A mismatched confirmation fails closed.
+* A matched confirmation enrolls the verifier.
+* Successful enrollment does not automatically unlock.
+
+## 23.3 Unlock behavior
+
+Press MENU or F1 again.
+
+Confirm:
+
+* A native unlock prompt appears.
+* Cancel leaves the application locked.
+* Wrong PIN leaves the application locked.
+* No visible success state appears for wrong PIN.
+* Correct PIN completes without crash or hang.
+* No PIN, key, capability, recovery material, or raw receipt is displayed.
+
+Phase 16E3B3C only requires correct-PIN flow stability.
+
+The stronger proof that operational material was truly unsealed and used belongs to Phase 16F.
+
+## 23.4 Explicit lock
+
+Use:
+
+```text
+INFO remote key
+or
+F2 on a USB keyboard
+```
+
+Confirm:
+
+* Explicit lock action is invoked.
+* App remains stable.
+* Subsequent sensitive behavior requires a new explicit unlock.
+
+## 23.5 Background and resume
+
+Send the app to the background or Home screen.
+
+Return to CrabLink TV.
+
+Confirm:
+
+* No automatic prompt appears.
+* No automatic unlock occurs.
+* The app is fail-closed.
+
+## 23.6 Relaunch
+
+Close/restart the application.
+
+Confirm:
+
+* Relaunch begins locked.
+* No automatic prompt appears.
+* No automatic unlock occurs.
+
+## 23.7 Disclosure review
+
+Throughout the test, confirm there is no visible disclosure of:
+
+* PIN.
+* Device key.
+* Capability.
+* Raw authorization.
+* Recovery phrase.
+* Recovery root.
+* Root-admin key.
+* Session token.
+* Private material.
+
+## 23.8 Remote compatibility note
+
+The physical remote may not emit:
+
+```text
+KEYCODE_MENU
+KEYCODE_INFO
+```
+
+If those controls do not trigger on the remote, attach a USB keyboard and use:
+
+```text
+F1=ENROLL_OR_UNLOCK
+F2=LOCK
+```
+
+If F1/F2 work but MENU/INFO do not, record that truthfully. It is a device/UX mapping issue, not permission to mark the remote-path observation as passed.
+
+---
+
+# 24. Required Phase 16F work after E3B3C passes
+
+Phase 16F is the final Passport-native Android TV phase.
+
+It must not begin with a fake completion claim.
+
+## 24.1 Phase 16F1 — redacted status surface
+
+Likely next patch:
+
+```text
+NATIVE_PASSPORT_PHASE16F1_REDACTED_STATUS_SURFACE
+```
+
+Required UI states:
+
+```text
+no Passport/device authorization
+authorization pending
+authorized
+locked
+operationally unlocked
+expired
+revoked
+invalid/corrupt state
+redacted @username when available
+clear fail-closed error state
+```
+
+Allowed UI information:
+
+* Redacted status.
+* Redacted username.
+* Device authorization posture.
+* Lock posture.
+* Expiry/revocation posture.
+* Safe retry or explicit unlock intent.
+* Truthful read-only capability status.
+
+Forbidden UI information:
+
+* Private key.
+* Device secret.
+* Recovery phrase.
+* Recovery root.
+* Root-admin key.
+* Raw authorization.
+* Raw capability.
+* Session token.
+* PIN or verifier material.
+* Unapproved root identifier details.
+
+The UI must not infer operational unlock merely because the prompt closed.
+
+It must consume a redacted native receipt/status projection.
+
+## 24.2 Operational unlock proof
+
+Phase 16F must prove that correct PIN results in the intended native chain:
+
+```text
+native PIN verified
+one-use ticket created
+ticket consumed once
+device key unsealed
+narrow capability unsealed
+global operational runtime hydrated
+proof-sensitive request uses device-bound runtime
+redacted success status projected
+```
+
+It must also prove:
+
+```text
+wrong PIN -> no ticket
+cancel -> no ticket
+expired ticket -> rejected
+reused ticket -> rejected
+JNI failure -> fail closed
+pending exception -> fail closed
+panic -> fail closed
+invalid receipt -> fail closed
+```
+
+## 24.3 Revocation enforcement
+
+Revocation must be performed externally by a legitimate root-admin desktop/mobile device.
+
+After revocation, confirm on TV:
+
+* Existing proof-sensitive use is blocked.
+* Capability refresh is rejected.
+* New proof request is rejected.
+* Operational runtime clears or fails closed.
+* UI shows revoked state.
+* Restart does not restore access.
+* Cached state does not override revocation.
+* No local “re-authorize” action bypasses root authority.
+
+## 24.4 Expiry enforcement
+
+Confirm:
+
+* Expired authorization cannot unlock proof use.
+* Expired capability cannot produce accepted proof.
+* UI shows expired rather than generic success.
+* Refresh requires the legitimate authorization path.
+
+## 24.5 Scope enforcement
+
+The TV must remain constrained to the approved read-only scope set.
+
+It may eventually access only reviewed read surfaces such as:
+
+```text
+identity/profile read
+catalog/content read
+entitlement read
+receipt read
+confirmed ROC read
+```
+
+It must reject attempts outside the delegated scope.
+
+## 24.6 Forbidden-authority regression matrix
+
+The final phase must prove the TV cannot:
+
+```text
+authorize another device
+revoke another device
+claim a username
+transfer a username
+release a username
+publish content
+edit creator truth
+spend ROC
+issue ROC
+mutate a ledger
+create settlement
+administer rewards
+operate a service node
+bridge assets
+stake assets
+provide liquidity
+export the device key
+export a raw capability
+receive the recovery phrase
+receive the recovery root
+receive the root-admin private key
+```
+
+These should be tested through source boundaries, command allowlists, native behavior, and physical UI review.
+
+## 24.7 Final application acceptance
+
+After Phase 16F implementation:
+
+1. Run focused Phase 16F checks.
+2. Run all relevant Phase 16 predecessor boundaries.
+3. Run public command boundary.
+4. Run host Cargo check.
+5. Run strict Clippy.
+6. Remove stale ARMv7 artifacts.
+7. Build a fresh ARMv7 APK.
+8. Run APK integrity/signature/ABI/alignment checks.
+9. Inspect packaged native and DEX markers.
+10. Install the final APK by USB.
+11. Run physical device acceptance.
+12. Record exact device behavior.
+13. Regenerate the codebundle.
+14. Create final Android TV closeout notes.
+15. Only then mark Phase 16 complete.
+
+---
+
+# 25. Exact resume order
+
+When returning to this work, do not immediately write a new Phase 16F patch.
+
+Use this order:
+
+## Step 1 — load project context
+
+Read:
+
+```text
+ANDROID_TV_NOTES.md
+PASSPORT_NATIVE_BUILDPLAN.md
+latest CrabLink TV carry-over notes
+latest repository source
+```
+
+Remember that the old codebundle is stale relative to B3B/B3C.
+
+## Step 2 — confirm the APK still exists
+
+Expected path:
+
+```text
+apps/crablink-tv/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
+```
+
+Expected SHA-256 from the last session:
+
+```text
+61c4683d2e4db2350a702ba940e2292e23b375a0c88429236b186eaf76532467
+```
+
+If the file has changed, do not claim it is the same artifact.
+
+Run the standard build/acceptance lane again if a fresh APK is needed.
+
+## Step 3 — install physically
+
+Copy the APK to USB media and install it manually on the Android TV box.
+
+No ADB is required for the current workflow.
+
+## Step 4 — run the interactive runner
+
+From repository root:
+
+```bash
+npm run tv:native-passport:phase16e3b3c:device-runtime:accept
+```
+
+Answer only:
+
+```text
+PASS
+FAIL
+```
+
+based on actual observations.
+
+## Step 5 — fix the first physical failure
+
+If any item fails:
+
+```text
+FIRST_FAILURE=<observation>
+NEXT_ACTION=FIX_FIRST_REPORTED_FAILURE
+```
+
+Do not continue down the checklist and treat later items as authoritative.
+
+Do not begin Phase 16F until the E3B3C prompt/lifecycle acceptance is honestly green or until a narrowly identified hardware-specific issue has been repaired and retested.
+
+## Step 6 — start Phase 16F1
+
+After E3B3C passes:
+
+```text
+NEXT_PATCH=NATIVE_PASSPORT_PHASE16F1_REDACTED_STATUS_SURFACE
+```
+
+Continue the established two-turn patch workflow.
+
+---
+
+# 26. Development workflow rules that must carry forward
+
+## 26.1 Patch/verification separation
+
+Every change must be split into separate turns:
+
+1. Apply-only patch.
+2. User runs it and posts output.
+3. Review the first failure or success.
+4. Verification-only block in the next turn.
+
+Do not combine a large mutation and its full verification into one terminal block.
+
+## 26.2 No repository commands
+
+Do not include any repository-management commands.
+
+Forbidden in assistant blocks:
+
+```text
+git
+git apply
+git diff
+git status
+git add
+git commit
+git push
+```
+
+The user handles repository operations separately.
+
+## 26.3 No downloads
+
+Do not add downloads unless explicitly requested.
+
+## 26.4 Codebundle cadence
+
+Do not regenerate the codebundle after every patch.
+
+Regenerate only:
+
+* At a major phase milestone.
+* At final session wrap-up when specifically useful.
+* When the user explicitly requests it.
+* When exact current source inspection cannot otherwise be performed.
+
+## 26.5 First-failure discipline
+
+* Run focused checks.
+* Stop at the first actual failure.
+* Repair the exact file and behavior.
+* Re-run the focused check.
+* Do not expand scope while red.
+
+## 26.6 Shell patch style
+
+Use paste-ready Bash functions.
+
+Prefer:
+
+```text
+function
+return
+backup
+atomic write
+rollback on failure
+explicit APPLIED/RED markers
+```
+
+Avoid terminating the user’s shell with `exit`.
+
+## 26.7 Truthful acceptance
+
+Never convert:
+
+```text
+source check
+host test
+Android compile
+APK packaging
+static marker inspection
+```
+
+into:
+
+```text
+physical device behavior proven
+```
+
+Use:
+
+```text
+ANDROID_RUNTIME_EXECUTION=NOT_RUN
+```
+
+until the device test actually occurs.
+
+## 26.8 Repository scope
+
+The latest TV work mutated CrabLink only.
+
+Current posture:
+
+```text
+RUSTYONIONS_MUTATED=NO
+```
+
+Do not modify RustyOnions during the remaining TV client phase unless the first real integration failure proves a backend contract change is required and the user explicitly agrees to cross that boundary.
+
+---
+
+# 27. Things not to do when resuming
+
+Do not:
+
+* Rebuild the TV app as a cloud login.
+* Reintroduce companion-device secret custody.
+* Put PIN input in React.
+* Pass PIN through a public Tauri command.
+* Return raw device key material to Kotlin.
+* Return raw capability material to Kotlin.
+* Return secret material to WebView.
+* Add `@JavascriptInterface` secret bridges.
+* Put Passport secrets in local storage.
+* Add automatic startup unlock.
+* Add automatic startup prompt.
+* Prompt automatically on resume.
+* Treat enrollment as unlock.
+* Treat prompt closure as successful unlock.
+* Allow wrong PIN to invoke JNI unseal.
+* Allow cancellation to invoke JNI unseal.
+* Allow concurrent prompt execution.
+* Let a D3 test helper become a production bypass.
+* Add more public Tauri commands without a documented reviewed need.
+* Expand the current eight-command allowlist casually.
+* Treat the stale codebundle as current source.
+* Use ARM64 for the known Android TV box.
+* Claim physical acceptance without the box.
+* Mark Phase 16 complete before Phase 16F.
+* Start the regular Android application inside `apps/crablink-tv`.
+* Mix future iOS implementation into the TV phase.
+* Add wallet, ledger, ROC mutation, bridge, staking, or node authority.
+
+---
+
+# 28. Broader roadmap after Android TV completion
+
+After the Android TV Passport path is fully green, the expected platform roadmap is:
+
+```text
+1. Finish CrabLink TV Phase 16 physical and final acceptance.
+2. Build the regular Android phone/tablet application.
+3. Build the iOS application.
+4. Reconcile shared Passport/core behavior across desktop, TV, Android, and iOS.
+5. Continue CrabNode/micronode integration and real network participation work.
+6. Evaluate QuickChain behavior with the completed clients.
+7. Return to the remaining ROX Anchor/Solana testnet integration.
+8. Run full beta-system flows across clients, nodes, ROC, QuickChain, and ROX Anchor.
+```
+
+The regular Android and iOS clients should reuse:
+
+* Shared route normalization.
+* Shared Passport contracts.
+* Shared read-only DTOs.
+* Shared proof models.
+* Shared receipt and entitlement truth rules.
+* Shared native-core behavior where platform-independent.
+
+They should not reuse:
+
+* TV layout.
+* TV focus graph.
+* Leanback navigation assumptions.
+* TV remote key mappings.
+* TV-specific lifecycle UX.
+
+---
+
+# 29. Final status ledger
+
+```text
+PROJECT=RUSTYONIONS_CRABLINK
+APPLICATION=CRABLINK_TV
+REPOSITORY=/Users/mymac/Desktop/crablink
+APP_PATH=apps/crablink-tv
+
+ORIGINAL_TV_PHASE0=COMPLETE
+ORIGINAL_TV_PHASE1=COMPLETE
+ORIGINAL_TV_PHASE2=COMPLETE
+ORIGINAL_TV_PHASE3=COMPLETE
+ORIGINAL_TV_PHASE4=COMPLETE
+ORIGINAL_TV_PHASE5=COMPLETE
+ORIGINAL_TV_PHASE6=COMPLETE
+ORIGINAL_TV_PHASE7=COMPLETE
+ORIGINAL_TV_PHASE8=COMPLETE
+ORIGINAL_TV_PHASE9=COMPLETE
+ORIGINAL_TV_PHASE10=COMPLETE
+ORIGINAL_TV_PHASE11=COMPLETE
+
+PASSPORT_NATIVE_PHASE16A=GREEN
+PASSPORT_NATIVE_PHASE16B=GREEN
+PASSPORT_NATIVE_PHASE16C=GREEN
+PASSPORT_NATIVE_PHASE16D=GREEN
+PASSPORT_NATIVE_PHASE16E3B3A=GREEN
+PASSPORT_NATIVE_PHASE16E3B3B=GREEN
+PASSPORT_NATIVE_PHASE16E3B3C_RUNNER=GREEN
+PASSPORT_NATIVE_PHASE16E3B3C_PHYSICAL_ACCEPTANCE=NOT_RUN
+PASSPORT_NATIVE_PHASE16F=NOT_STARTED
+
+LATEST_APK_ABI=armeabi-v7a
+LATEST_APK_SHA256=61c4683d2e4db2350a702ba940e2292e23b375a0c88429236b186eaf76532467
+LATEST_APK_STATIC_ACCEPTANCE=GREEN
+LATEST_APK_DEVICE_ACCEPTANCE=NOT_RUN
+
+EXPECTED_DEVICE_OS=Android_14
+EXPECTED_DEVICE_BUILD=rk3539_box_32-user_14_UTT2.241219.001
+INSTALLATION_METHOD=USB
+ADB_REQUIRED=NO
+
+EXPLICIT_NATIVE_REQUEST=MENU_OR_F1
+EXPLICIT_NATIVE_LOCK=INFO_OR_F2
+AUTOMATIC_STARTUP_PROMPT=NO
+AUTOMATIC_STARTUP_UNLOCK=NO
+BACKGROUND_LOCK=CONNECTED
+SUSPENSION_LOCK=CONNECTED
+DESTROY_LOCK=CONNECTED
+
+PIN_BYTES_CROSS_JNI=NO
+RAW_DEVICE_KEY_RETURNED_TO_KOTLIN_CALLER=NO
+RAW_CAPABILITY_RETURNED_TO_KOTLIN_CALLER=NO
+RAW_DEVICE_KEY_RETURNED_TO_WEBVIEW=NO
+RAW_CAPABILITY_RETURNED_TO_WEBVIEW=NO
+PRIVATE_MATERIAL_EXPORTED=NO
+
+PUBLIC_TAURI_COMMAND_COUNT=8
+PUBLIC_PASSPORT_TAURI_COMMAND_ADDED=NO
+
+PHYSICAL_DEVICE_AVAILABLE=NO
+CURRENT_BLOCKER=HARDWARE_AVAILABILITY
+CURRENT_COMPILER_FAILURE=NONE
+CURRENT_STATIC_BOUNDARY_FAILURE=NONE
+
+CODEBUNDLE_REGENERATED=NO
+CURRENT_CODEBUNDLE_STALE=YES
+RUSTYONIONS_MUTATED=NO
+
+PHASE16_COMPLETE=NO
+ANDROID_TV_FORMALLY_COMPLETE=NO
+ESTIMATED_ANDROID_TV_IMPLEMENTATION_COMPLETION=90_TO_95_PERCENT
+
+NEXT_ACTION=OBTAIN_ANDROID_TV_BOX_AND_TELEVISION
+NEXT_COMMAND=npm_run_tv:native-passport:phase16e3b3c:device-runtime:accept
+NEXT_PATCH_AFTER_DEVICE_GREEN=NATIVE_PASSPORT_PHASE16F1_REDACTED_STATUS_SURFACE
+```
+
+---
+
+# 30. One-paragraph restart summary
+
+CrabLink TV is a dedicated Tauri Android TV client whose original navigation, gateway, catalog, creator, verified-asset, media playback, Continue Watching, and resource-release phases are complete. Native Passport Phase 16 has implemented Android Keystore material storage, JNI secret handling, replay-safe hydration, delegated authorization, revocation/expiry/scope review, device proof boundaries, one-use verified PIN tickets, native PIN enrollment and confirmation, operational unlock wiring, explicit MENU/F1 enrollment or unlock, INFO/F2 lock, and fail-closed Android lifecycle behavior. All host checks, predecessor boundaries, strict Clippy, fresh ARMv7 compilation, APK checks, native-library matching, and packaged marker checks are green. The latest APK is SHA-256 `61c4683d2e4db2350a702ba940e2292e23b375a0c88429236b186eaf76532467`. Work is paused only because no television or Android TV box is currently available. Resume by installing that APK through USB and running `npm run tv:native-passport:phase16e3b3c:device-runtime:accept`. After prompt/lifecycle acceptance is physically green, implement Phase 16F’s redacted status UI, operational proof, revocation enforcement, forbidden-authority matrix, and final device acceptance. Do not mark Phase 16 or the Android TV build complete before those physical proofs are recorded.
+
+These notes are ready to paste into `ANDROID_TV_NOTES.md` as the authoritative July 31 session handoff.
+
+
+
+
+### END NOTE - JULY 31 2026 - 20:30 CST

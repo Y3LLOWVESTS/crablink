@@ -27,6 +27,7 @@ use crate::{
         DesktopNativeSecretSurfaceOutcome, DesktopNativeSecretSurfacePort,
         DesktopOperationalUnlockCommandState,
     },
+    passport_platform_material_clear_runtime::AlreadyAbsentDesktopPlatformMaterialClearer,
     passport_recovery_phrase_runtime::{
         run_desktop_recovery_ceremony_once_with_pending_recovery, DesktopRecoveryCeremonyOnceState,
     },
@@ -144,6 +145,7 @@ fn phase11b_one_app_state_create_then_recovery_uses_pending_native_memory() {
     let state = AppState::with_native_passport_runtime_and_secret_surface(
         vault_store,
         sealer.clone(),
+        Arc::new(AlreadyAbsentDesktopPlatformMaterialClearer),
         surface.clone(),
     );
 
@@ -243,6 +245,7 @@ fn phase11b_missing_pending_recovery_fails_closed_without_platform_unseal() {
     let state = AppState::with_native_passport_runtime_and_secret_surface(
         vault_store,
         sealer.clone(),
+        Arc::new(AlreadyAbsentDesktopPlatformMaterialClearer),
         surface.clone(),
     );
 

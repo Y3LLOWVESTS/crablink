@@ -50,3 +50,5 @@ export {
   receiptDisplayKey,
   receiptTimestampMillis,
 } from './receiptDisplay.js';
+
+export * from './onboardingContract.js';

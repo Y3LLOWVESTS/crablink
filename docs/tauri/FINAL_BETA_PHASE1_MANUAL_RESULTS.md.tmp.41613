@@ -1,0 +1,10 @@
+# FINAL_BETA Phase 1 Manual Results
+
+<!-- FINAL_BETA_PHASE1_MANUAL_RESULTS_V1 -->
+
+No PINs, recovery words, keys, capabilities, or private material
+may be recorded in this file.
+
+| Step | Status | Redacted observation |
+|---|---|---|
+| CLEAN_FIRST_RUN | Clean first run has no stale identity or dev user [GREEN/RED/SKIPPED]: Clean first run has no stale identity or dev user [GREEN/RED/SKIPPED]: GREEN |  |

@@ -19,6 +19,8 @@ use crate::passport_pending_operational_runtime::DesktopPendingOperationalSessio
 #[cfg(desktop)]
 use crate::passport_pending_recovery_runtime::DesktopPendingRecoverySessionStore;
 #[cfg(desktop)]
+use crate::passport_platform_material_clear_runtime::SharedDesktopPlatformMaterialClearer;
+#[cfg(desktop)]
 use crate::passport_platform_runtime::SharedNativePlatformSealer;
 #[cfg(desktop)]
 use crate::passport_recovery_acknowledgement_store::DesktopRecoveryAcknowledgementStore;
@@ -91,6 +93,8 @@ pub struct AppState {
     #[cfg(desktop)]
     pub passport_platform_sealer: SharedNativePlatformSealer,
     #[cfg(desktop)]
+    pub passport_platform_material_clearer: SharedDesktopPlatformMaterialClearer,
+    #[cfg(desktop)]
     pub passport_operational_session: DesktopOperationalVaultSessionStore,
     #[cfg(desktop)]
     pub passport_pending_recovery_session: DesktopPendingRecoverySessionStore,
@@ -105,10 +109,12 @@ impl AppState {
     pub fn with_native_passport_runtime(
         passport_vault_store: DesktopAtomicVaultStore,
         passport_platform_sealer: SharedNativePlatformSealer,
+        passport_platform_material_clearer: SharedDesktopPlatformMaterialClearer,
     ) -> Self {
         Self::with_native_passport_runtime_and_secret_surface(
             passport_vault_store,
             passport_platform_sealer,
+            passport_platform_material_clearer,
             new_desktop_native_secret_surface(),
         )
     }
@@ -117,6 +123,7 @@ impl AppState {
     pub fn with_native_passport_runtime_and_secret_surface(
         passport_vault_store: DesktopAtomicVaultStore,
         passport_platform_sealer: SharedNativePlatformSealer,
+        passport_platform_material_clearer: SharedDesktopPlatformMaterialClearer,
         passport_secret_surface: SharedDesktopNativeSecretSurface,
     ) -> Self {
         let passport_recovery_acknowledgement_store =
@@ -131,6 +138,7 @@ impl AppState {
             make_exports: new_make_export_store(),
             passport_vault_store,
             passport_platform_sealer,
+            passport_platform_material_clearer,
             passport_operational_session: DesktopOperationalVaultSessionStore::default(),
             passport_pending_recovery_session: DesktopPendingRecoverySessionStore::default(),
             passport_pending_operational_session: DesktopPendingOperationalSessionStore::default(),

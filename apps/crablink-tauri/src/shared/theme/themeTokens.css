@@ -1,27 +1,203 @@
 /*
- * RO:WHAT — Shared semantic theme tokens for CrabLink.
- * RO:WHY — Gives every crab:// page a uniform neutral light/dark foundation.
- * RO:INTERACTS — ThemeProvider, Shell, all page CSS files.
- * RO:INVARIANTS — components use tokens instead of raw ad hoc colors; no blue default theme.
- * RO:TEST — visual/manual theme smoke.
+ * RO:WHAT — Canonical visual and interaction tokens for CrabLink Desktop.
+ * RO:WHY — FINAL_BETA Phase 2; prevents each page from inventing its own typography, spacing, color, radius, elevation, and focus system.
+ * RO:INTERACTS — light.css, dark.css, designSystemFoundation.css, shell CSS, shared components, and route-owned pages.
+ * RO:INVARIANTS — components consume semantic tokens; raw palette values remain confined to theme definitions; themes preserve readable contrast.
+ * RO:METRICS — none.
+ * RO:CONFIG — light, dark, and system modes through ThemeProvider.
+ * RO:SECURITY — presentation only; no identity, Passport, wallet, receipt, or network authority.
+ * RO:TEST — designSystemFoundation.test.mjs and focused frontend build.
+ * FINAL_BETA_PHASE2A_DESIGN_FOUNDATION_V1
  */
 
 :root {
   color-scheme: light;
 
-  --cl-bg: #f5f4f1;
-  --cl-surface: #fbfaf7;
-  --cl-card: #ffffff;
-  --cl-text: #111111;
-  --cl-muted: #626262;
-  --cl-border: #d9d6cf;
+  /* Typography */
+  --cl-font-sans:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 
-  --cl-accent: #111111;
+  --cl-font-mono:
+    "SFMono-Regular",
+    Consolas,
+    "Liberation Mono",
+    Menlo,
+    monospace;
+
+  --cl-font-size-00: 0.6875rem;
+  --cl-font-size-0: 0.75rem;
+  --cl-font-size-1: 0.875rem;
+  --cl-font-size-2: 1rem;
+  --cl-font-size-3: 1.125rem;
+  --cl-font-size-4: 1.375rem;
+  --cl-font-size-5: 1.75rem;
+  --cl-font-size-6: 2.25rem;
+  --cl-font-size-7: 3rem;
+
+  --cl-line-tight: 1.12;
+  --cl-line-heading: 1.22;
+  --cl-line-body: 1.55;
+  --cl-line-relaxed: 1.7;
+
+  --cl-weight-regular: 450;
+  --cl-weight-medium: 600;
+  --cl-weight-semibold: 720;
+  --cl-weight-bold: 820;
+  --cl-weight-black: 920;
+
+  /* Spacing */
+  --cl-space-0: 0;
+  --cl-space-1: 0.25rem;
+  --cl-space-2: 0.5rem;
+  --cl-space-3: 0.75rem;
+  --cl-space-4: 1rem;
+  --cl-space-5: 1.25rem;
+  --cl-space-6: 1.5rem;
+  --cl-space-7: 2rem;
+  --cl-space-8: 2.5rem;
+  --cl-space-9: 3rem;
+  --cl-space-10: 4rem;
+
+  /* Radius */
+  --cl-radius-xs: 0.375rem;
+  --cl-radius-sm: 0.625rem;
+  --cl-radius-md: 0.875rem;
+  --cl-radius-lg: 1.125rem;
+  --cl-radius-xl: 1.5rem;
+  --cl-radius-pill: 999px;
+
+  /* Controls */
+  --cl-control-sm: 2rem;
+  --cl-control-md: 2.5rem;
+  --cl-control-lg: 3rem;
+
+  /* Layout */
+  --cl-content-narrow: 42rem;
+  --cl-content-reading: 48rem;
+  --cl-content-wide: 76rem;
+  --cl-content-max: 92rem;
+
+  /* Motion */
+  --cl-duration-fast: 100ms;
+  --cl-duration-normal: 180ms;
+  --cl-duration-slow: 280ms;
+  --cl-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --cl-ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
+
+  /* Layering */
+  --cl-z-sticky: 20;
+  --cl-z-drawer: 60;
+  --cl-z-modal: 80;
+  --cl-z-toast: 100;
+
+  /* Default light semantic colors */
+  --cl-bg: #f5f6f8;
+  --cl-surface: #fafbfc;
+  --cl-surface-raised: #ffffff;
+  --cl-card: #ffffff;
+  --cl-card-muted: #f0f2f5;
+  --cl-text: #17191d;
+  --cl-text-strong: #0c0d0f;
+  --cl-muted: #5b6472;
+  --cl-subtle: #7a8492;
+  --cl-border: #d8dde5;
+  --cl-border-strong: #b9c1cc;
+
+  --cl-accent: #d94b2b;
+  --cl-accent-hover: #b93c21;
+  --cl-accent-pressed: #963019;
+  --cl-accent-soft: #fff0eb;
   --cl-accent-contrast: #ffffff;
 
   --cl-danger: #b42318;
+  --cl-danger-soft: #fff0ef;
   --cl-warning: #8a4b00;
+  --cl-warning-soft: #fff6e6;
   --cl-success: #166534;
+  --cl-success-soft: #edf9f0;
+  --cl-info: #315f8c;
+  --cl-info-soft: #eef5fc;
 
-  --cl-ad-bg: #efede7;
+  --cl-hover: color-mix(
+    in srgb,
+    var(--cl-text) 6%,
+    transparent
+  );
+
+  --cl-pressed: color-mix(
+    in srgb,
+    var(--cl-text) 11%,
+    transparent
+  );
+
+  --cl-selected: color-mix(
+    in srgb,
+    var(--cl-accent) 12%,
+    transparent
+  );
+
+  --cl-disabled-bg: color-mix(
+    in srgb,
+    var(--cl-card-muted) 76%,
+    transparent
+  );
+
+  --cl-disabled-text: color-mix(
+    in srgb,
+    var(--cl-muted) 64%,
+    transparent
+  );
+
+  --cl-overlay: rgba(15, 18, 24, 0.52);
+
+  /* Elevation */
+  --cl-shadow-xs:
+    0 1px 2px
+    color-mix(
+      in srgb,
+      var(--cl-text) 8%,
+      transparent
+    );
+
+  --cl-shadow-sm:
+    0 3px 10px
+    color-mix(
+      in srgb,
+      var(--cl-text) 10%,
+      transparent
+    );
+
+  --cl-shadow-md:
+    0 12px 34px
+    color-mix(
+      in srgb,
+      var(--cl-text) 14%,
+      transparent
+    );
+
+  --cl-shadow-lg:
+    0 24px 72px
+    color-mix(
+      in srgb,
+      var(--cl-text) 20%,
+      transparent
+    );
+
+  /* Focus */
+  --cl-focus-color: var(--cl-accent);
+  --cl-focus-ring:
+    0 0 0 3px
+    color-mix(
+      in srgb,
+      var(--cl-focus-color) 28%,
+      transparent
+    );
+
+  --cl-ad-bg: var(--cl-card-muted);
 }
