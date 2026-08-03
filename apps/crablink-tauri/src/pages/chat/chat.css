@@ -6,6 +6,16 @@
  * RO:TEST — manual crab://chat smoke in light/dark themes.
  */
 
+/*
+ * FINAL_BETA_PHASE2D18_CHAT_THEME_ADOPTION_V1
+ *
+ * Chat presentation consumes canonical success, information, warning,
+ * danger, media, and contrast tokens.
+ *
+ * Backend message truth, paid confirmation, moderation authority,
+ * receipts, publication, and wallet behavior are unchanged.
+ */
+
 .cl-chat-page {
   display: grid;
   gap: 0.85rem;
@@ -77,8 +87,8 @@
   border: 1px solid color-mix(in srgb, var(--cl-border) 74%, transparent);
   border-radius: 26px;
   background:
-    radial-gradient(circle at 24% 24%, color-mix(in srgb, #22c55e 15%, transparent), transparent 32%),
-    radial-gradient(circle at 76% 76%, color-mix(in srgb, #38bdf8 12%, transparent), transparent 34%),
+    radial-gradient(circle at 24% 24%, color-mix(in srgb, var(--cl-success) 15%, transparent), transparent 32%),
+    radial-gradient(circle at 76% 76%, color-mix(in srgb, var(--cl-info) 12%, transparent), transparent 34%),
     color-mix(in srgb, var(--cl-surface) 78%, transparent);
   padding: 1rem;
 }
@@ -141,8 +151,8 @@
 .cl-chat-composer-actions button:first-child {
   border-color: color-mix(in srgb, var(--cl-accent) 62%, transparent);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--cl-accent) 76%, #22c55e), color-mix(in srgb, var(--cl-accent) 48%, #38bdf8));
-  color: white;
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-accent) 76%, var(--cl-success)), color-mix(in srgb, var(--cl-accent) 48%, var(--cl-info)));
+  color: var(--cl-accent-contrast);
   box-shadow: 0 14px 30px color-mix(in srgb, var(--cl-accent) 22%, transparent);
 }
 
@@ -160,9 +170,9 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
-  border: 1px solid color-mix(in srgb, #38bdf8 44%, var(--cl-border));
+  border: 1px solid color-mix(in srgb, var(--cl-info) 44%, var(--cl-border));
   border-radius: 18px;
-  background: color-mix(in srgb, #38bdf8 8%, var(--cl-card));
+  background: color-mix(in srgb, var(--cl-info) 8%, var(--cl-card));
   padding: 0.68rem 0.8rem;
 }
 
@@ -207,7 +217,7 @@
   gap: 0.78rem;
   min-height: 650px;
   background:
-    radial-gradient(circle at 18% 12%, color-mix(in srgb, #22c55e 12%, transparent), transparent 32%),
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--cl-success) 12%, transparent), transparent 32%),
     radial-gradient(circle at 82% 10%, color-mix(in srgb, var(--cl-accent) 14%, transparent), transparent 36%),
     linear-gradient(145deg, color-mix(in srgb, var(--cl-card) 92%, transparent), color-mix(in srgb, var(--cl-surface) 78%, transparent));
 }
@@ -248,11 +258,11 @@
 }
 
 .cl-chat-builder-score.is-good {
-  border-color: color-mix(in srgb, #22c55e 42%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-success) 42%, var(--cl-border));
 }
 
 .cl-chat-builder-score.is-warn {
-  border-color: color-mix(in srgb, #f59e0b 54%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-warning) 54%, var(--cl-border));
 }
 
 .cl-chat-status-rail,
@@ -300,24 +310,24 @@
 }
 
 .cl-chat-status-pill.is-warn {
-  border-color: color-mix(in srgb, #f59e0b 44%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-warning) 44%, var(--cl-border));
 }
 
 .cl-chat-status-pill.is-info {
-  border-color: color-mix(in srgb, #38bdf8 42%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-info) 42%, var(--cl-border));
 }
 
 .cl-chat-pinned-note {
   display: grid;
   gap: 0.25rem;
-  border: 1px solid color-mix(in srgb, #f59e0b 42%, var(--cl-border));
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 42%, var(--cl-border));
   border-radius: 18px;
-  background: color-mix(in srgb, #f59e0b 9%, var(--cl-card));
+  background: color-mix(in srgb, var(--cl-warning) 9%, var(--cl-card));
   padding: 0.72rem;
 }
 
 .cl-chat-pinned-note span {
-  color: color-mix(in srgb, #f59e0b 82%, var(--cl-text));
+  color: color-mix(in srgb, var(--cl-warning) 82%, var(--cl-text));
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.1em;
@@ -338,8 +348,8 @@
   border: 1px solid color-mix(in srgb, var(--cl-border) 70%, transparent);
   border-radius: 26px;
   background:
-    radial-gradient(circle at 18% 18%, color-mix(in srgb, #22c55e 9%, transparent), transparent 32%),
-    radial-gradient(circle at 84% 72%, color-mix(in srgb, #38bdf8 8%, transparent), transparent 38%),
+    radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--cl-success) 9%, transparent), transparent 32%),
+    radial-gradient(circle at 84% 72%, color-mix(in srgb, var(--cl-info) 8%, transparent), transparent 38%),
     color-mix(in srgb, var(--cl-surface) 62%, transparent);
   padding: 0.9rem;
   scrollbar-width: thin;
@@ -458,8 +468,8 @@
   border-radius: 22px 22px 6px 22px;
   border-color: color-mix(in srgb, var(--cl-accent) 40%, transparent);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--cl-accent) 76%, #22c55e), color-mix(in srgb, var(--cl-accent) 44%, #38bdf8));
-  color: white;
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-accent) 76%, var(--cl-success)), color-mix(in srgb, var(--cl-accent) 44%, var(--cl-info)));
+  color: var(--cl-accent-contrast);
 }
 
 .cl-chat-bubble.is-emoji-only {
@@ -548,11 +558,11 @@
 }
 
 .cl-chat-input-meta strong {
-  color: #f59e0b;
+  color: var(--cl-warning);
 }
 
 .cl-chat-paid-send {
-  border-color: color-mix(in srgb, #f59e0b 46%, var(--cl-border)) !important;
+  border-color: color-mix(in srgb, var(--cl-warning) 46%, var(--cl-border)) !important;
 }
 
 .cl-chat-composer-note,
@@ -630,10 +640,10 @@
 }
 
 .cl-chat-moderation-head > span {
-  border: 1px solid color-mix(in srgb, #f59e0b 50%, var(--cl-border));
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 50%, var(--cl-border));
   border-radius: 999px;
-  background: color-mix(in srgb, #f59e0b 10%, var(--cl-card));
-  color: color-mix(in srgb, #f59e0b 82%, var(--cl-text));
+  background: color-mix(in srgb, var(--cl-warning) 10%, var(--cl-card));
+  color: color-mix(in srgb, var(--cl-warning) 82%, var(--cl-text));
   padding: 0.32rem 0.58rem;
   font-size: 0.72rem;
   font-weight: 900;
@@ -668,8 +678,8 @@
   max-height: 620px;
   border: 1px solid color-mix(in srgb, var(--cl-border) 74%, transparent);
   border-radius: 20px;
-  background: color-mix(in srgb, #020617 88%, var(--cl-card));
-  color: #d1fae5;
+  background: color-mix(in srgb, var(--cl-media-canvas) 88%, var(--cl-card));
+  color: color-mix(in srgb, var(--cl-success) 28%, var(--cl-media-text));
   padding: 0.9rem;
   font-size: 0.78rem;
   line-height: 1.45;
@@ -747,8 +757,8 @@
   border: 1px solid color-mix(in srgb, var(--cl-border) 78%, transparent);
   border-radius: 28px;
   background:
-    radial-gradient(circle at 12% 8%, color-mix(in srgb, #22c55e 12%, transparent), transparent 34%),
-    radial-gradient(circle at 86% 12%, color-mix(in srgb, #38bdf8 12%, transparent), transparent 36%),
+    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--cl-success) 12%, transparent), transparent 34%),
+    radial-gradient(circle at 86% 12%, color-mix(in srgb, var(--cl-info) 12%, transparent), transparent 36%),
     linear-gradient(145deg, color-mix(in srgb, var(--cl-card) 92%, transparent), color-mix(in srgb, var(--cl-surface) 78%, transparent));
   box-shadow: 0 22px 70px color-mix(in srgb, var(--cl-text) 7%, transparent);
   padding: 1rem;
@@ -808,9 +818,9 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
-  border: 1px solid color-mix(in srgb, #38bdf8 44%, var(--cl-border));
+  border: 1px solid color-mix(in srgb, var(--cl-info) 44%, var(--cl-border));
   border-radius: 18px;
-  background: color-mix(in srgb, #38bdf8 8%, var(--cl-card));
+  background: color-mix(in srgb, var(--cl-info) 8%, var(--cl-card));
   padding: 0.68rem 0.8rem;
 }
 
@@ -917,18 +927,18 @@
 }
 
 .cl-chat-probe-result.is-expected {
-  border-color: color-mix(in srgb, #f59e0b 52%, var(--cl-border));
-  background: color-mix(in srgb, #f59e0b 8%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-warning) 52%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-warning) 8%, var(--cl-card));
 }
 
 .cl-chat-probe-result.is-ok {
-  border-color: color-mix(in srgb, #22c55e 52%, var(--cl-border));
-  background: color-mix(in srgb, #22c55e 8%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-success) 52%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-success) 8%, var(--cl-card));
 }
 
 .cl-chat-probe-result.is-error {
-  border-color: color-mix(in srgb, #fb7185 52%, var(--cl-border));
-  background: color-mix(in srgb, #fb7185 8%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-danger) 52%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-danger) 8%, var(--cl-card));
 }
 
 .cl-chat-probe-result strong,
@@ -989,8 +999,8 @@
 .cl-chat-contract-tabs button.is-active {
   border-color: color-mix(in srgb, var(--cl-accent) 62%, transparent);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--cl-accent) 76%, #22c55e), color-mix(in srgb, var(--cl-accent) 48%, #38bdf8));
-  color: white;
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-accent) 76%, var(--cl-success)), color-mix(in srgb, var(--cl-accent) 48%, var(--cl-info)));
+  color: var(--cl-accent-contrast);
 }
 
 .cl-chat-contract-json {
@@ -998,8 +1008,8 @@
   max-height: 520px;
   border: 1px solid color-mix(in srgb, var(--cl-border) 74%, transparent);
   border-radius: 20px;
-  background: color-mix(in srgb, #020617 88%, var(--cl-card));
-  color: #d1fae5;
+  background: color-mix(in srgb, var(--cl-media-canvas) 88%, var(--cl-card));
+  color: color-mix(in srgb, var(--cl-success) 28%, var(--cl-media-text));
   padding: 0.9rem;
   font-size: 0.78rem;
   line-height: 1.45;
@@ -1047,17 +1057,17 @@
 
 .cl-chat-hero-card.is-live,
 .cl-chat-contract-card.is-live {
-  border-color: color-mix(in srgb, #22c55e 54%, var(--cl-border));
-  box-shadow: 0 18px 45px color-mix(in srgb, #22c55e 14%, transparent);
+  border-color: color-mix(in srgb, var(--cl-success) 54%, var(--cl-border));
+  box-shadow: 0 18px 45px color-mix(in srgb, var(--cl-success) 14%, transparent);
 }
 
 .cl-chat-room.is-backend-ready {
-  border-color: color-mix(in srgb, #22c55e 38%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-success) 38%, var(--cl-border));
 }
 
 .cl-chat-status-pill.is-ok {
-  border-color: color-mix(in srgb, #22c55e 46%, var(--cl-border));
-  background: color-mix(in srgb, #22c55e 8%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-success) 46%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-success) 8%, var(--cl-card));
 }
 
 .cl-chat-backend-proof,
@@ -1072,13 +1082,13 @@
 }
 
 .cl-chat-backend-proof {
-  border-color: color-mix(in srgb, #22c55e 46%, var(--cl-border));
-  background: color-mix(in srgb, #22c55e 8%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-success) 46%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-success) 8%, var(--cl-card));
 }
 
 .cl-chat-quote-card {
-  border-color: color-mix(in srgb, #f59e0b 52%, var(--cl-border));
-  background: color-mix(in srgb, #f59e0b 9%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-warning) 52%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-warning) 9%, var(--cl-card));
 }
 
 .cl-chat-backend-proof strong,
@@ -1093,9 +1103,9 @@
 }
 
 .cl-chat-message.is-backend .cl-chat-message-proof span:first-child {
-  border-color: color-mix(in srgb, #22c55e 44%, var(--cl-border));
-  background: color-mix(in srgb, #22c55e 10%, var(--cl-card));
-  color: color-mix(in srgb, #22c55e 78%, var(--cl-text));
+  border-color: color-mix(in srgb, var(--cl-success) 44%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-success) 10%, var(--cl-card));
+  color: color-mix(in srgb, var(--cl-success) 78%, var(--cl-text));
 }
 
 .cl-chat-message.is-local .cl-chat-message-proof span:first-child {
@@ -1135,17 +1145,17 @@
 
 .cl-chat-hero-card.is-live,
 .cl-chat-contract-card.is-live {
-  border-color: color-mix(in srgb, #22c55e 54%, var(--cl-border));
-  box-shadow: 0 18px 45px color-mix(in srgb, #22c55e 14%, transparent);
+  border-color: color-mix(in srgb, var(--cl-success) 54%, var(--cl-border));
+  box-shadow: 0 18px 45px color-mix(in srgb, var(--cl-success) 14%, transparent);
 }
 
 .cl-chat-room.is-backend-ready {
-  border-color: color-mix(in srgb, #22c55e 38%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-success) 38%, var(--cl-border));
 }
 
 .cl-chat-status-pill.is-ok {
-  border-color: color-mix(in srgb, #22c55e 46%, var(--cl-border));
-  background: color-mix(in srgb, #22c55e 8%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-success) 46%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-success) 8%, var(--cl-card));
 }
 
 .cl-chat-backend-proof,
@@ -1160,13 +1170,13 @@
 }
 
 .cl-chat-backend-proof {
-  border-color: color-mix(in srgb, #22c55e 46%, var(--cl-border));
-  background: color-mix(in srgb, #22c55e 8%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-success) 46%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-success) 8%, var(--cl-card));
 }
 
 .cl-chat-quote-card {
-  border-color: color-mix(in srgb, #f59e0b 52%, var(--cl-border));
-  background: color-mix(in srgb, #f59e0b 9%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-warning) 52%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-warning) 9%, var(--cl-card));
 }
 
 .cl-chat-backend-proof strong,
@@ -1181,9 +1191,9 @@
 }
 
 .cl-chat-message.is-backend .cl-chat-message-proof span:first-child {
-  border-color: color-mix(in srgb, #22c55e 44%, var(--cl-border));
-  background: color-mix(in srgb, #22c55e 10%, var(--cl-card));
-  color: color-mix(in srgb, #22c55e 78%, var(--cl-text));
+  border-color: color-mix(in srgb, var(--cl-success) 44%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-success) 10%, var(--cl-card));
+  color: color-mix(in srgb, var(--cl-success) 78%, var(--cl-text));
 }
 
 .cl-chat-message.is-local .cl-chat-message-proof span:first-child {
@@ -1224,7 +1234,7 @@
 .cl-chat-quote-preview {
   display: grid;
   gap: 0.28rem;
-  border: 1px solid color-mix(in srgb, #f59e0b 28%, var(--cl-border));
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 28%, var(--cl-border));
   border-radius: 16px;
   background: color-mix(in srgb, var(--cl-card) 72%, transparent);
   padding: 0.62rem;
@@ -1284,9 +1294,9 @@
 }
 
 .cl-chat-quote-actions button {
-  border: 1px solid color-mix(in srgb, #f59e0b 50%, var(--cl-border));
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 50%, var(--cl-border));
   border-radius: 999px;
-  background: color-mix(in srgb, #f59e0b 18%, var(--cl-accent));
+  background: color-mix(in srgb, var(--cl-warning) 18%, var(--cl-accent));
   color: var(--cl-text);
   cursor: pointer;
   font-weight: 900;
@@ -1303,18 +1313,18 @@
 }
 
 .cl-chat-message.is-paid-receipted .cl-chat-message-avatar {
-  border-color: color-mix(in srgb, #f59e0b 48%, var(--cl-border));
-  background: color-mix(in srgb, #f59e0b 14%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-warning) 48%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-warning) 14%, var(--cl-card));
 }
 
 .cl-chat-message.is-paid-receipted .cl-chat-bubble {
-  border-color: color-mix(in srgb, #f59e0b 36%, var(--cl-border));
-  box-shadow: 0 16px 40px color-mix(in srgb, #f59e0b 10%, transparent);
+  border-color: color-mix(in srgb, var(--cl-warning) 36%, var(--cl-border));
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--cl-warning) 10%, transparent);
 }
 
 .cl-chat-message.is-paid-receipted .cl-chat-message-proof span {
-  border-color: color-mix(in srgb, #f59e0b 38%, var(--cl-border));
-  background: color-mix(in srgb, #f59e0b 10%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-warning) 38%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-warning) 10%, var(--cl-card));
 }
 
 @media (max-width: 780px) {

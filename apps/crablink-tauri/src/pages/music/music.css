@@ -6,6 +6,16 @@
  * RO:TEST — visual/manual checks in React HTTP lane and Chrome extension lane when bridged.
  */
 
+/*
+ * FINAL_BETA_PHASE2D24_MUSIC_THEME_ADOPTION_V1
+ *
+ * Music playback, error, and upload-success presentation consumes canonical
+ * danger, success, and media-canvas tokens.
+ *
+ * Local preview, upload, paid flow, receipt, wallet, backend, CID, and ROC
+ * behavior remain unchanged.
+ */
+
 .cl-music-page {
   display: grid;
   gap: 1rem;
@@ -564,8 +574,8 @@
 }
 
 .cl-music-local-player-problem {
-  border-color: color-mix(in srgb, var(--cl-danger, #b42318) 45%, var(--cl-border));
-  background: color-mix(in srgb, var(--cl-danger, #b42318) 9%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-danger) 45%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-danger) 9%, var(--cl-card));
 }
 
 .cl-music-local-player-empty span,
@@ -578,7 +588,7 @@
   overflow: hidden;
   border: 1px solid var(--cl-border);
   border-radius: 22px;
-  background: color-mix(in srgb, var(--cl-bg) 65%, #000);
+  background: color-mix(in srgb, var(--cl-bg) 65%, var(--cl-media-canvas));
   padding: 0.85rem;
 }
 
@@ -795,9 +805,9 @@
 }
 
 .cl-music-upload-success {
-  border: 1px solid color-mix(in srgb, var(--cl-success, #16a34a) 38%, var(--cl-border));
+  border: 1px solid color-mix(in srgb, var(--cl-success) 38%, var(--cl-border));
   border-radius: 18px;
-  background: color-mix(in srgb, var(--cl-success, #16a34a) 9%, var(--cl-card));
+  background: color-mix(in srgb, var(--cl-success) 9%, var(--cl-card));
   padding: 0.75rem;
 }
 

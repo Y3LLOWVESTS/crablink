@@ -11,8 +11,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { parseRouteInput } from './router.js';
+import { CRABLINK_HOME_ROUTE } from './shell/shellNavigation.js';
 
-const DEFAULT_ROUTE_INPUT = 'crab://home';
+const DEFAULT_ROUTE_INPUT = CRABLINK_HOME_ROUTE;
 const MAX_TABS = 10;
 
 let nextTabSequence = Date.now();

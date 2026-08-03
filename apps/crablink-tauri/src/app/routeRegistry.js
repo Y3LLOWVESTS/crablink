@@ -17,6 +17,7 @@ import {
 
 export const ROUTES = Object.freeze({
   home: lazy(() => import('../pages/home/HomePage.jsx')),
+  explore: lazy(() => import('../pages/explore/ExplorePage.jsx')),
   library: lazy(() => import('../pages/library/LibraryPage.jsx')),
   receipts: lazy(() => import('../pages/receipts/ReceiptsPage.jsx')),
   quickchain: lazy(() => import('../pages/quickchain/QuickchainReadinessPage.jsx')),

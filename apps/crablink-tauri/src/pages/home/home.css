@@ -6,6 +6,13 @@
  * RO:TEST — visual/manual crab://home smoke in light and dark mode.
  */
 
+/*
+ * FINAL_BETA_PHASE2D5_HOME_THEME_ADOPTION_V2
+ *
+ * Home presentation consumes the shared semantic theme directly.
+ * Route behavior, proof truth, and quick actions remain caller-owned.
+ */
+
 .home-page {
   display: grid;
   gap: 18px;
@@ -13,20 +20,6 @@
   max-width: 100%;
   min-width: 0;
   margin-inline: auto;
-
-  --cl-home-panel-bg: var(--cl-card, #ffffff);
-  --cl-home-panel-soft-bg: var(--cl-surface, #fbfaf7);
-  --cl-home-input-bg: color-mix(in srgb, var(--cl-card, #ffffff) 84%, var(--cl-bg, #f5f4f1) 16%);
-  --cl-home-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
-  --cl-home-proof-bg: color-mix(in srgb, var(--cl-card, #ffffff) 88%, var(--cl-bg, #f5f4f1) 12%);
-}
-
-[data-theme='dark'] .home-page {
-  --cl-home-panel-bg: #0b0b0b;
-  --cl-home-panel-soft-bg: #050505;
-  --cl-home-input-bg: #050505;
-  --cl-home-border-soft: #242424;
-  --cl-home-proof-bg: #080808;
 }
 
 .home-page *,
@@ -55,24 +48,24 @@
   gap: 12px;
   min-height: 172px;
   padding: 18px;
-  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border: 1px solid var(--cl-border);
   border-radius: 22px;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--cl-text, #111111) 5%, transparent), transparent 45%),
-    var(--cl-home-panel-bg);
-  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.06));
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-text) 5%, transparent), transparent 45%),
+    var(--cl-card);
+  box-shadow: var(--cl-shadow-md);
 }
 
 .cl-home-status-card.is-success {
-  border-color: color-mix(in srgb, var(--cl-success, #12805c) 38%, var(--cl-border, #d9d6cf));
+  border-color: color-mix(in srgb, var(--cl-success) 38%, var(--cl-border));
 }
 
 .cl-home-status-card.is-info {
-  border-color: color-mix(in srgb, var(--cl-info, #2a6fbb) 30%, var(--cl-border, #d9d6cf));
+  border-color: color-mix(in srgb, var(--cl-accent) 30%, var(--cl-border));
 }
 
 .cl-home-status-card.is-warning {
-  border-color: color-mix(in srgb, var(--cl-warning, #a15c00) 35%, var(--cl-border, #d9d6cf));
+  border-color: color-mix(in srgb, var(--cl-warning) 35%, var(--cl-border));
 }
 
 .cl-home-status-card div {
@@ -83,7 +76,7 @@
 }
 
 .cl-home-status-card strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: clamp(34px, 6vw, 60px);
   line-height: 0.9;
   letter-spacing: -0.07em;
@@ -91,7 +84,7 @@
 
 .cl-home-status-card h2 {
   margin: 0;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 20px;
   letter-spacing: -0.04em;
   overflow-wrap: anywhere;
@@ -100,7 +93,7 @@
 .cl-home-status-card p,
 .cl-home-muted {
   margin: 0;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.5;
 }
 
@@ -117,21 +110,21 @@
   gap: 10px;
   min-width: 0;
   padding: 14px;
-  border: 1px solid var(--cl-home-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 20px;
-  background: var(--cl-home-proof-bg);
+  background: var(--cl-card-muted);
 }
 
 .cl-home-proof-card.is-success {
-  border-color: color-mix(in srgb, var(--cl-success, #12805c) 38%, var(--cl-home-border-soft));
+  border-color: color-mix(in srgb, var(--cl-success) 38%, var(--cl-border));
 }
 
 .cl-home-proof-card.is-info {
-  border-color: color-mix(in srgb, var(--cl-info, #2a6fbb) 30%, var(--cl-home-border-soft));
+  border-color: color-mix(in srgb, var(--cl-accent) 30%, var(--cl-border));
 }
 
 .cl-home-proof-card.is-warning {
-  border-color: color-mix(in srgb, var(--cl-warning, #a15c00) 35%, var(--cl-home-border-soft));
+  border-color: color-mix(in srgb, var(--cl-warning) 35%, var(--cl-border));
 }
 
 .cl-home-proof-head {
@@ -145,7 +138,7 @@
 .cl-home-context-row span,
 .cl-home-route-proof span {
   display: block;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 11px;
   font-weight: 950;
   letter-spacing: 0.06em;
@@ -155,14 +148,14 @@
 .cl-home-proof-head strong {
   display: block;
   margin-top: 4px;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 14px;
   overflow-wrap: anywhere;
 }
 
 .cl-home-proof-card p {
   margin: 0;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.45;
 }
 
@@ -174,10 +167,10 @@
 }
 
 .cl-home-inline-link {
-  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border: 1px solid var(--cl-border);
   border-radius: 999px;
-  background: var(--cl-home-panel-bg);
-  color: var(--cl-text, #111111);
+  background: var(--cl-card);
+  color: var(--cl-text);
   cursor: pointer;
   font: inherit;
   font-size: 12px;
@@ -211,13 +204,13 @@
   align-items: center;
   min-width: 0;
   padding: 10px;
-  border: 1px solid var(--cl-home-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 14px;
-  background: var(--cl-home-panel-soft-bg);
+  background: var(--cl-surface);
 }
 
 .cl-home-context-row strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   overflow-wrap: anywhere;
 }
 
@@ -235,15 +228,15 @@
   align-items: start;
   min-width: 0;
   padding: 18px;
-  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border: 1px solid var(--cl-border);
   border-radius: 22px;
-  background: var(--cl-home-panel-bg);
-  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.06));
+  background: var(--cl-card);
+  box-shadow: var(--cl-shadow-md);
 }
 
 .cl-home-actions-head h2 {
   margin: 2px 0 0;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 28px;
   letter-spacing: -0.05em;
 }
@@ -251,7 +244,7 @@
 .cl-home-actions-head p {
   max-width: 900px;
   margin: 8px 0 0;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.5;
 }
 
@@ -263,7 +256,7 @@
 }
 
 .cl-home-actions-tools span {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 12px;
   text-align: right;
 }
@@ -274,12 +267,12 @@
 }
 
 .cl-home-route-groups > .cl-card {
-  background: var(--cl-home-panel-bg);
+  background: var(--cl-card);
 }
 
 .cl-home-group-copy {
   margin: 0 0 14px;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.5;
 }
 
@@ -294,13 +287,13 @@
   gap: 12px;
   min-width: 0;
   padding: 14px;
-  border: 1px solid var(--cl-home-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: var(--cl-home-panel-soft-bg);
+  background: var(--cl-surface);
 }
 
 .cl-home-route-card.is-proven {
-  border-color: color-mix(in srgb, var(--cl-success, #12805c) 38%, var(--cl-home-border-soft));
+  border-color: color-mix(in srgb, var(--cl-success) 38%, var(--cl-border));
 }
 
 .cl-home-route-card.is-local {
@@ -321,14 +314,14 @@
 
 .cl-home-route-card h3 {
   margin: 4px 0 0;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 18px;
   letter-spacing: -0.04em;
 }
 
 .cl-home-route-card p {
   margin: 0;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.45;
 }
 
@@ -339,10 +332,10 @@
   max-width: 100%;
   align-items: center;
   overflow-wrap: anywhere;
-  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border: 1px solid var(--cl-border);
   border-radius: 999px;
   padding: 5px 8px;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.02em;
@@ -350,7 +343,7 @@
 
 .cl-home-route-risk {
   flex: 0 0 auto;
-  background: var(--cl-home-input-bg);
+  background: var(--cl-input-bg);
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -359,14 +352,14 @@
   display: grid;
   gap: 6px;
   padding: 10px;
-  border: 1px solid var(--cl-home-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 14px;
-  background: var(--cl-home-panel-bg);
+  background: var(--cl-card);
 }
 
 .cl-home-route-proof code {
   display: block;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 12px;
   overflow-wrap: anywhere;
 }
@@ -394,7 +387,7 @@
   gap: 8px;
   margin: 12px 0 0;
   padding-left: 22px;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.45;
 }
 
@@ -406,11 +399,11 @@
 }
 
 .cl-home-next-list span {
-  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border: 1px solid var(--cl-border);
   border-radius: 999px;
   padding: 7px 10px;
-  background: var(--cl-home-panel-soft-bg);
-  color: var(--cl-muted, #626262);
+  background: var(--cl-surface);
+  color: var(--cl-muted);
   font-size: 12px;
   font-weight: 850;
 }

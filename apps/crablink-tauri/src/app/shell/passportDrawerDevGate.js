@@ -14,6 +14,10 @@ import {
   listDevPassportSessions,
 } from '../../shared/utils/devPassportSessions.js';
 
+import {
+  isExplicitDeveloperSurface,
+} from '../developerSurfaceMode.js';
+
 const EMPTY_DEV_SESSIONS =
   Object.freeze([]);
 
@@ -21,10 +25,10 @@ export function isExplicitPassportDrawerDevSurface({
   buildDev = false,
   settings = {},
 } = {}) {
-  return (
-    buildDev === true &&
-    settings?.devMode === true
-  );
+  return isExplicitDeveloperSurface({
+    buildDev,
+    settings,
+  });
 }
 
 export function listExplicitPassportDrawerDevSessions({

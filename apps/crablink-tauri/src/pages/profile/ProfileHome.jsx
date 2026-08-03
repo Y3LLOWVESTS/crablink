@@ -13,6 +13,9 @@ import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import CopyButton from '../../shared/components/CopyButton.jsx';
 import ProfileAvatar from './ProfileAvatar.jsx';
+import { buildPublicProfileRoute } from './ownProfileIdentity.js';
+
+// FINAL_BETA_PHASE4A2_PROFILE_STUDIO_PUBLIC_BRIDGE_V1
 import {
   getRocTruth,
   getUsernameTruth,
@@ -28,13 +31,24 @@ export default function ProfileHome({ app, route, draftState, onEdit }) {
   const routeLabel = route?.normalizedInput || 'crab://profile';
   const passportLabel = draft.ownerPassport || app?.settings?.passportSubject || 'passport label unavailable';
   const walletLabel = draft.walletAccount || app?.settings?.walletAccount || 'wallet label unavailable';
+  const publicProfileRoute = usernameTruth.validation?.ok
+    ? buildPublicProfileRoute(usernameTruth.display)
+    : '';
+
+  function openPublicProfile() {
+    if (!publicProfileRoute) {
+      return;
+    }
+
+    app?.navigate?.(publicProfileRoute);
+  }
 
   return (
     <section className="profile-hero" aria-label="Profile hero">
       <div className="profile-hero-card">
         <div className="profile-hero-banner" aria-hidden="true">
           <div className="profile-hero-banner-inner">
-            <span>crab://profile</span>
+            <span>crab://profile · Profile Studio</span>
             <strong>{draft.tagline || 'CrabLink creator profile draft'}</strong>
           </div>
         </div>
@@ -45,7 +59,7 @@ export default function ProfileHome({ app, route, draftState, onEdit }) {
           <div className="profile-hero-identity">
             <div className="profile-hero-title-row">
               <div>
-                <p className="cl-eyebrow">RON Passport profile</p>
+                <p className="cl-eyebrow">Profile Studio</p>
                 <h1>{draft.displayName || 'Unnamed profile'}</h1>
                 <p className="profile-handle">{usernameTruth.display || '@username-local-draft'}</p>
               </div>
@@ -53,6 +67,18 @@ export default function ProfileHome({ app, route, draftState, onEdit }) {
               <div className="profile-editor-buttons">
                 <Button variant="primary" onClick={onEdit}>
                   Edit Profile
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={openPublicProfile}
+                  disabled={!publicProfileRoute}
+                  title={
+                    publicProfileRoute
+                      ? `Open ${publicProfileRoute}`
+                      : 'Choose a valid username before opening the public profile.'
+                  }
+                >
+                  View Public Profile
                 </Button>
                 <CopyButton text={usernameTruth.display || routeLabel} label="Copy handle" />
               </div>
@@ -64,6 +90,7 @@ export default function ProfileHome({ app, route, draftState, onEdit }) {
             </p>
 
             <div className="profile-badges" aria-label="Profile status badges">
+              <Badge tone="info">owner workspace</Badge>
               <Badge tone="warning">local profile draft</Badge>
               <Badge tone={usernameTruth.tone}>{usernameTruth.source}</Badge>
               <Badge tone={usernameTruth.backendConfirmed ? 'success' : 'neutral'}>

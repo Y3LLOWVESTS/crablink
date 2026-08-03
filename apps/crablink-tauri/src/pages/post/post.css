@@ -6,19 +6,16 @@
  * RO:TEST — visual/manual checks in CrabLink full-tab browser in light and dark mode.
  */
 
+/*
+ * FINAL_BETA_PHASE2D9_POST_THEME_ADOPTION_V1
+ *
+ * Post drafting and publishing surfaces consume shared semantic tokens.
+ * Draft state, gateway stages, and publish truth remain unchanged.
+ */
+
 .post-page {
   display: grid;
   gap: 1rem;
-
-  --post-panel-bg: var(--cl-card, #ffffff);
-  --post-soft-bg: color-mix(in srgb, var(--cl-card, #ffffff) 74%, var(--cl-bg, #f5f4f1) 26%);
-  --post-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
-}
-
-[data-theme='dark'] .post-page {
-  --post-panel-bg: #0b0b0b;
-  --post-soft-bg: #050505;
-  --post-border-soft: #242424;
 }
 
 .post-draft-card,
@@ -108,13 +105,10 @@
   line-height: 1.6;
 }
 
-[data-theme='dark'] .post-preview-body {
-  background: #050505;
-}
 
 .post-section-copy,
 .post-publish-step p {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.55;
 }
 
@@ -127,17 +121,17 @@
   gap: 0.25rem;
   margin: 1rem 0;
   padding: 0.95rem;
-  border: 1px solid color-mix(in srgb, var(--cl-warning, #d97706) 50%, var(--post-border-soft));
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 50%, var(--cl-border));
   border-radius: 18px;
-  background: color-mix(in srgb, var(--cl-warning, #d97706) 11%, var(--post-soft-bg));
+  background: color-mix(in srgb, var(--cl-warning) 11%, var(--cl-card-muted));
 }
 
 .post-publish-warning strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
 }
 
 .post-publish-warning span {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.45;
 }
 
@@ -146,9 +140,9 @@
   gap: 1rem;
   margin-top: 1rem;
   padding: 1rem;
-  border: 1px solid var(--post-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 22px;
-  background: var(--post-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .post-publish-step header {
@@ -160,7 +154,7 @@
 
 .post-publish-step h3 {
   margin: 0.1rem 0 0;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 1.1rem;
 }
 
@@ -179,14 +173,14 @@
 .post-publish-fact {
   min-width: 0;
   padding: 0.82rem;
-  border: 1px solid var(--post-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--post-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .post-publish-fact span {
   display: block;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.06em;
@@ -196,7 +190,7 @@
 .post-publish-fact strong {
   display: block;
   margin-top: 0.2rem;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-weight: 850;
   overflow-wrap: anywhere;
 }

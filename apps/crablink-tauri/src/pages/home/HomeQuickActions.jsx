@@ -13,10 +13,17 @@ import { useMemo, useState } from 'react';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
 
+import {
+  isExplicitDeveloperSurface,
+} from '../../app/developerSurfaceMode.js';
+
 const LOCAL_PREVIEW_ORIGIN = 'http://127.0.0.1:4173';
 const DEFAULT_PROOF_IMAGE =
   'crab://6e343cbcbcd233a72ce45b197d1c45caea862480221ef0f7e4e4360f17e1fce0.image';
 const DEFAULT_PROOF_SITE = 'crab://ron7';
+
+const FINAL_BETA_PHASE5A1_ROUTE_SMOKE_QUARANTINE =
+  'FINAL_BETA_PHASE5A1_ROUTE_SMOKE_QUARANTINE_V1';
 
 function routeGroups({ proofSite, proofImage }) {
   return [
@@ -234,6 +241,19 @@ export default function HomeQuickActions({ app, proofSite = DEFAULT_PROOF_SITE, 
     [groups],
   );
 
+  const developerSurfaceEnabled =
+    isExplicitDeveloperSurface({
+      buildDev:
+        import.meta.env?.DEV === true,
+
+      settings:
+        app?.settings,
+    });
+
+  if (!developerSurfaceEnabled) {
+    return null;
+  }
+
   function open(route) {
     const crabRoute = route.route || `crab://${route.kind}`;
 
@@ -289,7 +309,13 @@ export default function HomeQuickActions({ app, proofSite = DEFAULT_PROOF_SITE, 
   }
 
   return (
-    <section className="cl-home-actions" aria-label="Route quick actions">
+    <section
+      className="cl-home-actions"
+      aria-label="Developer route quick actions"
+      data-final-beta-developer-surface={
+        FINAL_BETA_PHASE5A1_ROUTE_SMOKE_QUARANTINE
+      }
+    >
       <div className="cl-home-actions-head">
         <div>
           <p className="cl-eyebrow">Route quick actions</p>

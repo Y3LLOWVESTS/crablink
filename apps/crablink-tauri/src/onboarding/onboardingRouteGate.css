@@ -6,6 +6,13 @@
  * RO:TEST — React production build and onboardingRouteGate.test.mjs source boundary.
  */
 
+/*
+ * FINAL_BETA_PHASE2D15_ONBOARDING_ROUTE_GATE_THEME_ADOPTION_V1
+ *
+ * First-run onboarding consumes canonical shared elevation.
+ * Routing, Passport custody, recovery, PIN, and profile behavior are unchanged.
+ */
+
 .cl-onboarding-gate {
   min-height: 100vh;
   box-sizing: border-box;
@@ -33,7 +40,7 @@
   border: 1px solid var(--cl-border);
   border-radius: 1rem;
   background: var(--cl-card);
-  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 18%);
+  box-shadow: var(--cl-shadow-lg);
 }
 
 .cl-onboarding-gate__card h1 {

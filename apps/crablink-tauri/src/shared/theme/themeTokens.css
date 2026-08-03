@@ -83,6 +83,18 @@
   --cl-content-wide: 76rem;
   --cl-content-max: 92rem;
 
+  /*
+   * FINAL_BETA_PHASE2D14_SHARED_COMPATIBILITY_GEOMETRY_V1
+   *
+   * Exact compact-popup and settings geometry retained during theme adoption.
+   * These values do not alter the canonical shared radius scale above.
+   */
+  --cl-popup-radius-lg: 24px;
+  --cl-popup-radius-md: 16px;
+  --cl-popup-radius-sm: 12px;
+  --cl-settings-savebar-height: 92px;
+  --cl-settings-bottom-gap: 190px;
+
   /* Motion */
   --cl-duration-fast: 100ms;
   --cl-duration-normal: 180ms;
@@ -200,4 +212,266 @@
     );
 
   --cl-ad-bg: var(--cl-card-muted);
+
+  /*
+   * FINAL_BETA_PHASE2D16_SHARED_AD_TOKENS_V1
+   *
+   * Shared ad panels and creative sheen preserve the existing route palette
+   * without leaving raw colors or theme ownership inside the ad page.
+   */
+  --cl-ad-panel: var(--cl-surface);
+  --cl-ad-creative-sheen: color-mix(
+    in srgb,
+    var(--cl-text) 8%,
+    transparent
+  );
+
+  /*
+   * FINAL_BETA_PHASE2D17_SHARED_ALGO_PANEL_TOKEN_V1
+   *
+   * Algorithm transparency panels use a shared semantic surface while
+   * remaining inert local-draft presentation.
+   */
+  --cl-algo-panel: var(--cl-surface);
+
+  /*
+   * FINAL_BETA_PHASE2D19_SHARED_CODE_PANEL_TOKEN_V1
+   *
+   * Code and facet workspace panels consume a shared semantic surface.
+   * This token provides presentation only and grants no execution authority.
+   */
+  --cl-code-panel: var(--cl-surface);
+
+  /*
+   * FINAL_BETA_PHASE2D20_SHARED_GAME_TOKENS_V1
+   *
+   * Game workspace panels and cover sheen use shared semantic presentation.
+   * These tokens grant no runtime, save, session, wallet, or economy authority.
+   */
+  --cl-game-panel: var(--cl-surface);
+  --cl-game-cover-sheen: color-mix(
+    in srgb,
+    var(--cl-text) 8%,
+    transparent
+  );
+
+  /*
+   * FINAL_BETA_PHASE2D22_SHARED_LYRICS_PANEL_TOKEN_V1
+   *
+   * Lyrics preview panels consume a shared semantic surface.
+   * This token grants no publication, rights, payment, or wallet authority.
+   */
+  --cl-lyrics-panel: var(--cl-surface);
+
+  /*
+   * FINAL_BETA_PHASE2D5A_SHARED_INPUT_TOKENS_V2
+   *
+   * Input controls consume aliases of canonical semantic tokens.
+   * No light, dark, or page-local palette is defined here.
+   */
+  --cl-input-bg: var(--cl-card);
+  --cl-input-border: var(--cl-border);
+  --cl-input-focus-border: var(--cl-accent);
+  --cl-input-placeholder: var(--cl-muted);
+
+  /*
+   * FINAL_BETA_PHASE2D7A_SHARED_STUDIO_TOKENS_V1
+   *
+   * Reusable creator-studio palette. Values preserve the existing
+   * Make visual language without leaving palette ownership in a page.
+   */
+  --cl-studio-accent: #0f766e;
+  --cl-studio-accent-strong: #14b8a6;
+  --cl-studio-accent-soft: rgba(20, 184, 166, 0.12);
+  --cl-studio-danger: #ef4444;
+  --cl-studio-warning: #f59e0b;
+  --cl-studio-glow: rgba(20, 184, 166, 0.24);
+  --cl-studio-panel: rgba(255, 255, 255, 0.035);
+  --cl-studio-panel-strong: rgba(255, 255, 255, 0.065);
+
+  /*
+   * FINAL_BETA_PHASE2D23_SHARED_STUDIO_PIGMENT_RAMP_V1
+   *
+   * Shared fixed pigments for the graphical Make studio: gradients,
+   * timeline lanes, waveform surfaces, preview chrome, and status accents.
+   *
+   * Alpha remains at the call site through color-mix(), while base RGB
+   * ownership lives here. These values grant no capture, export, backend,
+   * CID, receipt, wallet, paid-access, or ROC authority.
+   */
+  --cl-studio-black: #000000;
+  --cl-studio-slate-950: #020617;
+  --cl-studio-teal-950: #031312;
+  --cl-studio-teal-ink: #04110f;
+  --cl-studio-near-black: #050505;
+  --cl-studio-near-black-cool: #050508;
+  --cl-studio-teal-ink-strong: #06130f;
+  --cl-studio-sky-950: #082f49;
+  --cl-studio-sky-500: #0ea5e9;
+  --cl-studio-slate-900: #0f172a;
+  --cl-studio-slate-800: #1e293b;
+  --cl-studio-green-500: #22c55e;
+  --cl-studio-teal-400: #2dd4bf;
+  --cl-studio-sky-400: #38bdf8;
+  --cl-studio-blue-500: #3b82f6;
+  --cl-studio-amber-950: #451a03;
+  --cl-studio-purple-900: #581c87;
+  --cl-studio-indigo-500: #6366f1;
+  --cl-studio-amber-900: #713f12;
+  --cl-studio-amber-850: #78350f;
+  --cl-studio-sky-300: #7dd3fc;
+  --cl-studio-red-900: #7f1d1d;
+  --cl-studio-indigo-400: #818cf8;
+  --cl-studio-slate-400: #94a3b8;
+  --cl-studio-teal-200: #99f6e4;
+  --cl-studio-violet-400: #a78bfa;
+  --cl-studio-purple-500: #a855f7;
+  --cl-studio-red-700: #b91c1c;
+  --cl-studio-sky-200: #bae6fd;
+  --cl-studio-violet-300: #c4b5fd;
+  --cl-studio-slate-300: #cbd5e1;
+  --cl-studio-teal-100: #ccfbf1;
+  --cl-studio-green-100: #dcfce7;
+  --cl-studio-sky-100: #e0f2fe;
+  --cl-studio-slate-200: #e2e8f0;
+  --cl-studio-cyan-50: #ecfeff;
+  --cl-studio-violet-100: #ede9fe;
+  --cl-studio-sky-50: #f0f9ff;
+  --cl-studio-teal-50: #f0fdfa;
+  --cl-studio-red-400: #f87171;
+  --cl-studio-slate-50: #f8fafc;
+  --cl-studio-amber-400: #fbbf24;
+  --cl-studio-red-200: #fecaca;
+  --cl-studio-amber-100: #fef3c7;
+  --cl-studio-system-red: #ff3b30;
+  --cl-studio-orange-50: #fff7ed;
+  --cl-studio-white: #ffffff;
+
+  /*
+   * FINAL_BETA_PHASE2D25_SHARED_PODCAST_PALETTE_V1
+   *
+   * Shared fixed palette for Podcast Studio recording, transport, waveform,
+   * metering, rights, publishing, success, warning, and error presentation.
+   *
+   * Alpha remains at the use site through color-mix(). These values grant no
+   * recording permission, ownership proof, publication, receipt, wallet,
+   * paid-access, backend, CID, or ROC authority.
+   */
+  --cl-podcast-pink: #ff4f8b;
+  --cl-podcast-rose: #fb7185;
+  --cl-podcast-sky-500: #0ea5e9;
+  --cl-podcast-orange-500: #f97316;
+  --cl-podcast-green-500: #22c55e;
+  --cl-podcast-red-500: #ef4444;
+  --cl-podcast-night: #080b12;
+  --cl-podcast-night-deep: #05070d;
+  --cl-podcast-black: #000000;
+  --cl-podcast-white: #ffffff;
+  --cl-podcast-green-300: #86efac;
+  --cl-podcast-slate-400: #94a3b8;
+  --cl-podcast-sky-400: #38bdf8;
+  --cl-podcast-rose-200: #fecdd3;
+  --cl-podcast-yellow-400: #facc15;
+  --cl-podcast-amber-500: #f59e0b;
+  --cl-podcast-slate-900: #0f172a;
+  --cl-podcast-slate-950: #020617;
+
+  /*
+   * FINAL_BETA_PHASE2D29_SHARED_STREAM_PALETTE_V1
+   *
+   * Shared fixed pigments for Stream Creator Studio indicators, local
+   * compositing controls, readiness states, status lamps, and decorative
+   * presentation.
+   *
+   * These tokens preserve exact legacy RGB values. They grant no media
+   * permission, backend session, live-state, CID, stream URL, receipt,
+   * entitlement, wallet, ledger, paid-access, publication, or ROC authority.
+   */
+  --cl-stream-green-500: #22c55e;
+  --cl-stream-green-400: #31d07d;
+  --cl-stream-amber-500: #f59e0b;
+  --cl-stream-amber-200: #fde68a;
+  --cl-stream-green-200: #bbf7d0;
+  --cl-stream-black: #000000;
+  --cl-stream-white: #ffffff;
+
+  /*
+   * FINAL_BETA_PHASE2D31_SHARED_SCAFFOLD_PALETTE_V1
+   *
+   * Shared fixed pigments for the retained Tauri diagnostic scaffold.
+   * Values preserve the exact legacy dark-shell presentation in both
+   * reference stylesheet copies.
+   *
+   * These tokens grant no gateway, settings, resolver, Passport, wallet,
+   * ledger, receipt, paid-access, publication, QuickChain, or ROC authority.
+   */
+  --cl-scaffold-bg: #08111f;
+  --cl-scaffold-text: #ecf7ff;
+  --cl-scaffold-glow-cyan: rgba(47, 181, 255, 0.20);
+  --cl-scaffold-glow-orange: rgba(255, 135, 74, 0.14);
+  --cl-scaffold-action: #68d5ff;
+  --cl-scaffold-action-text: #06111d;
+  --cl-scaffold-input-border: rgba(236, 247, 255, 0.18);
+  --cl-scaffold-input-bg: rgba(2, 10, 20, 0.75);
+  --cl-scaffold-code-bg: rgba(2, 10, 20, 0.72);
+  --cl-scaffold-code-border: rgba(236, 247, 255, 0.10);
+  --cl-scaffold-code-text: #b9e8ff;
+  --cl-scaffold-panel-border: rgba(236, 247, 255, 0.12);
+  --cl-scaffold-panel-bg: rgba(10, 24, 42, 0.82);
+  --cl-scaffold-shadow: rgba(0, 0, 0, 0.28);
+  --cl-scaffold-lede: #bdd4e4;
+  --cl-scaffold-status-border: rgba(104, 213, 255, 0.45);
+  --cl-scaffold-status-bg: rgba(104, 213, 255, 0.12);
+  --cl-scaffold-status-text: #9fe7ff;
+  --cl-scaffold-danger-border: rgba(255, 107, 107, 0.4);
+  --cl-scaffold-danger-bg: rgba(89, 20, 30, 0.72);
+  --cl-scaffold-list-text: #c8dce8;
+
+  /*
+   * FINAL_BETA_PHASE2D31_SHARED_MAKE_THEME_TOKENS_V1
+   *
+   * Shared defaults for Make workspace surfaces that previously owned
+   * page-local dark selectors.
+   *
+   * These values preserve presentation only. They grant no media, export,
+   * wallet, receipt, paid-access, publication, QuickChain, or ROC authority.
+   */
+  --cl-make-command-deck-background: radial-gradient(circle at 9% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 22%, transparent), transparent 30%),
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-studio-white) 7.5%, transparent), color-mix(in srgb, var(--cl-studio-white) 2.5%, transparent));
+  --cl-make-stat-pill-background: color-mix(in srgb, var(--cl-studio-black) 16%, transparent);
+  --cl-make-check-toggle-background: color-mix(in srgb, var(--cl-studio-black) 5%, transparent);
+  --cl-make-compact-status-background: color-mix(in srgb, var(--cl-studio-black) 4%, transparent);
+  --cl-make-debug-event-background: color-mix(in srgb, var(--cl-card) 76%, var(--cl-bg) 24%);
+
+  /*
+   * FINAL_BETA_PHASE2D12_SHARED_SURFACE_TOKENS_V1
+   *
+   * Canonical shared defaults own muted surfaces and code-background semantics.
+   */
+  --cl-surface-muted: color-mix(in srgb, var(--cl-surface) 92%, var(--cl-bg) 8%);
+  --cl-soft: color-mix(in srgb, var(--cl-text) 3.5%, transparent);
+  --cl-code-bg: color-mix(in srgb, var(--cl-text) 7%, transparent);
+
+  /*
+   * FINAL_BETA_PHASE2D12_SHARED_DOCUMENT_TOKENS_V1
+   *
+   * Fixed document-preview pigments remain stable across app themes.
+   * They are presentation tokens, not publication or backend truth.
+   */
+  --cl-document-canvas: #ffffff;
+  --cl-document-ink: #0f172a;
+}
+
+/*
+ * FINAL_BETA_PHASE2D3_SHARED_MEDIA_TOKENS_V1
+ *
+ * Shared media-canvas colors remain intentionally dark in both themes so
+ * video, image, and paid-stream previews do not recreate page-local palettes.
+ */
+:root {
+  --cl-media-canvas: #050505;
+  --cl-media-text: #ffffff;
+  --cl-media-muted: rgba(255, 255, 255, 0.7);
+  --cl-media-border: rgba(255, 255, 255, 0.16);
+  --cl-media-soft: rgba(255, 255, 255, 0.06);
 }

@@ -3,6 +3,7 @@
  * RO:WHY — BUILD_PLAN_Z Phase 21 needs explicit local/remote status attachment without giving React daemon, policy, wallet, ledger, registry, quorum, or finality authority.
  * RO:INTERACTS — Tauri `service_node_operator_status`; canonical macronode status projection.
  * RO:INVARIANTS — disabled by default; connection mode is explicit; remote credentials are caller-supplied and ephemeral; status observation is read-only.
+ * RO:BOUNDARY — FINAL_BETA_PHASE2D26_SERVICE_NODE_OPERATOR_DISPLAY_ONLY_BOUNDARY_V1; observed operator status is display-only; browser storage never grants paid, wallet, ledger, receipt, or authorization truth; Tauri/backend status remains authoritative.
  * RO:SECURITY — no localStorage/settings persistence for admin credentials; no mutation commands; no raw endpoint fetch from React.
  * RO:TEST — scripts/check-crablink-service-node-operator-boundary.mjs.
  */

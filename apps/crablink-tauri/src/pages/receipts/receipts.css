@@ -6,6 +6,17 @@
  * RO:TEST — crab://receipts in light/dark mode with site_visit and asset publish receipts.
  */
 
+/*
+ * FINAL_BETA_PHASE2D27_RECEIPTS_THEME_ADOPTION_V1
+ *
+ * Receipt history presentation consumes canonical shared theme tokens.
+ *
+ * Receipt data remains a browser-local display copy only. Backend wallet
+ * and ledger fields remain authoritative, and this route gains no spending,
+ * paid-entitlement, receipt-creation, finality, settlement, wallet, ledger,
+ * balance, bridge, or ROC authority.
+ */
+
 .receipts-page {
   display: grid;
   gap: 18px;
@@ -20,7 +31,7 @@
 
 .receipts-copy-state {
   margin: -4px 0 0;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 12px;
   font-weight: 850;
 }
@@ -33,18 +44,18 @@
 
 .receipts-stat-card {
   min-width: 0;
-  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border: 1px solid var(--cl-border);
   border-radius: 22px;
   padding: 18px;
   background:
-    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--cl-accent, #111) 9%, transparent), transparent 44%),
-    var(--cl-card, #ffffff);
-  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.06));
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--cl-accent) 9%, transparent), transparent 44%),
+    var(--cl-card);
+  box-shadow: var(--cl-shadow-md);
 }
 
 .receipts-stat-card span {
   display: block;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 11px;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -54,7 +65,7 @@
 .receipts-stat-card strong {
   display: block;
   margin-top: 8px;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: clamp(34px, 6vw, 58px);
   font-weight: 950;
   line-height: 0.92;
@@ -63,7 +74,7 @@
 
 .receipts-stat-card p {
   margin: 8px 0 0;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 12px;
   font-weight: 750;
 }
@@ -84,11 +95,11 @@
   align-items: center;
   gap: 8px;
   min-height: 36px;
-  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.28));
+  border: 1px solid var(--cl-border);
   border-radius: 999px;
   padding: 0 11px;
-  background: var(--cl-card, #ffffff);
-  color: var(--cl-text, #111111);
+  background: var(--cl-card);
+  color: var(--cl-text);
   cursor: pointer;
   font: inherit;
   font-size: 11px;
@@ -102,18 +113,18 @@
   height: 22px;
   place-items: center;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--cl-text, #111111) 8%, transparent);
+  background: color-mix(in srgb, var(--cl-text) 8%, transparent);
   font-size: 11px;
 }
 
 .receipts-tab-row button.is-active {
-  background: var(--cl-text, #111111);
-  color: var(--cl-bg, #ffffff);
-  border-color: var(--cl-text, #111111);
+  background: var(--cl-text);
+  color: var(--cl-bg);
+  border-color: var(--cl-text);
 }
 
 .receipts-tab-row button.is-active strong {
-  background: color-mix(in srgb, var(--cl-bg, #ffffff) 18%, transparent);
+  background: color-mix(in srgb, var(--cl-bg) 18%, transparent);
 }
 
 .receipts-toolbar-actions {
@@ -130,15 +141,15 @@
 
 .receipts-card {
   min-width: 0;
-  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border: 1px solid var(--cl-border);
   border-radius: 22px;
   padding: 16px;
-  background: var(--cl-card, #ffffff);
-  box-shadow: var(--cl-shadow-soft, 0 12px 28px rgba(0, 0, 0, 0.05));
+  background: var(--cl-card);
+  box-shadow: var(--cl-shadow-md);
 }
 
 .receipts-card.is-site_visit {
-  border-color: color-mix(in srgb, var(--cl-success, #16703d) 45%, var(--cl-border, #dddddd));
+  border-color: color-mix(in srgb, var(--cl-success) 45%, var(--cl-border));
 }
 
 .receipts-card header {
@@ -151,7 +162,7 @@
 
 .receipts-card header span {
   display: block;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 10px;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -162,7 +173,7 @@
   display: block;
   min-width: 0;
   margin-top: 3px;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 20px;
   font-weight: 950;
   line-height: 1.05;
@@ -178,15 +189,15 @@
 }
 
 .receipts-mini {
-  border: 1px solid color-mix(in srgb, var(--cl-border, #dddddd) 75%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cl-border) 75%, transparent);
   border-radius: 16px;
   padding: 12px;
-  background: color-mix(in srgb, var(--cl-surface, #f7f5ef) 78%, transparent);
+  background: color-mix(in srgb, var(--cl-surface) 78%, transparent);
 }
 
 .receipts-mini span {
   display: block;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 10px;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -196,7 +207,7 @@
 .receipts-mini strong {
   display: block;
   margin-top: 5px;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 18px;
   font-weight: 950;
   overflow-wrap: anywhere;
@@ -215,13 +226,13 @@
   align-items: start;
   min-width: 0;
   padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--cl-border, #dddddd) 75%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cl-border) 75%, transparent);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--cl-surface, #f7f5ef) 78%, transparent);
+  background: color-mix(in srgb, var(--cl-surface) 78%, transparent);
 }
 
 .receipts-fact span {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 10px;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -230,7 +241,7 @@
 
 .receipts-fact strong {
   min-width: 0;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 12px;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -257,15 +268,15 @@
 }
 
 .receipts-dev-json {
-  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.24));
+  border: 1px solid var(--cl-border);
   border-radius: 20px;
   padding: 14px;
-  background: var(--cl-card, #ffffff);
+  background: var(--cl-card);
 }
 
 .receipts-dev-json summary {
   cursor: pointer;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-weight: 950;
 }
 

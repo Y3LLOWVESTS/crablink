@@ -4,6 +4,7 @@
  * RO:INTERACTS — shared JSX primitives and designSystemFoundation.css.
  * RO:INVARIANTS — no direct fetch, storage, Tauri invocation, wallet/ledger mutation, unsafe HTML, or invented truth.
  * RO:TEST — node --test phase2cProductPrimitives.test.mjs.
+ * FINAL_BETA_PHASE2C1_TEXT_STATUS_MATCHER_REPAIR_V1
  */
 
 import assert from 'node:assert/strict';
@@ -133,12 +134,12 @@ test(
 
     assert.match(
       sources.roc,
-      />Offline</,
+      />\s*Offline\s*</,
     );
 
     assert.match(
       sources.roc,
-      />Stale</,
+      />\s*Stale\s*</,
     );
   },
 );

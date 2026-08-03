@@ -6,19 +6,16 @@
  * RO:TEST — visual/manual checks in CrabLink full-tab browser in light and dark mode.
  */
 
+/*
+ * FINAL_BETA_PHASE2D2_ARTICLE_THEME_ADOPTION_V1
+ *
+ * Article presentation now consumes the shared semantic theme directly.
+ * Light and dark values remain owned by shared/theme rather than this page.
+ */
+
 .article-page {
   display: grid;
   gap: 1rem;
-
-  --article-panel-bg: var(--cl-card, #ffffff);
-  --article-soft-bg: color-mix(in srgb, var(--cl-card, #ffffff) 74%, var(--cl-bg, #f5f4f1) 26%);
-  --article-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
-}
-
-[data-theme='dark'] .article-page {
-  --article-panel-bg: #0b0b0b;
-  --article-soft-bg: #050505;
-  --article-border-soft: #242424;
 }
 
 .article-draft-card,
@@ -125,13 +122,9 @@
   line-height: 1.65;
 }
 
-[data-theme='dark'] .article-preview-body {
-  background: #050505;
-}
-
 .article-section-copy,
 .article-publish-step p {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.55;
 }
 
@@ -144,17 +137,17 @@
   gap: 0.25rem;
   margin: 1rem 0;
   padding: 0.95rem;
-  border: 1px solid color-mix(in srgb, var(--cl-warning, #d97706) 50%, var(--article-border-soft));
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 50%, var(--cl-border));
   border-radius: 18px;
-  background: color-mix(in srgb, var(--cl-warning, #d97706) 11%, var(--article-soft-bg));
+  background: color-mix(in srgb, var(--cl-warning) 11%, var(--cl-card-muted));
 }
 
 .article-publish-warning strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
 }
 
 .article-publish-warning span {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.45;
 }
 
@@ -163,9 +156,9 @@
   gap: 1rem;
   margin-top: 1rem;
   padding: 1rem;
-  border: 1px solid var(--article-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 22px;
-  background: var(--article-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .article-publish-step header {
@@ -177,7 +170,7 @@
 
 .article-publish-step h3 {
   margin: 0.1rem 0 0;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 1.1rem;
 }
 
@@ -196,14 +189,14 @@
 .article-publish-fact {
   min-width: 0;
   padding: 0.82rem;
-  border: 1px solid var(--article-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--article-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .article-publish-fact span {
   display: block;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.06em;
@@ -213,7 +206,7 @@
 .article-publish-fact strong {
   display: block;
   margin-top: 0.2rem;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-weight: 850;
   overflow-wrap: anywhere;
 }

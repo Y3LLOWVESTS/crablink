@@ -9,6 +9,10 @@
  * RO:TEST — visual drawer smoke across no-passport, HTTP fallback, local labels, and gateway profile claim states.
  */
 
+import DeveloperDisclosure from '../../shared/components/DeveloperDisclosure.jsx';
+
+// FINAL_BETA_PHASE4A3_PASSPORT_DRAWER_CONSUMER_MODE_V1
+
 export default function PassportSummary({ view, identityState, walletState }) {
   return (
     <section className="cl-passport-summary" aria-label="Passport summary">
@@ -21,27 +25,58 @@ export default function PassportSummary({ view, identityState, walletState }) {
         <span className={`cl-passport-status-dot cl-passport-status-${view.statusTone}`} />
       </div>
 
-      <div className="cl-passport-stat-grid" aria-label="Passport stats">
-        <PassportStat label="Wallet" value={view.walletLabel} />
+      <div className="cl-passport-stat-grid" aria-label="Passport overview">
+        <PassportStat
+          label="Account"
+          value={view.walletAccount ? 'Connected' : 'Not connected'}
+        />
         <PassportStat label="ROC" value={view.balanceLabel} />
-        <PassportStat label="Storage" value={view.storageLabel} />
-        <PassportStat label="Gateway" value={view.gatewayLabel} />
+        <PassportStat label="Profile" value={view.publicProfileLabel} />
+        <PassportStat
+          label="Identity"
+          value={view.handle || view.requestedHandle || 'Not set'}
+        />
       </div>
 
-      <dl className="cl-passport-rows">
-        <PassportRow label="Handle" value={view.handle || 'Not confirmed'} />
-        <PassportRow label="Requested handle" value={view.requestedHandle || 'None'} />
-        <PassportRow label="Passport subject" value={view.passportSubject || 'Not configured'} />
-        <PassportRow label="Wallet account" value={view.walletAccount || 'Not configured'} />
+      <dl className="cl-passport-rows" aria-label="Passport account status">
+        <PassportRow
+          label="Username"
+          value={
+            view.handle ||
+            (view.requestedHandle ? `${view.requestedHandle} draft` : 'Not set')
+          }
+        />
+        <PassportRow
+          label="Account"
+          value={view.walletAccount ? 'Connected' : 'Not connected'}
+        />
+        <PassportRow label="Balance status" value={view.ledgerStatus} />
         <PassportRow label="Public profile" value={view.publicProfileLabel} />
-        <PassportRow label="Profile CID" value={view.publicProfileCid || 'Not published yet'} />
-        <PassportRow label="Ledger status" value={view.ledgerStatus} />
-        <PassportRow label="Extension origin" value={view.extensionOriginLabel} />
-        <PassportRow label="Identity refresh" value={refreshLabel(identityState)} />
-        <PassportRow label="Wallet refresh" value={refreshLabel(walletState)} />
-        <PassportRow label="Identity source" value={view.identitySourceLabel} />
-        <PassportRow label="Wallet source" value={view.walletSourceLabel} />
       </dl>
+
+      <DeveloperDisclosure
+        title="Advanced Passport details"
+        summary="Identifiers, sources, refresh history, and network diagnostics"
+      >
+        <dl
+          className="cl-passport-rows"
+          aria-label="Advanced Passport details"
+          data-passport-developer-facts="quarantined"
+        >
+          <PassportRow label="Handle" value={view.handle || 'Not confirmed'} />
+          <PassportRow label="Requested handle" value={view.requestedHandle || 'None'} />
+          <PassportRow label="Passport subject" value={view.passportSubject || 'Not configured'} />
+          <PassportRow label="Wallet account" value={view.walletAccount || 'Not configured'} />
+          <PassportRow label="Public profile" value={view.publicProfileLabel} />
+          <PassportRow label="Profile CID" value={view.publicProfileCid || 'Not published yet'} />
+          <PassportRow label="Ledger status" value={view.ledgerStatus} />
+          <PassportRow label="Extension origin" value={view.extensionOriginLabel} />
+          <PassportRow label="Identity refresh" value={refreshLabel(identityState)} />
+          <PassportRow label="Wallet refresh" value={refreshLabel(walletState)} />
+          <PassportRow label="Identity source" value={view.identitySourceLabel} />
+          <PassportRow label="Wallet source" value={view.walletSourceLabel} />
+        </dl>
+      </DeveloperDisclosure>
     </section>
   );
 }

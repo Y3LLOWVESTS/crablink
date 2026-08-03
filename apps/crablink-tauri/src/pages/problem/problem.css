@@ -6,6 +6,13 @@
  * RO:TEST — visual/manual problem route smoke in light and dark mode.
  */
 
+/*
+ * FINAL_BETA_PHASE2D10_PROBLEM_THEME_ADOPTION_V1
+ *
+ * Structured problem and remediation surfaces consume shared semantic
+ * tokens. Route, policy, gateway, and failure truth remain unchanged.
+ */
+
 .problem-page {
   display: grid;
   gap: 1rem;
@@ -13,19 +20,6 @@
   max-width: 100%;
   min-width: 0;
   margin-inline: auto;
-
-  --problem-panel-bg: var(--cl-card, #ffffff);
-  --problem-soft-bg: color-mix(in srgb, var(--cl-card, #ffffff) 76%, var(--cl-bg, #f5f4f1) 24%);
-  --problem-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
-  --problem-info-border: color-mix(in srgb, var(--cl-info, #2a6fbb) 38%, var(--problem-border-soft));
-  --problem-warning-border: color-mix(in srgb, var(--cl-warning, #a15c00) 44%, var(--problem-border-soft));
-  --problem-danger-border: color-mix(in srgb, var(--cl-danger, #b42318) 46%, var(--problem-border-soft));
-}
-
-[data-theme='dark'] .problem-page {
-  --problem-panel-bg: #0b0b0b;
-  --problem-soft-bg: #050505;
-  --problem-border-soft: #242424;
 }
 
 .problem-page *,
@@ -61,20 +55,20 @@
 }
 
 .problem-summary-card {
-  border-color: var(--problem-info-border);
+  border-color: color-mix(in srgb, var(--cl-accent) 38%, var(--cl-border));
 }
 
 .problem-summary-card.is-warning {
-  border-color: var(--problem-warning-border);
+  border-color: color-mix(in srgb, var(--cl-warning) 44%, var(--cl-border));
 }
 
 .problem-summary-card.is-danger {
-  border-color: var(--problem-danger-border);
+  border-color: color-mix(in srgb, var(--cl-danger) 46%, var(--cl-border));
 }
 
 .problem-copy {
   margin: 0;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.55;
 }
 
@@ -93,16 +87,16 @@
 .problem-dl div {
   min-width: 0;
   padding: 0.78rem;
-  border: 1px solid var(--problem-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--problem-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .problem-fact-grid span,
 .problem-dl dt {
   display: block;
   margin: 0 0 0.25rem;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.06em;
@@ -114,7 +108,7 @@
 .problem-remediation strong {
   display: block;
   margin: 0;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-weight: 850;
   overflow-wrap: anywhere;
 }
@@ -127,11 +121,11 @@
 .problem-remediation {
   display: grid;
   gap: 0.35rem;
-  border-color: var(--problem-warning-border);
+  border-color: color-mix(in srgb, var(--cl-warning) 44%, var(--cl-border));
 }
 
 .problem-remediation span {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.5;
 }
 
@@ -150,7 +144,7 @@
   gap: 0.65rem;
   margin: 0;
   padding-left: 1.1rem;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.5;
 }
 

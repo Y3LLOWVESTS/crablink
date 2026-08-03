@@ -35982,3 +35982,2131 @@ The Markdown file is ready to paste into the project as `FINAL_BETA_NOTES.md`.
 
 
 ### END NOTE - AUGUST 1 2026 - 12:55 CST
+
+
+### BEGIN NOTE - AUGUST 1 2026 - 23:55 CST
+
+The corrected Phase 2D14 apply stopped safely before mutation. The existing shared radius tokens use `1.125rem`, `0.875rem`, and `0.625rem`, not the assumed `24px`, `16px`, and `12px`. Therefore, `styles.css` remains unchanged and Phase 2D14 verification has **not** been run. These are the carry-over notes for the next session.
+
+````markdown
+# CrabLink `FINAL_BETA.md` Carry-Over Notes
+
+## Session endpoint
+
+Current work remains inside:
+
+- `FINAL_BETA.md`
+- Phase 2 — Desktop Design-System Acceptance
+- Current subphase: **Phase 2D14 — `styles.css` theme ownership**
+- Phase 2 remains open.
+- Phase 2D14 has not yet been applied successfully.
+- The first task next session is a corrected **apply-only** Phase 2D14 patch.
+- After reviewing that apply result, run a separate verification-only block.
+
+The final Phase 2D14 attempt stopped during read-only preflight:
+
+```text
+EXISTING_SHARED_RADIUS_SCALE_INVALID
+FINAL_BETA_PHASE2D14_STYLES_THEME_OWNERSHIP_APPLY_V2=RED
+SOURCE_MUTATED=NO
+NEXT_ACTION=FIX_FIRST_REPORTED_FAILURE
+````
+
+No source mutation occurred during either failed Phase 2D14 attempt.
+
+---
+
+# 1. Required workflow
+
+Continue using the established two-step workflow:
+
+1. Apply-only patch
+
+   * Source mutation allowed.
+   * No acceptance runner.
+   * No frontend build.
+   * No tests.
+   * No Cargo.
+   * No Tauri build.
+   * No macOS bundle.
+   * No RustyOnions work.
+
+2. Review the apply output.
+
+3. Verification-only block
+
+   * No source mutation.
+   * Focused source scan.
+   * Acceptance runner.
+   * Frontend production build.
+   * Stop on the first unexpected failure.
+
+Do not combine mutation and verification.
+
+Do not include any Git commands.
+
+Do not regenerate a codebundle yet.
+
+---
+
+# 2. Session starting point
+
+At the beginning of this portion of Phase 2 work, the acceptance runner reported:
+
+```text
+PAGE_LOCAL_THEME_TOKEN_DECLARATION_COUNT=36
+PAGE_LOCAL_RAW_COLOR_LITERAL_COUNT=1636
+FIRST_FAILURE_FILE=pages/site/site.css
+FIRST_FAILURE_LINE=16
+FIRST_FAILURE_DETAIL=--site-panel-bg
+```
+
+The next work was therefore the Site stylesheet migration.
+
+---
+
+# 3. Shared surface-token foundation
+
+## Initial Site apply failure
+
+The first Site apply did not mutate source because the following shared tokens were missing:
+
+```text
+--cl-surface-muted
+--cl-soft
+--cl-code-bg
+```
+
+The initial shared-token repair then discovered that `themeTokens.css` contains two `:root` blocks rather than one.
+
+That attempt also stopped before mutation.
+
+## Corrected shared-token repair
+
+The corrected repair identified the unique canonical `:root` block by looking for ownership of the established core tokens.
+
+It added these tokens to the canonical root, explicit light projection, and explicit dark projection:
+
+```css
+--cl-surface-muted:
+  color-mix(
+    in srgb,
+    var(--cl-surface) 92%,
+    var(--cl-bg) 8%
+  );
+
+--cl-soft:
+  color-mix(
+    in srgb,
+    var(--cl-text) 3.5%,
+    transparent
+  );
+
+--cl-code-bg:
+  color-mix(
+    in srgb,
+    var(--cl-text) 7%,
+    transparent
+  );
+```
+
+Markers added:
+
+```text
+FINAL_BETA_PHASE2D12_SHARED_SURFACE_TOKENS_V1
+FINAL_BETA_PHASE2D12_LIGHT_SURFACE_TOKEN_PROJECTION_V1
+FINAL_BETA_PHASE2D12_DARK_SURFACE_TOKEN_PROJECTION_V1
+```
+
+Verified ownership:
+
+```text
+ROOT:
+  selector blocks: 2
+  canonical blocks: 1
+
+LIGHT:
+  selector blocks: 1
+  canonical blocks: 1
+
+DARK:
+  selector blocks: 1
+  canonical blocks: 1
+```
+
+Each new token has exactly three definitions:
+
+```text
+--cl-surface-muted: 3
+--cl-soft: 3
+--cl-code-bg: 3
+```
+
+The focused verification, acceptance stability check, and frontend build were green.
+
+The Site stylesheet was unchanged during this foundation repair.
+
+---
+
+# 4. Phase 2D12 — Site migration
+
+## Files changed
+
+```text
+apps/crablink-tauri/src/pages/site/site.css
+apps/crablink-tauri/src/shared/theme/themeTokens.css
+```
+
+## Markers added
+
+```text
+FINAL_BETA_PHASE2D12_SITE_THEME_ADOPTION_V1
+FINAL_BETA_PHASE2D12_SHARED_DOCUMENT_TOKENS_V1
+```
+
+## Removed from `site.css`
+
+```text
+Local declarations:       6
+Local references:        41
+Shared-token fallbacks:  60
+Raw colors:              71
+Dark selectors:           2
+```
+
+Removed local Site properties:
+
+```text
+--site-panel-bg
+--site-soft-bg
+--site-border-soft
+```
+
+Reference replacements:
+
+```text
+--site-panel-bg   -> --cl-card
+--site-soft-bg    -> --cl-card-muted
+--site-border-soft -> --cl-border
+```
+
+## Shared document-preview tokens added
+
+Added to the canonical shared theme root:
+
+```css
+--cl-document-canvas: #ffffff;
+--cl-document-ink: #0f172a;
+```
+
+These preserve the intentionally fixed document-preview palette across app themes.
+
+They are presentation tokens only and do not represent publication, gateway, or backend truth.
+
+## Verified Site postwrite state
+
+```text
+SITE_THEME_MARKER_COUNT=1
+SHARED_DOCUMENT_TOKEN_MARKER_COUNT=1
+SITE_LOCAL_THEME_DECLARATION_COUNT=0
+SITE_LOCAL_THEME_REFERENCE_COUNT=0
+SITE_RAW_COLOR_LITERAL_COUNT=0
+SITE_PAGE_DARK_OVERRIDE_COUNT=0
+SITE_SHARED_TOKEN_FALLBACK_COUNT=0
+```
+
+Important exact shared-reference counts:
+
+```text
+--cl-border:           26
+--cl-muted:            16
+--cl-text:             15
+--cl-success:          13
+--cl-card-muted:       10
+--cl-card:              8
+--cl-surface:           3
+--cl-warning:           2
+--cl-accent:            2
+--cl-document-ink:      2
+--cl-danger:            1
+--cl-document-canvas:   1
+--cl-media-canvas:      1
+--cl-code-bg:           1
+--cl-soft:              1
+--cl-border-strong:     1
+--cl-surface-muted:     1
+```
+
+## Site acceptance result
+
+Acceptance advanced from:
+
+```text
+Declarations: 36
+Raw colors:  1636
+```
+
+to:
+
+```text
+Declarations: 30
+Raw colors:  1565
+```
+
+The next failure became:
+
+```text
+FIRST_FAILURE_FILE=pages/video/video.css
+FIRST_FAILURE_LINE=1453
+FIRST_FAILURE_DETAIL=--video-panel-bg
+```
+
+The Site production build was green.
+
+Site draft, template, render, publish, gateway, and backend behavior were not changed.
+
+---
+
+# 5. Phase 2D13 — Video migration
+
+## File changed
+
+```text
+apps/crablink-tauri/src/pages/video/video.css
+```
+
+## Marker added
+
+```text
+FINAL_BETA_PHASE2D13_VIDEO_THEME_ADOPTION_V1
+```
+
+## Removed from Video
+
+```text
+Local declarations:       6
+Local references:        42
+Shared-token fallbacks:  57
+Raw colors:             111
+Dark-selector matches:   17
+Dark rule blocks:        14
+```
+
+Removed local Video properties:
+
+```text
+--video-panel-bg
+--video-soft-bg
+--video-border-soft
+```
+
+Reference replacements:
+
+```text
+--video-panel-bg    -> --cl-card
+--video-soft-bg     -> --cl-card-muted
+--video-border-soft -> --cl-border
+```
+
+The fixed playback canvas was preserved using:
+
+```text
+--cl-media-canvas
+```
+
+Semantic replacements use:
+
+```text
+--cl-warning
+--cl-success
+--cl-accent
+--cl-border
+--cl-muted
+--cl-text
+--cl-card
+--cl-card-muted
+--cl-surface
+--cl-soft
+--cl-bg
+```
+
+Video shadows were changed from raw-color fallbacks to border-derived `color-mix()` expressions.
+
+## Verified Video state
+
+```text
+VIDEO_THEME_MARKER_COUNT=1
+VIDEO_LOCAL_THEME_DECLARATION_COUNT=0
+VIDEO_LOCAL_THEME_REFERENCE_COUNT=0
+VIDEO_RAW_COLOR_LITERAL_COUNT=0
+VIDEO_PAGE_DARK_SELECTOR_COUNT=0
+VIDEO_SHARED_TOKEN_FALLBACK_COUNT=0
+```
+
+Exact shared-reference counts:
+
+```text
+--cl-border:        55
+--cl-muted:         51
+--cl-text:          47
+--cl-card:          26
+--cl-surface:       14
+--cl-card-muted:    13
+--cl-success:        9
+--cl-warning:        6
+--cl-media-canvas:   5
+--cl-accent:         3
+--cl-soft:           1
+--cl-bg:             1
+```
+
+## Video acceptance result
+
+Acceptance advanced from:
+
+```text
+Declarations: 30
+Raw colors:  1565
+```
+
+to:
+
+```text
+Declarations: 24
+Raw colors:  1454
+```
+
+There are now zero Video findings in acceptance.
+
+The next failure is:
+
+```text
+FIRST_FAILURE_CLASS=PAGE_LOCAL_THEME_TOKEN_DECLARATION
+FIRST_FAILURE_FILE=styles.css
+FIRST_FAILURE_LINE=3
+FIRST_FAILURE_DETAIL=--bg
+```
+
+The latest frontend production build was green:
+
+```text
+352 modules transformed
+build time: 5.26s
+```
+
+Video draft, file-selection, playback, converter, rendition, publish, gateway, and backend behavior were not changed.
+
+---
+
+# 6. Current exact Phase 2 acceptance baseline
+
+This is the last fully verified acceptance state:
+
+```text
+CORE_COMPONENT_COUNT=17
+DOCUMENTED_NON_THEME_EXCEPTION_COUNT=2
+STRUCTURAL_FAILURE_COUNT=0
+
+PAGE_LOCAL_THEME_TOKEN_DECLARATION_COUNT=24
+PAGE_LOCAL_RAW_COLOR_LITERAL_COUNT=1454
+
+FINAL_BETA_PHASE2_DESIGN_SYSTEM=RED
+
+FIRST_FAILURE_CLASS=PAGE_LOCAL_THEME_TOKEN_DECLARATION
+FIRST_FAILURE_FILE=styles.css
+FIRST_FAILURE_LINE=3
+FIRST_FAILURE_DETAIL=--bg
+```
+
+Phase 2 remains red only because additional legacy design drift remains.
+
+The Site and Video files are no longer contributing findings.
+
+---
+
+# 7. Phase 2D14 — `styles.css` baseline
+
+Target file:
+
+```text
+apps/crablink-tauri/src/styles.css
+```
+
+Shared token file:
+
+```text
+apps/crablink-tauri/src/shared/theme/themeTokens.css
+```
+
+Current `styles.css` baseline:
+
+```text
+Total non-`--cl-*` declarations: 27
+Acceptance-counted declarations: 24
+Local references:                62
+Raw color literals/functions:    67
+Shared-token fallbacks:           0
+```
+
+Legacy local properties:
+
+```text
+--bg
+--bg-2
+--header
+--panel
+--panel-2
+--soft
+--border
+--border-strong
+--text
+--muted
+--muted-2
+--blue
+--blue-hover
+--gray
+--gray-hover
+--good-bg
+--good
+--warn-bg
+--warn
+--bad-bg
+--bad
+--shadow
+--radius-lg
+--radius-md
+--radius-sm
+--settings-savebar-height
+--settings-bottom-gap
+```
+
+Highest local reference counts:
+
+```text
+--muted:                  14
+--border:                  9
+--text:                    5
+--good:                    4
+--warn:                    4
+--bad:                     4
+--panel:                   3
+--settings-bottom-gap:     3
+--bg:                      2
+--blue:                    2
+--header:                  2
+--settings-savebar-height: 2
+```
+
+The legacy root block still exists unchanged because both Phase 2D14 attempts stopped before mutation.
+
+---
+
+# 8. Phase 2D14 attempt history
+
+## Attempt V1
+
+The first Phase 2D14 patch expected all five shared static tokens to be absent:
+
+```text
+--cl-radius-lg
+--cl-radius-md
+--cl-radius-sm
+--cl-settings-savebar-height
+--cl-settings-bottom-gap
+```
+
+Preflight found that the three radius tokens already existed.
+
+Result:
+
+```text
+PARTIAL_SHARED_STATIC_TOKEN_POSTURE
+SOURCE_MUTATED=NO
+```
+
+## Attempt V2
+
+The second patch correctly changed posture to reuse the existing shared radius scale.
+
+However, it incorrectly assumed the existing values were:
+
+```text
+--cl-radius-lg: 24px
+--cl-radius-md: 16px
+--cl-radius-sm: 12px
+```
+
+The actual canonical values are:
+
+```css
+--cl-radius-lg: 1.125rem;
+--cl-radius-md: 0.875rem;
+--cl-radius-sm: 0.625rem;
+```
+
+Result:
+
+```text
+EXISTING_SHARED_RADIUS_SCALE_INVALID
+SOURCE_MUTATED=NO
+```
+
+No Phase 2D14 marker exists.
+
+No settings-geometry marker exists.
+
+The following tokens are still absent:
+
+```text
+--cl-settings-savebar-height
+--cl-settings-bottom-gap
+```
+
+---
+
+# 9. Important radius/layout issue
+
+The old `styles.css` geometry is:
+
+```css
+--radius-lg: 24px;
+--radius-md: 16px;
+--radius-sm: 12px;
+```
+
+The existing shared scale is:
+
+```css
+--cl-radius-lg: 1.125rem;
+--cl-radius-md: 0.875rem;
+--cl-radius-sm: 0.625rem;
+```
+
+Do not blindly map the legacy radius references to the existing shared radius properties while claiming layout is unchanged.
+
+Those values are not identical.
+
+Do not modify the existing global shared radius scale merely to accommodate this legacy file, because doing so could change every component already consuming those tokens.
+
+## Recommended safe solution
+
+Add purpose-specific compatibility geometry tokens with the exact existing `styles.css` values, for example:
+
+```css
+--cl-popup-radius-lg: 24px;
+--cl-popup-radius-md: 16px;
+--cl-popup-radius-sm: 12px;
+--cl-settings-savebar-height: 92px;
+--cl-settings-bottom-gap: 190px;
+```
+
+Then map:
+
+```text
+--radius-lg -> --cl-popup-radius-lg
+--radius-md -> --cl-popup-radius-md
+--radius-sm -> --cl-popup-radius-sm
+```
+
+This approach:
+
+* preserves exact popup/options geometry;
+* leaves the canonical shared radius scale unchanged;
+* removes local custom-property ownership;
+* avoids broad visual drift in unrelated components.
+
+An alternative is replacing these references directly with their exact pixel literals. Purpose-specific shared compatibility tokens are preferable because Phase 2 is consolidating design-system ownership.
+
+Inspect current token naming conventions before locking the final compatibility-token names.
+
+---
+
+# 10. Required next-session first patch
+
+Create a corrected **apply-only** Phase 2D14 patch.
+
+It should:
+
+1. Confirm the current verified baseline remains:
+
+```text
+styles local declarations: 27
+styles local references:    62
+styles raw colors:           67
+styles shared fallbacks:      0
+```
+
+2. Confirm the existing shared radius values exactly:
+
+```text
+1.125rem
+0.875rem
+0.625rem
+```
+
+3. Preserve those existing tokens unchanged.
+
+4. Add only exact compatibility geometry needed by `styles.css`.
+
+5. Remove the legacy `:root` theme declaration block from `styles.css`.
+
+6. Replace legacy color references with shared semantic tokens.
+
+7. Replace radius and settings geometry references without changing their effective values.
+
+8. Remove all 67 raw color literals/functions from `styles.css`.
+
+9. Leave popup and options layout unchanged.
+
+10. Leave runtime, settings behavior, Passport, gateway, backend, wallet, and ledger behavior unchanged.
+
+11. Add a styles adoption marker.
+
+12. Add a shared compatibility-geometry marker to the canonical theme root.
+
+13. Run only postwrite scans.
+
+14. Do not run acceptance or build in the apply patch.
+
+Expected postwrite state:
+
+```text
+STYLES_LOCAL_THEME_DECLARATION_COUNT=0
+STYLES_LOCAL_THEME_REFERENCE_COUNT=0
+STYLES_RAW_COLOR_LITERAL_COUNT=0
+STYLES_SHARED_TOKEN_FALLBACK_COUNT=0
+```
+
+---
+
+# 11. Expected Phase 2D14 verification outcome
+
+After a successful apply, run a separate verification-only block.
+
+The acceptance totals should move from:
+
+```text
+Declarations: 24
+Raw colors:  1454
+```
+
+to approximately:
+
+```text
+Declarations: 0
+Raw colors:  1387
+```
+
+Calculation:
+
+```text
+24 - 24 = 0 acceptance-counted declarations
+1454 - 67 = 1387 raw-color findings
+```
+
+Expected first remaining failure:
+
+```text
+FIRST_FAILURE_CLASS=PAGE_LOCAL_RAW_COLOR_LITERAL
+FIRST_FAILURE_FILE=onboarding/onboardingRouteGate.css
+FIRST_FAILURE_LINE=36
+FIRST_FAILURE_DETAIL=rgb(
+```
+
+The verification must also assert:
+
+```text
+STYLES_ACCEPTANCE_FINDING_COUNT=0
+PAGE_LOCAL_THEME_TOKEN_DECLARATION_COUNT=0
+PAGE_LOCAL_RAW_COLOR_LITERAL_COUNT=1387
+```
+
+Then run:
+
+```bash
+cd apps/crablink-tauri
+npm run build
+```
+
+Do not run Cargo or a Tauri/macOS bundle unless a later phase specifically requires it.
+
+---
+
+# 12. Files changed successfully during this session
+
+```text
+apps/crablink-tauri/src/shared/theme/themeTokens.css
+apps/crablink-tauri/src/shared/theme/light.css
+apps/crablink-tauri/src/shared/theme/dark.css
+apps/crablink-tauri/src/pages/site/site.css
+apps/crablink-tauri/src/pages/video/video.css
+```
+
+`styles.css` has not yet changed.
+
+---
+
+# 13. Files and systems not changed
+
+No changes were made to:
+
+```text
+RustyOnions
+Passport behavior
+QuickChain
+ROX Anchor
+wallet or ledger behavior
+backend services
+gateway truth
+mobile runtime
+Android
+Android TV
+iOS
+Tauri Rust commands
+Cargo dependencies
+macOS application bundle
+```
+
+No codebundle was regenerated.
+
+No Git operations were performed.
+
+---
+
+# 14. Design and truth-boundary invariants
+
+Continue preserving these invariants:
+
+* Following remains local/private.
+* No public follow graph or public follower counts.
+* Local-first/network-hydrated behavior remains explicit.
+* Cached or offline state cannot become economic truth.
+* Follow state is not economic state.
+* ROC truth remains backend-derived.
+* Site draft, template, rendering, publishing, and gateway truth must not change during CSS cleanup.
+* Video file selection, playback, conversion, rendition, publishing, and gateway truth must not change during CSS cleanup.
+* Fixed media/document canvases must remain explicit semantic exceptions rather than accidental raw-color drift.
+* Theme cleanup must not introduce fake finality or fake success output.
+
+---
+
+# 15. Current status summary
+
+```text
+FINAL_BETA_CURRENT_PHASE=2
+FINAL_BETA_CURRENT_SUBPHASE=2D14
+PHASE2_STATUS=OPEN
+
+SITE_THEME_ADOPTION=VERIFIED_GREEN
+VIDEO_THEME_ADOPTION=VERIFIED_GREEN
+STYLES_THEME_ADOPTION=NOT_APPLIED
+
+CURRENT_DECLARATION_COUNT=24
+CURRENT_RAW_COLOR_COUNT=1454
+
+CURRENT_FIRST_FAILURE_FILE=styles.css
+CURRENT_FIRST_FAILURE_LINE=3
+CURRENT_FIRST_FAILURE_DETAIL=--bg
+
+LAST_PATCH_RESULT=RED
+LAST_PATCH_SOURCE_MUTATED=NO
+LAST_PATCH_FAILURE=EXISTING_SHARED_RADIUS_SCALE_INVALID
+
+NEXT_ACTION=APPLY_CORRECTED_PHASE2D14_STYLES_THEME_OWNERSHIP
+AFTER_APPLY=RUN_SEPARATE_PHASE2D14_VERIFICATION
+EXPECTED_NEXT_ACCEPTANCE_FAILURE=onboarding/onboardingRouteGate.css
+CODEBUNDLE_REGENERATED=NO
+```
+
+```
+```
+
+
+### END NOTE - AUGUST 1 2026 - 23:55 CST
+
+
+### BEGIN NOTE - AUGUST 3 2026 - 01:10 CST
+
+Phase 3A3 is fully green: all 18 focused tests passed, all advanced routes remained available, and the production build completed successfully. 
+
+# RustyOnions / CrabLink — FINAL_BETA Carry-Over Notes
+
+## Session handoff date
+
+**August 3, 2026**
+
+## Active project
+
+```text
+PROJECT=RustyOnions / CrabLink
+ACTIVE_REPOSITORY=crablink
+ACTIVE_APPLICATION=apps/crablink-tauri
+ACTIVE_BUILDPLAN=FINAL_BETA.md
+ACTIVE_PLATFORM=CrabLink Desktop
+PRIMARY_BETA_PLATFORM=macOS
+CURRENT_PHASE=FINAL_BETA_PHASE3_SHELL_AND_INFORMATION_ARCHITECTURE
+CURRENT_SUBPHASE_STATUS=PHASE3A1_PHASE3A2_PHASE3A3_GREEN
+PHASE3_FORMAL_CLOSEOUT=NOT_YET_RUN
+NEXT_MAJOR_PHASE=FINAL_BETA_PHASE4_IDENTITY_PROFILE_COHERENCE
+```
+
+The current desktop-first direction remains correct and unchanged:
+
+```text
+CrabLink Desktop is the active beta-critical path.
+CrabLink TV remains paused at its physical-device acceptance gate.
+Regular Android implementation remains paused.
+iOS remains deferred.
+The desktop product model and visual language must be stabilized first.
+```
+
+`FINAL_BETA.md` defines the desktop application as the reference product before TV and mobile work resumes. It preserves the local-custody Passport model, real backend truth boundaries, private QuickChain activation, private Solana-testnet ROX work, and the prohibition against arbitrary code or fake authority. 
+
+---
+
+# 1. Most important current status
+
+## Phase 2 is formally complete
+
+```text
+FINAL_BETA_PHASE2_DESIGN_SYSTEM=GREEN
+PHASE2_COMPLETE=YES
+LIGHT_THEME=GREEN
+DARK_THEME=GREEN
+FOCUS_STATES=GREEN
+CORE_COMPONENTS=GREEN
+NO_PAGE_LOCAL_THEME_DRIFT=YES
+```
+
+The final Phase 2 closeout verified:
+
+```text
+PAGE_CSS_FILE_COUNT=33
+PAGE_LOCAL_RAW_COLOR_LITERAL_COUNT=0
+PAGE_SHARED_TOKEN_FALLBACK_COUNT=0
+PAGE_LOCAL_THEME_TOKEN_DECLARATION_COUNT=0
+PAGE_OWNED_SHARED_TOKEN_DECLARATION_COUNT=0
+PAGE_LOCAL_THEME_REFERENCE_COUNT=0
+PAGE_DARK_SELECTOR_COUNT=0
+PAGE_UNEXPECTED_LOCAL_THEME_REFERENCE_COUNT=0
+PAGE_RUNTIME_CSS_VARIABLE_REFERENCE_COUNT=10
+```
+
+The ten remaining page-local CSS variable references are intentionally retained Make behavior/layout variables, not competing theme ownership:
+
+```text
+--make-timeline-zoom
+--make-timeline-cursor-pct
+--make-audio-left-pct
+--make-prompter-duration
+--make-visible-duration-ms
+--make-audio-width-pct
+```
+
+Their exact aggregate count is:
+
+```text
+PAGE_RUNTIME_CSS_VARIABLE_REFERENCE_COUNT=10
+MAKE_RUNTIME_VARIABLE_ALLOWLIST=EXACT
+MAKE_RUNTIME_VARIABLE_CLASSIFICATION=BEHAVIOR_AND_LAYOUT_ONLY
+```
+
+The Make page’s final five dark-selector declarations were moved into the shared theme system:
+
+```text
+SHARED_MAKE_BASE_TOKEN_COUNT=5
+SHARED_MAKE_DARK_OVERRIDE_COUNT=5
+MAKE_PAGE_DARK_SELECTOR_COUNT=0
+```
+
+The shared Make tokens are:
+
+```text
+--cl-make-command-deck-background
+--cl-make-stat-pill-background
+--cl-make-check-toggle-background
+--cl-make-compact-status-background
+--cl-make-debug-event-background
+```
+
+The shared zoom defaults are now owned by the design-system foundation:
+
+```text
+--cl-app-zoom-scale: 1
+--cl-app-zoom-inverse: 1
+```
+
+They are no longer declared by `Shell.css`.
+
+The final Phase 2 focused foundation test passed:
+
+```text
+TESTS=6
+PASS=6
+FAIL=0
+```
+
+The Phase 2 production build passed:
+
+```text
+FRONTEND_PRODUCTION_BUILD=GREEN
+VITE_MODULES_TRANSFORMED=352
+BUILD_TIME=5.38s
+```
+
+The build plan’s Phase 2 acceptance requires one coherent visual system, shared components, light/dark support, focus-state ownership, and no page-local theme drift. That acceptance is now satisfied. 
+
+---
+
+# 2. Phase 3 work completed in this session
+
+The Phase 3 goal is to make CrabLink immediately understandable by replacing engineering-first navigation with a consumer-facing shell while preserving the `crab://` browser model. The build plan requires:
+
+```text
+Home
+Explore
+Create
+Library
+Profile
+
+Home icon → crab://home
+Address/search preserved
+Back/Forward preserved
+Advanced surfaces quarantined
+Direct routes preserved
+Tabs secondary or optional
+Simple mode default
+Passport/ROC concise
+No raw developer labels or JSON in the normal shell
+```
+
+
+
+Three implementation subphases are now green:
+
+```text
+FINAL_BETA_PHASE3A1_CONSUMER_NAVIGATION_CONTRACT=GREEN
+FINAL_BETA_PHASE3A2_ACTIVE_PRIMARY_NAVIGATION_ADOPTION=GREEN
+FINAL_BETA_PHASE3A3_ADVANCED_SURFACE_QUARANTINE=GREEN
+```
+
+---
+
+# 3. Phase 3A1 — Consumer navigation contract
+
+## Goal
+
+Define the canonical normal-user navigation model before mounting it into the live shell.
+
+## Files added
+
+```text
+apps/crablink-tauri/src/app/shell/shellNavigation.js
+apps/crablink-tauri/src/app/shell/shellNavigation.test.mjs
+apps/crablink-tauri/src/pages/explore/ExplorePage.jsx
+```
+
+## Files modified
+
+```text
+apps/crablink-tauri/src/app/routeRegistry.js
+apps/crablink-tauri/src/app/appState.js
+apps/crablink-tauri/src/app/shell/BrowserTabs.jsx
+```
+
+## Navigation contract established
+
+```text
+PRIMARY_NAVIGATION_ITEM_COUNT=5
+PRIMARY_NAVIGATION_ORDER=HOME_EXPLORE_CREATE_LIBRARY_PROFILE
+```
+
+Canonical routes:
+
+```text
+Home     → crab://home
+Explore  → crab://explore
+Create   → crab://make
+Library  → crab://library
+Profile  → crab://profile
+```
+
+The Home route is now owned by a shared constant:
+
+```javascript
+CRABLINK_HOME_ROUTE = 'crab://home'
+```
+
+`appState.js` uses that shared constant for the default route instead of maintaining a separate literal.
+
+## Shell-mode contract
+
+```text
+DEFAULT_SHELL_MODE=SIMPLE
+POWER_USER_MODE_CONTRACT=DEFINED
+```
+
+The power-user contract exists, but a full user-facing mode switch was not required or implemented yet.
+
+## Explore route
+
+A real `crab://explore` route was added to the route registry.
+
+The current Explore page is deliberately honest:
+
+```text
+- It does not invent public content.
+- It does not treat local cache as public network truth.
+- It states that public discovery is not connected yet.
+- It links users to Library and Create.
+- It performs no network or economic mutation.
+```
+
+This is an interim destination until the later public discovery and Home/Explore backend phases.
+
+## Advanced navigation contract
+
+The following surfaces were explicitly classified as advanced:
+
+```text
+Receipts              → crab://receipts
+Node operator         → crab://operator
+QuickChain             → crab://quickchain
+Interface diagnostics → crab://text
+```
+
+They remain registered direct routes but are absent from consumer primary navigation.
+
+## Phase 3A1 verification
+
+Focused tests:
+
+```text
+TESTS=11
+PASS=11
+FAIL=0
+```
+
+Verified behavior:
+
+```text
+HOME_DIRECT_ROUTE=GREEN
+EXPLORE_DIRECT_ROUTE=GREEN
+CREATE_DIRECT_ROUTE=GREEN
+LIBRARY_DIRECT_ROUTE=GREEN
+PROFILE_DIRECT_ROUTE=GREEN
+ADVANCED_DIRECT_ROUTES=PRESERVED
+ADVANCED_SURFACES_PRESENT_IN_PRIMARY_NAV=NO
+CENTRAL_ROUTE_REGISTRY_INTEGRATION=GREEN
+```
+
+Production build:
+
+```text
+FRONTEND_PRODUCTION_BUILD=GREEN
+VITE_MODULES_TRANSFORMED=355
+BUILD_TIME=5.53s
+```
+
+No Rust, Tauri, macOS bundle, RustyOnions, or mobile work was run.
+
+---
+
+# 4. Phase 3A2 — Active primary navigation adoption
+
+## Goal
+
+Mount the consumer navigation into the real desktop shell without removing the trusted browser controls or tabs.
+
+## Files added
+
+```text
+apps/crablink-tauri/src/app/shell/ShellPrimaryNavigation.jsx
+apps/crablink-tauri/src/app/shell/ShellPrimaryNavigation.source.test.mjs
+```
+
+## Files modified
+
+```text
+apps/crablink-tauri/src/app/shell/Shell.jsx
+apps/crablink-tauri/src/app/shell/Shell.css
+```
+
+## Shell order after Phase 3A2
+
+```text
+TopBar
+→ consumer PrimaryNavigation
+→ BrowserTabs
+→ active route/page content
+```
+
+The active consumer navigation is therefore immediately visible while the browser-style tabs remain a secondary workspace surface.
+
+## Shared primitive reuse
+
+`ShellPrimaryNavigation.jsx` uses the shared design-system component:
+
+```text
+src/shared/components/PrimaryNavigation.jsx
+```
+
+It does not create a competing navigation implementation.
+
+Properties supplied to the shared component include:
+
+```text
+items=PRIMARY_NAVIGATION_ITEMS
+activeId=derived from current route kind
+label="CrabLink primary navigation"
+onSelect=caller-owned route navigation
+```
+
+## Active selection
+
+```text
+PRIMARY_NAVIGATION_ACTIVE_STATE=ROUTE_DERIVED
+PRIMARY_NAVIGATION_ARIA_CURRENT=GREEN
+```
+
+Route-to-navigation projection:
+
+```text
+route.kind=home     → active Home
+route.kind=explore  → active Explore
+route.kind=make     → active Create
+route.kind=library  → active Library
+route.kind=profile  → active Profile
+advanced route      → no consumer item selected
+```
+
+## Preserved shell behavior
+
+```text
+TOPBAR=PRESERVED
+ADDRESS_FIELD=PRESERVED
+BACK_FORWARD_HOME_REFRESH=PRESERVED
+BROWSER_TABS=PRESERVED_SECONDARY
+HEADER_AD_SLOT=PRESERVED
+DIRECT_ROUTE_SUPPORT_CHANGED=NO
+```
+
+## Responsive behavior
+
+The consumer navigation is horizontally arranged on normal desktop widths.
+
+At narrower widths:
+
+```text
+- The bar can scroll horizontally.
+- Navigation items retain bounded widths.
+- No mobile app implementation was added.
+```
+
+## Phase 3A2 implementation failures and repairs
+
+Two tooling-only failures occurred.
+
+### Initial patch-generator syntax failure
+
+The first apply script failed before source mutation because `${}` inside a nested JavaScript regex was interpreted by the outer template literal.
+
+Result:
+
+```text
+SOURCE_MUTATED=NO
+```
+
+A corrected V2 apply patch removed that nested-template regex hazard.
+
+### Generated source-test regex failure
+
+The first verification discovered that backslashes had been consumed in:
+
+```text
+ShellPrimaryNavigation.source.test.mjs
+```
+
+The malformed pattern appeared as:
+
+```javascript
+/var(s*--cl-[a-z0-9-]+s*,/i
+```
+
+This affected only the test source, not runtime source.
+
+A direct string-slicing repair replaced the malformed regex block without Python regex substitution.
+
+Final repair status:
+
+```text
+PHASE3A2_TEST_FILE_SYNTAX=GREEN
+PHASE3A2_REGEX_ESCAPE_REPAIR=GREEN
+ACTIVE_SHELL_RUNTIME_SOURCE_CHANGED=NO
+NAVIGATION_COMPONENT_CHANGED=NO
+NAVIGATION_CSS_CHANGED=NO
+```
+
+## Phase 3A2 final verification
+
+Focused tests:
+
+```text
+TESTS=14
+PASS=14
+FAIL=0
+```
+
+Verified behavior:
+
+```text
+ACTIVE_SHELL_PRIMARY_NAVIGATION=GREEN
+PRIMARY_NAVIGATION_ITEM_COUNT=5
+PRIMARY_NAVIGATION_ORDER=HOME_EXPLORE_CREATE_LIBRARY_PROFILE
+HOME_ICON_TARGET=crab://home
+PRIMARY_NAVIGATION_ACTIVE_STATE=ROUTE_DERIVED
+PRIMARY_NAVIGATION_ARIA_CURRENT=GREEN
+DEFAULT_SHELL_MODE=SIMPLE
+ADVANCED_ROUTE_PRIMARY_SELECTION=ABSENT
+```
+
+Production build:
+
+```text
+FRONTEND_PRODUCTION_BUILD=GREEN
+VITE_MODULES_TRANSFORMED=357
+BUILD_TIME=5.71s
+```
+
+No Rust, Tauri, macOS bundle, RustyOnions, or mobile work was run.
+
+---
+
+# 5. Phase 3A3 — Advanced-surface quarantine
+
+## Goal
+
+Remove engineering-first network and zoom controls from the normal top bar while preserving their functionality behind one explicit Advanced surface.
+
+## Files added
+
+```text
+apps/crablink-tauri/src/app/shell/ShellAdvancedMenu.jsx
+apps/crablink-tauri/src/app/shell/ShellAdvancedMenu.source.test.mjs
+```
+
+## Files modified
+
+```text
+apps/crablink-tauri/src/app/shell/TopBar.jsx
+apps/crablink-tauri/src/app/shell/Shell.css
+```
+
+## Controls removed from the normal top bar
+
+```text
+NORMAL_TOPBAR_GATEWAY_CONTROL=ABSENT
+NORMAL_TOPBAR_LOCAL_NODE_CONTROL=ABSENT
+NORMAL_TOPBAR_ZOOM_CONTROL=ABSENT
+```
+
+This removes engineering-heavy status and controls from the first-level consumer shell.
+
+## New Advanced surface
+
+One explicit Advanced trigger is now present in the top bar.
+
+The Advanced modal contains:
+
+```text
+Receipts
+Node operator
+QuickChain
+Interface diagnostics
+
+Gateway status/check
+Local node status/check
+```
+
+The modal clearly states that these tools do not grant:
+
+```text
+wallet authority
+ledger authority
+publication authority
+finality authority
+settlement authority
+QuickChain authority
+ROC authority
+```
+
+## Preserved direct routes
+
+```text
+RECEIPTS_DIRECT_ROUTE=GREEN
+OPERATOR_DIRECT_ROUTE=GREEN
+QUICKCHAIN_DIRECT_ROUTE=GREEN
+INTERFACE_DIAGNOSTICS_DIRECT_ROUTE=GREEN
+ADVANCED_ROUTE_REGISTRY_INTEGRATION=GREEN
+```
+
+The routes remain available through direct `crab://` entry even though they are not in primary navigation.
+
+## Preserved zoom access
+
+Zoom was removed only from the normal top-bar presentation.
+
+It remains available through:
+
+```text
+Settings modal
+Command/Control keyboard shortcuts
+```
+
+Verified:
+
+```text
+SETTINGS_ZOOM_CONTROL=PRESERVED
+ZOOM_KEYBOARD_SHORTCUTS=PRESERVED
+```
+
+## Preserved normal shell utilities
+
+```text
+NORMAL_TOPBAR_PASSPORT=PRESERVED
+NORMAL_TOPBAR_ROC=PRESERVED
+ADDRESS_FIELD=PRESERVED
+BACK_FORWARD_HOME_REFRESH=PRESERVED
+BROWSER_TABS=PRESERVED_SECONDARY
+```
+
+## Styling boundary
+
+The Phase 3A3 CSS introduced:
+
+```text
+PHASE3A3_RAW_COLOR_LITERAL_COUNT=0
+PHASE3A3_SHARED_TOKEN_FALLBACK_COUNT=0
+PHASE3A3_PAGE_DARK_SELECTOR_COUNT=0
+```
+
+It therefore remains within the shared Phase 2 theme system.
+
+## Phase 3A3 final verification
+
+Focused Phase 3 tests:
+
+```text
+TESTS=18
+PASS=18
+FAIL=0
+CANCELLED=0
+SKIPPED=0
+```
+
+The test set covered:
+
+```text
+- Advanced menu source boundaries.
+- Removal of normal top-bar engineering controls.
+- Preservation of direct advanced routes.
+- Preservation of Settings and keyboard zoom.
+- No unsafe rendering or economic authority.
+- Phase 3A2 active primary navigation regression.
+- Phase 3A1 navigation model regression.
+- Shared route metadata regression.
+```
+
+Final route integration:
+
+```text
+ADVANCED_NAVIGATION_ITEM_COUNT=4
+ADVANCED_ROUTE_PRIMARY_SELECTION=ABSENT
+ADVANCED_DIRECT_ROUTES=PRESERVED
+ADVANCED_ROUTE_REGISTRY_INTEGRATION=GREEN
+```
+
+Production build:
+
+```text
+FRONTEND_PRODUCTION_BUILD=GREEN
+VITE_MODULES_TRANSFORMED=358
+BUILD_TIME=5.56s
+```
+
+The complete Phase 3A3 output is green. 
+
+---
+
+# 6. Current shell architecture
+
+The active shell now conceptually presents:
+
+```text
+TopBar
+  Browser navigation
+    Back
+    Forward
+    Home
+    Refresh
+
+  Address/search field
+
+  Concise utility controls
+    Passport
+    Confirmed ROC
+    Advanced
+    Theme
+    Settings
+
+Consumer Primary Navigation
+  Home
+  Explore
+  Create
+  Library
+  Profile
+
+Secondary Browser Tabs
+
+Current route/page
+```
+
+The following no longer dominate the normal top bar:
+
+```text
+Gateway status/check
+Local node status/check
+Direct zoom button group
+Operator routes
+QuickChain route
+Diagnostics route
+Receipts route
+```
+
+They remain available through Advanced, Settings, keyboard controls, or direct routes.
+
+---
+
+# 7. Authority and security posture preserved
+
+No work in Phase 2 or Phase 3 changed backend, identity, payment, publication, QuickChain, or ROX authority.
+
+Repeated verification established:
+
+```text
+PASSPORT_OR_RECOVERY_SURFACE_CHANGED=NO
+WALLET_LEDGER_RECEIPT_OR_PAID_AUTHORITY_CHANGED=NO
+PUBLICATION_QUICKCHAIN_OR_ROC_AUTHORITY_CHANGED=NO
+AUTHORITY_EXPANSION=NO
+```
+
+No source introduced:
+
+```text
+dangerouslySetInnerHTML
+JSON.stringify developer dumps in the new shell surfaces
+fetch
+Tauri invoke
+localStorage
+sessionStorage
+wallet mutation
+ledger mutation
+Passport claims
+publication mutation
+QuickChain finality
+ROX settlement
+```
+
+The active invariants remain:
+
+```text
+React owns display and explicit user intent.
+Tauri owns native privilege.
+RustyOnions services own durable network truth.
+svc-wallet owns approved economic mutation ingress.
+ron-ledger owns economic truth.
+svc-passport owns Passport identity/device/authorization truth.
+svc-index owns reviewed lookup/feed projections, not economic truth.
+Content bytes remain B3-addressed and verified.
+QuickChain evidence is not client authority.
+ROX Anchor remains a controlled private-testnet anchor path.
+```
+
+These invariants are explicitly required by `FINAL_BETA.md`. 
+
+---
+
+# 8. What was not run or changed
+
+Throughout this UI and shell work:
+
+```text
+CARGO_RUN=NO
+TAURI_BUILD_RUN=NO
+MACOS_BUNDLE_RUN=NO
+RUSTYONIONS_MUTATED=NO
+MOBILE_PLATFORM_MUTATED=NO
+```
+
+This was intentional because the changes were frontend-only.
+
+Verification followed the agreed tiered strategy:
+
+```text
+apply-only patches:
+  no compilation
+  no tests
+  no build
+
+verification:
+  focused Node/source tests
+  route integration checks
+  Vite production build at integration/closeout boundaries
+
+not run:
+  Cargo workspace
+  Tauri release build
+  macOS application bundle
+```
+
+No full native build is presently required unless Phase 3 closeout uncovers native integration concerns.
+
+---
+
+# 9. Codebundle status
+
+The last attached/generated `CODEBUNDLE_TAURI_APP.md` was generated before the Phase 3A1–A3 source changes.
+
+Its header reports:
+
+```text
+Generated=2026-08-03T02:59:33Z
+Text files=991
+Git=da6f276 dirty
+```
+
+
+
+Therefore:
+
+```text
+LATEST_ATTACHED_CODEBUNDLE_CONTAINS_PHASE2_CLOSEOUT=YES
+LATEST_ATTACHED_CODEBUNDLE_CONTAINS_PHASE3A1_A2_A3=NO
+CURRENT_REPOSITORY_IS_AHEAD_OF_ATTACHED_CODEBUNDLE=YES
+```
+
+At the start of the next session, regenerate the codebundle before deep source inspection:
+
+```bash
+cd "$HOME/Desktop/crablink"
+bash scripts/make_codebundle.sh
+```
+
+Do not regenerate repeatedly after every small patch. This regeneration is appropriate because this is a session boundary and major shell milestone.
+
+---
+
+# 10. Formal Phase 3 status
+
+The implementation subphases are green:
+
+```text
+PHASE3A1=GREEN
+PHASE3A2=GREEN
+PHASE3A3=GREEN
+```
+
+However, the complete build-plan acceptance has not yet been run as one formal closeout:
+
+```text
+FINAL_BETA_PHASE3_SHELL=NOT_YET_FORMALLY_RECORDED_GREEN
+```
+
+The missing closeout is not evidence of a known source failure.
+
+It means the next session must explicitly verify the remaining Phase 3 acceptance items together:
+
+```text
+FINAL_BETA_PHASE3_SHELL=GREEN
+HOME_ICON_TARGET=crab://home
+PRIMARY_NAV=CONSUMER_FACING
+ADVANCED_SURFACES=QUARANTINED
+ADDRESS_FIELD=PRESERVED
+BACK_FORWARD=PRESERVED
+NORMAL_SHELL_RAW_JSON=ABSENT
+NEXT_PHASE=FINAL_BETA_PHASE4_IDENTITY_PROFILE_COHERENCE
+```
+
+The first six are already strongly supported by Phase 3A1–A3 results.
+
+The important item still needing explicit final inspection is:
+
+```text
+NORMAL_SHELL_RAW_JSON=ABSENT
+```
+
+The closeout should also inspect whether Passport and confirmed ROC status are concise enough for the normal top bar, rather than merely preserved.
+
+---
+
+# 11. Exact recommended first action next session
+
+## Step 1 — Regenerate and attach the current codebundle
+
+```bash
+cd "$HOME/Desktop/crablink"
+bash scripts/make_codebundle.sh
+```
+
+The next assistant instance should inspect the newly generated bundle, especially:
+
+```text
+apps/crablink-tauri/src/app/shell/Shell.jsx
+apps/crablink-tauri/src/app/shell/Shell.css
+apps/crablink-tauri/src/app/shell/TopBar.jsx
+apps/crablink-tauri/src/app/shell/ShellPrimaryNavigation.jsx
+apps/crablink-tauri/src/app/shell/ShellAdvancedMenu.jsx
+apps/crablink-tauri/src/app/shell/shellNavigation.js
+apps/crablink-tauri/src/app/shell/BrowserNav.jsx
+apps/crablink-tauri/src/app/shell/AddressBar.jsx
+apps/crablink-tauri/src/app/shell/BrowserTabs.jsx
+apps/crablink-tauri/src/app/shell/PassportChip.jsx
+apps/crablink-tauri/src/app/shell/BalanceChip.jsx
+apps/crablink-tauri/src/app/routeRegistry.js
+apps/crablink-tauri/src/app/router.js
+apps/crablink-tauri/src/app/appState.js
+apps/crablink-tauri/src/pages/explore/ExplorePage.jsx
+```
+
+## Step 2 — Perform a Phase 3 closeout inspection
+
+Inspect the normal shell for:
+
+```text
+raw JSON
+raw hashes
+unexplained engineering labels
+duplicated navigation
+overly verbose Passport status
+overly verbose ROC status
+developer/test language
+Advanced items still visible outside Advanced
+address-field regressions
+Back/Forward regressions
+home-target regressions
+tab dominance
+responsive overflow
+```
+
+## Step 3 — Fix only the first real failure
+
+Continue the established workflow:
+
+```text
+1. Apply-only mutation patch.
+2. Review apply output.
+3. Separate verification-only block.
+4. Fix the first failure before expanding scope.
+```
+
+Do not produce a broad speculative cleanup patch.
+
+## Step 4 — Run formal Phase 3 closeout
+
+The closeout should include:
+
+```text
+focused shell source tests
+Phase 3A1 regression
+Phase 3A2 regression
+Phase 3A3 regression
+route-registry integration
+normal-shell raw JSON/developer-label scan
+frontend production build
+```
+
+Expected footer:
+
+```text
+FINAL_BETA_PHASE3_SHELL=GREEN
+HOME_ICON_TARGET=crab://home
+PRIMARY_NAV=CONSUMER_FACING
+ADVANCED_SURFACES=QUARANTINED
+ADDRESS_FIELD=PRESERVED
+BACK_FORWARD=PRESERVED
+BROWSER_TABS=SECONDARY
+DEFAULT_SHELL_MODE=SIMPLE
+NORMAL_SHELL_RAW_JSON=ABSENT
+PASSPORT_STATUS=CONCISE
+ROC_STATUS=CONCISE
+FRONTEND_PRODUCTION_BUILD=GREEN
+NEXT_PHASE=FINAL_BETA_PHASE4_IDENTITY_PROFILE_COHERENCE
+```
+
+---
+
+# 12. Next major phase after shell closeout
+
+## FINAL_BETA Phase 4 — Onboarding, Passport, and Profile Coherence
+
+The Phase 4 goal is:
+
+```text
+Make identity feel like one product.
+```
+
+The build plan requires work around:
+
+```text
+- Onboarding completion handoff.
+- Passport status and profile relationship.
+- Automatic or coherent profile creation after Passport onboarding.
+- Public profile versus owner studio separation.
+- Username/profile navigation consistency.
+- Locked/unlocked state clarity.
+- Recovery/export guidance.
+- Concise identity status in the normal shell.
+- Removal of duplicate or conflicting identity actions.
+```
+
+Known product issue to carry forward:
+
+```text
+A newly created Passport/profile does not always lead to an immediately coherent
+profile-page route. The user previously observed that the username sometimes
+had to be entered manually on crab://profile before the public profile appeared.
+```
+
+This defect belongs directly in Phase 4.
+
+The build plan defines Phase 4 immediately after the Phase 3 shell acceptance. 
+
+---
+
+# 13. Broader remaining FINAL_BETA roadmap
+
+The desktop private-beta build plan extends through Phase 26.
+
+The major remaining product sequence is:
+
+```text
+Phase 4
+  Onboarding, Passport, and profile coherence
+
+Phase 5+
+  Public-profile product work
+  Publication timelines
+  Follow/unfollow behavior
+  Relationship projections
+  Following feed backend
+  Consumer Home feed
+  Home/Explore separation
+
+Phase 11
+  Safe site-security boundary
+  Remove arbitrary HTML/code from normal beta mode
+
+Phase 12
+  Shared structured scriptless site-template engine
+
+Phase 13
+  Blog template
+
+Phase 14
+  Imageboard template
+
+Phase 15
+  Forum template
+
+Phase 16
+  End-to-end site lifecycle acceptance
+
+Phase 17
+  Paid access, receipts, and confirmed ROC product stabilization
+
+Phase 18+
+  Private QuickChain activation, execution, replay, failure, and soak work
+
+Later ROX phases
+  Private Solana-testnet negative drills
+  halt/recovery
+  authority separation
+  reconciliation
+  final closeout
+
+Phase 23
+  UX, accessibility, and performance acceptance
+
+Phase 24
+  macOS packaging, signing, update, and recovery
+
+Phase 25
+  Controlled private-beta operations
+
+Phase 26
+  Final honest beta release decision
+```
+
+The later build plan explicitly requires clean UX, accessibility, performance, macOS packaging, update/recovery behavior, private-beta operations, and final launch acceptance. 
+
+---
+
+# 14. Product decisions that remain locked
+
+## Desktop-first beta
+
+```text
+DESKTOP_REFERENCE_PRODUCT=YES
+TV_RESUME_AFTER_DESKTOP_MODEL_FREEZE=YES
+ANDROID_RESUME_AFTER_DESKTOP_MODEL_FREEZE=YES
+IOS_DEFERRED=YES
+```
+
+## Local Passport custody
+
+```text
+PASSPORT_MODEL=WALLET_LIKE_LOCAL_CUSTODY
+CLOUD_LOGIN=FORBIDDEN
+CLOUD_PASSPORT_SECRET_CUSTODY=FORBIDDEN
+RAW_SECRET_IN_REACT=FORBIDDEN
+PIN_AND_RECOVERY_NATIVE_ONLY=YES
+```
+
+## Following model
+
+Current beta direction remains:
+
+```text
+FOLLOWING_LIST_OWNER=LOCAL_CRABLINK_APP
+FOLLOWING_LIST_DEFAULT_STORAGE=OFFLINE_LOCAL_STORAGE
+PUBLIC_FOLLOWER_COUNT=FORBIDDEN
+PUBLIC_FOLLOWING_COUNT=FORBIDDEN
+PUBLIC_FOLLOWER_LIST=FORBIDDEN
+PUBLIC_FOLLOWING_LIST=FORBIDDEN
+SERVER_SOCIAL_GRAPH=NOT_REQUIRED_FOR_BETA
+NETWORK_FOLLOW_MUTATION=NOT_REQUIRED_FOR_BETA
+```
+
+Doctrine:
+
+```text
+Public content lives on the network.
+Personal selection lives on the device.
+```
+
+This local-following decision should be reconciled carefully with older generic social-graph language in `FINAL_BETA.md`. Do not silently build a public follower graph or public counts.
+
+## Site templates
+
+```text
+NORMAL_CUSTOM_CODE=FORBIDDEN
+NORMAL_RAW_HTML_IMPORT=FORBIDDEN
+NORMAL_ROOT_HTML_EDITOR=FORBIDDEN
+SCRIPTLESS_STRUCTURED_TEMPLATES=REQUIRED
+INITIAL_TEMPLATES=BLOG_IMAGEBOARD_FORUM
+```
+
+## Economic truth
+
+```text
+SILENT_SPEND=FORBIDDEN
+FAKE_RECEIPT=FORBIDDEN
+FAKE_BALANCE=FORBIDDEN
+CACHE_ONLY_PAID_UNLOCK=FORBIDDEN
+RECEIPT_TRUTH=BACKEND_DERIVED
+CONFIRMED_ROC_TRUTH=BACKEND_DERIVED
+```
+
+## QuickChain and ROX
+
+```text
+QUICKCHAIN_PRIVATE_NETWORK_ONLY=YES
+QUICKCHAIN_CLIENT_EVIDENCE_IS_AUTHORITY=NO
+ROX_PRIVATE_SOLANA_TESTNET_ONLY=YES
+PUBLIC_BRIDGE=FORBIDDEN
+PUBLIC_MINT_BURN=FORBIDDEN
+STAKING=FORBIDDEN
+LIQUIDITY=FORBIDDEN
+EXCHANGE_FACING_BEHAVIOR=FORBIDDEN
+```
+
+---
+
+# 15. Required workflow for the next assistant instance
+
+## Patch format
+
+All terminal work must be paste-ready:
+
+```text
+~~~~bash
+...
+~~~~
+```
+
+## Two-step mutation flow
+
+Every source change must be split:
+
+```text
+Turn 1:
+  apply-only patch
+
+Turn 2:
+  verification-only block after apply output is reviewed
+```
+
+Never combine a large mutation and full verification into the same patch.
+
+## No repository commands
+
+Do not include:
+
+```text
+git
+git status
+git diff
+git add
+git commit
+git push
+git apply
+```
+
+The user handles repository operations separately.
+
+## Tiered verification
+
+```text
+Apply-only patch:
+  no tests
+  no build
+  no Cargo
+  no Tauri
+  no bundle
+
+Frontend-only verification:
+  focused Node/source checks
+  focused tests
+  Vite build only at integration boundaries or phase closeout
+
+Rust/native change:
+  focused Cargo check/test for changed code
+
+Full native/release:
+  only at major milestone, integration boundary, phase closeout,
+  release candidate, or when a failure makes it necessary
+```
+
+## Failure policy
+
+```text
+Fix only the first reported failure.
+Do not continue to later checks after a failure.
+Do not broaden scope while the current failure remains.
+```
+
+## Codebundle policy
+
+```text
+Do not regenerate after every patch.
+Regenerate at session wrap-up, major milestones, or when explicitly requested.
+```
+
+## Manual acceptance
+
+Do not create interactive questionnaire scripts.
+
+Present any manual acceptance checklist directly in chat and let the user report:
+
+```text
+GREEN
+RED
+SKIPPED
+```
+
+Record confirmed results through a later apply-only patch if required.
+
+---
+
+# 16. Current clean restart statement
+
+The next session can begin from this exact posture:
+
+```text
+FINAL_BETA_PHASE2_DESIGN_SYSTEM=GREEN
+
+FINAL_BETA_PHASE3A1_CONSUMER_NAVIGATION_CONTRACT=GREEN
+
+FINAL_BETA_PHASE3A2_ACTIVE_PRIMARY_NAVIGATION_ADOPTION=GREEN
+
+FINAL_BETA_PHASE3A3_ADVANCED_SURFACE_QUARANTINE=GREEN
+
+ACTIVE_PRIMARY_NAVIGATION=HOME_EXPLORE_CREATE_LIBRARY_PROFILE
+
+HOME_ICON_TARGET=crab://home
+
+DEFAULT_SHELL_MODE=SIMPLE
+
+ADDRESS_FIELD=PRESERVED
+
+BACK_FORWARD_HOME_REFRESH=PRESERVED
+
+BROWSER_TABS=PRESERVED_SECONDARY
+
+NORMAL_TOPBAR_GATEWAY_CONTROL=ABSENT
+
+NORMAL_TOPBAR_LOCAL_NODE_CONTROL=ABSENT
+
+NORMAL_TOPBAR_ZOOM_CONTROL=ABSENT
+
+ADVANCED_MENU=GREEN
+
+ADVANCED_DIRECT_ROUTES=PRESERVED
+
+SETTINGS_ZOOM_CONTROL=PRESERVED
+
+ZOOM_KEYBOARD_SHORTCUTS=PRESERVED
+
+NORMAL_TOPBAR_PASSPORT=PRESERVED
+
+NORMAL_TOPBAR_ROC=PRESERVED
+
+PASSPORT_OR_RECOVERY_SURFACE_CHANGED=NO
+
+WALLET_LEDGER_RECEIPT_OR_PAID_AUTHORITY_CHANGED=NO
+
+PUBLICATION_QUICKCHAIN_OR_ROC_AUTHORITY_CHANGED=NO
+
+LAST_PHASE3_FOCUSED_TEST_COUNT=18
+
+LAST_PHASE3_FOCUSED_TEST_PASS=18
+
+LAST_PHASE3_FOCUSED_TEST_FAIL=0
+
+LAST_FRONTEND_BUILD=GREEN
+
+LAST_FRONTEND_BUILD_MODULE_COUNT=358
+
+LAST_FRONTEND_BUILD_TIME=5.56s
+
+CARGO_RUN=NO
+
+TAURI_BUILD_RUN=NO
+
+MACOS_BUNDLE_RUN=NO
+
+RUSTYONIONS_MUTATED=NO
+
+MOBILE_PLATFORM_MUTATED=NO
+
+LATEST_ATTACHED_CODEBUNDLE_IS_PRE_PHASE3=YES
+
+NEXT_ACTION=REGENERATE_CODEBUNDLE_AND_RUN_PHASE3_FORMAL_CLOSEOUT
+
+NEXT_MAJOR_PHASE=FINAL_BETA_PHASE4_IDENTITY_PROFILE_COHERENCE
+```
+
+These notes are ready to paste into the next session as the authoritative handoff context.
+
+
+### END NOTE - AUGUST 3 2026 - 01:10 CST

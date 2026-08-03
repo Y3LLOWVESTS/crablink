@@ -6,6 +6,14 @@
  * RO:TEST — visual/manual crab://game smoke in light and dark mode.
  */
 
+/*
+ * FINAL_BETA_PHASE2D20_GAME_THEME_ADOPTION_V1
+ *
+ * Game workspace panels consume shared light/dark semantic surfaces.
+ * Runtime, sandbox, save, session, publication, B3, wallet, and ROC
+ * authority remain unchanged.
+ */
+
 .game-page {
   display: grid;
   gap: 1rem;
@@ -42,11 +50,7 @@
   padding: 1rem;
   border: 1px solid var(--cl-border);
   border-radius: 22px;
-  background: var(--cl-surface);
-}
-
-[data-theme='dark'] .game-form-section {
-  background: #050505;
+  background: var(--cl-game-panel);
 }
 
 .game-form-section-head {
@@ -149,11 +153,7 @@
   padding: 0.85rem;
   border: 1px solid var(--cl-border);
   border-radius: 20px;
-  background: var(--cl-surface);
-}
-
-[data-theme='dark'] .game-preview-hero {
-  background: #050505;
+  background: var(--cl-game-panel);
 }
 
 .game-preview-cover {
@@ -163,18 +163,16 @@
   border: 1px dashed var(--cl-border);
   border-radius: 16px;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 48%),
-    var(--cl-card);
+    linear-gradient(
+      135deg,
+      var(--cl-game-cover-sheen),
+      transparent 48%
+    ),
+    var(--cl-game-panel);
   color: var(--cl-muted);
   font-size: 0.72rem;
   font-weight: 850;
   text-align: center;
-}
-
-[data-theme='dark'] .game-preview-cover {
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.045), transparent 48%),
-    #050505;
 }
 
 .game-preview-copy {
@@ -256,13 +254,7 @@
   padding: 0.85rem;
   border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: var(--cl-surface);
-}
-
-[data-theme='dark'] .game-safety-list,
-[data-theme='dark'] .game-asset-empty,
-[data-theme='dark'] .game-asset-group {
-  background: #050505;
+  background: var(--cl-game-panel);
 }
 
 .game-safety-list h3,

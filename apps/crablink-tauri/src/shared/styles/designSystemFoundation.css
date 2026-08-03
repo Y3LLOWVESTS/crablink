@@ -9,6 +9,22 @@
  * RO:TEST — designSystemFoundation.test.mjs and focused frontend build.
  */
 
+/*
+ * FINAL_BETA_PHASE2D31_SHARED_ZOOM_VARIABLE_OWNERSHIP_V1
+ *
+ * Shared defaults for CrabLink's bounded UI-only zoom state.
+ * uiZoom.js may replace these values on document.documentElement.
+ *
+ * These variables affect presentation only. They grant no route, Passport,
+ * wallet, ledger, receipt, paid-access, publication, QuickChain, or ROC
+ * authority.
+ */
+
+:root {
+  --cl-app-zoom-scale: 1;
+  --cl-app-zoom-inverse: 1;
+}
+
 html {
   background: var(--cl-bg);
   color: var(--cl-text);
@@ -1347,5 +1363,500 @@ select {
   .cl-receipt-row-status {
     align-items: flex-start;
     justify-content: flex-start;
+  }
+}
+
+/*
+ * FINAL_BETA_PHASE2C2_SHELL_PRIMITIVES_V2
+ *
+ * Visual-only shell, navigation, utility, address, drawer, and toast contracts.
+ * Phase 3 owns active-shell adoption and final route semantics.
+ */
+
+.cl-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.cl-skip-link {
+  position: fixed;
+  z-index: var(--cl-z-toast);
+  top: var(--cl-space-2);
+  left: var(--cl-space-2);
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-accent);
+  color: var(--cl-accent-contrast);
+  padding:
+    var(--cl-space-2)
+    var(--cl-space-3);
+  font-weight: var(--cl-weight-bold);
+  transform: translateY(-180%);
+  transition:
+    transform
+      var(--cl-duration-fast)
+      var(--cl-ease-standard);
+}
+
+.cl-skip-link:focus {
+  transform: translateY(0);
+}
+
+.cl-app-shell {
+  min-height: 100dvh;
+  background: var(--cl-bg);
+  color: var(--cl-text);
+}
+
+.cl-app-shell-header {
+  position: sticky;
+  z-index: var(--cl-z-sticky);
+  top: 0;
+  display: grid;
+  grid-template-columns:
+    auto
+    minmax(12rem, 1fr)
+    auto;
+  align-items: center;
+  gap: var(--cl-space-4);
+  min-height: var(--cl-shell-header-height);
+  border-bottom: 1px solid var(--cl-border);
+  background:
+    color-mix(
+      in srgb,
+      var(--cl-surface) 94%,
+      transparent
+    );
+  padding:
+    var(--cl-space-3)
+    var(--cl-space-5);
+  backdrop-filter: blur(16px);
+}
+
+.cl-app-shell-brand,
+.cl-app-shell-address,
+.cl-app-shell-utility {
+  min-width: 0;
+}
+
+.cl-app-shell-body {
+  display: grid;
+  grid-template-columns:
+    var(--cl-shell-navigation-width)
+    minmax(0, 1fr);
+  min-height:
+    calc(
+      100dvh -
+      var(--cl-shell-header-height)
+    );
+}
+
+.cl-app-shell-navigation {
+  position: sticky;
+  top: var(--cl-shell-header-height);
+  align-self: start;
+  height:
+    calc(
+      100dvh -
+      var(--cl-shell-header-height)
+    );
+  overflow: auto;
+  border-right: 1px solid var(--cl-border);
+  background: var(--cl-surface);
+  padding: var(--cl-space-4);
+}
+
+.cl-app-shell-content {
+  min-width: 0;
+  width: 100%;
+  max-width: var(--cl-content-wide);
+  margin-inline: auto;
+  padding: var(--cl-space-6);
+}
+
+.cl-app-shell-content:focus {
+  outline: none;
+}
+
+.cl-primary-navigation-list {
+  display: grid;
+  gap: var(--cl-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-primary-navigation-item {
+  display: grid;
+  grid-template-columns:
+    auto
+    minmax(0, 1fr)
+    auto;
+  align-items: center;
+  gap: var(--cl-space-3);
+  width: 100%;
+  min-height: var(--cl-control-md);
+  border: 1px solid transparent;
+  border-radius: var(--cl-radius-md);
+  background: transparent;
+  color: var(--cl-muted);
+  padding:
+    var(--cl-space-2)
+    var(--cl-space-3);
+  font: inherit;
+  font-weight: var(--cl-weight-semibold);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cl-primary-navigation-item:hover:not(:disabled) {
+  border-color: var(--cl-border);
+  background: var(--cl-card-muted);
+  color: var(--cl-text);
+}
+
+.cl-primary-navigation-item:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.cl-primary-navigation-item.is-active {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--cl-accent) 38%,
+      var(--cl-border)
+    );
+  background: var(--cl-accent-soft);
+  color: var(--cl-accent);
+}
+
+.cl-primary-navigation-item:disabled {
+  color: var(--cl-disabled-text);
+  cursor: not-allowed;
+}
+
+.cl-primary-navigation-icon {
+  display: grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  place-items: center;
+}
+
+.cl-primary-navigation-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cl-primary-navigation-badge {
+  display: inline-flex;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--cl-radius-pill);
+  background: var(--cl-card-muted);
+  color: var(--cl-muted);
+  padding-inline: var(--cl-space-2);
+  font-size: var(--cl-font-size-00);
+}
+
+.cl-primary-navigation.is-compact
+.cl-primary-navigation-label,
+.cl-primary-navigation.is-compact
+.cl-primary-navigation-badge {
+  display: none;
+}
+
+.cl-utility-bar,
+.cl-utility-bar-leading,
+.cl-utility-bar-content,
+.cl-utility-bar-trailing {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--cl-space-2);
+}
+
+.cl-utility-bar {
+  justify-content: flex-end;
+}
+
+.cl-utility-status {
+  display: inline-flex;
+  min-height: 1.65rem;
+  align-items: center;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-pill);
+  background: var(--cl-card-muted);
+  color: var(--cl-muted);
+  padding:
+    0.25rem
+    0.55rem;
+  font-size: var(--cl-font-size-00);
+  font-weight: var(--cl-weight-bold);
+}
+
+.cl-utility-status.is-success {
+  background: var(--cl-success-soft);
+  color: var(--cl-success);
+}
+
+.cl-utility-status.is-warning {
+  background: var(--cl-warning-soft);
+  color: var(--cl-warning);
+}
+
+.cl-utility-status.is-danger {
+  background: var(--cl-danger-soft);
+  color: var(--cl-danger);
+}
+
+.cl-crab-address-field {
+  display: grid;
+  grid-template-columns:
+    auto
+    minmax(8rem, 1fr)
+    auto;
+  align-items: center;
+  gap: var(--cl-space-2);
+  width: 100%;
+}
+
+.cl-address-history-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-1);
+}
+
+.cl-address-input-shell {
+  display: grid;
+  grid-template-columns:
+    auto
+    minmax(0, 1fr);
+  align-items: center;
+  min-width: 0;
+  min-height: var(--cl-control-md);
+  overflow: hidden;
+  border: 1px solid var(--cl-input-border);
+  border-radius: var(--cl-radius-pill);
+  background: var(--cl-input-bg);
+  box-shadow: var(--cl-shadow-inset);
+}
+
+.cl-address-input-shell:focus-within {
+  border-color: var(--cl-input-focus-border);
+  box-shadow:
+    var(--cl-shadow-inset),
+    var(--cl-focus-ring);
+}
+
+.cl-address-scheme {
+  display: inline-flex;
+  align-self: stretch;
+  align-items: center;
+  border-right: 1px solid var(--cl-border);
+  background: var(--cl-card-muted);
+  color: var(--cl-accent);
+  padding-inline: var(--cl-space-3);
+  font-family: var(--cl-font-mono);
+  font-size: var(--cl-font-size-0);
+  font-weight: var(--cl-weight-bold);
+}
+
+.cl-address-input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--cl-text);
+  padding-inline: var(--cl-space-3);
+  font: inherit;
+}
+
+.cl-address-input::placeholder {
+  color: var(--cl-input-placeholder);
+}
+
+.cl-drawer-backdrop {
+  position: fixed;
+  z-index: var(--cl-z-drawer);
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  background: var(--cl-overlay);
+}
+
+.cl-drawer {
+  width:
+    min(
+      100%,
+      var(--cl-drawer-width)
+    );
+  height: 100%;
+  overflow: auto;
+  border-left: 1px solid var(--cl-border);
+  background: var(--cl-surface-raised);
+  color: var(--cl-text);
+  padding: var(--cl-space-5);
+  box-shadow: var(--cl-shadow-lg);
+}
+
+.cl-toast-region {
+  position: fixed;
+  z-index: var(--cl-z-toast);
+  right: var(--cl-space-4);
+  bottom: var(--cl-space-4);
+  display: grid;
+  width:
+    min(
+      24rem,
+      calc(100vw - 2rem)
+    );
+  gap: var(--cl-space-2);
+  pointer-events: none;
+}
+
+.cl-toast {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto;
+  align-items: start;
+  gap: var(--cl-space-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-surface-raised);
+  color: var(--cl-text);
+  padding: var(--cl-space-4);
+  box-shadow: var(--cl-shadow-md);
+  pointer-events: auto;
+}
+
+.cl-toast.is-success {
+  border-color: var(--cl-success);
+}
+
+.cl-toast.is-warning {
+  border-color: var(--cl-warning);
+}
+
+.cl-toast.is-danger {
+  border-color: var(--cl-danger);
+}
+
+@media (max-width: 980px) {
+  .cl-app-shell-header {
+    grid-template-columns:
+      auto
+      minmax(0, 1fr);
+  }
+
+  .cl-app-shell-utility {
+    grid-column: 1 / -1;
+  }
+
+  .cl-app-shell-body {
+    grid-template-columns:
+      var(--cl-shell-navigation-compact-width)
+      minmax(0, 1fr);
+  }
+
+  .cl-primary-navigation-label,
+  .cl-primary-navigation-badge {
+    display: none;
+  }
+
+  .cl-primary-navigation-item {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+}
+
+@media (max-width: 720px) {
+  .cl-app-shell-header {
+    position: static;
+    grid-template-columns: 1fr;
+    padding: var(--cl-space-3);
+  }
+
+  .cl-app-shell-body {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-app-shell-navigation {
+    position: static;
+    height: auto;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--cl-border);
+    padding: var(--cl-space-2);
+  }
+
+  .cl-primary-navigation-list {
+    display: flex;
+    min-width: max-content;
+  }
+
+  .cl-primary-navigation-label {
+    display: inline;
+  }
+
+  .cl-primary-navigation-item {
+    grid-template-columns:
+      auto
+      auto;
+    width: auto;
+  }
+
+  .cl-app-shell-content {
+    padding: var(--cl-space-4);
+  }
+
+  .cl-crab-address-field {
+    grid-template-columns:
+      auto
+      minmax(0, 1fr);
+  }
+
+  .cl-crab-address-field >
+  .cl-button-primary {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .cl-utility-bar {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .cl-drawer {
+    width: 100%;
+    border-left: 0;
+  }
+
+  .cl-toast-region {
+    right: var(--cl-space-3);
+    bottom: var(--cl-space-3);
+    left: var(--cl-space-3);
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-skip-link,
+  .cl-primary-navigation-item,
+  .cl-address-input-shell {
+    transition: none;
+  }
+
+  .cl-primary-navigation-item:active:not(:disabled) {
+    transform: none;
   }
 }

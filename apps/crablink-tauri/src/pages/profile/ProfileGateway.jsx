@@ -9,7 +9,7 @@
  * RO:TEST — manual crab://profile route smoke; gateway profile claim/read smoke; passport drawer profile-cache smoke.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
@@ -29,6 +29,10 @@ import {
   getUsernameTruth,
   labelFromSnake,
 } from './profileDraftModel.js';
+import {
+  resolveOwnProfileHandle,
+  synchronizeOwnProfileHandle,
+} from './ownProfileIdentity.js';
 
 const EMPTY_PROFILE_STATE = Object.freeze({
   status: 'idle',
@@ -39,6 +43,8 @@ const EMPTY_PROFILE_STATE = Object.freeze({
   error: null,
 });
 
+// FINAL_BETA_PHASE4A1_OWN_PROFILE_AUTO_SEED_V1
+
 export default function ProfileGateway({ app, route, draftState }) {
   const { draft, stats, completeness } = draftState;
   const settings = app?.settings || {};
@@ -46,19 +52,15 @@ export default function ProfileGateway({ app, route, draftState }) {
   const usernameTruth = getUsernameTruth(draft, app);
   const rocTruth = getRocTruth(app);
 
-  const initialHandle = normalizeHandle(
-    usernameTruth.display ||
-      settings.handle ||
-      settings.username ||
-      settings.requestedHandle ||
-      settings.requestedUsername ||
-      draft.handle ||
-      draft.username ||
-      '',
-  );
+  const ownProfileHandle = resolveOwnProfileHandle({
+    usernameTruth,
+    settings,
+    draft,
+  });
 
+  const requestedHandleEditedRef = useRef(false);
   const [profileState, setProfileState] = useState(EMPTY_PROFILE_STATE);
-  const [requestedHandle, setRequestedHandle] = useState(initialHandle);
+  const [requestedHandle, setRequestedHandle] = useState(ownProfileHandle);
   const [displayName, setDisplayName] = useState(
     stringValue(draft.displayName, draft.display_name, settings.displayName, ''),
   );
@@ -66,6 +68,16 @@ export default function ProfileGateway({ app, route, draftState }) {
   const [avatarImage, setAvatarImage] = useState(
     stringValue(draft.avatarImage, draft.avatar_image, draft.avatarUrl, settings.avatarImage, ''),
   );
+
+  useEffect(() => {
+    setRequestedHandle((currentHandle) =>
+      synchronizeOwnProfileHandle({
+        currentHandle,
+        candidateHandle: ownProfileHandle,
+        manuallyEdited: requestedHandleEditedRef.current,
+      }),
+    );
+  }, [ownProfileHandle]);
 
   const identityClient = useMemo(() => {
     if (app?.identityClient?.ready || app?.identityClient?.gateway) {
@@ -112,6 +124,11 @@ export default function ProfileGateway({ app, route, draftState }) {
     ? 'svc-gateway public profile route'
     : usernameTruth.source || 'local draft/display hint';
   const busy = profileState.status === 'loading';
+
+  function handleRequestedHandleChange(event) {
+    requestedHandleEditedRef.current = true;
+    setRequestedHandle(normalizeHandle(event.target.value));
+  }
 
   async function readProfile() {
     if (busy) {
@@ -277,7 +294,7 @@ export default function ProfileGateway({ app, route, draftState }) {
           <span>@username</span>
           <TextInput
             value={requestedHandle}
-            onChange={(event) => setRequestedHandle(normalizeHandle(event.target.value))}
+            onChange={handleRequestedHandleChange}
             placeholder="@username"
             maxLength={33}
           />

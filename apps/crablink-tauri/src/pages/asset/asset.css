@@ -6,6 +6,13 @@
  * RO:TEST — visual/manual checks in light/dark mode with gateway online/offline.
  */
 
+/*
+ * FINAL_BETA_PHASE2D3_ASSET_THEME_ADOPTION_V2
+ *
+ * Asset surfaces now consume shared semantic tokens. Light and dark
+ * values remain owned by shared/theme, including media-canvas colors.
+ */
+
 .asset-page {
   display: grid;
   gap: 1rem;
@@ -14,19 +21,8 @@
   min-width: 0;
   margin-inline: auto;
 
-  --asset-panel-bg: var(--cl-card, #ffffff);
-  --asset-soft-bg: color-mix(in srgb, var(--cl-card, #ffffff) 74%, var(--cl-bg, #f5f4f1) 26%);
-  --asset-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
-  --asset-ok-border: color-mix(in srgb, var(--cl-success, #12805c) 42%, var(--asset-border-soft));
-  --asset-warn-border: color-mix(in srgb, var(--cl-warning, #a15c00) 42%, var(--asset-border-soft));
-  --asset-danger-border: color-mix(in srgb, var(--cl-danger, #b42318) 44%, var(--asset-border-soft));
 }
 
-[data-theme='dark'] .asset-page {
-  --asset-panel-bg: #0b0b0b;
-  --asset-soft-bg: #050505;
-  --asset-border-soft: #242424;
-}
 
 .asset-page *,
 .asset-page *::before,
@@ -62,10 +58,10 @@
   align-items: stretch;
   min-width: 0;
   padding: 1rem;
-  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border: 1px solid var(--cl-border);
   border-radius: 24px;
-  background: var(--asset-panel-bg);
-  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.05));
+  background: var(--cl-card);
+  box-shadow: var(--cl-shadow-soft);
 }
 
 .asset-route-main,
@@ -76,9 +72,9 @@
 .asset-resolved-timing div {
   min-width: 0;
   padding: 0.72rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--asset-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .asset-route-main span,
@@ -92,7 +88,7 @@
 .asset-attempt-list span {
   display: block;
   margin-bottom: 0.28rem;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.06em;
@@ -108,7 +104,7 @@
 .asset-preview-source-strip strong {
   display: block;
   margin: 0;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-weight: 850;
   overflow-wrap: anywhere;
 }
@@ -156,7 +152,7 @@
 .asset-problem-help span,
 .asset-preview-empty span {
   margin: 0;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.5;
 }
 
@@ -192,12 +188,12 @@
   place-items: center;
   overflow: hidden;
   min-height: 360px;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 24px;
   background:
-    linear-gradient(45deg, color-mix(in srgb, var(--cl-text, #111111) 4%, transparent) 25%, transparent 25%),
-    linear-gradient(-45deg, color-mix(in srgb, var(--cl-text, #111111) 4%, transparent) 25%, transparent 25%),
-    var(--asset-soft-bg);
+    linear-gradient(45deg, color-mix(in srgb, var(--cl-text) 4%, transparent) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in srgb, var(--cl-text) 4%, transparent) 25%, transparent 25%),
+    var(--cl-card-muted);
   background-size: 18px 18px;
 }
 
@@ -216,14 +212,14 @@
   min-height: 180px;
   place-items: center;
   text-align: center;
-  border: 1px dashed var(--asset-warn-border);
+  border: 1px dashed color-mix(in srgb, var(--cl-warning) 42%, var(--cl-border));
   border-radius: 22px;
-  background: var(--asset-soft-bg);
+  background: var(--cl-card-muted);
   padding: 1.2rem;
 }
 
 .asset-preview-empty strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
 }
 
 .asset-preview-source-strip {
@@ -237,9 +233,9 @@
 .asset-preview-source-strip div {
   min-width: 0;
   padding: 0.7rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--asset-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .asset-preview-fallbacks {
@@ -247,9 +243,9 @@
   gap: 0.55rem;
   margin-top: 0.75rem;
   padding: 0.8rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--asset-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .asset-preview-fallbacks div {
@@ -262,7 +258,7 @@
 .asset-preview-fallbacks code {
   display: block;
   overflow-wrap: anywhere;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
 }
 
 .asset-detail-grid {
@@ -290,17 +286,17 @@
   align-items: center;
   min-width: 0;
   padding: 0.72rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--asset-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .asset-attempt-list > div.is-ok {
-  border-color: var(--asset-ok-border);
+  border-color: color-mix(in srgb, var(--cl-success) 42%, var(--cl-border));
 }
 
 .asset-attempt-list > div.is-error {
-  border-color: var(--asset-danger-border);
+  border-color: color-mix(in srgb, var(--cl-danger) 44%, var(--cl-border));
 }
 
 .asset-attempt-list strong,
@@ -310,11 +306,11 @@
 }
 
 .asset-attempt-list strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
 }
 
 .asset-attempt-list small {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
 }
 
 .asset-resolved-timing {
@@ -330,11 +326,11 @@
 }
 
 .asset-problem-card {
-  border-color: var(--asset-danger-border);
+  border-color: color-mix(in srgb, var(--cl-danger) 44%, var(--cl-border));
 }
 
 .asset-problem-warning {
-  border-color: var(--asset-warn-border);
+  border-color: color-mix(in srgb, var(--cl-warning) 42%, var(--cl-border));
 }
 
 .asset-problem-summary {
@@ -347,9 +343,9 @@
 .asset-problem-message {
   margin-top: 0.75rem;
   padding: 0.8rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--asset-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .asset-problem-facts {
@@ -364,13 +360,13 @@
   gap: 0.25rem;
   margin-top: 0.9rem;
   padding: 0.85rem;
-  border: 1px solid var(--asset-warn-border);
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 42%, var(--cl-border));
   border-radius: 16px;
-  background: var(--asset-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .asset-problem-help strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
 }
 
 @media (max-width: 1100px) {
@@ -417,7 +413,7 @@
 }
 
 .asset-text-content-card {
-  border-color: rgba(18, 128, 92, 0.28);
+  border-color: color-mix(in srgb, var(--cl-success) 28%, var(--cl-border));
 }
 
 .asset-text-body {
@@ -425,13 +421,13 @@
   gap: 0.45rem;
   margin-top: 0.95rem;
   padding: 1rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: var(--asset-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .asset-text-body span {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -439,14 +435,14 @@
 }
 
 .asset-text-body strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 1.2rem;
   letter-spacing: -0.03em;
 }
 
 .asset-text-body p {
   margin: 0;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 1rem;
   line-height: 1.62;
   white-space: pre-wrap;
@@ -456,18 +452,18 @@
 .asset-preview-empty code {
   display: block;
   margin-top: 0.7rem;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.78rem;
   overflow-wrap: anywhere;
 }
 
 .asset-content-view-card {
-  border-color: color-mix(in srgb, var(--cl-warning, #a15c00) 32%, var(--asset-border-soft));
+  border-color: color-mix(in srgb, var(--cl-warning) 32%, var(--cl-border));
 }
 
 .asset-content-view-card.is-paid {
-  border-color: var(--asset-ok-border);
+  border-color: color-mix(in srgb, var(--cl-success) 42%, var(--cl-border));
 }
 
 .asset-content-view-status,
@@ -493,19 +489,19 @@
 }
 
 .asset-content-view-receipt .asset-fact {
-  border-color: var(--asset-ok-border);
+  border-color: color-mix(in srgb, var(--cl-success) 42%, var(--cl-border));
 }
 
 .asset-content-view-json {
   padding: 0.85rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--asset-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .asset-content-view-json summary {
   cursor: pointer;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-weight: 900;
 }
 
@@ -528,7 +524,7 @@
 .asset-fact span {
   display: block;
   margin-bottom: 0.28rem;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.06em;
@@ -539,7 +535,7 @@
   display: block;
   min-width: 0;
   max-width: 100%;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-weight: 850;
   line-height: 1.28;
   overflow-wrap: anywhere;
@@ -585,14 +581,14 @@
   overflow: hidden;
   border: 1px solid var(--cl-border);
   border-radius: 22px;
-  background: #050505;
+  background: var(--cl-media-canvas);
 }
 
 .asset-video-preview-shell video {
   display: block;
   width: 100%;
   max-height: 68vh;
-  background: #050505;
+  background: var(--cl-media-canvas);
 }
 /* RO:WHAT — Stream-lite paid viewer styles for .stream asset pages.
  * RO:WHY — Render backend-returned latest stream segment after receipt without fake local playback.
@@ -600,7 +596,7 @@
  */
 
 .asset-stream-viewer-card {
-  border-color: color-mix(in srgb, var(--cl-success, #15b86a) 35%, var(--asset-border-soft));
+  border-color: color-mix(in srgb, var(--cl-success) 35%, var(--cl-border));
 }
 
 .asset-stream-lite-status {
@@ -612,18 +608,18 @@
   gap: 0.35rem;
   margin-top: 0.95rem;
   padding: 0.95rem;
-  border: 1px dashed color-mix(in srgb, var(--cl-warning, #a15c00) 55%, var(--asset-border-soft));
+  border: 1px dashed color-mix(in srgb, var(--cl-warning) 55%, var(--cl-border));
   border-radius: 18px;
-  background: var(--asset-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .asset-stream-lite-warning strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-weight: 950;
 }
 
 .asset-stream-lite-warning span {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.5;
 }
 
@@ -638,10 +634,10 @@
   gap: 0.85rem;
   margin-top: 1rem;
   padding: 1rem;
-  border: 1px solid var(--asset-ok-border);
+  border: 1px solid color-mix(in srgb, var(--cl-success) 42%, var(--cl-border));
   border-radius: 22px;
-  background: #050505;
-  color: #ffffff;
+  background: var(--cl-media-canvas);
+  color: var(--cl-media-text);
   overflow: hidden;
 }
 
@@ -659,7 +655,7 @@
 
 .asset-stream-lite-player-head span,
 .asset-stream-lite-player-head small {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--cl-media-muted);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -667,7 +663,7 @@
 }
 
 .asset-stream-lite-player-head strong {
-  color: #ffffff;
+  color: var(--cl-media-text);
   font-weight: 950;
 }
 
@@ -677,16 +673,16 @@
   max-height: 68vh;
   object-fit: contain;
   border-radius: 16px;
-  background: #000000;
+  background: var(--cl-media-canvas);
 }
 
 .asset-stream-lite-text {
   margin: 0;
   padding: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--cl-media-border);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #ffffff;
+  background: var(--cl-media-soft);
+  color: var(--cl-media-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.9rem;
   line-height: 1.55;
@@ -704,11 +700,11 @@
   gap: 0.85rem;
   margin-top: 1rem;
   padding: 1rem;
-  border: 1px solid color-mix(in srgb, var(--cl-success, #15b86a) 30%, var(--asset-border-soft));
+  border: 1px solid color-mix(in srgb, var(--cl-success) 30%, var(--cl-border));
   border-radius: 22px;
   background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--cl-success, #15b86a) 10%, transparent), transparent 40%),
-    var(--asset-soft-bg);
+    radial-gradient(circle at top right, color-mix(in srgb, var(--cl-success) 10%, transparent), transparent 40%),
+    var(--cl-card-muted);
 }
 
 .asset-stream-poll-card > div:first-child {
@@ -718,7 +714,7 @@
 
 .asset-stream-poll-card > div:first-child > span,
 .asset-stream-poll-select span {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -726,13 +722,13 @@
 }
 
 .asset-stream-poll-card > div:first-child > strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 1rem;
   font-weight: 980;
 }
 
 .asset-stream-poll-card > div:first-child > small {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.5;
 }
 
@@ -743,10 +739,10 @@
 
 .asset-stream-poll-select select {
   width: 100%;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 14px;
-  background: var(--asset-card-bg);
-  color: var(--cl-text, #111111);
+  background: var(--cl-input-bg);
+  color: var(--cl-text);
   font: inherit;
   font-weight: 850;
   padding: 0.62rem 0.75rem;
@@ -813,7 +809,7 @@
 
 .asset-rendition-head {
   padding: 0 0.25rem;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.68rem;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -822,14 +818,14 @@
 
 .asset-rendition-row {
   padding: 0.82rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: var(--asset-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .asset-rendition-row.is-current {
-  border-color: var(--asset-ok-border);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cl-success, #12805c) 14%, transparent);
+  border-color: color-mix(in srgb, var(--cl-success) 42%, var(--cl-border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cl-success) 14%, transparent);
 }
 
 .asset-rendition-role,
@@ -840,7 +836,7 @@
 }
 
 .asset-rendition-role small {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.78rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -855,13 +851,13 @@
 }
 
 .asset-rendition-link-stack strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 0.92rem;
   font-weight: 850;
 }
 
 .asset-rendition-link-stack code {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   font-size: 0.78rem;
 }
@@ -876,10 +872,10 @@
 .asset-rendition-meta span {
   min-width: 0;
   padding: 0.34rem 0.5rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 999px;
-  background: var(--asset-panel-bg);
-  color: var(--cl-muted, #626262);
+  background: var(--cl-card);
+  color: var(--cl-muted);
   font-size: 0.76rem;
   font-weight: 800;
   overflow-wrap: anywhere;
@@ -966,7 +962,7 @@
 .asset-image-manifest-header span,
 .asset-image-manifest-fact span {
   display: block;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.06em;
@@ -974,7 +970,7 @@
 }
 
 .asset-image-manifest-header strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 1rem;
   font-weight: 950;
   overflow-wrap: anywhere;
@@ -999,9 +995,9 @@
   gap: 0.3rem;
   min-width: 0;
   padding: 0.72rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--asset-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .asset-image-manifest-fact.is-wide {
@@ -1009,7 +1005,7 @@
 }
 
 .asset-image-manifest-fact strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 0.95rem;
   font-weight: 850;
   line-height: 1.45;
@@ -1018,7 +1014,7 @@
 
 .asset-image-manifest-note {
   margin: 0;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.86rem;
   line-height: 1.5;
 }
@@ -1136,8 +1132,8 @@
 
 .asset-image-locked-preview {
   background:
-    radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--cl-warning, #a65f00) 7%, transparent), transparent 44%),
-    var(--asset-soft-bg);
+    radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--cl-warning) 7%, transparent), transparent 44%),
+    var(--cl-card-muted);
 }
 
 .asset-image-status-grid {
@@ -1151,9 +1147,9 @@
   gap: 0.2rem;
   min-width: 0;
   padding: 0.72rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--asset-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .asset-image-status-grid span,
@@ -1162,7 +1158,7 @@
 .asset-image-manifest-document-field span,
 .asset-image-technical-details > summary span {
   display: block;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.065em;
@@ -1170,7 +1166,7 @@
 }
 
 .asset-image-status-grid strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 1.18rem;
   font-weight: 980;
   overflow-wrap: anywhere;
@@ -1185,7 +1181,7 @@
 
 .asset-image-status-note {
   margin: 0.8rem 0 0;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.88rem;
   line-height: 1.45;
 }
@@ -1195,12 +1191,12 @@
   gap: 1rem;
   min-width: 0;
   padding: 1rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 28px;
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--cl-success, #12805c) 7%, transparent), transparent 45%),
-    var(--asset-panel-bg);
-  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.045));
+    radial-gradient(circle at top left, color-mix(in srgb, var(--cl-success) 7%, transparent), transparent 45%),
+    var(--cl-card);
+  box-shadow: var(--cl-shadow-soft);
 }
 
 .asset-image-manifest-document-header {
@@ -1219,7 +1215,7 @@
 
 .asset-image-manifest-title-stack h2 {
   margin: 0;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: clamp(1.6rem, 3vw, 3rem);
   font-weight: 980;
   letter-spacing: -0.055em;
@@ -1230,7 +1226,7 @@
 .asset-image-manifest-title-stack p {
   max-width: 92ch;
   margin: 0;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.98rem;
   line-height: 1.55;
 }
@@ -1246,13 +1242,13 @@
   gap: 0.3rem;
   min-width: 0;
   padding: 0.82rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: var(--asset-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .asset-image-manifest-callout strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 1rem;
   font-weight: 930;
   overflow-wrap: anywhere;
@@ -1270,9 +1266,9 @@
   gap: 0.32rem;
   min-width: 0;
   padding: 0.78rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--asset-soft-bg) 82%, transparent);
+  background: color-mix(in srgb, var(--cl-card-muted) 82%, transparent);
 }
 
 .asset-image-manifest-document-field.is-wide {
@@ -1280,7 +1276,7 @@
 }
 
 .asset-image-manifest-document-field strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 0.98rem;
   font-weight: 850;
   line-height: 1.48;
@@ -1296,7 +1292,7 @@
 
 .asset-image-manifest-note {
   margin: 0;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.86rem;
   line-height: 1.5;
 }
@@ -1313,9 +1309,9 @@
 
 .asset-image-technical-details {
   padding: 0.9rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 24px;
-  background: color-mix(in srgb, var(--asset-panel-bg) 88%, transparent);
+  background: color-mix(in srgb, var(--cl-card) 88%, transparent);
 }
 
 .asset-image-technical-details > summary {
@@ -1330,7 +1326,7 @@
 }
 
 .asset-image-technical-details > summary strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 1rem;
   font-weight: 950;
 }
@@ -1392,8 +1388,8 @@
 .asset-image-manifest-certificate {
   border-radius: 24px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--asset-panel-bg) 96%, white), var(--asset-panel-bg)),
-    var(--asset-panel-bg);
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-card) 96%, var(--cl-surface-raised)), var(--cl-card)),
+    var(--cl-card);
 }
 
 .asset-image-manifest-identity-strip {
@@ -1401,9 +1397,9 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
   overflow: hidden;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--asset-soft-bg) 74%, transparent);
+  background: color-mix(in srgb, var(--cl-card-muted) 74%, transparent);
 }
 
 .asset-image-manifest-identity-item {
@@ -1411,7 +1407,7 @@
   gap: 0.24rem;
   min-width: 0;
   padding: 0.72rem 0.85rem;
-  border-right: 1px solid var(--asset-border-soft);
+  border-right: 1px solid var(--cl-border);
 }
 
 .asset-image-manifest-identity-item:last-child {
@@ -1419,7 +1415,7 @@
 }
 
 .asset-image-manifest-identity-item span {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.68rem;
   font-weight: 950;
   letter-spacing: 0.07em;
@@ -1427,7 +1423,7 @@
 }
 
 .asset-image-manifest-identity-item strong {
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 0.92rem;
   font-weight: 900;
   overflow-wrap: anywhere;
@@ -1441,7 +1437,7 @@
 .asset-image-manifest-readable-grid .asset-image-manifest-document-field {
   padding: 0.58rem 0;
   border: 0;
-  border-top: 1px solid var(--asset-border-soft);
+  border-top: 1px solid var(--cl-border);
   border-radius: 0;
   background: transparent;
 }
@@ -1463,9 +1459,9 @@
 .asset-content-view-proof-details {
   margin-top: 0.75rem;
   padding: 0.72rem;
-  border: 1px solid var(--asset-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--asset-soft-bg) 78%, transparent);
+  background: color-mix(in srgb, var(--cl-card-muted) 78%, transparent);
 }
 
 .asset-content-view-proof-details > summary {
@@ -1475,7 +1471,7 @@
   gap: 0.75rem;
   cursor: pointer;
   list-style: none;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-weight: 950;
 }
 
@@ -1485,7 +1481,7 @@
 
 .asset-content-view-proof-details > summary::after {
   content: 'Details';
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.06em;
@@ -1501,7 +1497,7 @@
 
 .asset-content-view-proof-grid .asset-fact {
   padding: 0.56rem;
-  background: var(--asset-panel-bg);
+  background: var(--cl-card);
 }
 
 .asset-content-view-json {
@@ -1509,7 +1505,7 @@
 }
 
 .asset-content-view-json > summary {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.86rem;
 }
 
@@ -1541,7 +1537,7 @@
   }
 
   .asset-image-manifest-identity-item:nth-child(n + 3) {
-    border-top: 1px solid var(--asset-border-soft);
+    border-top: 1px solid var(--cl-border);
   }
 }
 
@@ -1554,7 +1550,7 @@
 
   .asset-image-manifest-identity-item {
     border-right: 0;
-    border-top: 1px solid var(--asset-border-soft);
+    border-top: 1px solid var(--cl-border);
   }
 
   .asset-image-manifest-identity-item:first-child {
@@ -1567,11 +1563,11 @@
 /* --- Video manifest/rendition page polish --- */
 
 .asset-video-manifest-document {
-  border-color: color-mix(in srgb, var(--cl-success, #2f6b3f) 28%, var(--cl-border, #d8d2c7));
+  border-color: color-mix(in srgb, var(--cl-success) 28%, var(--cl-border));
 }
 
 .asset-video-rendition-card .asset-rendition-row.is-original {
-  border-color: color-mix(in srgb, var(--cl-success, #2f6b3f) 52%, var(--cl-border, #d8d2c7));
+  border-color: color-mix(in srgb, var(--cl-success) 52%, var(--cl-border));
 }
 
 /* CrabLink video/image rendition overflow cleanup — begin */

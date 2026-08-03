@@ -6,6 +6,13 @@
  * RO:TEST — visual/manual checks in CrabLink full-tab browser in light and dark mode.
  */
 
+/*
+ * FINAL_BETA_PHASE2D17_ALGO_THEME_ADOPTION_V1
+ *
+ * Algorithm workspace panels consume shared light/dark semantic surfaces.
+ * Draft, execution, ranking, publication, B3, and ROC authority are unchanged.
+ */
+
 .algo-page {
   display: grid;
   gap: 1rem;
@@ -37,11 +44,7 @@
   padding: 1rem;
   border: 1px solid var(--cl-border);
   border-radius: 22px;
-  background: var(--cl-surface);
-}
-
-[data-theme='dark'] .algo-form-section {
-  background: #050505;
+  background: var(--cl-algo-panel);
 }
 
 .algo-form-section-head {
@@ -99,11 +102,7 @@
   padding: 0.9rem;
   border: 1px solid var(--cl-border);
   border-radius: 20px;
-  background: var(--cl-surface);
-}
-
-[data-theme='dark'] .algo-preview-hero {
-  background: #050505;
+  background: var(--cl-algo-panel);
 }
 
 .algo-preview-hero h3,
@@ -186,15 +185,7 @@
   padding: 0.85rem;
   border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: var(--cl-surface);
-}
-
-[data-theme='dark'] .algo-signal-column,
-[data-theme='dark'] .algo-goal-card,
-[data-theme='dark'] .algo-linked-list,
-[data-theme='dark'] .algo-safety-list,
-[data-theme='dark'] .algo-facet-rule {
-  background: #050505;
+  background: var(--cl-algo-panel);
 }
 
 .algo-signal-column h3,

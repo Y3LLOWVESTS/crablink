@@ -10,6 +10,7 @@
  */
 
 import BrowserTabs from './BrowserTabs.jsx';
+import ShellPrimaryNavigation from './ShellPrimaryNavigation.jsx';
 import HeaderAdSlot from './HeaderAdSlot.jsx';
 import ModalHost from './ModalHost.jsx';
 import ToastHost from './ToastHost.jsx';
@@ -22,6 +23,7 @@ export default function Shell({ children, route, navigation, tabs = [], activeTa
   return (
     <div className="cl-shell" data-route-kind={routeKind}>
       <TopBar route={route} navigation={navigation} />
+      <ShellPrimaryNavigation route={route} navigation={navigation} />
       <BrowserTabs
         tabs={tabs}
         activeTabId={activeTabId}

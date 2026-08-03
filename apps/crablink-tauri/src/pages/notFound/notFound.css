@@ -6,6 +6,13 @@
  * RO:TEST — visual/manual malformed-route smoke in light and dark mode.
  */
 
+/*
+ * FINAL_BETA_PHASE2D8_NOT_FOUND_THEME_ADOPTION_V1
+ *
+ * Unsupported-route presentation consumes the shared semantic theme.
+ * Route parsing, navigation help, and failure truth remain unchanged.
+ */
+
 .not-found-page {
   display: grid;
   gap: 1rem;
@@ -13,18 +20,6 @@
   max-width: 100%;
   min-width: 0;
   margin-inline: auto;
-
-  --nf-panel-bg: var(--cl-card, #ffffff);
-  --nf-soft-bg: color-mix(in srgb, var(--cl-card, #ffffff) 76%, var(--cl-bg, #f5f4f1) 24%);
-  --nf-border-soft: color-mix(in srgb, var(--cl-border, #d9d6cf) 72%, transparent);
-  --nf-warning-border: color-mix(in srgb, var(--cl-warning, #a15c00) 40%, var(--nf-border-soft));
-  --nf-success-border: color-mix(in srgb, var(--cl-success, #12805c) 38%, var(--nf-border-soft));
-}
-
-[data-theme='dark'] .not-found-page {
-  --nf-panel-bg: #0b0b0b;
-  --nf-soft-bg: #050505;
-  --nf-border-soft: #242424;
 }
 
 .not-found-page *,
@@ -63,16 +58,16 @@
   min-width: 0;
   margin-bottom: 0.7rem;
   padding: 0.85rem;
-  border: 1px solid var(--nf-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--nf-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .not-found-input-box span,
 .not-found-route-card span,
 .not-found-shapes span {
   display: block;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.06em;
@@ -83,7 +78,7 @@
 .not-found-route-card strong {
   display: block;
   margin-top: 0.25rem;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-weight: 850;
   overflow-wrap: anywhere;
 }
@@ -91,10 +86,10 @@
 .not-found-error {
   margin: 0.85rem 0 0;
   padding: 0.85rem;
-  border: 1px solid var(--nf-warning-border);
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 40%, var(--cl-border));
   border-radius: 16px;
-  background: var(--nf-soft-bg);
-  color: var(--cl-muted, #626262);
+  background: var(--cl-card-muted);
+  color: var(--cl-muted);
   line-height: 1.5;
 }
 
@@ -111,15 +106,15 @@
   gap: 0.3rem;
   min-width: 0;
   padding: 0.8rem;
-  border: 1px solid var(--nf-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--nf-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .not-found-shapes code,
 .not-found-example-list code {
   display: block;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   font-size: 0.82rem;
   overflow-wrap: anywhere;
@@ -136,22 +131,22 @@
   gap: 0.75rem;
   min-width: 0;
   padding: 0.9rem;
-  border: 1px solid var(--nf-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: var(--nf-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .not-found-route-card.is-success {
-  border-color: var(--nf-success-border);
+  border-color: color-mix(in srgb, var(--cl-success) 38%, var(--cl-border));
 }
 
 .not-found-route-card.is-warning {
-  border-color: var(--nf-warning-border);
+  border-color: color-mix(in srgb, var(--cl-warning) 40%, var(--cl-border));
 }
 
 .not-found-route-card p {
   margin: 0;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   line-height: 1.45;
 }
 
@@ -167,9 +162,9 @@
   align-items: center;
   min-width: 0;
   padding: 0.75rem;
-  border: 1px solid var(--nf-border-soft);
+  border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--nf-soft-bg);
+  background: var(--cl-card-muted);
 }
 
 .not-found-example-list > div > div {

@@ -1,12 +1,14 @@
 /**
- * RO:WHAT — Interactive passport chip for the trusted CrabLink React shell.
- * RO:WHY — Opens the passport drawer while displaying identity state honestly in extension and HTTP test contexts.
+ * RO:WHAT — Interactive consumer Passport chip for the trusted CrabLink React shell.
+ * RO:WHY — FINAL_BETA Phase 3; opens the Passport drawer without exposing raw engineering identifiers in normal shell chrome.
  * RO:INTERACTS — appContext settings/storage, TopBar, PassportDrawer, future identity/profile routes.
- * RO:INVARIANTS — only backend-confirmed usernames may be labeled confirmed; HTTP React test mode must not fake extension storage.
+ * RO:INVARIANTS — only backend-confirmed usernames may be labeled confirmed; raw Passport subjects stay out of normal shell display.
  * RO:METRICS — none.
- * RO:CONFIG — passportSubject, handle, requestedHandle, usernameStatus, storage backend.
- * RO:SECURITY — no private keys, seed phrases, private alt mappings, or spend authority are stored/rendered here.
- * RO:TEST — manual identity chip/drawer smoke in extension and Vite/HTTP contexts.
+ * RO:CONFIG — passportSubject presence, handle, requestedHandle, usernameStatus, storage backend.
+ * RO:SECURITY — no private keys, seed phrases, private alt mappings, raw Passport subjects, or spend authority are rendered here.
+ * RO:TEST — finalBetaPhase3ShellAcceptance.source.test.mjs; manual identity chip/drawer smoke.
+ *
+ * FINAL_BETA_PHASE3A4_CONCISE_PASSPORT_STATUS_V1
  */
 
 import { useEffect, useId, useRef, useState } from 'react';
@@ -23,16 +25,17 @@ export default function PassportChip({ navigation }) {
   const confirmed = Boolean(settings?.handle && status === 'confirmed');
   const requested = String(settings?.requestedHandle || '').trim();
   const passportSubject = String(settings?.passportSubject || '').trim();
+  const hasPassport = Boolean(passportSubject);
   const httpFallback = Boolean(storage?.isDevFallback);
 
   const display = confirmed
     ? settings.handle
     : requested
       ? `${requested} draft`
-      : passportSubject
-        ? passportSubject
+      : hasPassport
+        ? 'Passport ready'
         : httpFallback
-          ? 'HTTP test mode'
+          ? 'Preview mode'
           : 'No passport';
 
   const title = passportTitle({
@@ -40,7 +43,7 @@ export default function PassportChip({ navigation }) {
     storage,
     confirmed,
     requested,
-    passportSubject,
+    hasPassport,
     httpFallback,
   });
 
@@ -98,26 +101,33 @@ export default function PassportChip({ navigation }) {
   );
 }
 
-function passportTitle({ settings, storage, confirmed, requested, passportSubject, httpFallback }) {
+function passportTitle({
+  settings,
+  storage,
+  confirmed,
+  requested,
+  hasPassport,
+  httpFallback,
+}) {
   if (confirmed) {
-    return `Backend-confirmed passport handle: ${settings.handle}`;
+    return `Backend-confirmed Passport handle: ${settings.handle}`;
   }
 
   if (requested) {
     return `${requested} is a local draft until RustyOnions confirms it through the gateway.`;
   }
 
-  if (passportSubject) {
-    return `Configured passport label: ${passportSubject}`;
+  if (hasPassport) {
+    return 'A local Passport is configured. Open the Passport panel for status and account details.';
   }
 
   if (httpFallback) {
     return [
-      'React lane is running outside the Chrome extension origin.',
-      'It cannot read chrome.storage.local from the loaded extension.',
+      'React lane is running outside the packaged CrabLink origin.',
+      'It cannot read the packaged application storage adapter.',
       `Current storage backend: ${storage?.backend || 'fallback'}.`,
     ].join(' ');
   }
 
-  return 'No passport label is loaded in this React session.';
+  return 'No Passport is configured in this CrabLink session.';
 }

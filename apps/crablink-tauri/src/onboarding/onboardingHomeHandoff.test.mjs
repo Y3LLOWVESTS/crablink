@@ -490,23 +490,71 @@ test(
       );
     }
 
-    const expectedPassportChipDisplay = [
-      '  const display = confirmed',
-      '    ? settings.handle',
-      '    : requested',
-      '      ? `${requested} draft`',
-      '      : passportSubject',
-      '        ? passportSubject',
-      '        : httpFallback',
-      "          ? 'HTTP test mode'",
-      "          : 'No passport';",
-    ].join('\n');
+    // FINAL_BETA_PHASE4_PASSPORT_CHIP_TEST_ALIGNMENT_V1
+    const passportChipDisplayStart =
+      passportChipSource.indexOf(
+        '  const display = confirmed',
+      );
+
+    const passportChipDisplayEnd =
+      passportChipSource.indexOf(
+        '  const title = passportTitle',
+        passportChipDisplayStart,
+      );
 
     assert.ok(
-      passportChipSource.includes(
-        expectedPassportChipDisplay,
-      ),
-      'Passport chip display must prefer the requested local draft over the configured subject label',
+      passportChipDisplayStart >= 0 &&
+        passportChipDisplayEnd >
+          passportChipDisplayStart,
+      'Passport chip display projection must remain present',
+    );
+
+    const passportChipDisplay =
+      passportChipSource.slice(
+        passportChipDisplayStart,
+        passportChipDisplayEnd,
+      );
+
+    const requestedDraftIndex =
+      passportChipDisplay.indexOf(
+        '? `${requested} draft`',
+      );
+
+    const passportReadyIndex =
+      passportChipDisplay.indexOf(
+        "? 'Passport ready'",
+      );
+
+    assert.ok(
+      requestedDraftIndex >= 0,
+      'Passport chip must render the requested username as a local draft',
+    );
+
+    assert.ok(
+      passportReadyIndex >
+        requestedDraftIndex,
+      'Passport chip must prefer the requested local draft over the concise Passport-ready fallback',
+    );
+
+    assert.match(
+      passportChipDisplay,
+      /\? settings\.handle/,
+    );
+
+    assert.match(
+      passportChipDisplay,
+      /\? 'Preview mode'/,
+    );
+
+    assert.match(
+      passportChipDisplay,
+      /: 'No passport';/,
+    );
+
+    assert.doesNotMatch(
+      passportChipDisplay,
+      /\?\s*passportSubject\s*:/,
+      'Passport chip normal display must not render the raw Passport subject',
     );
 
     assert.doesNotMatch(

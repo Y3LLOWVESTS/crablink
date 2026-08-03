@@ -6,17 +6,25 @@
  * RO:TEST — manual crab://make smoke in light/dark mode, camera/screen/PiP/audio-card modes.
  */
 
-.make-page {
-  --make-accent: #0f766e;
-  --make-accent-strong: #14b8a6;
-  --make-accent-soft: rgba(20, 184, 166, 0.12);
-  --make-danger: #ef4444;
-  --make-warning: #f59e0b;
-  --make-glow: rgba(20, 184, 166, 0.24);
-  --make-panel: rgba(255, 255, 255, 0.035);
-  --make-panel-strong: rgba(255, 255, 255, 0.065);
-}
+/*
+ * FINAL_BETA_PHASE2D7A_MAKE_SHARED_TOKEN_ADOPTION_V1
+ *
+ * The Make studio palette is owned by shared semantic studio tokens.
+ * Runtime timeline, cursor, duration, and audio geometry variables remain local.
+ */
 
+
+/*
+ * FINAL_BETA_PHASE2D23_MAKE_THEME_OWNERSHIP_V1
+ *
+ * Make consumes the shared studio pigment ramp. Original RGB and alpha
+ * values are preserved, while palette ownership no longer lives in this
+ * route stylesheet.
+ *
+ * Runtime timeline, cursor, duration, and audio geometry variables remain
+ * intentionally local. Capture, preview, export, CID, receipt, wallet,
+ * paid-access, backend, and ROC behavior are unchanged.
+ */
 .make-shell {
   display: grid;
   gap: 1rem;
@@ -33,8 +41,8 @@
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 12% 0%, rgba(20, 184, 166, 0.14), transparent 34%),
-    radial-gradient(circle at 100% 8%, rgba(99, 102, 241, 0.12), transparent 32%);
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 14%, transparent), transparent 34%),
+    radial-gradient(circle at 100% 8%, color-mix(in srgb, var(--cl-studio-indigo-500) 12%, transparent), transparent 32%);
   content: '';
 }
 
@@ -53,17 +61,10 @@
   border: 1px solid var(--cl-border);
   border-radius: 30px;
   background:
-    radial-gradient(circle at 9% 0%, rgba(20, 184, 166, 0.22), transparent 30%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025));
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+    var(--cl-make-command-deck-background);
+  box-shadow: 0 24px 80px color-mix(in srgb, var(--cl-studio-black) 22%, transparent);
 }
 
-[data-theme='dark'] .make-command-deck {
-  background:
-    radial-gradient(circle at 9% 0%, rgba(20, 184, 166, 0.20), transparent 30%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.018)),
-    #050505;
-}
 
 .make-command-main {
   display: flex;
@@ -78,20 +79,20 @@
   width: 3.4rem;
   height: 3.4rem;
   place-items: center;
-  border: 1px solid rgba(20, 184, 166, 0.38);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-accent-strong) 38%, transparent);
   border-radius: 22px;
   background:
-    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.75), transparent 18%),
-    linear-gradient(135deg, rgba(20, 184, 166, 0.88), rgba(15, 118, 110, 0.35));
-  box-shadow: 0 0 0 8px var(--make-glow);
+    radial-gradient(circle at 35% 25%, color-mix(in srgb, var(--cl-studio-white) 75%, transparent), transparent 18%),
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-studio-accent-strong) 88%, transparent), color-mix(in srgb, var(--cl-studio-accent) 35%, transparent));
+  box-shadow: 0 0 0 8px var(--cl-studio-glow);
 }
 
 .make-orb span {
   width: 1.1rem;
   height: 1.1rem;
   border-radius: 999px;
-  background: #06130f;
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.32);
+  background: var(--cl-studio-teal-ink-strong);
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--cl-studio-white) 32%, transparent);
 }
 
 .make-command-main h2,
@@ -137,12 +138,9 @@
   padding: 0.62rem 0.75rem;
   border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: rgba(0, 0, 0, 0.16);
+  background: var(--cl-make-stat-pill-background);
 }
 
-[data-theme='dark'] .make-stat-pill {
-  background: rgba(255, 255, 255, 0.035);
-}
 
 .make-stat-pill small {
   color: var(--cl-muted);
@@ -168,9 +166,9 @@
   align-items: center;
   gap: 0.45rem;
   padding: 0.45rem 0.65rem;
-  border: 1px solid rgba(239, 68, 68, 0.36);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-danger) 36%, transparent);
   border-radius: 999px;
-  background: rgba(239, 68, 68, 0.11);
+  background: color-mix(in srgb, var(--cl-studio-danger) 11%, transparent);
   color: var(--cl-text);
   font-size: 0.78rem;
   font-weight: 900;
@@ -180,7 +178,7 @@
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 999px;
-  background: var(--make-danger);
+  background: var(--cl-studio-danger);
 }
 
 .make-preview-card .cl-card-body {
@@ -195,10 +193,10 @@
   border: 1px solid var(--cl-border);
   border-radius: 30px;
   background:
-    radial-gradient(circle at 20% 20%, rgba(20, 184, 166, 0.18), transparent 34%),
-    radial-gradient(circle at 80% 30%, rgba(99, 102, 241, 0.16), transparent 38%),
-    #050508;
-  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.24);
+    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent), transparent 34%),
+    radial-gradient(circle at 80% 30%, color-mix(in srgb, var(--cl-studio-indigo-500) 16%, transparent), transparent 38%),
+    var(--cl-studio-near-black-cool);
+  box-shadow: 0 26px 80px color-mix(in srgb, var(--cl-studio-black) 24%, transparent);
 }
 
 .make-preview-canvas {
@@ -207,7 +205,7 @@
   max-height: min(68vh, 760px);
   aspect-ratio: 16 / 9;
   object-fit: contain;
-  background: #050508;
+  background: var(--cl-studio-near-black-cool);
 }
 
 .make-hidden-video {
@@ -230,10 +228,10 @@
 
 .make-preview-topbar span {
   padding: 0.45rem 0.62rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-white) 14%, transparent);
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
+  background: color-mix(in srgb, var(--cl-studio-black) 55%, transparent);
+  color: var(--cl-studio-white);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.05em;
@@ -248,10 +246,10 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.55rem 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-white) 18%, transparent);
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.68);
-  color: #fff;
+  background: color-mix(in srgb, var(--cl-studio-black) 68%, transparent);
+  color: var(--cl-studio-white);
   font-size: 0.82rem;
   font-weight: 900;
   letter-spacing: 0.03em;
@@ -262,8 +260,8 @@
   width: 0.62rem;
   height: 0.62rem;
   border-radius: 999px;
-  background: var(--make-danger);
-  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.78);
+  background: var(--cl-studio-danger);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--cl-studio-danger) 78%, transparent);
   animation: make-rec-pulse 1.15s infinite;
 }
 
@@ -275,14 +273,14 @@
   display: grid;
   gap: 0.42rem;
   padding: 0.85rem 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-white) 18%, transparent);
   border-radius: 24px;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.50)),
-    rgba(20, 184, 166, 0.10);
-  color: #fff;
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-studio-black) 72%, transparent), color-mix(in srgb, var(--cl-studio-black) 50%, transparent)),
+    color-mix(in srgb, var(--cl-studio-accent-strong) 10%, transparent);
+  color: var(--cl-studio-white);
   pointer-events: none;
-  box-shadow: 0 22px 64px rgba(0, 0, 0, 0.26);
+  box-shadow: 0 22px 64px color-mix(in srgb, var(--cl-studio-black) 26%, transparent);
   backdrop-filter: blur(10px);
 }
 
@@ -297,12 +295,12 @@
 .make-prompter-window {
   overflow: hidden;
   max-height: clamp(5rem, 20vw, 12rem);
-  mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 82%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, var(--cl-studio-black) 14%, var(--cl-studio-black) 82%, transparent);
 }
 
 .make-prompter-overlay pre {
   margin: 0;
-  color: #fff;
+  color: var(--cl-studio-white);
   font-family: inherit;
   font-size: clamp(1.05rem, 2vw, 2.15rem);
   font-weight: 900;
@@ -317,7 +315,7 @@
 }
 
 .make-prompter-overlay span {
-  color: rgba(255, 255, 255, 0.66);
+  color: color-mix(in srgb, var(--cl-studio-white) 66%, transparent);
   font-size: 0.66rem;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -335,10 +333,10 @@
   align-items: center;
   max-width: min(30rem, calc(100% - 2rem));
   padding: 0.48rem 0.55rem 0.48rem 0.72rem;
-  border: 1px solid rgba(20, 184, 166, 0.36);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-accent-strong) 36%, transparent);
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.68);
-  color: rgba(255, 255, 255, 0.82);
+  background: color-mix(in srgb, var(--cl-studio-black) 68%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-white) 82%, transparent);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.06em;
@@ -350,8 +348,8 @@
   padding: 0.34rem 0.62rem;
   border: 0;
   border-radius: 999px;
-  background: #fff;
-  color: #050505;
+  background: var(--cl-studio-white);
+  color: var(--cl-studio-near-black);
   cursor: pointer;
   font: inherit;
 }
@@ -373,9 +371,9 @@
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 50% 46%, rgba(20, 184, 166, 0.24), transparent 22%),
-    rgba(0, 0, 0, 0.62);
-  color: #fff;
+    radial-gradient(circle at 50% 46%, color-mix(in srgb, var(--cl-studio-accent-strong) 24%, transparent), transparent 22%),
+    color-mix(in srgb, var(--cl-studio-black) 62%, transparent);
+  color: var(--cl-studio-white);
   text-align: center;
   backdrop-filter: blur(4px);
 }
@@ -385,10 +383,10 @@
   width: clamp(6rem, 16vw, 10rem);
   height: clamp(6rem, 16vw, 10rem);
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-white) 24%, transparent);
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.42);
-  box-shadow: 0 0 0 14px rgba(20, 184, 166, 0.12);
+  background: color-mix(in srgb, var(--cl-studio-black) 42%, transparent);
+  box-shadow: 0 0 0 14px color-mix(in srgb, var(--cl-studio-accent-strong) 12%, transparent);
   font-size: clamp(4rem, 10vw, 7rem);
   font-weight: 1000;
   line-height: 1;
@@ -396,7 +394,7 @@
 
 .make-countdown-overlay span {
   margin-top: 1rem;
-  color: rgba(255, 255, 255, 0.82);
+  color: color-mix(in srgb, var(--cl-studio-white) 82%, transparent);
   font-size: 0.82rem;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -404,9 +402,9 @@
 }
 
 @keyframes make-rec-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.78); }
-  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--cl-studio-danger) 78%, transparent); }
+  70% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--cl-studio-danger) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--cl-studio-danger) 0%, transparent); }
 }
 
 .make-preset-deck {
@@ -416,8 +414,8 @@
   border: 1px solid var(--cl-border);
   border-radius: 26px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(20, 184, 166, 0.10), transparent 38%),
-    var(--make-panel);
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 10%, transparent), transparent 38%),
+    var(--cl-studio-panel);
 }
 
 .make-section-kicker {
@@ -458,7 +456,7 @@
   border: 1px solid var(--cl-border);
   border-radius: 20px;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018));
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-white) 5.5%, transparent), color-mix(in srgb, var(--cl-studio-white) 1.8%, transparent));
   color: var(--cl-text);
   cursor: pointer;
   text-align: left;
@@ -471,11 +469,11 @@
 
 .make-preset-card:hover:not(:disabled),
 .make-preset-card.is-active {
-  border-color: rgba(20, 184, 166, 0.58);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 58%, transparent);
   background:
-    radial-gradient(circle at 0% 0%, rgba(20, 184, 166, 0.18), transparent 42%),
-    var(--make-accent-soft);
-  box-shadow: 0 18px 44px rgba(20, 184, 166, 0.10);
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent), transparent 42%),
+    var(--cl-studio-accent-soft);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--cl-studio-accent-strong) 10%, transparent);
   transform: translateY(-1px);
 }
 
@@ -487,10 +485,10 @@
 .make-preset-eye {
   width: fit-content;
   padding: 0.22rem 0.45rem;
-  border: 1px solid rgba(20, 184, 166, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-accent-strong) 28%, transparent);
   border-radius: 999px;
-  background: rgba(20, 184, 166, 0.10);
-  color: var(--make-accent-strong);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 10%, transparent);
+  color: var(--cl-studio-accent-strong);
   font-size: 0.62rem;
   font-weight: 950;
   letter-spacing: 0.07em;
@@ -528,7 +526,7 @@
   padding: 0.78rem;
   border: 1px solid var(--cl-border);
   border-radius: 22px;
-  background: var(--make-panel);
+  background: var(--cl-studio-panel);
   color: var(--cl-text);
   cursor: pointer;
   text-align: left;
@@ -541,9 +539,9 @@
 
 .make-mode-card:hover:not(:disabled),
 .make-mode-card.is-active {
-  border-color: rgba(20, 184, 166, 0.55);
-  background: var(--make-accent-soft);
-  box-shadow: 0 16px 40px rgba(20, 184, 166, 0.08);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 55%, transparent);
+  background: var(--cl-studio-accent-soft);
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--cl-studio-accent-strong) 8%, transparent);
   transform: translateY(-1px);
 }
 
@@ -557,10 +555,10 @@
   width: 2.1rem;
   height: 2.1rem;
   place-items: center;
-  border: 1px solid rgba(20, 184, 166, 0.32);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-accent-strong) 32%, transparent);
   border-radius: 15px;
-  background: rgba(20, 184, 166, 0.10);
-  color: var(--make-accent-strong);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 10%, transparent);
+  color: var(--cl-studio-accent-strong);
   font-weight: 950;
 }
 
@@ -597,13 +595,13 @@
 }
 
 .make-alert-danger {
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.11);
+  border-color: color-mix(in srgb, var(--cl-studio-danger) 40%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-danger) 11%, transparent);
 }
 
 .make-alert-warning {
-  border-color: rgba(245, 158, 11, 0.42);
-  background: rgba(245, 158, 11, 0.12);
+  border-color: color-mix(in srgb, var(--cl-studio-warning) 42%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-warning) 12%, transparent);
 }
 
 .make-timeline-card .cl-card-body,
@@ -629,8 +627,8 @@
   border: 1px dashed var(--cl-border);
   border-radius: 24px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(20, 184, 166, 0.10), transparent 45%),
-    var(--make-panel);
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 10%, transparent), transparent 45%),
+    var(--cl-studio-panel);
   color: var(--cl-muted);
   text-align: center;
 }
@@ -653,9 +651,9 @@
 
 .make-empty-timeline-art span {
   width: 4.8rem;
-  border: 1px solid rgba(20, 184, 166, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-accent-strong) 28%, transparent);
   border-radius: 12px;
-  background: rgba(20, 184, 166, 0.10);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 10%, transparent);
 }
 
 .make-empty-timeline-art span:nth-child(1) { height: 1.4rem; }
@@ -684,16 +682,16 @@
   padding: 0.78rem;
   border: 1px solid var(--cl-border);
   border-radius: 20px;
-  background: var(--make-panel);
+  background: var(--cl-studio-panel);
   color: var(--cl-text);
   cursor: pointer;
   text-align: left;
 }
 
 .make-strip-item.is-selected {
-  border-color: rgba(20, 184, 166, 0.62);
-  background: var(--make-accent-soft);
-  box-shadow: inset 0 0 0 1px rgba(20, 184, 166, 0.18);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 62%, transparent);
+  background: var(--cl-studio-accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent);
 }
 
 .make-strip-number {
@@ -702,8 +700,8 @@
   height: 1.6rem;
   place-items: center;
   border-radius: 999px;
-  background: var(--make-accent-strong);
-  color: #04110f;
+  background: var(--cl-studio-accent-strong);
+  color: var(--cl-studio-teal-ink);
   font-size: 0.75rem;
   font-weight: 950;
 }
@@ -729,7 +727,7 @@
   padding: 0.85rem;
   border: 1px solid var(--cl-border);
   border-radius: 24px;
-  background: var(--make-panel);
+  background: var(--cl-studio-panel);
 }
 
 .make-selected-clip video {
@@ -737,7 +735,7 @@
   min-height: 190px;
   border: 1px solid var(--cl-border);
   border-radius: 20px;
-  background: #000;
+  background: var(--cl-studio-black);
   object-fit: cover;
 }
 
@@ -780,23 +778,23 @@
   border: 1px solid var(--cl-border);
   border-radius: 24px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(20, 184, 166, 0.12), transparent 50%),
-    #000;
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 12%, transparent), transparent 50%),
+    var(--cl-studio-black);
 }
 
 .make-sequence-player-shell video {
   width: 100%;
   height: 100%;
   min-height: 260px;
-  background: #000;
+  background: var(--cl-studio-black);
   object-fit: contain;
 }
 
 .make-sequence-monitor-shell {
   min-height: 220px;
   background:
-    radial-gradient(circle at 30% 20%, rgba(20, 184, 166, 0.22), transparent 42%),
-    linear-gradient(145deg, rgba(15, 23, 42, 0.94), rgba(2, 6, 23, 0.98));
+    radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--cl-studio-accent-strong) 22%, transparent), transparent 42%),
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-slate-900) 94%, transparent), color-mix(in srgb, var(--cl-studio-slate-950) 98%, transparent));
 }
 
 .make-sequence-monitor-copy {
@@ -805,12 +803,12 @@
   place-content: center;
   min-height: 220px;
   padding: 1.2rem;
-  color: #fff;
+  color: var(--cl-studio-white);
   text-align: center;
 }
 
 .make-sequence-monitor-copy span {
-  color: rgba(153, 246, 228, 0.86);
+  color: color-mix(in srgb, var(--cl-studio-teal-200) 86%, transparent);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.10em;
@@ -823,7 +821,7 @@
 }
 
 .make-sequence-monitor-copy small {
-  color: rgba(255, 255, 255, 0.66);
+  color: color-mix(in srgb, var(--cl-studio-white) 66%, transparent);
   font-weight: 850;
 }
 
@@ -848,7 +846,7 @@
   padding: 0.95rem;
   border: 1px solid var(--cl-border);
   border-radius: 24px;
-  background: var(--make-panel);
+  background: var(--cl-studio-panel);
 }
 
 .make-sequence-panel p {
@@ -876,9 +874,9 @@
   display: grid;
   gap: 0.2rem;
   padding: 0.72rem 0.78rem;
-  border: 1px solid rgba(20, 184, 166, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-accent-strong) 28%, transparent);
   border-radius: 18px;
-  background: rgba(20, 184, 166, 0.08);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 8%, transparent);
 }
 
 .make-sequence-now span {
@@ -900,9 +898,9 @@
   display: grid;
   gap: 0.22rem;
   padding: 0.78rem 0.85rem;
-  border: 1px solid rgba(34, 197, 94, 0.38);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-green-500) 38%, transparent);
   border-radius: 18px;
-  background: rgba(34, 197, 94, 0.10);
+  background: color-mix(in srgb, var(--cl-studio-green-500) 10%, transparent);
 }
 
 .make-approved-box strong {
@@ -918,9 +916,9 @@
   display: grid;
   gap: 0.18rem;
   padding: 0.72rem 0.78rem;
-  border: 1px solid rgba(20, 184, 166, 0.34);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-accent-strong) 34%, transparent);
   border-radius: 18px;
-  background: var(--make-accent-soft);
+  background: var(--cl-studio-accent-soft);
 }
 
 .make-latest-decision strong {
@@ -938,11 +936,11 @@
   display: grid;
   gap: 0.85rem;
   padding: 0.95rem;
-  border: 1px solid rgba(20, 184, 166, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-accent-strong) 28%, transparent);
   border-radius: 24px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(20, 184, 166, 0.12), transparent 38%),
-    var(--make-panel);
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 12%, transparent), transparent 38%),
+    var(--cl-studio-panel);
 }
 
 .make-prompter-editor-head {
@@ -987,7 +985,7 @@
 .make-disclosure {
   border: 1px solid var(--cl-border);
   border-radius: 24px;
-  background: var(--make-panel);
+  background: var(--cl-studio-panel);
 }
 
 .make-disclosure summary {
@@ -1027,20 +1025,17 @@
   padding: 0.72rem 0.8rem;
   border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--cl-make-check-toggle-background);
   color: var(--cl-text);
   font-size: 0.84rem;
   font-weight: 850;
 }
 
-[data-theme='dark'] .make-check-toggle {
-  background: rgba(255, 255, 255, 0.025);
-}
 
 .make-check-toggle input {
   width: 1rem;
   height: 1rem;
-  accent-color: var(--make-accent-strong);
+  accent-color: var(--cl-studio-accent-strong);
 }
 
 .make-handoff {
@@ -1052,11 +1047,11 @@
   display: grid;
   gap: 0.32rem;
   padding: 0.95rem;
-  border: 1px solid rgba(20, 184, 166, 0.30);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-accent-strong) 30%, transparent);
   border-radius: 22px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(20, 184, 166, 0.15), transparent 48%),
-    var(--make-panel);
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 15%, transparent), transparent 48%),
+    var(--cl-studio-panel);
 }
 
 .make-finish-hero strong {
@@ -1084,7 +1079,7 @@
   padding: 0.7rem;
   border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: var(--make-panel);
+  background: var(--cl-studio-panel);
 }
 
 .make-handoff-step span {
@@ -1093,8 +1088,8 @@
   height: 1.7rem;
   place-items: center;
   border-radius: 999px;
-  background: var(--make-accent-strong);
-  color: #04110f;
+  background: var(--cl-studio-accent-strong);
+  color: var(--cl-studio-teal-ink);
   font-size: 0.78rem;
   font-weight: 950;
 }
@@ -1106,8 +1101,8 @@
 }
 
 .make-handoff-step.is-complete {
-  border-color: rgba(20, 184, 166, 0.52);
-  background: var(--make-accent-soft);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 52%, transparent);
+  background: var(--cl-studio-accent-soft);
 }
 
 .make-side-stack {
@@ -1131,11 +1126,11 @@
   display: grid;
   gap: 0.2rem;
   padding: 0.95rem;
-  border: 1px solid rgba(20, 184, 166, 0.32);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-accent-strong) 32%, transparent);
   border-radius: 22px;
   background:
-    radial-gradient(circle at 10% 0%, rgba(20, 184, 166, 0.16), transparent 50%),
-    var(--make-panel);
+    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 16%, transparent), transparent 50%),
+    var(--cl-studio-panel);
 }
 
 .make-side-hero-stat strong {
@@ -1161,12 +1156,9 @@
   padding: 0.72rem 0.78rem;
   border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--cl-make-compact-status-background);
 }
 
-[data-theme='dark'] .make-compact-status {
-  background: rgba(255, 255, 255, 0.025);
-}
 
 .make-compact-status span {
   color: var(--cl-muted);
@@ -1192,15 +1184,15 @@
 }
 
 .make-tone-success {
-  border-color: rgba(20, 184, 166, 0.34);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 34%, transparent);
 }
 
 .make-tone-warning {
-  border-color: rgba(245, 158, 11, 0.34);
+  border-color: color-mix(in srgb, var(--cl-studio-warning) 34%, transparent);
 }
 
 .make-tone-danger {
-  border-color: rgba(239, 68, 68, 0.34);
+  border-color: color-mix(in srgb, var(--cl-studio-danger) 34%, transparent);
 }
 
 .make-stat-grid {
@@ -1223,7 +1215,7 @@
 }
 
 .make-boundary-list li::marker {
-  color: var(--make-accent-strong);
+  color: var(--cl-studio-accent-strong);
 }
 
 .make-pipeline-list {
@@ -1238,7 +1230,7 @@
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--cl-border);
   border-radius: 16px;
-  background: var(--make-panel);
+  background: var(--cl-studio-panel);
   color: var(--cl-text);
   font-size: 0.86rem;
   font-weight: 850;
@@ -1248,8 +1240,8 @@
   width: 0.55rem;
   height: 0.55rem;
   border-radius: 999px;
-  background: var(--make-accent-strong);
-  box-shadow: 0 0 0 5px var(--make-glow);
+  background: var(--cl-studio-accent-strong);
+  box-shadow: 0 0 0 5px var(--cl-studio-glow);
   content: '';
 }
 
@@ -1370,12 +1362,12 @@
   display: grid;
   gap: 1rem;
   padding: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.24);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 24%, transparent);
   border-radius: 24px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(20, 184, 166, 0.14), transparent 30%),
-    linear-gradient(135deg, rgba(15, 23, 42, 0.66), rgba(2, 6, 23, 0.46));
-  box-shadow: 0 22px 60px rgba(2, 6, 23, 0.18);
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 14%, transparent), transparent 30%),
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-studio-slate-900) 66%, transparent), color-mix(in srgb, var(--cl-studio-slate-950) 46%, transparent));
+  box-shadow: 0 22px 60px color-mix(in srgb, var(--cl-studio-slate-950) 18%, transparent);
 }
 
 .make-cutout-head {
@@ -1393,7 +1385,7 @@
 .make-cutout-head p {
   max-width: 62rem;
   margin: 0.35rem 0 0;
-  color: var(--cl-muted, #94a3b8);
+  color: var(--cl-muted);
   font-size: 0.88rem;
   line-height: 1.5;
 }
@@ -1411,9 +1403,9 @@
   gap: 0.8rem;
   min-height: 100%;
   padding: 0.85rem;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 22%, transparent);
   border-radius: 18px;
-  background: rgba(15, 23, 42, 0.38);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 38%, transparent);
 }
 
 .make-switch-row-tight {
@@ -1424,19 +1416,19 @@
   width: 1.05rem;
   height: 1.05rem;
   margin-top: 0.12rem;
-  accent-color: var(--make-accent-strong);
+  accent-color: var(--cl-studio-accent-strong);
 }
 
 .make-switch-row strong {
   display: block;
-  color: var(--cl-text, #f8fafc);
+  color: var(--cl-text);
   font-size: 0.9rem;
 }
 
 .make-switch-row small {
   display: block;
   margin-top: 0.22rem;
-  color: var(--cl-muted, #94a3b8);
+  color: var(--cl-muted);
   font-size: 0.78rem;
   line-height: 1.35;
 }
@@ -1455,18 +1447,18 @@
   justify-content: center;
   min-height: 2.4rem;
   padding: 0.62rem 0.85rem;
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 28%, transparent);
   border-radius: 999px;
-  color: var(--cl-text, #f8fafc);
-  background: rgba(15, 23, 42, 0.54);
+  color: var(--cl-text);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 54%, transparent);
   cursor: pointer;
   font-size: 0.84rem;
   font-weight: 700;
 }
 
 .make-background-picker:hover {
-  border-color: rgba(20, 184, 166, 0.58);
-  background: rgba(20, 184, 166, 0.13);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 58%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 13%, transparent);
 }
 
 .make-background-picker input {
@@ -1484,19 +1476,19 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
-  color: var(--cl-muted, #94a3b8);
+  color: var(--cl-muted);
   font-size: 0.78rem;
 }
 
 .make-cutout-foot span {
   padding: 0.36rem 0.58rem;
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 18%, transparent);
   border-radius: 999px;
-  background: rgba(2, 6, 23, 0.34);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 34%, transparent);
 }
 
 .make-cutout-foot strong {
-  color: var(--cl-text, #f8fafc);
+  color: var(--cl-text);
 }
 
 @media (max-width: 1100px) {
@@ -1528,7 +1520,7 @@
 .make-range-input {
   width: 100%;
   min-width: 0;
-  accent-color: var(--make-accent-strong, #14b8a6);
+  accent-color: var(--cl-studio-accent-strong);
   cursor: pointer;
   pointer-events: auto;
 }
@@ -1541,19 +1533,19 @@
 .make-range-value {
   min-width: 4.25rem;
   padding: 0.35rem 0.55rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 20%, transparent);
   border-radius: 999px;
-  color: var(--cl-text, #f8fafc);
-  background: rgba(2, 6, 23, 0.42);
+  color: var(--cl-text);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 42%, transparent);
   font-size: 0.78rem;
   text-align: center;
 }
 
 .make-cutout-grid .make-range-control {
   padding: 0.72rem 0.85rem;
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 18%, transparent);
   border-radius: 18px;
-  background: rgba(15, 23, 42, 0.28);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 28%, transparent);
 }
 
 
@@ -1585,11 +1577,11 @@
   align-items: center;
   gap: 0.45rem;
   padding: 0.42rem 0.68rem;
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 28%, transparent);
   border-radius: 999px;
-  color: rgba(248, 250, 252, 0.88);
-  background: rgba(2, 6, 23, 0.58);
-  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.22);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 88%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 58%, transparent);
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--cl-studio-slate-950) 22%, transparent);
   font-size: 0.78rem;
   opacity: 0;
   transform: translate(-50%, 8px);
@@ -1601,8 +1593,8 @@
   width: 0.48rem;
   height: 0.48rem;
   border-radius: 999px;
-  background: var(--make-accent-strong, #14b8a6);
-  box-shadow: 0 0 0 0.3rem rgba(20, 184, 166, 0.18);
+  background: var(--cl-studio-accent-strong);
+  box-shadow: 0 0 0 0.3rem color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent);
 }
 
 .make-subject-overlay.is-visible .make-subject-drag-hint {
@@ -1618,10 +1610,10 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.48rem;
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 28%, transparent);
   border-radius: 999px;
-  background: rgba(2, 6, 23, 0.72);
-  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.38);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 72%, transparent);
+  box-shadow: 0 24px 60px color-mix(in srgb, var(--cl-studio-slate-950) 38%, transparent);
   backdrop-filter: blur(14px);
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.92);
@@ -1640,10 +1632,10 @@
   place-items: center;
   width: 2.45rem;
   height: 2.45rem;
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 28%, transparent);
   border-radius: 999px;
-  color: #f8fafc;
-  background: rgba(15, 23, 42, 0.88);
+  color: var(--cl-studio-slate-50);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 88%, transparent);
   cursor: pointer;
   font-size: 1.45rem;
   font-weight: 900;
@@ -1651,8 +1643,8 @@
 }
 
 .make-subject-zoom-popover button:hover:not(:disabled) {
-  border-color: rgba(20, 184, 166, 0.68);
-  background: rgba(20, 184, 166, 0.22);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 68%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 22%, transparent);
 }
 
 .make-subject-zoom-popover button:disabled {
@@ -1662,7 +1654,7 @@
 
 .make-subject-zoom-popover span {
   min-width: 3.6rem;
-  color: #f8fafc;
+  color: var(--cl-studio-slate-50);
   font-size: 0.85rem;
   font-weight: 800;
   text-align: center;
@@ -1673,10 +1665,10 @@
   right: 1.2rem;
   bottom: 5.2rem;
   padding: 0.38rem 0.58rem;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 22%, transparent);
   border-radius: 999px;
-  color: rgba(248, 250, 252, 0.82);
-  background: rgba(2, 6, 23, 0.58);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 82%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 58%, transparent);
   font-size: 0.74rem;
   font-weight: 800;
   opacity: 0;
@@ -1698,25 +1690,22 @@
 }
 
 .make-debug-event-list > span {
-  color: var(--cl-muted, #858585);
+  color: var(--cl-muted);
   font-size: 0.85rem;
   font-weight: 700;
 }
 
 .make-debug-event-list details {
-  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.24));
+  border: 1px solid var(--cl-border);
   border-radius: 12px;
   padding: 0.55rem 0.65rem;
-  background: color-mix(in srgb, var(--cl-card, #ffffff) 76%, var(--cl-bg, #f5f5f5) 24%);
+  background: var(--cl-make-debug-event-background);
 }
 
-[data-theme='dark'] .make-debug-event-list details {
-  background: rgba(255, 255, 255, 0.035);
-}
 
 .make-debug-event-list summary {
   cursor: pointer;
-  color: var(--cl-text, #f5f5f5);
+  color: var(--cl-text);
   font-size: 0.78rem;
   font-weight: 850;
 }
@@ -1725,7 +1714,7 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   margin: 0.55rem 0 0;
-  color: var(--cl-muted, #a8a8a8);
+  color: var(--cl-muted);
   font-size: 0.72rem;
   line-height: 1.45;
 }
@@ -1737,17 +1726,17 @@
   padding: 0.85rem;
   border: 1px solid var(--cl-border);
   border-radius: 20px;
-  background: var(--make-panel);
+  background: var(--cl-studio-panel);
 }
 
 .make-export-status-ready {
-  border-color: rgba(34, 197, 94, 0.38);
-  background: rgba(34, 197, 94, 0.10);
+  border-color: color-mix(in srgb, var(--cl-studio-green-500) 38%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-green-500) 10%, transparent);
 }
 
 .make-export-status-error {
-  border-color: rgba(245, 158, 11, 0.42);
-  background: rgba(245, 158, 11, 0.10);
+  border-color: color-mix(in srgb, var(--cl-studio-warning) 42%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-warning) 10%, transparent);
 }
 
 .make-export-status-head {
@@ -1774,21 +1763,21 @@
   border: 1px solid var(--cl-border);
   border-radius: 999px;
   color: var(--cl-text);
-  background: rgba(0, 0, 0, 0.18);
+  background: color-mix(in srgb, var(--cl-studio-black) 18%, transparent);
 }
 
 .make-export-meter {
   overflow: hidden;
   height: 8px;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.20);
+  background: color-mix(in srgb, var(--cl-studio-slate-400) 20%, transparent);
 }
 
 .make-export-meter span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--make-accent), var(--make-accent-strong));
+  background: linear-gradient(90deg, var(--cl-studio-accent), var(--cl-studio-accent-strong));
   transition: width 180ms ease;
 }
 
@@ -1817,12 +1806,12 @@
   display: grid;
   gap: 0.45rem;
   padding: 0.8rem;
-  border: 1px solid color-mix(in srgb, var(--make-accent, #14b8a6) 24%, var(--cl-border, rgba(148, 163, 184, 0.24)) 76%);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-accent) 24%, var(--cl-border) 76%);
   border-radius: 26px;
   background:
-    linear-gradient(135deg, rgba(20, 184, 166, 0.09), transparent 34%),
-    color-mix(in srgb, var(--make-panel, rgba(15, 23, 42, 0.72)) 86%, transparent 14%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-studio-accent-strong) 9%, transparent), transparent 34%),
+    color-mix(in srgb, var(--cl-studio-panel) 86%, transparent 14%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--cl-studio-white) 5.5%, transparent);
 }
 
 .make-timeline-ruler {
@@ -1852,11 +1841,11 @@
   min-height: 6.45rem;
   overflow: hidden;
   padding: 0.76rem;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 22%, transparent);
   border-radius: 22px;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 46%),
-    rgba(15, 23, 42, 0.72);
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-white) 8%, transparent), transparent 46%),
+    color-mix(in srgb, var(--cl-studio-slate-900) 72%, transparent);
   color: var(--cl-text);
   cursor: pointer;
   text-align: left;
@@ -1865,24 +1854,24 @@
 
 .make-timeline-segment:hover,
 .make-timeline-segment:focus-visible {
-  border-color: rgba(20, 184, 166, 0.46);
-  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.18);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 46%, transparent);
+  box-shadow: 0 14px 32px color-mix(in srgb, var(--cl-studio-slate-950) 18%, transparent);
   transform: translateY(-1px);
   outline: none;
 }
 
 .make-timeline-segment.is-selected {
-  border-color: rgba(20, 184, 166, 0.78);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 78%, transparent);
   background:
-    linear-gradient(145deg, rgba(20, 184, 166, 0.22), rgba(59, 130, 246, 0.12)),
-    rgba(15, 23, 42, 0.82);
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-accent-strong) 22%, transparent), color-mix(in srgb, var(--cl-studio-blue-500) 12%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-900) 82%, transparent);
   box-shadow:
-    0 18px 42px rgba(2, 6, 23, 0.24),
-    inset 0 0 0 1px rgba(20, 184, 166, 0.18);
+    0 18px 42px color-mix(in srgb, var(--cl-studio-slate-950) 24%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent);
 }
 
 .make-timeline-segment.has-effect {
-  border-color: rgba(168, 85, 247, 0.44);
+  border-color: color-mix(in srgb, var(--cl-studio-purple-500) 44%, transparent);
 }
 
 .make-timeline-segment-fill {
@@ -1890,7 +1879,7 @@
   inset-block: auto 0;
   height: 0.35rem;
   border-radius: 999px 999px 0 0;
-  background: linear-gradient(90deg, var(--make-accent, #14b8a6), var(--make-accent-strong, #22d3ee));
+  background: linear-gradient(90deg, var(--cl-studio-accent), var(--cl-studio-accent-strong));
   opacity: 0.9;
 }
 
@@ -1902,8 +1891,8 @@
   height: 1.55rem;
   place-items: center;
   border-radius: 999px;
-  background: rgba(20, 184, 166, 0.94);
-  color: #04110f;
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 94%, transparent);
+  color: var(--cl-studio-teal-ink);
   font-size: 0.72rem;
   font-weight: 950;
 }
@@ -1933,10 +1922,10 @@
 .make-timeline-segment-edit {
   justify-self: start;
   padding: 0.16rem 0.44rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-white) 12%, transparent);
   border-radius: 999px;
-  color: color-mix(in srgb, var(--cl-text, #fff) 82%, var(--make-accent, #14b8a6) 18%);
-  background: rgba(255, 255, 255, 0.065);
+  color: color-mix(in srgb, var(--cl-text) 82%, var(--cl-studio-accent) 18%);
+  background: color-mix(in srgb, var(--cl-studio-white) 6.5%, transparent);
   font-size: 0.68rem;
   font-weight: 950;
   letter-spacing: 0.03em;
@@ -1946,10 +1935,10 @@
 .make-selected-clip-editor {
   grid-template-columns: minmax(260px, 0.52fr) minmax(0, 1fr);
   align-items: stretch;
-  border-color: color-mix(in srgb, var(--make-accent, #14b8a6) 22%, var(--cl-border, rgba(148, 163, 184, 0.24)) 78%);
+  border-color: color-mix(in srgb, var(--cl-studio-accent) 22%, var(--cl-border) 78%);
   background:
-    radial-gradient(circle at 10% 0%, rgba(20, 184, 166, 0.10), transparent 32%),
-    var(--make-panel);
+    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 10%, transparent), transparent 32%),
+    var(--cl-studio-panel);
 }
 
 .make-selected-preview-frame {
@@ -1958,9 +1947,9 @@
   align-content: stretch;
   min-height: 270px;
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 22%, transparent);
   border-radius: 22px;
-  background: #000;
+  background: var(--cl-studio-black);
 }
 
 .make-selected-preview-frame video {
@@ -2016,9 +2005,9 @@
   display: grid;
   gap: 0.66rem;
   padding: 0.78rem;
-  border: 1px solid rgba(148, 163, 184, 0.20);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 20%, transparent);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.045);
+  background: color-mix(in srgb, var(--cl-studio-white) 4.5%, transparent);
 }
 
 .make-trim-head {
@@ -2056,7 +2045,7 @@
 
 .make-range-field input[type='range'] {
   width: 100%;
-  accent-color: var(--make-accent, #14b8a6);
+  accent-color: var(--cl-studio-accent);
 }
 
 .make-trim-actions {
@@ -2078,9 +2067,9 @@
   gap: 0.25rem;
   min-height: 4.6rem;
   padding: 0.62rem;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 22%, transparent);
   border-radius: 16px;
-  background: rgba(15, 23, 42, 0.48);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 48%, transparent);
   color: var(--cl-text);
   cursor: pointer;
   text-align: left;
@@ -2089,14 +2078,14 @@
 
 .make-effect-button:hover,
 .make-effect-button:focus-visible {
-  border-color: rgba(20, 184, 166, 0.42);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 42%, transparent);
   transform: translateY(-1px);
   outline: none;
 }
 
 .make-effect-button.is-selected {
-  border-color: rgba(20, 184, 166, 0.72);
-  background: rgba(20, 184, 166, 0.12);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 72%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 12%, transparent);
 }
 
 .make-effect-button span {
@@ -2193,15 +2182,15 @@
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 50% 50%, transparent 48%, rgba(0, 0, 0, 0.36) 100%),
-    rgba(0, 0, 0, 0.22);
+    radial-gradient(circle at 50% 50%, transparent 48%, color-mix(in srgb, var(--cl-studio-black) 36%, transparent) 100%),
+    color-mix(in srgb, var(--cl-studio-black) 22%, transparent);
 }
 
 .make-preview-playback-layer video {
   width: 100%;
   height: 100%;
   max-height: min(68vh, 760px);
-  background: #020617;
+  background: var(--cl-studio-slate-950);
   object-fit: contain;
 }
 
@@ -2212,12 +2201,12 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-white) 16%, transparent);
   background:
-    linear-gradient(145deg, rgba(15, 23, 42, 0.72), rgba(2, 6, 23, 0.62)),
-    rgba(2, 6, 23, 0.56);
-  color: #fff;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.26);
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-slate-900) 72%, transparent), color-mix(in srgb, var(--cl-studio-slate-950) 62%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-950) 56%, transparent);
+  color: var(--cl-studio-white);
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--cl-studio-black) 26%, transparent);
   backdrop-filter: blur(18px) saturate(1.2);
 }
 
@@ -2232,8 +2221,8 @@
 .make-preview-playback-status span {
   padding: 0.22rem 0.42rem;
   border-radius: 999px;
-  background: rgba(20, 184, 166, 0.18);
-  color: rgba(153, 246, 228, 0.94);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-teal-200) 94%, transparent);
   font-size: 0.68rem;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -2258,10 +2247,10 @@
 
 .make-preview-playback-actions button,
 .make-preview-mini-actions button {
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-white) 14%, transparent);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.90);
+  background: color-mix(in srgb, var(--cl-studio-white) 8%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-white) 90%, transparent);
   cursor: pointer;
   font-size: 0.7rem;
   font-weight: 950;
@@ -2274,8 +2263,8 @@
 .make-preview-playback-actions button:focus-visible,
 .make-preview-mini-actions button:hover,
 .make-preview-mini-actions button:focus-visible {
-  border-color: rgba(20, 184, 166, 0.74);
-  background: rgba(20, 184, 166, 0.18);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 74%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent);
   outline: none;
 }
 
@@ -2303,14 +2292,14 @@
 .make-preview-record-button {
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.94);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-white) 18%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-white) 94%, transparent);
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
-    rgba(2, 6, 23, 0.55);
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-white) 14%, transparent), color-mix(in srgb, var(--cl-studio-white) 4%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-950) 55%, transparent);
   box-shadow:
-    0 18px 46px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 18px 46px color-mix(in srgb, var(--cl-studio-black) 28%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--cl-studio-white) 12%, transparent);
   backdrop-filter: blur(20px) saturate(1.3);
   cursor: pointer;
   transition:
@@ -2336,13 +2325,13 @@
 .make-preview-round-button:hover,
 .make-preview-round-button:focus-visible,
 .make-preview-round-button.is-active {
-  border-color: rgba(20, 184, 166, 0.8);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 80%, transparent);
   background:
-    linear-gradient(145deg, rgba(20, 184, 166, 0.26), rgba(59, 130, 246, 0.10)),
-    rgba(2, 6, 23, 0.72);
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-accent-strong) 26%, transparent), color-mix(in srgb, var(--cl-studio-blue-500) 10%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-950) 72%, transparent);
   box-shadow:
-    0 20px 54px rgba(20, 184, 166, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    0 20px 54px color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--cl-studio-white) 18%, transparent);
   transform: translateY(-1px) scale(1.03);
   outline: none;
 }
@@ -2354,18 +2343,18 @@
   gap: 0.18rem;
   padding: 0.52rem;
   border-radius: 999px;
-  border-color: rgba(248, 113, 113, 0.46);
+  border-color: color-mix(in srgb, var(--cl-studio-red-400) 46%, transparent);
   color: white;
   background:
-    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.42), transparent 28%),
-    linear-gradient(145deg, #ff3b30, #b91c1c);
+    radial-gradient(circle at 35% 25%, color-mix(in srgb, var(--cl-studio-white) 42%, transparent), transparent 28%),
+    linear-gradient(145deg, var(--cl-studio-system-red), var(--cl-studio-red-700));
 }
 
 .make-preview-record-button:hover,
 .make-preview-record-button:focus-visible {
   box-shadow:
-    0 0 0 5px rgba(248, 113, 113, 0.16),
-    0 24px 60px rgba(239, 68, 68, 0.30);
+    0 0 0 5px color-mix(in srgb, var(--cl-studio-red-400) 16%, transparent),
+    0 24px 60px color-mix(in srgb, var(--cl-studio-danger) 30%, transparent);
   transform: translateY(-1px) scale(1.04);
   outline: none;
 }
@@ -2373,8 +2362,8 @@
 .make-preview-record-button.is-recording {
   border-radius: 1.45rem;
   background:
-    linear-gradient(145deg, rgba(248, 113, 113, 0.18), rgba(127, 29, 29, 0.88)),
-    rgba(2, 6, 23, 0.78);
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-red-400) 18%, transparent), color-mix(in srgb, var(--cl-studio-red-900) 88%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-950) 78%, transparent);
 }
 
 .make-preview-record-button:disabled {
@@ -2392,7 +2381,7 @@
 .make-preview-record-label {
   max-width: 4rem;
   overflow: hidden;
-  color: rgba(255, 255, 255, 0.94);
+  color: color-mix(in srgb, var(--cl-studio-white) 94%, transparent);
   font-size: 0.66rem;
   font-weight: 950;
   letter-spacing: 0.05em;
@@ -2411,14 +2400,14 @@
   display: grid;
   gap: 0.45rem;
   padding: 0.72rem;
-  border: 1px solid rgba(20, 184, 166, 0.42);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-accent-strong) 42%, transparent);
   border-radius: 22px;
   background:
-    linear-gradient(135deg, rgba(20, 184, 166, 0.18), rgba(59, 130, 246, 0.08)),
-    rgba(2, 6, 23, 0.58);
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent), color-mix(in srgb, var(--cl-studio-blue-500) 8%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-950) 58%, transparent);
   box-shadow:
-    0 22px 60px rgba(0, 0, 0, 0.30),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 22px 60px color-mix(in srgb, var(--cl-studio-black) 30%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--cl-studio-white) 12%, transparent);
   backdrop-filter: blur(22px) saturate(1.25);
 }
 
@@ -2427,11 +2416,11 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 0.7rem;
   align-items: center;
-  color: rgba(255, 255, 255, 0.86);
+  color: color-mix(in srgb, var(--cl-studio-white) 86%, transparent);
 }
 
 .make-preview-mini-timeline-head span {
-  color: rgba(255, 255, 255, 0.58);
+  color: color-mix(in srgb, var(--cl-studio-white) 58%, transparent);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.10em;
@@ -2472,12 +2461,12 @@
   align-content: center;
   min-width: 132px;
   padding: 0.48rem 0.58rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-white) 14%, transparent);
   border-radius: 16px;
-  color: rgba(255, 255, 255, 0.90);
+  color: color-mix(in srgb, var(--cl-studio-white) 90%, transparent);
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.035)),
-    rgba(15, 23, 42, 0.56);
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-white) 10%, transparent), color-mix(in srgb, var(--cl-studio-white) 3.5%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-900) 56%, transparent);
   cursor: pointer;
   text-align: left;
 }
@@ -2486,17 +2475,17 @@
 .make-preview-mini-clip:focus-visible,
 .make-preview-mini-clip.is-active,
 .make-preview-mini-clip.is-playing {
-  border-color: rgba(20, 184, 166, 0.84);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 84%, transparent);
   background:
-    linear-gradient(145deg, rgba(20, 184, 166, 0.30), rgba(59, 130, 246, 0.10)),
-    rgba(15, 23, 42, 0.66);
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-accent-strong) 30%, transparent), color-mix(in srgb, var(--cl-studio-blue-500) 10%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-900) 66%, transparent);
   outline: none;
 }
 
 .make-preview-mini-clip.is-playing span {
-  background: #fef3c7;
-  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.16);
-  color: #451a03;
+  background: var(--cl-studio-amber-100);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--cl-studio-warning) 16%, transparent);
+  color: var(--cl-studio-amber-950);
 }
 
 .make-preview-mini-clip span {
@@ -2507,8 +2496,8 @@
   place-items: center;
   align-self: center;
   border-radius: 999px;
-  background: rgba(20, 184, 166, 0.92);
-  color: #031312;
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 92%, transparent);
+  color: var(--cl-studio-teal-950);
   font-size: 0.72rem;
   font-weight: 950;
 }
@@ -2527,7 +2516,7 @@
 }
 
 .make-preview-mini-clip small {
-  color: rgba(255, 255, 255, 0.62);
+  color: color-mix(in srgb, var(--cl-studio-white) 62%, transparent);
   font-size: 0.68rem;
   font-weight: 800;
 }
@@ -2538,15 +2527,15 @@
   align-items: center;
   width: 100%;
   min-height: 3rem;
-  color: rgba(255, 255, 255, 0.74);
+  color: color-mix(in srgb, var(--cl-studio-white) 74%, transparent);
 }
 
 .make-preview-mini-empty span {
   width: 0.72rem;
   height: 0.72rem;
   border-radius: 999px;
-  background: #ff3b30;
-  box-shadow: 0 0 0 7px rgba(239, 68, 68, 0.14);
+  background: var(--cl-studio-system-red);
+  box-shadow: 0 0 0 7px color-mix(in srgb, var(--cl-studio-danger) 14%, transparent);
 }
 
 .make-preview-mini-empty strong {
@@ -2555,7 +2544,7 @@
 }
 
 .make-preview-mini-empty small {
-  color: rgba(255, 255, 255, 0.58);
+  color: color-mix(in srgb, var(--cl-studio-white) 58%, transparent);
   font-size: 0.74rem;
   font-weight: 800;
 }
@@ -2568,15 +2557,15 @@
   width: min(440px, calc(100% - 8rem));
   min-height: 320px;
   overflow: hidden;
-  border: 1px solid rgba(20, 184, 166, 0.40);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-accent-strong) 40%, transparent);
   border-radius: 26px;
-  color: rgba(255, 255, 255, 0.90);
+  color: color-mix(in srgb, var(--cl-studio-white) 90%, transparent);
   background:
-    radial-gradient(circle at 18% 0%, rgba(20, 184, 166, 0.22), transparent 34%),
-    linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.78));
+    radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 22%, transparent), transparent 34%),
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-slate-900) 92%, transparent), color-mix(in srgb, var(--cl-studio-slate-950) 78%, transparent));
   box-shadow:
-    0 30px 90px rgba(0, 0, 0, 0.40),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 30px 90px color-mix(in srgb, var(--cl-studio-black) 40%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--cl-studio-white) 12%, transparent);
   backdrop-filter: blur(26px) saturate(1.35);
 }
 
@@ -2586,12 +2575,12 @@
   align-items: start;
   justify-content: space-between;
   padding: 0.95rem 1rem 0.65rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  border-bottom: 1px solid color-mix(in srgb, var(--cl-studio-white) 10%, transparent);
 }
 
 .make-preview-drawer-head span {
   display: block;
-  color: rgba(255, 255, 255, 0.52);
+  color: color-mix(in srgb, var(--cl-studio-white) 52%, transparent);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.10em;
@@ -2601,7 +2590,7 @@
 .make-preview-drawer-head strong {
   display: block;
   margin-top: 0.12rem;
-  color: rgba(255, 255, 255, 0.96);
+  color: color-mix(in srgb, var(--cl-studio-white) 96%, transparent);
   font-size: 1rem;
   font-weight: 950;
 }
@@ -2611,10 +2600,10 @@
   width: 2.05rem;
   height: 2.05rem;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-white) 12%, transparent);
   border-radius: 999px;
   color: white;
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--cl-studio-white) 6%, transparent);
   cursor: pointer;
 }
 
@@ -2631,9 +2620,9 @@
   display: grid;
   gap: 0.62rem;
   padding: 0.72rem;
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-white) 10%, transparent);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.045);
+  background: color-mix(in srgb, var(--cl-studio-white) 4.5%, transparent);
 }
 
 .make-preview-drawer-section-head {
@@ -2644,7 +2633,7 @@
 }
 
 .make-preview-drawer-section-head strong {
-  color: rgba(255, 255, 255, 0.95);
+  color: color-mix(in srgb, var(--cl-studio-white) 95%, transparent);
   font-size: 0.88rem;
   font-weight: 950;
 }
@@ -2652,7 +2641,7 @@
 .make-preview-drawer-section-head span {
   max-width: 52%;
   overflow: hidden;
-  color: rgba(255, 255, 255, 0.55);
+  color: color-mix(in srgb, var(--cl-studio-white) 55%, transparent);
   font-size: 0.72rem;
   font-weight: 850;
   text-align: right;
@@ -2671,10 +2660,10 @@
   gap: 0.24rem;
   min-height: 4rem;
   padding: 0.58rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-white) 12%, transparent);
   border-radius: 15px;
-  color: rgba(255, 255, 255, 0.88);
-  background: rgba(15, 23, 42, 0.55);
+  color: color-mix(in srgb, var(--cl-studio-white) 88%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 55%, transparent);
   cursor: pointer;
   text-align: left;
 }
@@ -2682,8 +2671,8 @@
 .make-preview-effect-tile:hover,
 .make-preview-effect-tile:focus-visible,
 .make-preview-effect-tile.is-selected {
-  border-color: rgba(20, 184, 166, 0.74);
-  background: rgba(20, 184, 166, 0.13);
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 74%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 13%, transparent);
   outline: none;
 }
 
@@ -2699,7 +2688,7 @@
 
 .make-preview-effect-tile small,
 .make-preview-drawer-note {
-  color: rgba(255, 255, 255, 0.58);
+  color: color-mix(in srgb, var(--cl-studio-white) 58%, transparent);
   font-size: 0.72rem;
   font-weight: 800;
   line-height: 1.35;
@@ -2713,7 +2702,7 @@
 .make-preview-drawer .make-mode-card,
 .make-preview-drawer .make-preset-card,
 .make-preview-drawer .make-cutout-card {
-  background: rgba(255, 255, 255, 0.045);
+  background: color-mix(in srgb, var(--cl-studio-white) 4.5%, transparent);
 }
 
 .make-preview-drawer .make-cutout-card {
@@ -2851,15 +2840,15 @@
 }
 
 .make-preview-subject-button.is-active {
-  border-color: rgba(251, 191, 36, 0.88);
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 88%, transparent);
   background:
-    radial-gradient(circle at 50% 42%, rgba(251, 191, 36, 0.36), transparent 56%),
-    rgba(120, 53, 15, 0.70);
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--cl-studio-amber-400) 36%, transparent), transparent 56%),
+    color-mix(in srgb, var(--cl-studio-amber-850) 70%, transparent);
   box-shadow:
-    0 0 0 1px rgba(251, 191, 36, 0.24),
-    0 18px 46px rgba(251, 191, 36, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
-  color: #fff7ed;
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-amber-400) 24%, transparent),
+    0 18px 46px color-mix(in srgb, var(--cl-studio-amber-400) 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--cl-studio-white) 16%, transparent);
+  color: var(--cl-studio-orange-50);
 }
 
 .make-subject-overlay {
@@ -2999,26 +2988,26 @@
 }
 
 .make-preview-mode-button.is-active {
-  border-color: rgba(129, 140, 248, 0.92);
+  border-color: color-mix(in srgb, var(--cl-studio-indigo-400) 92%, transparent);
   background:
-    radial-gradient(circle at 50% 36%, rgba(129, 140, 248, 0.38), transparent 58%),
-    rgba(30, 41, 59, 0.76);
+    radial-gradient(circle at 50% 36%, color-mix(in srgb, var(--cl-studio-indigo-400) 38%, transparent), transparent 58%),
+    color-mix(in srgb, var(--cl-studio-slate-800) 76%, transparent);
   box-shadow:
-    0 0 0 1px rgba(129, 140, 248, 0.26),
-    0 20px 54px rgba(99, 102, 241, 0.20),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-indigo-400) 26%, transparent),
+    0 20px 54px color-mix(in srgb, var(--cl-studio-indigo-500) 20%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--cl-studio-white) 18%, transparent);
 }
 
 .make-preview-mini-actions .make-preview-timeline-edit {
-  border-color: rgba(251, 191, 36, 0.48);
-  background: rgba(251, 191, 36, 0.14);
-  color: #fef3c7;
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 48%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-amber-400) 14%, transparent);
+  color: var(--cl-studio-amber-100);
 }
 
 .make-preview-mini-actions .make-preview-timeline-edit:hover,
 .make-preview-mini-actions .make-preview-timeline-edit:focus-visible {
-  border-color: rgba(251, 191, 36, 0.88);
-  background: rgba(251, 191, 36, 0.22);
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 88%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-amber-400) 22%, transparent);
 }
 
 .make-preview-mini-rail {
@@ -3056,10 +3045,10 @@
   top: 0.42rem;
   right: 0.42rem;
   z-index: 2;
-  border: 1px solid rgba(251, 191, 36, 0.38);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 38%, transparent);
   border-radius: 999px;
-  background: rgba(2, 6, 23, 0.52);
-  color: #fef3c7;
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 52%, transparent);
+  color: var(--cl-studio-amber-100);
   cursor: pointer;
   font-size: 0.6rem;
   font-weight: 950;
@@ -3070,13 +3059,13 @@
 
 .make-preview-mini-clip-edit:hover,
 .make-preview-mini-clip-edit:focus-visible {
-  border-color: rgba(251, 191, 36, 0.86);
-  background: rgba(251, 191, 36, 0.18);
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 86%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-amber-400) 18%, transparent);
   outline: none;
 }
 
 .make-preview-mini-clip-main:focus-visible {
-  outline: 2px solid rgba(20, 184, 166, 0.82);
+  outline: 2px solid color-mix(in srgb, var(--cl-studio-accent-strong) 82%, transparent);
   outline-offset: -3px;
 }
 
@@ -3175,9 +3164,9 @@
 }
 
 .make-preview-mini-actions .make-preview-timeline-edit.is-active {
-  border-color: rgba(20, 184, 166, 0.92);
-  background: rgba(20, 184, 166, 0.24);
-  color: #ccfbf1;
+  border-color: color-mix(in srgb, var(--cl-studio-accent-strong) 92%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 24%, transparent);
+  color: var(--cl-studio-teal-100);
 }
 
 .make-preview-mini-clip {
@@ -3193,13 +3182,13 @@
 
 .make-preview-mini-clip.is-trimming {
   min-width: 230px;
-  border-color: rgba(251, 191, 36, 0.86) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 86%, transparent) !important;
   background:
-    linear-gradient(145deg, rgba(251, 191, 36, 0.20), rgba(20, 184, 166, 0.14)),
-    rgba(15, 23, 42, 0.74) !important;
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-amber-400) 20%, transparent), color-mix(in srgb, var(--cl-studio-accent-strong) 14%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-900) 74%, transparent) !important;
   box-shadow:
-    0 0 0 1px rgba(251, 191, 36, 0.22),
-    0 24px 68px rgba(0, 0, 0, 0.28);
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-amber-400) 22%, transparent),
+    0 24px 68px color-mix(in srgb, var(--cl-studio-black) 28%, transparent);
 }
 
 .make-preview-mini-clip-trim-fill {
@@ -3209,9 +3198,9 @@
   z-index: 0;
   border-radius: 12px;
   background:
-    linear-gradient(90deg, rgba(20, 184, 166, 0.34), rgba(59, 130, 246, 0.20)),
-    rgba(20, 184, 166, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.18);
+    linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-accent-strong) 34%, transparent), color-mix(in srgb, var(--cl-studio-blue-500) 20%, transparent)),
+    color-mix(in srgb, var(--cl-studio-accent-strong) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-teal-400) 18%, transparent);
   pointer-events: none;
 }
 
@@ -3252,10 +3241,10 @@
   top: 0.42rem;
   right: 0.42rem;
   z-index: 6;
-  border: 1px solid rgba(251, 191, 36, 0.38);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 38%, transparent);
   border-radius: 999px;
-  background: rgba(2, 6, 23, 0.56);
-  color: #fef3c7;
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 56%, transparent);
+  color: var(--cl-studio-amber-100);
   cursor: pointer;
   font-size: 0.6rem;
   font-weight: 950;
@@ -3267,8 +3256,8 @@
 .make-preview-mini-clip-edit:hover,
 .make-preview-mini-clip-edit:focus-visible,
 .make-preview-mini-clip-edit.is-active {
-  border-color: rgba(251, 191, 36, 0.90);
-  background: rgba(251, 191, 36, 0.20);
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 90%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-amber-400) 20%, transparent);
   outline: none;
 }
 
@@ -3278,13 +3267,13 @@
   bottom: 0.18rem;
   z-index: 8;
   width: 1.05rem;
-  border: 1px solid rgba(251, 191, 36, 0.92);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 92%, transparent);
   border-radius: 999px;
   background:
-    linear-gradient(180deg, rgba(254, 243, 199, 0.98), rgba(251, 191, 36, 0.86));
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-studio-amber-100) 98%, transparent), color-mix(in srgb, var(--cl-studio-amber-400) 86%, transparent));
   box-shadow:
-    0 0 0 4px rgba(251, 191, 36, 0.12),
-    0 10px 24px rgba(0, 0, 0, 0.28);
+    0 0 0 4px color-mix(in srgb, var(--cl-studio-amber-400) 12%, transparent),
+    0 10px 24px color-mix(in srgb, var(--cl-studio-black) 28%, transparent);
   cursor: ew-resize !important;
 }
 
@@ -3296,7 +3285,7 @@
   left: 50%;
   width: 2px;
   border-radius: 99px;
-  background: rgba(69, 26, 3, 0.72);
+  background: color-mix(in srgb, var(--cl-studio-amber-950) 72%, transparent);
   transform: translateX(-50%);
 }
 
@@ -3320,8 +3309,8 @@
   bottom: 0.24rem;
   z-index: 7;
   border-radius: 999px;
-  background: rgba(2, 6, 23, 0.62);
-  color: rgba(254, 243, 199, 0.96);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 62%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 96%, transparent);
   font-size: 0.58rem;
   font-weight: 950;
   letter-spacing: 0.06em;
@@ -3357,14 +3346,14 @@
 }
 
 .make-preview-mode-button.is-active {
-  border-color: rgba(129, 140, 248, 0.92);
+  border-color: color-mix(in srgb, var(--cl-studio-indigo-400) 92%, transparent);
   background:
-    radial-gradient(circle at 50% 36%, rgba(129, 140, 248, 0.38), transparent 58%),
-    rgba(30, 41, 59, 0.76);
+    radial-gradient(circle at 50% 36%, color-mix(in srgb, var(--cl-studio-indigo-400) 38%, transparent), transparent 58%),
+    color-mix(in srgb, var(--cl-studio-slate-800) 76%, transparent);
   box-shadow:
-    0 0 0 1px rgba(129, 140, 248, 0.26),
-    0 20px 54px rgba(99, 102, 241, 0.20),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-indigo-400) 26%, transparent),
+    0 20px 54px color-mix(in srgb, var(--cl-studio-indigo-500) 20%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--cl-studio-white) 18%, transparent);
 }
 
 @media (max-width: 900px) {
@@ -3443,9 +3432,9 @@
   font-size: 0 !important;
   font-weight: 400 !important;
   background:
-    linear-gradient(90deg, rgba(20, 184, 166, 0.32), rgba(59, 130, 246, 0.18)),
-    rgba(20, 184, 166, 0.13) !important;
-  box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.16) !important;
+    linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-accent-strong) 32%, transparent), color-mix(in srgb, var(--cl-studio-blue-500) 18%, transparent)),
+    color-mix(in srgb, var(--cl-studio-accent-strong) 13%, transparent) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-teal-400) 16%, transparent) !important;
 }
 
 .make-preview-mini-clip.is-trimming .make-preview-mini-clip-main {
@@ -3480,8 +3469,8 @@
    Adds elapsed timeline fill, makes clip transitions less black, and keeps clip playback visible once ready. */
 .make-preview-playback-layer {
   background:
-    radial-gradient(circle at 50% 50%, transparent 54%, rgba(0, 0, 0, 0.18) 100%),
-    rgba(0, 0, 0, 0.04) !important;
+    radial-gradient(circle at 50% 50%, transparent 54%, color-mix(in srgb, var(--cl-studio-black) 18%, transparent) 100%),
+    color-mix(in srgb, var(--cl-studio-black) 4%, transparent) !important;
 }
 
 .make-preview-playback-video {
@@ -3494,8 +3483,8 @@
 }
 
 .make-preview-playback-layer.is-loading .make-preview-playback-status span {
-  background: rgba(251, 191, 36, 0.18);
-  color: #fef3c7;
+  background: color-mix(in srgb, var(--cl-studio-amber-400) 18%, transparent);
+  color: var(--cl-studio-amber-100);
 }
 
 .make-preview-mini-clip-play-fill {
@@ -3508,11 +3497,11 @@
   min-width: 0 !important;
   border-radius: 12px;
   background:
-    linear-gradient(90deg, rgba(251, 191, 36, 0.72), rgba(20, 184, 166, 0.52)),
-    rgba(251, 191, 36, 0.38);
+    linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-amber-400) 72%, transparent), color-mix(in srgb, var(--cl-studio-accent-strong) 52%, transparent)),
+    color-mix(in srgb, var(--cl-studio-amber-400) 38%, transparent);
   box-shadow:
-    inset 0 0 0 1px rgba(254, 243, 199, 0.24),
-    0 0 20px rgba(20, 184, 166, 0.14);
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-amber-100) 24%, transparent),
+    0 0 20px color-mix(in srgb, var(--cl-studio-accent-strong) 14%, transparent);
   pointer-events: none;
   transition:
     right 90ms linear,
@@ -3528,10 +3517,10 @@
 }
 
 .make-preview-mini-clip.is-playing {
-  border-color: rgba(251, 191, 36, 0.82) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 82%, transparent) !important;
   box-shadow:
-    0 0 0 1px rgba(251, 191, 36, 0.16),
-    0 18px 52px rgba(0, 0, 0, 0.22);
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-amber-400) 16%, transparent),
+    0 18px 52px color-mix(in srgb, var(--cl-studio-black) 22%, transparent);
 }
 
 .make-preview-mini-clip-main,
@@ -3601,11 +3590,11 @@
   z-index: 1 !important;
   border-radius: 15px !important;
   background:
-    linear-gradient(90deg, rgba(251, 191, 36, 0.34), rgba(20, 184, 166, 0.26)),
-    rgba(20, 184, 166, 0.10) !important;
+    linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-amber-400) 34%, transparent), color-mix(in srgb, var(--cl-studio-accent-strong) 26%, transparent)),
+    color-mix(in srgb, var(--cl-studio-accent-strong) 10%, transparent) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(254, 243, 199, 0.12),
-    inset 0 0 24px rgba(20, 184, 166, 0.10) !important;
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-amber-100) 12%, transparent),
+    inset 0 0 24px color-mix(in srgb, var(--cl-studio-accent-strong) 10%, transparent) !important;
   opacity: 0.46 !important;
 }
 
@@ -3671,11 +3660,11 @@
   width: 2px !important;
   border-radius: 999px !important;
   background:
-    linear-gradient(180deg, rgba(254, 243, 199, 0.98), rgba(20, 184, 166, 0.84)) !important;
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-studio-amber-100) 98%, transparent), color-mix(in srgb, var(--cl-studio-accent-strong) 84%, transparent)) !important;
   box-shadow:
-    0 0 0 1px rgba(2, 6, 23, 0.70),
-    0 0 18px rgba(45, 212, 191, 0.36),
-    0 0 22px rgba(251, 191, 36, 0.20) !important;
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-slate-950) 70%, transparent),
+    0 0 18px color-mix(in srgb, var(--cl-studio-teal-400) 36%, transparent),
+    0 0 22px color-mix(in srgb, var(--cl-studio-amber-400) 20%, transparent) !important;
   opacity: 0.62 !important;
   transform: translateX(-50%) !important;
   transition:
@@ -3694,15 +3683,15 @@
   height: 1.28rem !important;
   place-items: center !important;
   border-radius: 999px !important;
-  border: 1px solid rgba(251, 191, 36, 0.58) !important;
-  background: rgba(2, 6, 23, 0.76) !important;
-  color: rgba(254, 243, 199, 0.98) !important;
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 58%, transparent) !important;
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 76%, transparent) !important;
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 98%, transparent) !important;
   font-size: 0.78rem !important;
   font-weight: 950 !important;
   line-height: 1 !important;
   opacity: 0 !important;
   pointer-events: none !important;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55) !important;
+  text-shadow: 0 1px 8px color-mix(in srgb, var(--cl-studio-black) 55%, transparent) !important;
   transform: translate(-50%, -50%) scale(0.92) !important;
   transition:
     opacity 140ms ease,
@@ -3715,9 +3704,9 @@
   width: 3px !important;
   opacity: 0.98 !important;
   box-shadow:
-    0 0 0 1px rgba(2, 6, 23, 0.76),
-    0 0 22px rgba(45, 212, 191, 0.52),
-    0 0 26px rgba(251, 191, 36, 0.30) !important;
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-slate-950) 76%, transparent),
+    0 0 22px color-mix(in srgb, var(--cl-studio-teal-400) 52%, transparent),
+    0 0 26px color-mix(in srgb, var(--cl-studio-amber-400) 30%, transparent) !important;
 }
 
 .make-preview-trim-handle:hover::after,
@@ -3744,11 +3733,11 @@
   bottom: 0.12rem !important;
   border-radius: 16px !important;
   background:
-    linear-gradient(90deg, rgba(20, 184, 166, 0.20), rgba(251, 191, 36, 0.16)),
-    rgba(15, 23, 42, 0.22) !important;
+    linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-accent-strong) 20%, transparent), color-mix(in srgb, var(--cl-studio-amber-400) 16%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-900) 22%, transparent) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(251, 191, 36, 0.22),
-    inset 0 0 28px rgba(20, 184, 166, 0.10) !important;
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-amber-400) 22%, transparent),
+    inset 0 0 28px color-mix(in srgb, var(--cl-studio-accent-strong) 10%, transparent) !important;
 }
 
 .make-preview-mini-clip.is-trimming::before,
@@ -3760,7 +3749,7 @@
   z-index: 11;
   width: 1px;
   border-radius: 999px;
-  background: rgba(254, 243, 199, 0.20);
+  background: color-mix(in srgb, var(--cl-studio-amber-100) 20%, transparent);
   pointer-events: none;
 }
 
@@ -3792,10 +3781,10 @@
 }
 
 .make-preview-timeline-cursor-button.is-active {
-  border-color: rgba(45, 212, 191, 0.78) !important;
-  background: rgba(20, 184, 166, 0.28) !important;
-  color: rgba(236, 254, 255, 0.98) !important;
-  box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.20), 0 0 24px rgba(20, 184, 166, 0.24) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 78%, transparent) !important;
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 28%, transparent) !important;
+  color: color-mix(in srgb, var(--cl-studio-cyan-50) 98%, transparent) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cl-studio-teal-400) 20%, transparent), 0 0 24px color-mix(in srgb, var(--cl-studio-accent-strong) 24%, transparent) !important;
 }
 
 .make-preview-mini-scroll {
@@ -3803,7 +3792,7 @@
   overflow-y: visible;
   padding: 0.12rem 0 0.48rem;
   overscroll-behavior-x: contain;
-  scrollbar-color: rgba(45, 212, 191, 0.70) rgba(15, 23, 42, 0.72);
+  scrollbar-color: color-mix(in srgb, var(--cl-studio-teal-400) 70%, transparent) color-mix(in srgb, var(--cl-studio-slate-900) 72%, transparent);
   scrollbar-width: thin;
 }
 
@@ -3813,13 +3802,13 @@
 
 .make-preview-mini-scroll::-webkit-scrollbar-track {
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.70);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 70%, transparent);
 }
 
 .make-preview-mini-scroll::-webkit-scrollbar-thumb {
-  border: 2px solid rgba(15, 23, 42, 0.70);
+  border: 2px solid color-mix(in srgb, var(--cl-studio-slate-900) 70%, transparent);
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(251, 191, 36, 0.82), rgba(45, 212, 191, 0.82));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-amber-400) 82%, transparent), color-mix(in srgb, var(--cl-studio-teal-400) 82%, transparent));
 }
 
 .make-preview-mini-rail {
@@ -3848,7 +3837,7 @@
 }
 
 .make-preview-timeline-cursor-capture:focus-visible {
-  outline: 2px solid rgba(45, 212, 191, 0.82);
+  outline: 2px solid color-mix(in srgb, var(--cl-studio-teal-400) 82%, transparent);
   outline-offset: -4px;
 }
 
@@ -3857,18 +3846,18 @@
   top: 0.08rem;
   bottom: 0.08rem;
   z-index: 16;
-  border: 1px solid rgba(254, 243, 199, 0.42);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-100) 42%, transparent);
   border-radius: 16px;
   background:
     repeating-linear-gradient(
       135deg,
-      rgba(251, 191, 36, 0.28) 0,
-      rgba(251, 191, 36, 0.28) 7px,
-      rgba(45, 212, 191, 0.18) 7px,
-      rgba(45, 212, 191, 0.18) 14px
+      color-mix(in srgb, var(--cl-studio-amber-400) 28%, transparent) 0,
+      color-mix(in srgb, var(--cl-studio-amber-400) 28%, transparent) 7px,
+      color-mix(in srgb, var(--cl-studio-teal-400) 18%, transparent) 7px,
+      color-mix(in srgb, var(--cl-studio-teal-400) 18%, transparent) 14px
     ),
-    rgba(15, 23, 42, 0.26);
-  box-shadow: inset 0 0 0 1px rgba(2, 6, 23, 0.54), 0 0 24px rgba(251, 191, 36, 0.16);
+    color-mix(in srgb, var(--cl-studio-slate-900) 26%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-slate-950) 54%, transparent), 0 0 24px color-mix(in srgb, var(--cl-studio-amber-400) 16%, transparent);
   pointer-events: none;
 }
 
@@ -3879,11 +3868,11 @@
   z-index: 17;
   width: 2px;
   border-radius: 999px;
-  background: rgba(254, 243, 199, 0.98);
+  background: color-mix(in srgb, var(--cl-studio-amber-100) 98%, transparent);
   box-shadow:
-    0 0 0 1px rgba(2, 6, 23, 0.78),
-    0 0 18px rgba(45, 212, 191, 0.56),
-    0 0 24px rgba(251, 191, 36, 0.34);
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-slate-950) 78%, transparent),
+    0 0 18px color-mix(in srgb, var(--cl-studio-teal-400) 56%, transparent),
+    0 0 24px color-mix(in srgb, var(--cl-studio-amber-400) 34%, transparent);
   pointer-events: none;
   transform: translateX(-50%);
 }
@@ -3897,8 +3886,8 @@
   height: 1.1rem;
   place-items: center;
   border-radius: 999px;
-  background: rgba(2, 6, 23, 0.82);
-  color: rgba(254, 243, 199, 0.98);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 82%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 98%, transparent);
   font-family: ui-serif, Georgia, serif;
   font-size: 0.76rem;
   font-weight: 950;
@@ -3917,7 +3906,7 @@
 
 .make-preview-mini-clip.has-cursor-selection .make-preview-mini-clip-main strong,
 .make-preview-mini-clip.has-cursor-selection .make-preview-mini-clip-main small {
-  text-shadow: 0 1px 12px rgba(2, 6, 23, 0.82);
+  text-shadow: 0 1px 12px color-mix(in srgb, var(--cl-studio-slate-950) 82%, transparent);
 }
 
 /* End Make Studio timeline editor phase 1. */
@@ -3981,11 +3970,11 @@
   left: 50% !important;
   width: 2px !important;
   border-radius: 999px !important;
-  background: linear-gradient(180deg, rgba(254, 243, 199, 0.98), rgba(45, 212, 191, 0.88)) !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cl-studio-amber-100) 98%, transparent), color-mix(in srgb, var(--cl-studio-teal-400) 88%, transparent)) !important;
   box-shadow:
-    0 0 0 1px rgba(2, 6, 23, 0.78),
-    0 0 18px rgba(45, 212, 191, 0.34),
-    0 0 18px rgba(251, 191, 36, 0.18) !important;
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-slate-950) 78%, transparent),
+    0 0 18px color-mix(in srgb, var(--cl-studio-teal-400) 34%, transparent),
+    0 0 18px color-mix(in srgb, var(--cl-studio-amber-400) 18%, transparent) !important;
   opacity: 0.62 !important;
   transform: translateX(-50%) !important;
 }
@@ -3999,10 +3988,10 @@
   width: 1.18rem !important;
   height: 1.18rem !important;
   place-items: center !important;
-  border: 1px solid rgba(251, 191, 36, 0.62) !important;
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 62%, transparent) !important;
   border-radius: 999px !important;
-  background: rgba(2, 6, 23, 0.78) !important;
-  color: rgba(254, 243, 199, 0.98) !important;
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 78%, transparent) !important;
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 98%, transparent) !important;
   font-size: 0.72rem !important;
   font-weight: 950 !important;
   line-height: 1 !important;
@@ -4067,12 +4056,12 @@
   display: grid;
   place-items: center;
   align-self: stretch;
-  border: 1px dashed rgba(45, 212, 191, 0.48);
+  border: 1px dashed color-mix(in srgb, var(--cl-studio-teal-400) 48%, transparent);
   border-radius: 18px;
   background:
-    radial-gradient(circle at 50% 42%, rgba(45, 212, 191, 0.18), transparent 62%),
-    rgba(15, 23, 42, 0.34);
-  color: rgba(236, 254, 255, 0.92);
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--cl-studio-teal-400) 18%, transparent), transparent 62%),
+    color-mix(in srgb, var(--cl-studio-slate-900) 34%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-cyan-50) 92%, transparent);
   cursor: pointer;
   opacity: 0.86;
   transition:
@@ -4087,27 +4076,27 @@
   width: 2.12rem;
   height: 2.12rem;
   place-items: center;
-  border: 1px solid rgba(251, 191, 36, 0.64);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 64%, transparent);
   border-radius: 999px;
   background:
-    radial-gradient(circle at 50% 42%, rgba(251, 191, 36, 0.30), transparent 60%),
-    rgba(2, 6, 23, 0.72);
-  color: rgba(254, 243, 199, 0.98);
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--cl-studio-amber-400) 30%, transparent), transparent 60%),
+    color-mix(in srgb, var(--cl-studio-slate-950) 72%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 98%, transparent);
   font-size: 1.45rem;
   font-weight: 950;
   line-height: 1;
   box-shadow:
-    0 0 0 1px rgba(2, 6, 23, 0.70),
-    0 0 20px rgba(251, 191, 36, 0.18),
-    0 0 22px rgba(45, 212, 191, 0.16);
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-slate-950) 70%, transparent),
+    0 0 20px color-mix(in srgb, var(--cl-studio-amber-400) 18%, transparent),
+    0 0 22px color-mix(in srgb, var(--cl-studio-teal-400) 16%, transparent);
 }
 
 .make-preview-mini-add-clip:hover,
 .make-preview-mini-add-clip:focus-visible {
-  border-color: rgba(45, 212, 191, 0.88);
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 88%, transparent);
   background:
-    radial-gradient(circle at 50% 42%, rgba(45, 212, 191, 0.28), transparent 62%),
-    rgba(15, 23, 42, 0.54);
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--cl-studio-teal-400) 28%, transparent), transparent 62%),
+    color-mix(in srgb, var(--cl-studio-slate-900) 54%, transparent);
   opacity: 1;
   outline: none;
   transform: translateY(-1px);
@@ -4115,11 +4104,11 @@
 
 .make-preview-mini-add-clip:hover span,
 .make-preview-mini-add-clip:focus-visible span {
-  border-color: rgba(251, 191, 36, 0.92);
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 92%, transparent);
   box-shadow:
-    0 0 0 1px rgba(2, 6, 23, 0.74),
-    0 0 24px rgba(251, 191, 36, 0.28),
-    0 0 28px rgba(45, 212, 191, 0.24);
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-slate-950) 74%, transparent),
+    0 0 24px color-mix(in srgb, var(--cl-studio-amber-400) 28%, transparent),
+    0 0 28px color-mix(in srgb, var(--cl-studio-teal-400) 24%, transparent);
 }
 
 .make-preview-mini-add-clip:disabled {
@@ -4189,11 +4178,11 @@
   z-index: 260 !important;
   width: 4px !important;
   border-radius: 999px !important;
-  background: rgba(251, 191, 36, 1) !important;
+  background: var(--cl-studio-amber-400) !important;
   box-shadow:
-    0 0 0 1px rgba(2, 6, 23, 0.92),
-    0 0 12px rgba(251, 191, 36, 0.84),
-    0 0 22px rgba(251, 191, 36, 0.36) !important;
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-slate-950) 92%, transparent),
+    0 0 12px color-mix(in srgb, var(--cl-studio-amber-400) 84%, transparent),
+    0 0 22px color-mix(in srgb, var(--cl-studio-amber-400) 36%, transparent) !important;
   pointer-events: none !important;
   transform: translateX(-50%) !important;
 }
@@ -4207,7 +4196,7 @@
   z-index: 259 !important;
   width: 10px !important;
   border-radius: 999px !important;
-  background: rgba(251, 191, 36, 0.10) !important;
+  background: color-mix(in srgb, var(--cl-studio-amber-400) 10%, transparent) !important;
   filter: blur(4px) !important;
   pointer-events: none !important;
   transform: translateX(-50%) !important;
@@ -4236,21 +4225,21 @@
   min-width: 3.2rem;
   place-items: center;
   padding: 0.28rem 0.48rem;
-  border: 1px solid rgba(251, 191, 36, 0.66);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 66%, transparent);
   border-radius: 999px;
   background:
-    radial-gradient(circle at 50% 35%, rgba(251, 191, 36, 0.20), transparent 62%),
-    rgba(2, 6, 23, 0.86);
-  color: rgba(254, 243, 199, 0.98);
+    radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--cl-studio-amber-400) 20%, transparent), transparent 62%),
+    color-mix(in srgb, var(--cl-studio-slate-950) 86%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 98%, transparent);
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.02em;
   line-height: 1;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.62);
+  text-shadow: 0 1px 8px color-mix(in srgb, var(--cl-studio-black) 62%, transparent);
   box-shadow:
-    0 0 0 1px rgba(2, 6, 23, 0.72),
-    0 12px 26px rgba(0, 0, 0, 0.28),
-    0 0 22px rgba(251, 191, 36, 0.18);
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-slate-950) 72%, transparent),
+    0 12px 26px color-mix(in srgb, var(--cl-studio-black) 28%, transparent),
+    0 0 22px color-mix(in srgb, var(--cl-studio-amber-400) 18%, transparent);
   pointer-events: none;
   transform: translate(-50%, 0);
   animation: makeTimelineTimeBadgeFade 2.8s ease forwards;
@@ -4263,9 +4252,9 @@
   bottom: -0.34rem;
   width: 0.52rem;
   height: 0.52rem;
-  border-right: 1px solid rgba(251, 191, 36, 0.58);
-  border-bottom: 1px solid rgba(251, 191, 36, 0.58);
-  background: rgba(2, 6, 23, 0.86);
+  border-right: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 58%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 58%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 86%, transparent);
   transform: translateX(-50%) rotate(45deg);
 }
 
@@ -4368,7 +4357,7 @@
   padding-top: 2.35rem !important;
   padding-bottom: 1.02rem !important;
   overscroll-behavior-x: contain !important;
-  scrollbar-color: rgba(45, 212, 191, 0.76) rgba(15, 23, 42, 0.76) !important;
+  scrollbar-color: color-mix(in srgb, var(--cl-studio-teal-400) 76%, transparent) color-mix(in srgb, var(--cl-studio-slate-900) 76%, transparent) !important;
   scrollbar-gutter: stable !important;
   scrollbar-width: thin !important;
 }
@@ -4379,13 +4368,13 @@
 
 .make-preview-mini-scroll::-webkit-scrollbar-track {
   border-radius: 999px !important;
-  background: rgba(15, 23, 42, 0.76) !important;
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 76%, transparent) !important;
 }
 
 .make-preview-mini-scroll::-webkit-scrollbar-thumb {
-  border: 2px solid rgba(15, 23, 42, 0.76) !important;
+  border: 2px solid color-mix(in srgb, var(--cl-studio-slate-900) 76%, transparent) !important;
   border-radius: 999px !important;
-  background: linear-gradient(90deg, rgba(251, 191, 36, 0.86), rgba(45, 212, 191, 0.86)) !important;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-amber-400) 86%, transparent), color-mix(in srgb, var(--cl-studio-teal-400) 86%, transparent)) !important;
 }
 
 .make-preview-mini-rail {
@@ -4464,16 +4453,16 @@
   z-index: 390 !important;
   min-width: 10px !important;
   max-width: 100% !important;
-  border: 1px solid rgba(254, 243, 199, 0.84) !important;
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-100) 84%, transparent) !important;
   border-radius: 10px !important;
   background:
-    linear-gradient(90deg, rgba(251, 191, 36, 0.50), rgba(20, 184, 166, 0.38)),
-    rgba(251, 191, 36, 0.16) !important;
+    linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-amber-400) 50%, transparent), color-mix(in srgb, var(--cl-studio-accent-strong) 38%, transparent)),
+    color-mix(in srgb, var(--cl-studio-amber-400) 16%, transparent) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(2, 6, 23, 0.58),
-    0 0 0 1px rgba(251, 191, 36, 0.16),
-    0 0 24px rgba(251, 191, 36, 0.24),
-    0 0 22px rgba(20, 184, 166, 0.16) !important;
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-slate-950) 58%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-amber-400) 16%, transparent),
+    0 0 24px color-mix(in srgb, var(--cl-studio-amber-400) 24%, transparent),
+    0 0 22px color-mix(in srgb, var(--cl-studio-accent-strong) 16%, transparent) !important;
   opacity: 1 !important;
   pointer-events: none !important;
   transform: none !important;
@@ -4518,17 +4507,17 @@
   z-index: 395 !important;
   min-width: 10px !important;
   max-width: 100% !important;
-  border: 1px solid rgba(254, 243, 199, 0.88) !important;
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-100) 88%, transparent) !important;
   border-radius: 14px !important;
   background:
-    linear-gradient(90deg, rgba(251, 191, 36, 0.48), rgba(20, 184, 166, 0.36)),
-    rgba(251, 191, 36, 0.18) !important;
+    linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-amber-400) 48%, transparent), color-mix(in srgb, var(--cl-studio-accent-strong) 36%, transparent)),
+    color-mix(in srgb, var(--cl-studio-amber-400) 18%, transparent) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(2, 6, 23, 0.58),
-    inset 0 0 26px rgba(251, 191, 36, 0.16),
-    0 0 0 1px rgba(251, 191, 36, 0.18),
-    0 0 28px rgba(251, 191, 36, 0.28),
-    0 0 24px rgba(20, 184, 166, 0.18) !important;
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-slate-950) 58%, transparent),
+    inset 0 0 26px color-mix(in srgb, var(--cl-studio-amber-400) 16%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-amber-400) 18%, transparent),
+    0 0 28px color-mix(in srgb, var(--cl-studio-amber-400) 28%, transparent),
+    0 0 24px color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent) !important;
   opacity: 1 !important;
   pointer-events: none !important;
   transform: none !important;
@@ -4596,17 +4585,17 @@
   z-index: 460 !important;
   min-width: 10px !important;
   max-width: 100% !important;
-  border: 1px solid rgba(254, 243, 199, 0.88) !important;
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-100) 88%, transparent) !important;
   border-radius: 14px !important;
   background:
-    linear-gradient(90deg, rgba(251, 191, 36, 0.48), rgba(20, 184, 166, 0.38)),
-    rgba(251, 191, 36, 0.20) !important;
+    linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-amber-400) 48%, transparent), color-mix(in srgb, var(--cl-studio-accent-strong) 38%, transparent)),
+    color-mix(in srgb, var(--cl-studio-amber-400) 20%, transparent) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(2, 6, 23, 0.60),
-    inset 0 0 30px rgba(251, 191, 36, 0.16),
-    0 0 0 1px rgba(251, 191, 36, 0.20),
-    0 0 28px rgba(251, 191, 36, 0.28),
-    0 0 24px rgba(20, 184, 166, 0.18) !important;
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-slate-950) 60%, transparent),
+    inset 0 0 30px color-mix(in srgb, var(--cl-studio-amber-400) 16%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-amber-400) 20%, transparent),
+    0 0 28px color-mix(in srgb, var(--cl-studio-amber-400) 28%, transparent),
+    0 0 24px color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent) !important;
   opacity: 1 !important;
   pointer-events: none !important;
   transform: none !important;
@@ -4653,8 +4642,8 @@
   overflow: hidden;
   border-radius: inherit;
   background:
-    radial-gradient(circle at 50% 50%, transparent 46%, rgba(2, 6, 23, 0.40) 100%),
-    rgba(2, 6, 23, 0.20);
+    radial-gradient(circle at 50% 50%, transparent 46%, color-mix(in srgb, var(--cl-studio-slate-950) 40%, transparent) 100%),
+    color-mix(in srgb, var(--cl-studio-slate-950) 20%, transparent);
   pointer-events: auto;
 }
 
@@ -4662,7 +4651,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  background: #020617;
+  background: var(--cl-studio-slate-950);
 }
 
 .make-preview-marker-status {
@@ -4675,13 +4664,13 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.68rem;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-white) 16%, transparent);
   border-radius: 999px;
   background:
-    linear-gradient(145deg, rgba(15, 23, 42, 0.74), rgba(2, 6, 23, 0.62)),
-    rgba(2, 6, 23, 0.58);
-  color: #fff;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.26);
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-slate-900) 74%, transparent), color-mix(in srgb, var(--cl-studio-slate-950) 62%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-950) 58%, transparent);
+  color: var(--cl-studio-white);
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--cl-studio-black) 26%, transparent);
   backdrop-filter: blur(18px) saturate(1.2);
 }
 
@@ -4689,8 +4678,8 @@
   flex: 0 0 auto;
   padding: 0.22rem 0.42rem;
   border-radius: 999px;
-  background: rgba(251, 191, 36, 0.20);
-  color: rgba(254, 243, 199, 0.96);
+  background: color-mix(in srgb, var(--cl-studio-amber-400) 20%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 96%, transparent);
   font-size: 0.68rem;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -4698,8 +4687,8 @@
 }
 
 .make-preview-marker-layer.is-looping .make-preview-marker-status span {
-  background: rgba(20, 184, 166, 0.20);
-  color: rgba(153, 246, 228, 0.96);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 20%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-teal-200) 96%, transparent);
 }
 
 .make-preview-marker-status strong,
@@ -4716,7 +4705,7 @@
 }
 
 .make-preview-marker-status small {
-  color: rgba(226, 232, 240, 0.80);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 80%, transparent);
   font-size: 0.72rem;
   font-weight: 850;
 }
@@ -4736,11 +4725,11 @@
   bottom: 0.16rem !important;
   border-radius: 14px !important;
   background:
-    linear-gradient(90deg, rgba(251, 191, 36, 0.30), rgba(20, 184, 166, 0.26)),
-    rgba(251, 191, 36, 0.14) !important;
+    linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-amber-400) 30%, transparent), color-mix(in srgb, var(--cl-studio-accent-strong) 26%, transparent)),
+    color-mix(in srgb, var(--cl-studio-amber-400) 14%, transparent) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(254, 243, 199, 0.10),
-    0 0 22px rgba(251, 191, 36, 0.12) !important;
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-amber-100) 10%, transparent),
+    0 0 22px color-mix(in srgb, var(--cl-studio-amber-400) 12%, transparent) !important;
 }
 
 /* Make timeline visible-duration pass.
@@ -4773,10 +4762,10 @@
   max-width: calc(100% - 0.9rem);
   overflow: hidden;
   padding: 0.08rem 0.32rem;
-  border: 1px solid rgba(251, 191, 36, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 28%, transparent);
   border-radius: 999px;
-  background: rgba(251, 191, 36, 0.14);
-  color: rgba(254, 243, 199, 0.92);
+  background: color-mix(in srgb, var(--cl-studio-amber-400) 14%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 92%, transparent);
   font-size: 0.54rem;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -4789,8 +4778,8 @@
   left: 0 !important;
   right: 0 !important;
   background:
-    linear-gradient(90deg, rgba(251, 191, 36, 0.16), rgba(20, 184, 166, 0.18)),
-    rgba(20, 184, 166, 0.10);
+    linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-amber-400) 16%, transparent), color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent)),
+    color-mix(in srgb, var(--cl-studio-accent-strong) 10%, transparent);
 }
 
 .make-preview-mini-clip.is-trimmed .make-preview-mini-clip-main > small {
@@ -4819,22 +4808,22 @@
   place-items: center;
   min-width: 2.35rem;
   height: 3.85rem;
-  border: 1px solid rgba(125, 211, 252, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-sky-300) 28%, transparent);
   border-radius: 18px;
   background:
-    linear-gradient(145deg, rgba(14, 165, 233, 0.20), rgba(20, 184, 166, 0.12)),
-    rgba(2, 6, 23, 0.20);
-  color: rgba(224, 242, 254, 0.96);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-sky-500) 20%, transparent), color-mix(in srgb, var(--cl-studio-accent-strong) 12%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-950) 20%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-sky-100) 96%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-white) 5%, transparent);
   cursor: pointer;
 }
 
 .make-preview-mini-link-clip:hover:not(:disabled) {
   transform: translateY(-1px);
-  border-color: rgba(125, 211, 252, 0.52);
+  border-color: color-mix(in srgb, var(--cl-studio-sky-300) 52%, transparent);
   background:
-    linear-gradient(145deg, rgba(14, 165, 233, 0.28), rgba(20, 184, 166, 0.18)),
-    rgba(2, 6, 23, 0.26);
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-sky-500) 28%, transparent), color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-950) 26%, transparent);
 }
 
 .make-preview-mini-link-clip:disabled {
@@ -4847,11 +4836,11 @@
   gap: 0.42rem;
   margin-top: 0.52rem;
   padding: 0.52rem;
-  border: 1px solid rgba(125, 211, 252, 0.16);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-sky-300) 16%, transparent);
   border-radius: 20px;
   background:
-    linear-gradient(145deg, rgba(14, 165, 233, 0.10), rgba(15, 23, 42, 0.42)),
-    rgba(2, 6, 23, 0.28);
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-sky-500) 10%, transparent), color-mix(in srgb, var(--cl-studio-slate-900) 42%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-950) 28%, transparent);
 }
 
 .make-linked-video-strip-head,
@@ -4865,7 +4854,7 @@
 
 .make-linked-video-strip-head span,
 .make-preview-audio-lane-head span {
-  color: rgba(226, 232, 240, 0.70);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 70%, transparent);
   font-size: 0.66rem;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -4874,7 +4863,7 @@
 
 .make-linked-video-strip-head strong,
 .make-preview-audio-lane-head strong {
-  color: rgba(248, 250, 252, 0.95);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 95%, transparent);
   font-size: 0.78rem;
   font-weight: 950;
 }
@@ -4893,10 +4882,10 @@
   gap: 0.5rem;
   align-items: center;
   padding: 0.46rem 0.5rem;
-  border: 1px solid rgba(125, 211, 252, 0.16);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-sky-300) 16%, transparent);
   border-radius: 16px;
-  background: rgba(15, 23, 42, 0.52);
-  color: rgba(226, 232, 240, 0.92);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 52%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 92%, transparent);
 }
 
 .make-linked-video-chip > span {
@@ -4905,7 +4894,7 @@
   width: 1.65rem;
   height: 1.65rem;
   border-radius: 999px;
-  background: rgba(14, 165, 233, 0.14);
+  background: color-mix(in srgb, var(--cl-studio-sky-500) 14%, transparent);
 }
 
 .make-linked-video-chip div {
@@ -4927,16 +4916,16 @@
 }
 
 .make-linked-video-chip small {
-  color: rgba(203, 213, 225, 0.66);
+  color: color-mix(in srgb, var(--cl-studio-slate-300) 66%, transparent);
   font-size: 0.64rem;
   font-weight: 800;
 }
 
 .make-linked-video-chip em {
   padding: 0.18rem 0.38rem;
-  border: 1px solid rgba(251, 191, 36, 0.20);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 20%, transparent);
   border-radius: 999px;
-  color: rgba(254, 243, 199, 0.92);
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 92%, transparent);
   font-size: 0.58rem;
   font-style: normal;
   font-weight: 950;
@@ -4949,10 +4938,10 @@
   place-items: center;
   width: 1.55rem;
   height: 1.55rem;
-  border: 1px solid rgba(248, 113, 113, 0.22);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-red-400) 22%, transparent);
   border-radius: 999px;
-  background: rgba(127, 29, 29, 0.22);
-  color: rgba(254, 202, 202, 0.95);
+  background: color-mix(in srgb, var(--cl-studio-red-900) 22%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-red-200) 95%, transparent);
   cursor: pointer;
 }
 
@@ -4961,11 +4950,11 @@
   gap: 0.5rem;
   margin-top: 0.52rem;
   padding: 0.56rem;
-  border: 1px solid rgba(196, 181, 253, 0.16);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-violet-300) 16%, transparent);
   border-radius: 22px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(168, 85, 247, 0.14), transparent 40%),
-    linear-gradient(145deg, rgba(15, 23, 42, 0.58), rgba(2, 6, 23, 0.34));
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cl-studio-purple-500) 14%, transparent), transparent 40%),
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-slate-900) 58%, transparent), color-mix(in srgb, var(--cl-studio-slate-950) 34%, transparent));
 }
 
 .make-preview-audio-lane-head > div {
@@ -4982,10 +4971,10 @@
   place-items: center;
   width: 1.8rem;
   height: 1.8rem;
-  border: 1px solid rgba(196, 181, 253, 0.24);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-violet-300) 24%, transparent);
   border-radius: 999px;
-  background: rgba(88, 28, 135, 0.20);
-  color: rgba(237, 233, 254, 0.96);
+  background: color-mix(in srgb, var(--cl-studio-purple-900) 20%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-violet-100) 96%, transparent);
   font-size: 0.92rem;
   letter-spacing: 0;
   text-transform: none;
@@ -4993,7 +4982,7 @@
 
 .make-preview-audio-lane-head small {
   min-width: 0;
-  color: rgba(203, 213, 225, 0.72);
+  color: color-mix(in srgb, var(--cl-studio-slate-300) 72%, transparent);
   font-size: 0.66rem;
   font-weight: 800;
 }
@@ -5007,10 +4996,10 @@
 
 .make-preview-audio-actions button {
   padding: 0.34rem 0.52rem;
-  border: 1px solid rgba(196, 181, 253, 0.22);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-violet-300) 22%, transparent);
   border-radius: 999px;
-  background: rgba(88, 28, 135, 0.18);
-  color: rgba(237, 233, 254, 0.96);
+  background: color-mix(in srgb, var(--cl-studio-purple-900) 18%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-violet-100) 96%, transparent);
   font-size: 0.66rem;
   font-weight: 950;
   cursor: pointer;
@@ -5034,16 +5023,16 @@
   gap: 0.5rem;
   align-items: center;
   padding: 0.46rem;
-  border: 1px solid rgba(196, 181, 253, 0.14);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-violet-300) 14%, transparent);
   border-radius: 16px;
-  background: rgba(15, 23, 42, 0.46);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 46%, transparent);
 }
 
 .make-preview-audio-track.is-linked {
-  border-color: rgba(125, 211, 252, 0.18);
+  border-color: color-mix(in srgb, var(--cl-studio-sky-300) 18%, transparent);
   background:
-    linear-gradient(145deg, rgba(14, 165, 233, 0.10), transparent),
-    rgba(15, 23, 42, 0.46);
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-sky-500) 10%, transparent), transparent),
+    color-mix(in srgb, var(--cl-studio-slate-900) 46%, transparent);
 }
 
 .make-preview-audio-track-icon {
@@ -5052,8 +5041,8 @@
   width: 1.85rem;
   height: 1.85rem;
   border-radius: 999px;
-  background: rgba(168, 85, 247, 0.14);
-  color: rgba(237, 233, 254, 0.96);
+  background: color-mix(in srgb, var(--cl-studio-purple-500) 14%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-violet-100) 96%, transparent);
 }
 
 .make-preview-audio-track-main {
@@ -5070,13 +5059,13 @@
 }
 
 .make-preview-audio-track-main strong {
-  color: rgba(248, 250, 252, 0.96);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 96%, transparent);
   font-size: 0.76rem;
   font-weight: 950;
 }
 
 .make-preview-audio-track-main small {
-  color: rgba(203, 213, 225, 0.68);
+  color: color-mix(in srgb, var(--cl-studio-slate-300) 68%, transparent);
   font-size: 0.64rem;
   font-weight: 800;
 }
@@ -5087,18 +5076,18 @@
   gap: 0.32rem;
   align-items: center;
   min-width: 0;
-  color: rgba(226, 232, 240, 0.78);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 78%, transparent);
   font-size: 0.62rem;
   font-weight: 950;
 }
 
 .make-preview-audio-volume input {
   width: 100%;
-  accent-color: #a78bfa;
+  accent-color: var(--cl-studio-violet-400);
 }
 
 .make-preview-audio-volume b {
-  color: rgba(248, 250, 252, 0.86);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 86%, transparent);
   font-size: 0.62rem;
   text-align: right;
 }
@@ -5108,9 +5097,9 @@
   gap: 0.52rem;
   align-items: center;
   padding: 0.52rem;
-  border: 1px dashed rgba(196, 181, 253, 0.18);
+  border: 1px dashed color-mix(in srgb, var(--cl-studio-violet-300) 18%, transparent);
   border-radius: 16px;
-  color: rgba(226, 232, 240, 0.82);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 82%, transparent);
 }
 
 .make-preview-audio-empty span {
@@ -5118,7 +5107,7 @@
   height: 1.45rem;
   border-radius: 999px;
   background:
-    linear-gradient(135deg, rgba(196, 181, 253, 0.42), rgba(45, 212, 191, 0.26));
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-studio-violet-300) 42%, transparent), color-mix(in srgb, var(--cl-studio-teal-400) 26%, transparent));
 }
 
 .make-preview-audio-empty strong,
@@ -5132,7 +5121,7 @@
 }
 
 .make-preview-audio-empty small {
-  color: rgba(203, 213, 225, 0.68);
+  color: color-mix(in srgb, var(--cl-studio-slate-300) 68%, transparent);
   font-size: 0.64rem;
   font-weight: 800;
 }
@@ -5146,13 +5135,13 @@
   gap: 0.55rem;
   width: min(430px, calc(100% - 2rem));
   padding: 0.72rem;
-  border: 1px solid rgba(125, 211, 252, 0.22);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-sky-300) 22%, transparent);
   border-radius: 22px;
   background:
-    radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.20), transparent 46%),
-    linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.86));
-  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.42);
-  color: rgba(248, 250, 252, 0.95);
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--cl-studio-sky-500) 20%, transparent), transparent 46%),
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-slate-900) 92%, transparent), color-mix(in srgb, var(--cl-studio-slate-950) 86%, transparent));
+  box-shadow: 0 26px 80px color-mix(in srgb, var(--cl-studio-black) 42%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 95%, transparent);
   backdrop-filter: blur(18px) saturate(1.15);
 }
 
@@ -5165,7 +5154,7 @@
 
 .make-linked-media-popover-head span,
 .make-linked-media-popover p {
-  color: rgba(203, 213, 225, 0.76);
+  color: color-mix(in srgb, var(--cl-studio-slate-300) 76%, transparent);
   font-size: 0.68rem;
   font-weight: 850;
 }
@@ -5187,10 +5176,10 @@
   place-items: center;
   width: 1.8rem;
   height: 1.8rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-white) 14%, transparent);
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.60);
-  color: rgba(248, 250, 252, 0.92);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 60%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 92%, transparent);
   cursor: pointer;
 }
 
@@ -5203,25 +5192,25 @@
 .make-linked-media-form input {
   min-width: 0;
   padding: 0.52rem 0.62rem;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 22%, transparent);
   border-radius: 14px;
-  background: rgba(2, 6, 23, 0.48);
-  color: rgba(248, 250, 252, 0.95);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 48%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 95%, transparent);
   font-size: 0.8rem;
   outline: none;
 }
 
 .make-linked-media-form input:focus {
-  border-color: rgba(125, 211, 252, 0.52);
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.14);
+  border-color: color-mix(in srgb, var(--cl-studio-sky-300) 52%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cl-studio-sky-500) 14%, transparent);
 }
 
 .make-linked-media-form button {
   padding: 0.52rem 0.68rem;
-  border: 1px solid rgba(20, 184, 166, 0.32);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-accent-strong) 32%, transparent);
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(20, 184, 166, 0.32), rgba(14, 165, 233, 0.22));
-  color: rgba(240, 253, 250, 0.98);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--cl-studio-accent-strong) 32%, transparent), color-mix(in srgb, var(--cl-studio-sky-500) 22%, transparent));
+  color: color-mix(in srgb, var(--cl-studio-teal-50) 98%, transparent);
   font-size: 0.72rem;
   font-weight: 950;
   cursor: pointer;
@@ -5260,9 +5249,9 @@
   height: 0.42rem;
   margin-top: 0.32rem;
   overflow: hidden;
-  border: 1px solid rgba(196, 181, 253, 0.14);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-violet-300) 14%, transparent);
   border-radius: 999px;
-  background: rgba(2, 6, 23, 0.44);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 44%, transparent);
 }
 
 .make-preview-audio-timeline-plate {
@@ -5272,8 +5261,8 @@
   min-width: 0.6rem;
   border-radius: 999px;
   background:
-    linear-gradient(90deg, rgba(196, 181, 253, 0.90), rgba(45, 212, 191, 0.72));
-  box-shadow: 0 0 18px rgba(168, 85, 247, 0.18);
+    linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-violet-300) 90%, transparent), color-mix(in srgb, var(--cl-studio-teal-400) 72%, transparent));
+  box-shadow: 0 0 18px color-mix(in srgb, var(--cl-studio-purple-500) 18%, transparent);
 }
 
 .make-preview-audio-position {
@@ -5291,7 +5280,7 @@
 }
 
 .make-preview-audio-position label span {
-  color: rgba(226, 232, 240, 0.78);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 78%, transparent);
   font-size: 0.6rem;
   font-weight: 950;
   letter-spacing: 0.04em;
@@ -5300,7 +5289,7 @@
 
 .make-preview-audio-position input {
   width: 100%;
-  accent-color: #2dd4bf;
+  accent-color: var(--cl-studio-teal-400);
 }
 
 .make-preview-audio-position button,
@@ -5311,10 +5300,10 @@
   min-width: 2.3rem;
   height: 1.7rem;
   padding: 0 0.38rem;
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 18%, transparent);
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.54);
-  color: rgba(226, 232, 240, 0.90);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 54%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 90%, transparent);
   font-size: 0.6rem;
   font-weight: 950;
   cursor: pointer;
@@ -5322,13 +5311,13 @@
 
 .make-preview-audio-mute {
   min-width: 3.6rem;
-  border-color: rgba(196, 181, 253, 0.18);
-  color: rgba(237, 233, 254, 0.95);
+  border-color: color-mix(in srgb, var(--cl-studio-violet-300) 18%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-violet-100) 95%, transparent);
 }
 
 .make-preview-audio-track.is-muted .make-preview-audio-mute {
-  border-color: rgba(251, 191, 36, 0.28);
-  color: rgba(254, 243, 199, 0.95);
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 28%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 95%, transparent);
 }
 
 .make-linked-media-popover {
@@ -5344,9 +5333,9 @@
   grid-template-columns: 1fr 1fr;
   gap: 0.42rem;
   padding: 0.5rem;
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 14%, transparent);
   border-radius: 16px;
-  background: rgba(2, 6, 23, 0.28);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 28%, transparent);
 }
 
 .make-linked-media-time-grid label {
@@ -5355,7 +5344,7 @@
 }
 
 .make-linked-media-time-grid label span {
-  color: rgba(203, 213, 225, 0.74);
+  color: color-mix(in srgb, var(--cl-studio-slate-300) 74%, transparent);
   font-size: 0.62rem;
   font-weight: 950;
   letter-spacing: 0.06em;
@@ -5366,10 +5355,10 @@
 .make-linked-media-time-grid input:not([type]) {
   min-width: 0;
   padding: 0.4rem 0.5rem;
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 16%, transparent);
   border-radius: 12px;
-  background: rgba(15, 23, 42, 0.56);
-  color: rgba(248, 250, 252, 0.86);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 56%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 86%, transparent);
 }
 
 .make-linked-media-entire {
@@ -5404,16 +5393,16 @@
    claim rights, payout, backend receipt truth, or export inclusion. */
 .make-linked-video-chip .make-linked-video-range {
   margin-top: 0.1rem;
-  color: rgba(125, 211, 252, 0.82);
+  color: color-mix(in srgb, var(--cl-studio-sky-300) 82%, transparent);
   font-size: 0.6rem;
   font-weight: 950;
 }
 
 .make-linked-media-time-grid.is-editable {
-  border-color: rgba(45, 212, 191, 0.20);
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 20%, transparent);
   background:
-    radial-gradient(circle at 0% 0%, rgba(45, 212, 191, 0.10), transparent 46%),
-    rgba(2, 6, 23, 0.30);
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cl-studio-teal-400) 10%, transparent), transparent 46%),
+    color-mix(in srgb, var(--cl-studio-slate-950) 30%, transparent);
 }
 
 .make-linked-media-time-grid input[type="text"]:disabled {
@@ -5423,14 +5412,14 @@
 
 .make-linked-media-time-help {
   grid-column: 1 / -1;
-  color: rgba(203, 213, 225, 0.72);
+  color: color-mix(in srgb, var(--cl-studio-slate-300) 72%, transparent);
   font-size: 0.62rem;
   font-weight: 800;
   line-height: 1.35;
 }
 
 .make-linked-media-entire input[type="checkbox"] {
-  accent-color: #2dd4bf;
+  accent-color: var(--cl-studio-teal-400);
 }
 
 /* Linked media composer portal.
@@ -5442,8 +5431,8 @@
   inset: 0;
   z-index: 2147482990;
   background:
-    radial-gradient(circle at 78% 24%, rgba(14, 165, 233, 0.16), transparent 36%),
-    rgba(2, 6, 23, 0.42);
+    radial-gradient(circle at 78% 24%, color-mix(in srgb, var(--cl-studio-sky-500) 16%, transparent), transparent 36%),
+    color-mix(in srgb, var(--cl-studio-slate-950) 42%, transparent);
   backdrop-filter: blur(2px);
 }
 
@@ -5460,9 +5449,9 @@
   pointer-events: auto;
   transform: translateZ(0);
   box-shadow:
-    0 34px 120px rgba(0, 0, 0, 0.66),
-    0 0 0 1px rgba(125, 211, 252, 0.16),
-    0 0 48px rgba(14, 165, 233, 0.16);
+    0 34px 120px color-mix(in srgb, var(--cl-studio-black) 66%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-sky-300) 16%, transparent),
+    0 0 48px color-mix(in srgb, var(--cl-studio-sky-500) 16%, transparent);
 }
 
 @media (max-width: 760px) {
@@ -5482,18 +5471,18 @@
 }
 
 .make-linked-video-chip.is-previewing {
-  border-color: rgba(45, 212, 191, 0.38);
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 38%, transparent);
   background:
-    radial-gradient(circle at 0% 50%, rgba(45, 212, 191, 0.14), transparent 48%),
-    rgba(15, 23, 42, 0.62);
+    radial-gradient(circle at 0% 50%, color-mix(in srgb, var(--cl-studio-teal-400) 14%, transparent), transparent 48%),
+    color-mix(in srgb, var(--cl-studio-slate-900) 62%, transparent);
   box-shadow:
-    inset 0 0 0 1px rgba(45, 212, 191, 0.10),
-    0 16px 48px rgba(0, 0, 0, 0.22);
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-teal-400) 10%, transparent),
+    0 16px 48px color-mix(in srgb, var(--cl-studio-black) 22%, transparent);
 }
 
 .make-linked-video-chip .make-linked-video-range {
   margin-top: 0.1rem;
-  color: rgba(125, 211, 252, 0.82);
+  color: color-mix(in srgb, var(--cl-studio-sky-300) 82%, transparent);
   font-size: 0.6rem;
   font-weight: 950;
 }
@@ -5502,28 +5491,28 @@
   width: auto;
   min-width: 2.05rem;
   padding: 0 0.58rem;
-  border-color: rgba(45, 212, 191, 0.26);
-  background: rgba(20, 184, 166, 0.16);
-  color: rgba(204, 251, 241, 0.96);
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 26%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 16%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-teal-100) 96%, transparent);
 }
 
 .make-linked-video-chip .make-linked-video-preview-button:hover,
 .make-linked-video-chip .make-linked-video-preview-button[aria-pressed="true"] {
-  border-color: rgba(45, 212, 191, 0.58);
-  background: rgba(20, 184, 166, 0.28);
-  color: rgba(240, 253, 250, 1);
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 58%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 28%, transparent);
+  color: var(--cl-studio-teal-50);
 }
 
 .make-linked-video-preview-card {
   display: grid;
   gap: 0.55rem;
   padding: 0.62rem;
-  border: 1px solid rgba(45, 212, 191, 0.20);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-teal-400) 20%, transparent);
   border-radius: 20px;
   background:
-    radial-gradient(circle at 14% 0%, rgba(14, 165, 233, 0.16), transparent 46%),
-    linear-gradient(145deg, rgba(15, 23, 42, 0.74), rgba(2, 6, 23, 0.62));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--cl-studio-sky-500) 16%, transparent), transparent 46%),
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-slate-900) 74%, transparent), color-mix(in srgb, var(--cl-studio-slate-950) 62%, transparent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-white) 4%, transparent);
 }
 
 .make-linked-video-preview-head {
@@ -5546,7 +5535,7 @@
 }
 
 .make-linked-video-preview-head span {
-  color: rgba(45, 212, 191, 0.82);
+  color: color-mix(in srgb, var(--cl-studio-teal-400) 82%, transparent);
   font-size: 0.62rem;
   font-weight: 950;
   letter-spacing: 0.10em;
@@ -5555,14 +5544,14 @@
 
 .make-linked-video-preview-head strong {
   margin-top: 0.08rem;
-  color: rgba(248, 250, 252, 0.96);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 96%, transparent);
   font-size: 0.86rem;
   font-weight: 950;
 }
 
 .make-linked-video-preview-head small {
   margin-top: 0.08rem;
-  color: rgba(203, 213, 225, 0.74);
+  color: color-mix(in srgb, var(--cl-studio-slate-300) 74%, transparent);
   font-size: 0.66rem;
   font-weight: 850;
 }
@@ -5572,10 +5561,10 @@
   place-items: center;
   width: 1.8rem;
   height: 1.8rem;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 22%, transparent);
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.64);
-  color: rgba(248, 250, 252, 0.92);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 64%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 92%, transparent);
   cursor: pointer;
 }
 
@@ -5585,11 +5574,11 @@
   place-items: center;
   min-height: clamp(160px, 26vw, 360px);
   overflow: hidden;
-  border: 1px solid rgba(125, 211, 252, 0.14);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-sky-300) 14%, transparent);
   border-radius: 18px;
   background:
-    radial-gradient(circle at 50% 20%, rgba(30, 41, 59, 0.88), transparent 44%),
-    #020617;
+    radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--cl-studio-slate-800) 88%, transparent), transparent 44%),
+    var(--cl-studio-slate-950);
 }
 
 .make-linked-video-preview-frame video {
@@ -5597,14 +5586,14 @@
   width: 100%;
   max-height: min(46vh, 460px);
   object-fit: contain;
-  background: #020617;
+  background: var(--cl-studio-slate-950);
 }
 
 .make-linked-video-preview-empty {
   display: grid;
   gap: 0.25rem;
   padding: 1rem;
-  color: rgba(226, 232, 240, 0.86);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 86%, transparent);
   text-align: center;
 }
 
@@ -5614,7 +5603,7 @@
 }
 
 .make-linked-video-preview-empty span {
-  color: rgba(203, 213, 225, 0.72);
+  color: color-mix(in srgb, var(--cl-studio-slate-300) 72%, transparent);
   font-size: 0.68rem;
   font-weight: 800;
 }
@@ -5625,18 +5614,18 @@
   bottom: 0.7rem;
   max-width: min(420px, calc(100% - 1.4rem));
   padding: 0.38rem 0.52rem;
-  border: 1px solid rgba(125, 211, 252, 0.18);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-sky-300) 18%, transparent);
   border-radius: 999px;
-  background: rgba(2, 6, 23, 0.76);
-  color: rgba(224, 242, 254, 0.94);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 76%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-sky-100) 94%, transparent);
   font-size: 0.62rem;
   font-weight: 900;
   backdrop-filter: blur(12px);
 }
 
 .make-linked-video-preview-status.is-error {
-  border-color: rgba(251, 191, 36, 0.28);
-  color: rgba(254, 243, 199, 0.96);
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 28%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 96%, transparent);
 }
 
 .make-linked-video-preview-facts {
@@ -5651,7 +5640,7 @@
   flex: 1 1 240px;
   min-width: 0;
   overflow: hidden;
-  color: rgba(203, 213, 225, 0.68);
+  color: color-mix(in srgb, var(--cl-studio-slate-300) 68%, transparent);
   font-size: 0.62rem;
   font-weight: 800;
   text-overflow: ellipsis;
@@ -5660,9 +5649,9 @@
 
 .make-linked-video-preview-facts em {
   padding: 0.18rem 0.42rem;
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 16%, transparent);
   border-radius: 999px;
-  color: rgba(226, 232, 240, 0.76);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 76%, transparent);
   font-size: 0.56rem;
   font-style: normal;
   font-weight: 950;
@@ -5674,7 +5663,7 @@
    This is content_view preview only: it never grants remix/export rights,
    payout authority, backend ownership truth, or Make export inclusion. */
 .make-linked-video-preview-card.is-paid {
-  border-color: rgba(34, 197, 94, 0.28);
+  border-color: color-mix(in srgb, var(--cl-studio-green-500) 28%, transparent);
 }
 
 .make-linked-video-preview-locked {
@@ -5683,12 +5672,12 @@
   place-items: center;
   width: min(720px, calc(100% - 2rem));
   padding: 1.1rem;
-  border: 1px solid rgba(251, 191, 36, 0.18);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 18%, transparent);
   border-radius: 22px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(251, 191, 36, 0.12), transparent 48%),
-    rgba(2, 6, 23, 0.74);
-  color: rgba(248, 250, 252, 0.92);
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--cl-studio-amber-400) 12%, transparent), transparent 48%),
+    color-mix(in srgb, var(--cl-studio-slate-950) 74%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 92%, transparent);
   text-align: center;
 }
 
@@ -5699,7 +5688,7 @@
 
 .make-linked-video-preview-locked span {
   max-width: 560px;
-  color: rgba(203, 213, 225, 0.78);
+  color: color-mix(in srgb, var(--cl-studio-slate-300) 78%, transparent);
   font-size: 0.68rem;
   font-weight: 820;
   line-height: 1.38;
@@ -5716,10 +5705,10 @@
 .make-linked-video-preview-pay-actions button {
   min-height: 2.1rem;
   padding: 0 0.78rem;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 22%, transparent);
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.80);
-  color: rgba(226, 232, 240, 0.94);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 80%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 94%, transparent);
   cursor: pointer;
   font-size: 0.66rem;
   font-weight: 950;
@@ -5727,16 +5716,16 @@
 }
 
 .make-linked-video-preview-pay-actions button.is-primary {
-  border-color: rgba(45, 212, 191, 0.42);
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 42%, transparent);
   background:
-    radial-gradient(circle at 50% 0%, rgba(45, 212, 191, 0.22), transparent 58%),
-    rgba(20, 184, 166, 0.22);
-  color: rgba(240, 253, 250, 0.98);
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--cl-studio-teal-400) 22%, transparent), transparent 58%),
+    color-mix(in srgb, var(--cl-studio-accent-strong) 22%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-teal-50) 98%, transparent);
 }
 
 .make-linked-video-preview-pay-actions button:hover:not(:disabled) {
   transform: translateY(-1px);
-  border-color: rgba(125, 211, 252, 0.42);
+  border-color: color-mix(in srgb, var(--cl-studio-sky-300) 42%, transparent);
 }
 
 .make-linked-video-preview-pay-actions button:disabled {
@@ -5745,14 +5734,14 @@
 }
 
 .make-linked-video-preview-proof {
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 16%, transparent);
   border-radius: 18px;
-  background: rgba(2, 6, 23, 0.36);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 36%, transparent);
   padding: 0.55rem;
 }
 
 .make-linked-video-preview-proof summary {
-  color: rgba(125, 211, 252, 0.86);
+  color: color-mix(in srgb, var(--cl-studio-sky-300) 86%, transparent);
   cursor: pointer;
   font-size: 0.62rem;
   font-weight: 950;
@@ -5766,11 +5755,11 @@
   gap: 0.55rem;
   align-items: center;
   padding: 0.34rem 0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  border-bottom: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 8%, transparent);
 }
 
 .make-linked-video-preview-proof span {
-  color: rgba(148, 163, 184, 0.78);
+  color: color-mix(in srgb, var(--cl-studio-slate-400) 78%, transparent);
   font-size: 0.58rem;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -5780,7 +5769,7 @@
 .make-linked-video-preview-proof strong {
   min-width: 0;
   overflow: hidden;
-  color: rgba(226, 232, 240, 0.92);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 92%, transparent);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 0.62rem;
   font-weight: 850;
@@ -5790,7 +5779,7 @@
 
 .make-linked-video-preview-proof p {
   margin: 0.55rem 0 0;
-  color: rgba(203, 213, 225, 0.72);
+  color: color-mix(in srgb, var(--cl-studio-slate-300) 72%, transparent);
   font-size: 0.62rem;
   font-weight: 780;
   line-height: 1.35;
@@ -5803,11 +5792,11 @@
   display: grid;
   gap: 0.75rem;
   padding: 0.9rem;
-  border: 1px solid rgba(125, 211, 252, 0.18);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-sky-300) 18%, transparent);
   border-radius: 22px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(14, 165, 233, 0.12), transparent 46%),
-    var(--make-panel);
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cl-studio-sky-500) 12%, transparent), transparent 46%),
+    var(--cl-studio-panel);
 }
 
 .make-export-boundary-head {
@@ -5824,7 +5813,7 @@
 }
 
 .make-export-boundary-head span {
-  color: rgba(125, 211, 252, 0.82);
+  color: color-mix(in srgb, var(--cl-studio-sky-300) 82%, transparent);
   font-size: 0.62rem;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -5848,23 +5837,23 @@
   gap: 0.18rem;
   min-width: 0;
   padding: 0.65rem;
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 14%, transparent);
   border-radius: 16px;
-  background: rgba(2, 6, 23, 0.24);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 24%, transparent);
 }
 
 .make-export-boundary-fact.is-good {
-  border-color: rgba(45, 212, 191, 0.22);
-  background: rgba(20, 184, 166, 0.08);
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 22%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 8%, transparent);
 }
 
 .make-export-boundary-fact.is-warn {
-  border-color: rgba(251, 191, 36, 0.24);
-  background: rgba(251, 191, 36, 0.08);
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 24%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-amber-400) 8%, transparent);
 }
 
 .make-export-boundary-fact span {
-  color: rgba(203, 213, 225, 0.74);
+  color: color-mix(in srgb, var(--cl-studio-slate-300) 74%, transparent);
   font-size: 0.58rem;
   font-weight: 950;
   letter-spacing: 0.06em;
@@ -5888,21 +5877,21 @@
   display: grid;
   gap: 0.22rem;
   padding: 0.7rem 0.8rem;
-  border: 1px solid rgba(251, 191, 36, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 28%, transparent);
   border-radius: 18px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(251, 191, 36, 0.12), transparent 48%),
-    rgba(2, 6, 23, 0.26);
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cl-studio-amber-400) 12%, transparent), transparent 48%),
+    color-mix(in srgb, var(--cl-studio-slate-950) 26%, transparent);
 }
 
 .make-export-linked-warning strong {
-  color: rgba(254, 243, 199, 0.96);
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 96%, transparent);
   font-size: 0.76rem;
   font-weight: 950;
 }
 
 .make-export-linked-warning span {
-  color: rgba(226, 232, 240, 0.78);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 78%, transparent);
   font-size: 0.68rem;
   font-weight: 800;
   line-height: 1.4;
@@ -5920,10 +5909,10 @@
   max-width: min(100%, 26rem);
   overflow: hidden;
   padding: 0.28rem 0.48rem;
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 16%, transparent);
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.44);
-  color: rgba(226, 232, 240, 0.82);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 44%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 82%, transparent);
   font-size: 0.6rem;
   font-style: normal;
   font-weight: 900;
@@ -5951,22 +5940,22 @@
    This is draft/reference UI only: it does not grant reuse rights, export authority,
    payout split authority, ownership, receipts, or backend truth. */
 .make-preview-linked-video-clip {
-  border-color: rgba(125, 211, 252, 0.44) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-sky-300) 44%, transparent) !important;
   background:
-    linear-gradient(145deg, rgba(14, 165, 233, 0.24), rgba(20, 184, 166, 0.10)),
-    rgba(15, 23, 42, 0.72) !important;
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-sky-500) 24%, transparent), color-mix(in srgb, var(--cl-studio-accent-strong) 10%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-900) 72%, transparent) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(125, 211, 252, 0.12),
-    0 0 24px rgba(14, 165, 233, 0.12);
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-sky-300) 12%, transparent),
+    0 0 24px color-mix(in srgb, var(--cl-studio-sky-500) 12%, transparent);
 }
 
 .make-preview-linked-video-clip:hover,
 .make-preview-linked-video-clip:focus-within,
 .make-preview-linked-video-clip.is-active {
-  border-color: rgba(45, 212, 191, 0.84) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 84%, transparent) !important;
   background:
-    linear-gradient(145deg, rgba(20, 184, 166, 0.30), rgba(14, 165, 233, 0.16)),
-    rgba(15, 23, 42, 0.80) !important;
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-accent-strong) 30%, transparent), color-mix(in srgb, var(--cl-studio-sky-500) 16%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-900) 80%, transparent) !important;
 }
 
 .make-preview-linked-video-clip > span {
@@ -5979,9 +5968,9 @@
   height: 1.56rem;
   place-items: center;
   border-radius: 999px;
-  background: rgba(14, 165, 233, 0.24) !important;
-  color: rgba(224, 242, 254, 0.98) !important;
-  box-shadow: 0 0 0 6px rgba(14, 165, 233, 0.10);
+  background: color-mix(in srgb, var(--cl-studio-sky-500) 24%, transparent) !important;
+  color: color-mix(in srgb, var(--cl-studio-sky-100) 98%, transparent) !important;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--cl-studio-sky-500) 10%, transparent);
 }
 
 .make-preview-linked-video-clip .make-preview-mini-clip-main {
@@ -6000,11 +5989,11 @@
 }
 
 .make-preview-linked-video-clip .make-preview-mini-clip-main strong {
-  color: rgba(240, 249, 255, 0.98);
+  color: color-mix(in srgb, var(--cl-studio-sky-50) 98%, transparent);
 }
 
 .make-preview-linked-video-clip .make-preview-mini-clip-main small {
-  color: rgba(186, 230, 253, 0.74);
+  color: color-mix(in srgb, var(--cl-studio-sky-200) 74%, transparent);
 }
 
 .make-preview-linked-video-clip em {
@@ -6015,10 +6004,10 @@
   max-width: calc(100% - 8.2rem);
   overflow: hidden;
   padding: 0.1rem 0.36rem;
-  border: 1px solid rgba(251, 191, 36, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 28%, transparent);
   border-radius: 999px;
-  background: rgba(251, 191, 36, 0.13);
-  color: rgba(254, 243, 199, 0.94);
+  background: color-mix(in srgb, var(--cl-studio-amber-400) 13%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 94%, transparent);
   font-size: 0.54rem;
   font-style: normal;
   font-weight: 950;
@@ -6032,8 +6021,8 @@
 
 .make-preview-linked-video-open {
   right: 2.58rem !important;
-  border-color: rgba(45, 212, 191, 0.36) !important;
-  color: rgba(204, 251, 241, 0.96) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 36%, transparent) !important;
+  color: color-mix(in srgb, var(--cl-studio-teal-100) 96%, transparent) !important;
 }
 
 .make-preview-linked-video-remove {
@@ -6045,10 +6034,10 @@
   width: 1.55rem;
   height: 1.55rem;
   place-items: center;
-  border: 1px solid rgba(248, 113, 113, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-red-400) 28%, transparent);
   border-radius: 999px;
-  background: rgba(127, 29, 29, 0.24);
-  color: rgba(254, 202, 202, 0.96);
+  background: color-mix(in srgb, var(--cl-studio-red-900) 24%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-red-200) 96%, transparent);
   cursor: pointer;
   font-size: 0.72rem;
   font-weight: 950;
@@ -6056,8 +6045,8 @@
 
 .make-preview-linked-video-remove:hover,
 .make-preview-linked-video-remove:focus-visible {
-  border-color: rgba(248, 113, 113, 0.72);
-  background: rgba(127, 29, 29, 0.42);
+  border-color: color-mix(in srgb, var(--cl-studio-red-400) 72%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-red-900) 42%, transparent);
   outline: none;
 }
 
@@ -6072,10 +6061,10 @@
 }
 
 .make-linked-video-inspector-close {
-  border: 1px solid rgba(148, 163, 184, 0.24);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 24%, transparent);
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.58);
-  color: rgba(226, 232, 240, 0.92);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 58%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 92%, transparent);
   cursor: pointer;
   font-size: 0.62rem;
   font-weight: 950;
@@ -6085,7 +6074,7 @@
 
 .make-linked-video-inspector-close:hover,
 .make-linked-video-inspector-close:focus-visible {
-  border-color: rgba(45, 212, 191, 0.52);
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 52%, transparent);
   outline: none;
 }
 
@@ -6120,14 +6109,14 @@
   gap: 0.64rem;
   margin-top: 0.72rem;
   padding: 0.68rem;
-  border: 1px solid rgba(45, 212, 191, 0.34);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-teal-400) 34%, transparent);
   border-radius: 22px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(20, 184, 166, 0.18), transparent 34%),
-    linear-gradient(145deg, rgba(15, 23, 42, 0.88), rgba(2, 6, 23, 0.72));
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent), transparent 34%),
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-slate-900) 88%, transparent), color-mix(in srgb, var(--cl-studio-slate-950) 72%, transparent));
   box-shadow:
-    inset 0 0 0 1px rgba(125, 211, 252, 0.08),
-    0 18px 54px rgba(0, 0, 0, 0.22);
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-sky-300) 8%, transparent),
+    0 18px 54px color-mix(in srgb, var(--cl-studio-black) 22%, transparent);
 }
 
 .make-linked-video-payment-inspector .make-linked-video-strip-head {
@@ -6138,7 +6127,7 @@
 }
 
 .make-linked-video-payment-inspector .make-linked-video-strip-head span {
-  color: rgba(45, 212, 191, 0.92);
+  color: color-mix(in srgb, var(--cl-studio-teal-400) 92%, transparent);
   font-size: 0.64rem;
   font-weight: 950;
   letter-spacing: 0.09em;
@@ -6148,7 +6137,7 @@
 .make-linked-video-payment-inspector .make-linked-video-strip-head strong {
   min-width: 0;
   overflow: hidden;
-  color: rgba(240, 253, 250, 0.98);
+  color: color-mix(in srgb, var(--cl-studio-teal-50) 98%, transparent);
   font-size: 0.82rem;
   font-weight: 950;
   text-overflow: ellipsis;
@@ -6156,10 +6145,10 @@
 }
 
 .make-linked-video-inspector-close {
-  border: 1px solid rgba(148, 163, 184, 0.24);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-slate-400) 24%, transparent);
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.58);
-  color: rgba(226, 232, 240, 0.92);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 58%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 92%, transparent);
   cursor: pointer;
   font-size: 0.62rem;
   font-weight: 950;
@@ -6169,7 +6158,7 @@
 
 .make-linked-video-inspector-close:hover,
 .make-linked-video-inspector-close:focus-visible {
-  border-color: rgba(45, 212, 191, 0.52);
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 52%, transparent);
   outline: none;
 }
 
@@ -6179,10 +6168,10 @@
   align-items: center;
   min-width: 0;
   padding: 0.46rem 0.54rem;
-  border: 1px solid rgba(251, 191, 36, 0.22);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 22%, transparent);
   border-radius: 16px;
-  background: rgba(113, 63, 18, 0.16);
-  color: rgba(254, 243, 199, 0.90);
+  background: color-mix(in srgb, var(--cl-studio-amber-900) 16%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 90%, transparent);
   font-size: 0.68rem;
   line-height: 1.35;
 }
@@ -6194,13 +6183,13 @@
 
 .make-linked-video-payment-note span {
   min-width: 0;
-  color: rgba(254, 243, 199, 0.76);
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 76%, transparent);
 }
 
 .make-linked-video-payment-inspector .make-linked-video-preview-card {
   margin: 0;
-  border-color: rgba(45, 212, 191, 0.28);
-  background: rgba(2, 6, 23, 0.34);
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 28%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-slate-950) 34%, transparent);
 }
 
 .make-linked-video-payment-inspector .make-linked-video-preview-pay-actions {
@@ -6218,9 +6207,9 @@
 }
 
 .make-linked-video-payment-inspector .make-linked-video-preview-pay-actions .is-primary {
-  border-color: rgba(45, 212, 191, 0.58);
-  background: linear-gradient(135deg, rgba(20, 184, 166, 0.92), rgba(14, 165, 233, 0.72));
-  color: rgba(2, 6, 23, 0.94);
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 58%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--cl-studio-accent-strong) 92%, transparent), color-mix(in srgb, var(--cl-studio-sky-500) 72%, transparent));
+  color: color-mix(in srgb, var(--cl-studio-slate-950) 94%, transparent);
 }
 
 .make-preview-linked-video-open {
@@ -6261,14 +6250,14 @@
   overflow: auto !important;
   margin: 0 !important;
   padding: 0.72rem !important;
-  border: 1px solid rgba(45, 212, 191, 0.38) !important;
+  border: 1px solid color-mix(in srgb, var(--cl-studio-teal-400) 38%, transparent) !important;
   border-radius: 24px !important;
   background:
-    radial-gradient(circle at 0% 0%, rgba(20, 184, 166, 0.20), transparent 36%),
-    linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.92)) !important;
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 20%, transparent), transparent 36%),
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-slate-900) 96%, transparent), color-mix(in srgb, var(--cl-studio-slate-950) 92%, transparent)) !important;
   box-shadow:
-    0 32px 110px rgba(0, 0, 0, 0.58),
-    inset 0 0 0 1px rgba(125, 211, 252, 0.08) !important;
+    0 32px 110px color-mix(in srgb, var(--cl-studio-black) 58%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-sky-300) 8%, transparent) !important;
   backdrop-filter: blur(22px) saturate(1.18);
 }
 
@@ -6296,7 +6285,7 @@
   top: 0 !important;
   z-index: 2 !important;
   padding-bottom: 0.45rem !important;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.76)) !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cl-studio-slate-900) 98%, transparent), color-mix(in srgb, var(--cl-studio-slate-900) 76%, transparent)) !important;
 }
 
 .make-preview-linked-video-clip {
@@ -6304,10 +6293,10 @@
 }
 
 .make-preview-linked-video-clip.has-linked-preview-proxy {
-  border-color: rgba(34, 197, 94, 0.72) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-green-500) 72%, transparent) !important;
   background:
-    linear-gradient(145deg, rgba(34, 197, 94, 0.24), rgba(14, 165, 233, 0.14)),
-    rgba(15, 23, 42, 0.76) !important;
+    linear-gradient(145deg, color-mix(in srgb, var(--cl-studio-green-500) 24%, transparent), color-mix(in srgb, var(--cl-studio-sky-500) 14%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-900) 76%, transparent) !important;
 }
 
 .make-preview-linked-video-trim-handle {
@@ -6316,11 +6305,11 @@
   bottom: 0.18rem;
   z-index: 12;
   width: 0.82rem;
-  border: 1px solid rgba(254, 243, 199, 0.42);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-100) 42%, transparent);
   border-radius: 999px;
   background:
-    linear-gradient(180deg, rgba(254, 243, 199, 0.76), rgba(20, 184, 166, 0.44)),
-    rgba(15, 23, 42, 0.44);
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-studio-amber-100) 76%, transparent), color-mix(in srgb, var(--cl-studio-accent-strong) 44%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-900) 44%, transparent);
   cursor: ew-resize;
   opacity: 0;
   transition: opacity 130ms ease, transform 130ms ease;
@@ -6374,26 +6363,26 @@
 
 .make-preview-linked-video-clip.has-linked-preview-proxy em,
 .make-preview-linked-video-clip.is-active.has-linked-preview-proxy em {
-  border-color: rgba(34, 197, 94, 0.38);
-  background: rgba(34, 197, 94, 0.14);
-  color: rgba(220, 252, 231, 0.96);
+  border-color: color-mix(in srgb, var(--cl-studio-green-500) 38%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-green-500) 14%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-green-100) 96%, transparent);
 }
 
 .make-preview-linked-video-clip.is-active {
   box-shadow:
-    inset 0 0 0 1px rgba(45, 212, 191, 0.22),
-    0 0 0 1px rgba(45, 212, 191, 0.24),
-    0 0 30px rgba(20, 184, 166, 0.14);
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-teal-400) 22%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--cl-studio-teal-400) 24%, transparent),
+    0 0 30px color-mix(in srgb, var(--cl-studio-accent-strong) 14%, transparent);
 }
 
 .make-linked-video-payment-inspector .make-linked-video-payment-note strong::after {
   content: " editor-only";
-  color: rgba(251, 191, 36, 0.72);
+  color: color-mix(in srgb, var(--cl-studio-amber-400) 72%, transparent);
 }
 
 .make-sequence-card .make-sequence-panel p::after {
   content: " Linked preview clips may play locally after payment, but export stays blocked until reuse authorization exists.";
-  color: rgba(251, 191, 36, 0.86);
+  color: color-mix(in srgb, var(--cl-studio-amber-400) 86%, transparent);
 }
 
 
@@ -6409,8 +6398,8 @@
   min-width: 0.18rem;
   margin: 0.08rem 0.1rem;
   border-radius: 999px;
-  background: rgba(251, 191, 36, 0.98);
-  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.14), 0 0 22px rgba(251, 191, 36, 0.38);
+  background: color-mix(in srgb, var(--cl-studio-amber-400) 98%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cl-studio-amber-400) 14%, transparent), 0 0 22px color-mix(in srgb, var(--cl-studio-amber-400) 38%, transparent);
   pointer-events: none;
 }
 
@@ -6422,9 +6411,9 @@
   opacity: 0.66;
   transform: scale(0.985);
   box-shadow:
-    inset 0 0 0 1px rgba(45, 212, 191, 0.28),
-    0 0 0 2px rgba(45, 212, 191, 0.30),
-    0 18px 38px rgba(8, 47, 73, 0.28) !important;
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-teal-400) 28%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--cl-studio-teal-400) 30%, transparent),
+    0 18px 38px color-mix(in srgb, var(--cl-studio-sky-950) 28%, transparent) !important;
 }
 
 .make-preview-mini-move-handle {
@@ -6436,12 +6425,12 @@
   width: 1.6rem;
   height: 1.6rem;
   place-items: center;
-  border: 1px solid rgba(45, 212, 191, 0.72);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-teal-400) 72%, transparent);
   border-radius: 999px;
   background:
-    radial-gradient(circle at 50% 36%, rgba(255, 255, 255, 0.22), transparent 62%),
-    rgba(20, 184, 166, 0.94);
-  color: rgba(2, 6, 23, 0.94);
+    radial-gradient(circle at 50% 36%, color-mix(in srgb, var(--cl-studio-white) 22%, transparent), transparent 62%),
+    color-mix(in srgb, var(--cl-studio-accent-strong) 94%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-slate-950) 94%, transparent);
   cursor: grab;
   font-size: 0.76rem;
   font-weight: 1000;
@@ -6455,11 +6444,11 @@
 
 .make-preview-mini-move-handle:hover,
 .make-preview-mini-move-handle:focus-visible {
-  border-color: rgba(251, 191, 36, 0.94);
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 94%, transparent);
   background:
-    radial-gradient(circle at 50% 36%, rgba(255, 255, 255, 0.26), transparent 62%),
-    rgba(251, 191, 36, 0.94);
-  box-shadow: 0 0 0 5px rgba(251, 191, 36, 0.12);
+    radial-gradient(circle at 50% 36%, color-mix(in srgb, var(--cl-studio-white) 26%, transparent), transparent 62%),
+    color-mix(in srgb, var(--cl-studio-amber-400) 94%, transparent);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--cl-studio-amber-400) 12%, transparent);
   outline: none;
   transform: translateY(-50%) scale(1.06);
 }
@@ -6504,11 +6493,11 @@
   min-width: 3.95rem !important;
   height: 1.52rem !important;
   padding: 0 0.68rem !important;
-  border: 1px solid rgba(251, 191, 36, 0.88) !important;
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 88%, transparent) !important;
   border-radius: 999px !important;
   background:
-    linear-gradient(180deg, rgba(254, 243, 199, 0.98), rgba(251, 191, 36, 0.92)) !important;
-  color: rgba(2, 6, 23, 0.96) !important;
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-studio-amber-100) 98%, transparent), color-mix(in srgb, var(--cl-studio-amber-400) 92%, transparent)) !important;
+  color: color-mix(in srgb, var(--cl-studio-slate-950) 96%, transparent) !important;
   cursor: grab !important;
   font-size: 0.58rem !important;
   font-weight: 1000 !important;
@@ -6520,15 +6509,15 @@
   touch-action: none !important;
   transform: translate(-50%, -50%) !important;
   box-shadow:
-    0 0 0 4px rgba(251, 191, 36, 0.12),
-    0 12px 28px rgba(2, 6, 23, 0.36) !important;
+    0 0 0 4px color-mix(in srgb, var(--cl-studio-amber-400) 12%, transparent),
+    0 12px 28px color-mix(in srgb, var(--cl-studio-slate-950) 36%, transparent) !important;
 }
 
 .make-preview-mini-clip .make-preview-mini-move-handle:hover,
 .make-preview-mini-clip .make-preview-mini-move-handle:focus-visible {
-  border-color: rgba(45, 212, 191, 0.95) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 95%, transparent) !important;
   background:
-    linear-gradient(180deg, rgba(204, 251, 241, 0.98), rgba(45, 212, 191, 0.92)) !important;
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-studio-teal-100) 98%, transparent), color-mix(in srgb, var(--cl-studio-teal-400) 92%, transparent)) !important;
   outline: none !important;
   transform: translate(-50%, -50%) scale(1.04) !important;
 }
@@ -6564,10 +6553,10 @@
   min-width: 0.22rem !important;
   margin: 0.08rem 0.12rem !important;
   border-radius: 999px !important;
-  background: rgba(251, 191, 36, 0.98) !important;
+  background: color-mix(in srgb, var(--cl-studio-amber-400) 98%, transparent) !important;
   box-shadow:
-    0 0 0 4px rgba(251, 191, 36, 0.14),
-    0 0 24px rgba(251, 191, 36, 0.40) !important;
+    0 0 0 4px color-mix(in srgb, var(--cl-studio-amber-400) 14%, transparent),
+    0 0 24px color-mix(in srgb, var(--cl-studio-amber-400) 40%, transparent) !important;
   pointer-events: none !important;
 }
 
@@ -6588,16 +6577,16 @@
 }
 
 .make-preview-linked-video-clip .make-preview-mini-move-handle {
-  border-color: rgba(125, 211, 252, 0.88) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-sky-300) 88%, transparent) !important;
   background:
-    linear-gradient(180deg, rgba(224, 242, 254, 0.98), rgba(56, 189, 248, 0.90)) !important;
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-studio-sky-100) 98%, transparent), color-mix(in srgb, var(--cl-studio-sky-400) 90%, transparent)) !important;
 }
 
 .make-preview-linked-video-clip .make-preview-mini-move-handle:hover,
 .make-preview-linked-video-clip .make-preview-mini-move-handle:focus-visible {
-  border-color: rgba(251, 191, 36, 0.92) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 92%, transparent) !important;
   background:
-    linear-gradient(180deg, rgba(254, 243, 199, 0.98), rgba(251, 191, 36, 0.92)) !important;
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-studio-amber-100) 98%, transparent), color-mix(in srgb, var(--cl-studio-amber-400) 92%, transparent)) !important;
 }
 
 .make-preview-mini-drop-marker {
@@ -6609,10 +6598,10 @@
 }
 
 .make-preview-audio-track.is-moving {
-  border-color: rgba(45, 212, 191, 0.46) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 46%, transparent) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(45, 212, 191, 0.16),
-    0 0 0 2px rgba(45, 212, 191, 0.14) !important;
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-teal-400) 16%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--cl-studio-teal-400) 14%, transparent) !important;
 }
 
 .make-preview-audio-timeline-rail {
@@ -6637,11 +6626,11 @@
   min-width: 3.45rem;
   height: 1.18rem;
   padding: 0 0.54rem;
-  border: 1px solid rgba(251, 191, 36, 0.86);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 86%, transparent);
   border-radius: 999px;
   background:
-    linear-gradient(180deg, rgba(254, 243, 199, 0.98), rgba(251, 191, 36, 0.90));
-  color: rgba(2, 6, 23, 0.96);
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-studio-amber-100) 98%, transparent), color-mix(in srgb, var(--cl-studio-amber-400) 90%, transparent));
+  color: color-mix(in srgb, var(--cl-studio-slate-950) 96%, transparent);
   cursor: grab;
   font-size: 0.54rem;
   font-weight: 1000;
@@ -6652,15 +6641,15 @@
   touch-action: none;
   transform: translate(-50%, -50%);
   box-shadow:
-    0 0 0 3px rgba(251, 191, 36, 0.10),
-    0 8px 20px rgba(2, 6, 23, 0.34);
+    0 0 0 3px color-mix(in srgb, var(--cl-studio-amber-400) 10%, transparent),
+    0 8px 20px color-mix(in srgb, var(--cl-studio-slate-950) 34%, transparent);
 }
 
 .make-preview-audio-move-handle:hover,
 .make-preview-audio-move-handle:focus-visible {
-  border-color: rgba(45, 212, 191, 0.92);
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 92%, transparent);
   background:
-    linear-gradient(180deg, rgba(204, 251, 241, 0.98), rgba(45, 212, 191, 0.90));
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-studio-teal-100) 98%, transparent), color-mix(in srgb, var(--cl-studio-teal-400) 90%, transparent));
   outline: none;
 }
 
@@ -6680,7 +6669,7 @@
   display: grid;
   gap: 0.16rem;
   min-width: 0;
-  color: rgba(226, 232, 240, 0.78);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 78%, transparent);
   font-size: 0.6rem;
   font-weight: 950;
   letter-spacing: 0.04em;
@@ -6689,7 +6678,7 @@
 
 .make-preview-audio-trim-length input {
   width: 100%;
-  accent-color: #fbbf24;
+  accent-color: var(--cl-studio-amber-400);
 }
 
 .make-audio-is-moving,
@@ -6704,12 +6693,12 @@
   display: block !important;
   min-height: 5.9rem !important;
   padding: 1rem 0.72rem 0.82rem !important;
-  border: 1px solid rgba(196, 181, 253, 0.16) !important;
+  border: 1px solid color-mix(in srgb, var(--cl-studio-violet-300) 16%, transparent) !important;
   border-radius: 18px !important;
   background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.28), rgba(15, 23, 42, 0.42)),
-    radial-gradient(circle at 8% 50%, rgba(168, 85, 247, 0.18), transparent 42%) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-studio-slate-900) 28%, transparent), color-mix(in srgb, var(--cl-studio-slate-900) 42%, transparent)),
+    radial-gradient(circle at 8% 50%, color-mix(in srgb, var(--cl-studio-purple-500) 18%, transparent), transparent 42%) !important;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--cl-studio-white) 4%, transparent) !important;
   overflow-x: auto !important;
   overflow-y: visible !important;
 }
@@ -6722,8 +6711,8 @@
   height: 0.12rem;
   border-radius: 999px;
   background:
-    linear-gradient(90deg, rgba(196, 181, 253, 0.18), rgba(45, 212, 191, 0.18)),
-    repeating-linear-gradient(90deg, rgba(226, 232, 240, 0.18) 0 1px, transparent 1px 3.5rem);
+    linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-violet-300) 18%, transparent), color-mix(in srgb, var(--cl-studio-teal-400) 18%, transparent)),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--cl-studio-slate-200) 18%, transparent) 0 1px, transparent 1px 3.5rem);
   content: '';
   pointer-events: none;
 }
@@ -6739,14 +6728,14 @@
   width: clamp(9.5rem, var(--make-audio-width-pct, 18%), calc(100% - var(--make-audio-left-pct, 0%))) !important;
   min-height: 3.35rem !important;
   padding: 0.58rem 2.25rem 0.58rem 0.62rem !important;
-  border: 1px solid rgba(196, 181, 253, 0.34) !important;
+  border: 1px solid color-mix(in srgb, var(--cl-studio-violet-300) 34%, transparent) !important;
   border-radius: 18px !important;
   background:
-    linear-gradient(135deg, rgba(88, 28, 135, 0.70), rgba(30, 41, 59, 0.82)),
-    radial-gradient(circle at 20% 0%, rgba(45, 212, 191, 0.20), transparent 52%) !important;
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-studio-purple-900) 70%, transparent), color-mix(in srgb, var(--cl-studio-slate-800) 82%, transparent)),
+    radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--cl-studio-teal-400) 20%, transparent), transparent 52%) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.035),
-    0 12px 32px rgba(2, 6, 23, 0.28) !important;
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-white) 3.5%, transparent),
+    0 12px 32px color-mix(in srgb, var(--cl-studio-slate-950) 28%, transparent) !important;
   overflow: visible !important;
   transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
@@ -6754,16 +6743,16 @@
 .make-preview-audio-track-list-timeline > .make-preview-audio-track:hover,
 .make-preview-audio-track-list-timeline > .make-preview-audio-track:focus-within {
   z-index: 60 !important;
-  border-color: rgba(251, 191, 36, 0.58) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 58%, transparent) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(251, 191, 36, 0.10),
-    0 16px 42px rgba(2, 6, 23, 0.38) !important;
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-amber-400) 10%, transparent),
+    0 16px 42px color-mix(in srgb, var(--cl-studio-slate-950) 38%, transparent) !important;
   transform: translateY(-1px);
 }
 
 .make-preview-audio-track-list-timeline > .make-preview-audio-track.is-moving {
   z-index: 80 !important;
-  border-color: rgba(45, 212, 191, 0.82) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 82%, transparent) !important;
   transform: translateY(-1px) scale(0.992);
 }
 
@@ -6773,7 +6762,7 @@
   width: 1.62rem !important;
   height: 1.62rem !important;
   margin-right: 0.44rem;
-  background: rgba(196, 181, 253, 0.18) !important;
+  background: color-mix(in srgb, var(--cl-studio-violet-300) 18%, transparent) !important;
 }
 
 .make-preview-audio-track-list-timeline .make-preview-audio-track-main {
@@ -6846,10 +6835,10 @@
   display: none !important;
   width: min(31rem, calc(100vw - 5rem)) !important;
   padding: 0.58rem 0.68rem !important;
-  border: 1px solid rgba(196, 181, 253, 0.22) !important;
+  border: 1px solid color-mix(in srgb, var(--cl-studio-violet-300) 22%, transparent) !important;
   border-radius: 16px !important;
-  background: rgba(15, 23, 42, 0.96) !important;
-  box-shadow: 0 20px 48px rgba(2, 6, 23, 0.46) !important;
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 96%, transparent) !important;
+  box-shadow: 0 20px 48px color-mix(in srgb, var(--cl-studio-slate-950) 46%, transparent) !important;
 }
 
 .make-preview-audio-track-list-timeline .make-preview-audio-position {
@@ -6903,11 +6892,11 @@
 
 .make-preview-audio-track-list-timeline > .make-preview-audio-track.is-selected {
   z-index: 70 !important;
-  border-color: rgba(251, 191, 36, 0.88) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-amber-400) 88%, transparent) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(251, 191, 36, 0.16),
-    0 0 0 2px rgba(251, 191, 36, 0.20),
-    0 14px 36px rgba(2, 6, 23, 0.36) !important;
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-amber-400) 16%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--cl-studio-amber-400) 20%, transparent),
+    0 14px 36px color-mix(in srgb, var(--cl-studio-slate-950) 36%, transparent) !important;
 }
 
 .make-preview-audio-track-list-timeline > .make-preview-audio-track:focus {
@@ -6946,18 +6935,18 @@
   align-items: center;
   margin-top: 0.64rem;
   padding: 0.64rem 0.74rem;
-  border: 1px solid rgba(196, 181, 253, 0.22);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-violet-300) 22%, transparent);
   border-radius: 18px;
   background:
-    linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.82)),
-    radial-gradient(circle at 5% 50%, rgba(168, 85, 247, 0.16), transparent 42%);
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-studio-slate-900) 92%, transparent), color-mix(in srgb, var(--cl-studio-slate-800) 82%, transparent)),
+    radial-gradient(circle at 5% 50%, color-mix(in srgb, var(--cl-studio-purple-500) 16%, transparent), transparent 42%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.045),
-    0 14px 36px rgba(2, 6, 23, 0.24);
+    inset 0 1px 0 color-mix(in srgb, var(--cl-studio-white) 4.5%, transparent),
+    0 14px 36px color-mix(in srgb, var(--cl-studio-slate-950) 24%, transparent);
 }
 
 .make-preview-audio-controls-panel.is-linked {
-  border-color: rgba(125, 211, 252, 0.24);
+  border-color: color-mix(in srgb, var(--cl-studio-sky-300) 24%, transparent);
 }
 
 .make-preview-audio-controls-title {
@@ -6975,7 +6964,7 @@
   height: 1.85rem;
   place-items: center;
   border-radius: 999px;
-  background: rgba(196, 181, 253, 0.18);
+  background: color-mix(in srgb, var(--cl-studio-violet-300) 18%, transparent);
 }
 
 .make-preview-audio-controls-title strong,
@@ -6987,14 +6976,14 @@
 }
 
 .make-preview-audio-controls-title strong {
-  color: rgba(248, 250, 252, 0.95);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 95%, transparent);
   font-size: 0.72rem;
   font-weight: 1000;
 }
 
 .make-preview-audio-controls-title small {
   grid-column: 2;
-  color: rgba(196, 181, 253, 0.78);
+  color: color-mix(in srgb, var(--cl-studio-violet-300) 78%, transparent);
   font-size: 0.58rem;
   font-weight: 900;
   letter-spacing: 0.04em;
@@ -7008,7 +6997,7 @@
 }
 
 .make-preview-audio-control span {
-  color: rgba(226, 232, 240, 0.78);
+  color: color-mix(in srgb, var(--cl-studio-slate-200) 78%, transparent);
   font-size: 0.58rem;
   font-weight: 1000;
   letter-spacing: 0.07em;
@@ -7018,7 +7007,7 @@
 .make-preview-audio-control input[type='range'] {
   width: 100%;
   min-width: 0;
-  accent-color: #fbbf24;
+  accent-color: var(--cl-studio-amber-400);
 }
 
 .make-preview-audio-control-volume {
@@ -7031,7 +7020,7 @@
 }
 
 .make-preview-audio-control-volume strong {
-  color: rgba(248, 250, 252, 0.82);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 82%, transparent);
   font-size: 0.62rem;
   font-weight: 1000;
 }
@@ -7040,12 +7029,12 @@
   align-self: stretch;
   justify-content: center;
   padding: 0.32rem 0.46rem;
-  border: 1px dashed rgba(148, 163, 184, 0.24);
+  border: 1px dashed color-mix(in srgb, var(--cl-studio-slate-400) 24%, transparent);
   border-radius: 14px;
 }
 
 .make-preview-audio-control-note strong {
-  color: rgba(148, 163, 184, 0.86);
+  color: color-mix(in srgb, var(--cl-studio-slate-400) 86%, transparent);
   font-size: 0.62rem;
   font-weight: 950;
 }
@@ -7053,10 +7042,10 @@
 .make-preview-audio-controls-button {
   min-height: 2rem;
   padding: 0.36rem 0.68rem;
-  border: 1px solid rgba(196, 181, 253, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-violet-300) 28%, transparent);
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.72);
-  color: rgba(248, 250, 252, 0.90);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 72%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-slate-50) 90%, transparent);
   cursor: pointer;
   font-size: 0.6rem;
   font-weight: 1000;
@@ -7066,20 +7055,20 @@
 
 .make-preview-audio-controls-button:hover,
 .make-preview-audio-controls-button:focus-visible {
-  border-color: rgba(45, 212, 191, 0.60);
-  background: rgba(20, 184, 166, 0.18);
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 60%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-accent-strong) 18%, transparent);
   outline: none;
 }
 
 .make-preview-audio-controls-button.is-danger {
-  border-color: rgba(248, 113, 113, 0.34);
-  color: rgba(254, 202, 202, 0.94);
+  border-color: color-mix(in srgb, var(--cl-studio-red-400) 34%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-red-200) 94%, transparent);
 }
 
 .make-preview-audio-controls-button.is-danger:hover,
 .make-preview-audio-controls-button.is-danger:focus-visible {
-  border-color: rgba(248, 113, 113, 0.62);
-  background: rgba(127, 29, 29, 0.34);
+  border-color: color-mix(in srgb, var(--cl-studio-red-400) 62%, transparent);
+  background: color-mix(in srgb, var(--cl-studio-red-900) 34%, transparent);
 }
 
 @media (max-width: 1180px) {
@@ -7096,10 +7085,10 @@
 
 .make-preview-audio-track-list-timeline > .make-preview-audio-track.is-trimming {
   z-index: 90 !important;
-  border-color: rgba(45, 212, 191, 0.86) !important;
+  border-color: color-mix(in srgb, var(--cl-studio-teal-400) 86%, transparent) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(45, 212, 191, 0.18),
-    0 18px 48px rgba(2, 6, 23, 0.42) !important;
+    inset 0 0 0 1px color-mix(in srgb, var(--cl-studio-teal-400) 18%, transparent),
+    0 18px 48px color-mix(in srgb, var(--cl-studio-slate-950) 42%, transparent) !important;
 }
 
 .make-preview-audio-trim-handle {
@@ -7108,11 +7097,11 @@
   bottom: 0.34rem;
   z-index: 95;
   width: 0.72rem;
-  border: 1px solid rgba(254, 243, 199, 0.56);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-100) 56%, transparent);
   border-radius: 999px;
   background:
-    linear-gradient(180deg, rgba(254, 243, 199, 0.92), rgba(45, 212, 191, 0.66)),
-    rgba(15, 23, 42, 0.42);
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-studio-amber-100) 92%, transparent), color-mix(in srgb, var(--cl-studio-teal-400) 66%, transparent)),
+    color-mix(in srgb, var(--cl-studio-slate-900) 42%, transparent);
   cursor: ew-resize;
   opacity: 0.92;
 }
@@ -7138,10 +7127,10 @@
   bottom: -1.18rem;
   z-index: 94;
   padding: 0.14rem 0.46rem;
-  border: 1px solid rgba(251, 191, 36, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cl-studio-amber-400) 28%, transparent);
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.92);
-  color: rgba(254, 243, 199, 0.92);
+  background: color-mix(in srgb, var(--cl-studio-slate-900) 92%, transparent);
+  color: color-mix(in srgb, var(--cl-studio-amber-100) 92%, transparent);
   font-size: 0.54rem;
   font-weight: 950;
   letter-spacing: 0.05em;
@@ -7159,7 +7148,7 @@
 
 /* Batch: audio lane undo/redo + slot-swap behavior. */
 .make-preview-audio-track-list-timeline > .make-preview-audio-track.is-moving {
-  outline: 1px dashed rgba(45, 212, 191, 0.48);
+  outline: 1px dashed color-mix(in srgb, var(--cl-studio-teal-400) 48%, transparent);
   outline-offset: 0.16rem;
 }
 

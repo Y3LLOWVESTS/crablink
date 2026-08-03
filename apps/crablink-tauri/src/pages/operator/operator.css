@@ -212,7 +212,7 @@
 }
 
 .cl-operator-review-list article.is-selected {
-  outline: 2px solid var(--cl-focus, currentColor);
+  outline: 2px solid var(--cl-focus-color);
   outline-offset: 2px;
 }
 

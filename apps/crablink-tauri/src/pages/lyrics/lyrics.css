@@ -6,6 +6,14 @@
  * RO:TEST — visual/manual checks in CrabLink full-tab browser in light and dark mode.
  */
 
+/*
+ * FINAL_BETA_PHASE2D22_LYRICS_THEME_ADOPTION_V1
+ *
+ * Lyrics preview presentation consumes the shared light/dark semantic
+ * surface while draft, publication, rights, payment, receipt, wallet,
+ * backend, CID, and ROC behavior remain unchanged.
+ */
+
 .lyrics-page {
   display: grid;
   gap: 1rem;
@@ -80,16 +88,13 @@
   white-space: pre-wrap;
   border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: var(--cl-surface);
+  background: var(--cl-lyrics-panel);
   color: var(--cl-text);
   padding: 0.9rem;
   font: inherit;
   line-height: 1.6;
 }
 
-[data-theme='dark'] .lyrics-preview-body {
-  background: #050505;
-}
 
 @media (max-width: 760px) {
   .lyrics-form-grid {

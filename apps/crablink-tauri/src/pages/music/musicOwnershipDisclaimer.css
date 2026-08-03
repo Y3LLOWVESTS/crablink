@@ -6,6 +6,16 @@
  * RO:TEST — visual smoke in light/dark theme and npm run build.
  */
 
+/*
+ * FINAL_BETA_PHASE2D24_MUSIC_OWNERSHIP_THEME_ADOPTION_V1
+ *
+ * Music ownership and rights-attestation success states consume the
+ * canonical success token.
+ *
+ * This remains a local attestation gate and does not prove legal ownership,
+ * grant wallet authority, publish an asset, create a receipt, or spend ROC.
+ */
+
 .cl-music-ownership {
   display: grid;
   gap: 0.9rem;
@@ -52,8 +62,8 @@
 }
 
 .cl-music-ownership-pill.is-ready {
-  border-color: color-mix(in srgb, var(--cl-success, #16a34a) 55%, var(--cl-border));
-  background: color-mix(in srgb, var(--cl-success, #16a34a) 13%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-success) 55%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-success) 13%, var(--cl-card));
 }
 
 .cl-music-ownership-warning {
@@ -136,8 +146,8 @@
 }
 
 .cl-music-ownership-check.is-checked {
-  border-color: color-mix(in srgb, var(--cl-success, #16a34a) 50%, var(--cl-border));
-  background: color-mix(in srgb, var(--cl-success, #16a34a) 8%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-success) 50%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-success) 8%, var(--cl-card));
 }
 
 .cl-music-ownership-check input {

@@ -16,6 +16,7 @@ import AddressBar from './AddressBar.jsx';
 import BalanceChip from './BalanceChip.jsx';
 import BrowserNav from './BrowserNav.jsx';
 import PassportChip from './PassportChip.jsx';
+import ShellAdvancedMenu from './ShellAdvancedMenu.jsx';
 import {
   clearDevNonceHints,
   clearLocalCatalogDisplayCache,
@@ -36,10 +37,6 @@ export default function TopBar({ route, navigation }) {
   const context = useAppContext();
   const theme = useTheme();
   const [zoomScale, setZoomScale] = useState(() => readStoredZoomScale());
-  const gatewayState = context.gatewayStatus?.state || 'unknown';
-  const gatewayLabel = context.gatewayStatus?.label || 'Gateway unchecked';
-  const localNodeState = context.localNodeStatus?.state || 'disabled';
-  const localNodeLabel = context.localNodeStatus?.label || 'Local node disabled';
 
   useEffect(() => {
     const scale = readStoredZoomScale();
@@ -186,52 +183,10 @@ export default function TopBar({ route, navigation }) {
       />
 
       <div className="cl-topbar-status" aria-label="CrabLink status controls">
-        <button
-          className={`cl-status-pill cl-status-${gatewayState}`}
-          type="button"
-          onClick={context.checkGateway}
-          title={gatewayLabel}
-        >
-          <span aria-hidden="true" />
-          {gatewayState === 'checking'
-            ? 'Checking…'
-            : gatewayState === 'online'
-              ? 'Online'
-              : gatewayState === 'degraded'
-                ? 'Degraded'
-                : 'Gateway'}
-        </button>
-
-        <button
-          className={`cl-status-pill cl-status-${localNodeState}`}
-          type="button"
-          onClick={context.checkLocalNode}
-          title={localNodeLabel}
-        >
-          <span aria-hidden="true" />
-          {localNodeState === 'checking'
-            ? 'Node…'
-            : localNodeState === 'online'
-              ? 'Node'
-              : localNodeState === 'degraded'
-                ? 'Node!'
-                : 'Node off'}
-        </button>
-
         <PassportChip navigation={navigation} />
         <BalanceChip />
 
-        <div className="cl-zoom-controls" aria-label="Page zoom controls">
-          <button type="button" onClick={() => zoomOut({ announce: true })} title="Zoom out: Command -">
-            −
-          </button>
-          <button type="button" onClick={() => resetZoom({ announce: true })} title="Reset zoom: Command 0">
-            {formatZoomPercent(zoomScale)}
-          </button>
-          <button type="button" onClick={() => zoomIn({ announce: true })} title="Zoom in: Command +">
-            +
-          </button>
-        </div>
+        <ShellAdvancedMenu navigation={navigation} />
 
         <button
           className="cl-icon-button"

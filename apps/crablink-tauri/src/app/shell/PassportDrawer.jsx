@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useAppContext } from '../appContext.js';
+import DeveloperDisclosure from '../../shared/components/DeveloperDisclosure.jsx';
 import PassportActions from './PassportActions.jsx';
 import PassportSummary, { buildPassportView } from './PassportSummary.jsx';
 import {
@@ -61,6 +62,8 @@ const NATIVE_PASSPORT_PHASE15AD_LABEL =
   'NATIVE_PASSPORT_PHASE15AD_DRAWER_NATIVE_STATUS_ACCEPTANCE';
 const NATIVE_PASSPORT_PHASE15AF_LABEL =
   'NATIVE_PASSPORT_PHASE15AF_DESKTOP_PASSPORT_NATIVE_MANUAL_ACCEPTANCE';
+const FINAL_BETA_PHASE4A3_PASSPORT_DRAWER_CONSUMER_MODE =
+  'FINAL_BETA_PHASE4A3_PASSPORT_DRAWER_CONSUMER_MODE_V1';
 
 
 export default function PassportDrawer({ id, navigation, onClose }) {
@@ -683,6 +686,9 @@ export default function PassportDrawer({ id, navigation, onClose }) {
     <section
       id={id}
       className="cl-passport-drawer"
+      data-final-beta-passport-mode={
+        FINAL_BETA_PHASE4A3_PASSPORT_DRAWER_CONSUMER_MODE
+      }
       role="dialog"
       aria-label="CrabLink passport drawer"
     >
@@ -732,25 +738,25 @@ export default function PassportDrawer({ id, navigation, onClose }) {
       <section className="cl-passport-truth" aria-label="Native Passport runtime">
         <header className="cl-drawer-panel-head">
           <div>
-            <strong>Local Native Passport</strong>
+            <strong>Device security</strong>
             <p>
-              Wallet-like local custody commands run through the reviewed Tauri adapter only. No PIN or
-              recovery material is accepted by this React drawer. Root confirmation remains redacted.
+              Your local Passport is protected by native desktop controls. PIN and recovery stay outside
+              this drawer, and account secrets are never rendered in React.
             </p>
           </div>
         </header>
 
         <dl className="cl-passport-rows">
           <div>
-            <dt>Native runtime</dt>
-            <dd>{nativePassportAvailable ? 'Available in Tauri' : 'Unavailable outside Tauri'}</dd>
+            <dt>Desktop protection</dt>
+            <dd>{nativePassportAvailable ? 'Available' : 'Unavailable outside desktop app'}</dd>
           </div>
           <div>
-            <dt>Native status</dt>
+            <dt>Passport state</dt>
             <dd>{nativePassportStatusLabel}</dd>
           </div>
           <div>
-            <dt>Last command</dt>
+            <dt>Last device action</dt>
             <dd>{nativePassportCommandLabel}</dd>
           </div>
           <div>
@@ -767,7 +773,7 @@ export default function PassportDrawer({ id, navigation, onClose }) {
           >
             {nativePassportState.status === 'checking' && !nativePassportCommand
               ? 'Checking native status…'
-              : 'Refresh native status'}
+              : 'Refresh device status'}
           </button>
           <button
             type="button"
@@ -785,7 +791,7 @@ export default function PassportDrawer({ id, navigation, onClose }) {
           >
             {nativePassportCommand === 'unlock operational'
               ? 'Unlocking…'
-              : 'Unlock operational'}
+              : 'Unlock Passport'}
           </button>
           <button
             type="button"
@@ -794,67 +800,86 @@ export default function PassportDrawer({ id, navigation, onClose }) {
           >
             {nativePassportCommand === 'lock' ? 'Locking…' : 'Lock'}
           </button>
-          <button
-            type="button"
-            onClick={() => runNativePassportCommand(confirmNativePassportRoot, 'root confirm')}
-            disabled={!nativePassportAvailable || nativePassportBusy}
-            title="Redacted root-sensitive confirmation bridge only; no root material is returned."
-          >
-            {nativePassportCommand === 'root confirm'
-              ? 'Confirming…'
-              : 'Confirm root action'}
-          </button>
-          <button
-            type="button"
-            onClick={() => runNativePassportCommand(clearNativePassport, 'clear')}
-            disabled={!nativePassportAvailable || nativePassportBusy}
-            title="Drops native session material and removes the local encrypted vault."
-          >
-            {nativePassportCommand === 'clear' ? 'Clearing…' : 'Clear local Passport'}
-          </button>
         </div>
 
-        <section aria-label="Native Passport status truth">
-          <h3>Native Passport status truth</h3>
+        <section
+          className="cl-passport-guidance"
+          aria-label="Recovery and export guidance"
+        >
+          <strong>Recovery and export</strong>
           <p>
-            Phase {NATIVE_PASSPORT_PHASE15AD_LABEL} renders normalized status and command DTO
-            facts only. Identifiers remain absent or redacted; unsafe flags must stay NO.
+            Recovery words, PIN entry, and export confirmation remain native-only. Use the reviewed
+            desktop ceremony when those actions are available; never paste recovery material into CrabLink.
           </p>
-          <dl className="cl-passport-rows">
-            {nativePassportStatusRows.map((row) => (
-              <div key={`native-status-${row.label}`}>
-                <dt>{row.label}</dt>
-                <dd>{row.value}</dd>
-              </div>
-            ))}
-          </dl>
-
-          <h3>Last native command truth</h3>
-          <dl className="cl-passport-rows">
-            {nativePassportCommandRows.map((row) => (
-              <div key={`native-command-${row.label}`}>
-                <dt>{row.label}</dt>
-                <dd>{row.value}</dd>
-              </div>
-            ))}
-          </dl>
-
-          <section aria-label="Native Passport manual acceptance">
-            <h3>Native Passport manual acceptance</h3>
-            <p>
-              Phase {NATIVE_PASSPORT_PHASE15AF_LABEL} is the human verification checklist for the
-              local Native Passport drawer. Run it only in the desktop Tauri shell.
-            </p>
-            <ol className="cl-passport-manual-acceptance">
-              {nativePassportManualAcceptanceRows.map((row) => (
-                <li key={`native-manual-${row.label}`}>
-                  <strong>{row.label}</strong>
-                  <span>{row.value}</span>
-                </li>
-              ))}
-            </ol>
-          </section>
         </section>
+
+        <DeveloperDisclosure
+          title="Advanced Passport controls"
+          summary="Diagnostics, root confirmation, removal, and acceptance evidence"
+        >
+          <div className="cl-passport-actions">
+            <button
+              type="button"
+              onClick={() => runNativePassportCommand(confirmNativePassportRoot, 'root confirm')}
+              disabled={!nativePassportAvailable || nativePassportBusy}
+              title="Redacted root-sensitive confirmation bridge only; no root material is returned."
+            >
+              {nativePassportCommand === 'root confirm'
+                ? 'Confirming…'
+                : 'Confirm root action'}
+            </button>
+            <button
+              type="button"
+              onClick={() => runNativePassportCommand(clearNativePassport, 'clear')}
+              disabled={!nativePassportAvailable || nativePassportBusy}
+              title="Drops native session material and removes the local encrypted vault."
+            >
+              {nativePassportCommand === 'clear' ? 'Clearing…' : 'Clear local Passport'}
+            </button>
+          </div>
+
+          <section aria-label="Native Passport status truth">
+            <h3>Native Passport status truth</h3>
+            <p>
+              Phase {NATIVE_PASSPORT_PHASE15AD_LABEL} renders normalized status and command DTO
+              facts only. Identifiers remain absent or redacted; unsafe flags must stay NO.
+            </p>
+            <dl className="cl-passport-rows">
+              {nativePassportStatusRows.map((row) => (
+                <div key={`native-status-${row.label}`}>
+                  <dt>{row.label}</dt>
+                  <dd>{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            <h3>Last native command truth</h3>
+            <dl className="cl-passport-rows">
+              {nativePassportCommandRows.map((row) => (
+                <div key={`native-command-${row.label}`}>
+                  <dt>{row.label}</dt>
+                  <dd>{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            <section aria-label="Native Passport manual acceptance">
+              <h3>Native Passport manual acceptance</h3>
+              <p>
+                Phase {NATIVE_PASSPORT_PHASE15AF_LABEL} is the human verification checklist for the
+                local Native Passport drawer. Run it only in the desktop Tauri shell.
+              </p>
+              <ol className="cl-passport-manual-acceptance">
+                {nativePassportManualAcceptanceRows.map((row) => (
+                  <li key={`native-manual-${row.label}`}>
+                    <strong>{row.label}</strong>
+                    <span>{row.value}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          </section>
+        </DeveloperDisclosure>
 
         {nativePassportState.status === 'error' && (
           <p className="cl-passport-inline-warning">
@@ -923,14 +948,14 @@ export default function PassportDrawer({ id, navigation, onClose }) {
           <div>
             <strong>Account pages</strong>
             <p>
-              Receipts, catalog entries, and proof/debug panels live on pages now, not inside this dropdown.
+              Open Profile Studio, your saved library, or backend-derived receipt history.
             </p>
           </div>
         </header>
 
         <div className="cl-passport-actions">
           <button type="button" onClick={() => navigateAndClose(profileRouteFromView(view))}>
-            Profile
+            Profile Studio
           </button>
           <button type="button" onClick={() => navigateAndClose('crab://library')}>
             Library <span aria-label={`${catalogCount} catalog entries`}>({catalogCount})</span>
@@ -938,6 +963,14 @@ export default function PassportDrawer({ id, navigation, onClose }) {
           <button type="button" onClick={() => navigateAndClose('crab://receipts')}>
             Receipts <span aria-label={`${receiptCount} receipts`}>({receiptCount})</span>
           </button>
+        </div>
+      </section>
+
+      <DeveloperDisclosure
+        title="Advanced account pages"
+        summary="Proof and QuickChain engineering surfaces"
+      >
+        <div className="cl-passport-actions">
           <button type="button" onClick={() => navigateAndClose('crab://text')}>
             Text proof
           </button>
@@ -945,7 +978,7 @@ export default function PassportDrawer({ id, navigation, onClose }) {
             QuickChain
           </button>
         </div>
-      </section>
+      </DeveloperDisclosure>
 
       {drawerDevSurfaceEnabled && (
         <section className="cl-passport-truth" aria-label="Starter ROC bootstrap">

@@ -6,6 +6,14 @@
  * RO:TEST — visual/manual crab://code smoke in light and dark mode.
  */
 
+/*
+ * FINAL_BETA_PHASE2D19_CODE_THEME_ADOPTION_V1
+ *
+ * Code and facet workspace panels consume shared light/dark semantic surfaces.
+ * Fetch, execution, sandbox, publication, B3, capability, and ROC behavior
+ * remain unchanged.
+ */
+
 .code-page {
   display: grid;
   gap: 1rem;
@@ -41,11 +49,7 @@
   padding: 1rem;
   border: 1px solid var(--cl-border);
   border-radius: 22px;
-  background: var(--cl-surface);
-}
-
-[data-theme='dark'] .code-form-section {
-  background: #050505;
+  background: var(--cl-code-panel);
 }
 
 .code-form-section-head {
@@ -156,11 +160,7 @@
   padding: 0.9rem;
   border: 1px solid var(--cl-border);
   border-radius: 20px;
-  background: var(--cl-surface);
-}
-
-[data-theme='dark'] .code-preview-hero {
-  background: #050505;
+  background: var(--cl-code-panel);
 }
 
 .code-preview-hero h3,
@@ -242,14 +242,7 @@
   padding: 0.85rem;
   border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: var(--cl-surface);
-}
-
-[data-theme='dark'] .code-token-list,
-[data-theme='dark'] .code-linked-list,
-[data-theme='dark'] .code-toml-section,
-[data-theme='dark'] .code-safety-list {
-  background: #050505;
+  background: var(--cl-code-panel);
 }
 
 .code-token-list h3,

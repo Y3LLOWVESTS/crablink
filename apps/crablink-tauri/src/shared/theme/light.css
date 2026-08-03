@@ -40,4 +40,58 @@
 
   --cl-overlay: rgba(15, 18, 24, 0.52);
   --cl-ad-bg: var(--cl-card-muted);
+
+  /*
+   * FINAL_BETA_PHASE2D16_LIGHT_AD_TOKEN_PROJECTION_V1
+   *
+   * Light mode projects the established ad panel and creative-sheen palette.
+   */
+  --cl-ad-panel: var(--cl-surface);
+  --cl-ad-creative-sheen: color-mix(
+    in srgb,
+    var(--cl-text) 8%,
+    transparent
+  );
+
+  /*
+   * FINAL_BETA_PHASE2D17_LIGHT_ALGO_PANEL_PROJECTION_V1
+   *
+   * Light mode projects algorithm panels onto the standard app surface.
+   */
+  --cl-algo-panel: var(--cl-surface);
+
+  /*
+   * FINAL_BETA_PHASE2D19_LIGHT_CODE_PANEL_PROJECTION_V1
+   *
+   * Light mode projects code workspace panels onto the standard app surface.
+   */
+  --cl-code-panel: var(--cl-surface);
+
+  /*
+   * FINAL_BETA_PHASE2D20_LIGHT_GAME_TOKEN_PROJECTION_V1
+   *
+   * Light mode projects game workspace panels onto the standard app surface.
+   */
+  --cl-game-panel: var(--cl-surface);
+  --cl-game-cover-sheen: color-mix(
+    in srgb,
+    var(--cl-text) 8%,
+    transparent
+  );
+
+  /*
+   * FINAL_BETA_PHASE2D22_LIGHT_LYRICS_PANEL_PROJECTION_V1
+   *
+   * Light mode projects lyrics previews onto the standard app surface.
+   */
+  --cl-lyrics-panel: var(--cl-surface);
+
+  /*
+   * FINAL_BETA_PHASE2D12_LIGHT_SURFACE_TOKEN_PROJECTION_V1
+   *
+   * Light mode explicitly projects the shared muted surface and code-background semantics.
+   */
+  --cl-surface-muted: color-mix(in srgb, var(--cl-surface) 92%, var(--cl-bg) 8%);
+  --cl-soft: color-mix(in srgb, var(--cl-text) 3.5%, transparent);
+  --cl-code-bg: color-mix(in srgb, var(--cl-text) 7%, transparent);
 }

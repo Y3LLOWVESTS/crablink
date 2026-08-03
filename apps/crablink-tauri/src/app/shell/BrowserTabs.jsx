@@ -241,6 +241,7 @@ function iconForRoute(route) {
 
   const icons = {
     home: '⌂',
+    explore: '◉',
     library: '▦',
     receipts: '◇',
     profile: '@',

@@ -6,6 +6,17 @@
  * RO:TEST — crab://text in light/dark mode with and without text asset proof entries.
  */
 
+/*
+ * FINAL_BETA_PHASE2D30_TEXT_THEME_ADOPTION_V1
+ *
+ * Text primitive readiness presentation consumes canonical shared tokens.
+ *
+ * Local catalog and receipt evidence remains display-only. This stylesheet
+ * grants no asset publication, CID, receipt, ownership, wallet mutation,
+ * ledger replay, accounting, rewarder, QuickChain, paid-access, or ROC
+ * authority.
+ */
+
 .text-page {
   display: grid;
   gap: 18px;
@@ -21,7 +32,7 @@
 
 .text-copy-state {
   margin: 0;
-  color: var(--cl-success, #166534);
+  color: var(--cl-success);
   font-size: 12px;
   font-weight: 850;
 }
@@ -42,24 +53,24 @@
 .text-primitive-card,
 .text-proof-card {
   min-width: 0;
-  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.26));
+  border: 1px solid var(--cl-border);
   border-radius: 24px;
   padding: 18px;
-  background: var(--cl-card, #ffffff);
-  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.06));
+  background: var(--cl-card);
+  box-shadow: var(--cl-shadow-md);
 }
 
 .text-progress-card {
   background:
-    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--cl-accent, #111) 8%, transparent), transparent 44%),
-    var(--cl-card, #ffffff);
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--cl-accent) 8%, transparent), transparent 44%),
+    var(--cl-card);
 }
 
 .text-progress-card span,
 .text-primitive-card header span,
 .text-proof-card header span {
   display: block;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 11px;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -69,7 +80,7 @@
 .text-progress-card strong {
   display: block;
   margin-top: 10px;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: clamp(32px, 6vw, 58px);
   font-weight: 950;
   line-height: 0.92;
@@ -81,7 +92,7 @@
 .text-primitive-card p,
 .text-proof-list p {
   margin: 10px 0 0;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 13px;
   font-weight: 700;
   line-height: 1.5;
@@ -89,12 +100,12 @@
 
 .text-progress-card.is-success,
 .text-primitive-card.is-proven {
-  border-color: color-mix(in srgb, var(--cl-success, #166534) 38%, var(--cl-border, #d9d6cf));
+  border-color: color-mix(in srgb, var(--cl-success) 38%, var(--cl-border));
 }
 
 .text-progress-card.is-warning,
 .text-primitive-card.is-open {
-  border-color: color-mix(in srgb, var(--cl-warning, #8a4b00) 34%, var(--cl-border, #d9d6cf));
+  border-color: color-mix(in srgb, var(--cl-warning) 34%, var(--cl-border));
 }
 
 .text-primitive-card,
@@ -117,7 +128,7 @@
 .text-proof-list h2 {
   display: block;
   margin: 4px 0 0;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 18px;
   line-height: 1.15;
   overflow-wrap: anywhere;
@@ -135,13 +146,13 @@
   align-items: start;
   min-width: 0;
   padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--cl-border, #d9d6cf) 75%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cl-border) 75%, transparent);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--cl-surface, #f7f5ef) 78%, transparent);
+  background: color-mix(in srgb, var(--cl-surface) 78%, transparent);
 }
 
 .text-fact span {
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 10px;
   font-weight: 950;
   letter-spacing: 0.08em;
@@ -150,7 +161,7 @@
 
 .text-fact strong {
   min-width: 0;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-size: 12px;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -174,7 +185,7 @@
   gap: 8px;
   margin: 14px 0 0;
   padding-left: 18px;
-  color: var(--cl-muted, #626262);
+  color: var(--cl-muted);
   font-size: 13px;
   font-weight: 750;
 }
@@ -182,16 +193,16 @@
 .text-proof-list {
   display: grid;
   gap: 14px;
-  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.24));
+  border: 1px solid var(--cl-border);
   border-radius: 24px;
   padding: 18px;
-  background: var(--cl-card, #ffffff);
-  box-shadow: var(--cl-shadow-soft, 0 16px 34px rgba(0, 0, 0, 0.05));
+  background: var(--cl-card);
+  box-shadow: var(--cl-shadow-md);
 }
 
 .text-proof-list > header {
   padding-bottom: 8px;
-  border-bottom: 1px solid color-mix(in srgb, var(--cl-border, #d9d6cf) 70%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--cl-border) 70%, transparent);
 }
 
 .text-proof-list .cl-eyebrow {
@@ -205,15 +216,15 @@
 }
 
 .text-dev-json {
-  border: 1px solid var(--cl-border, rgba(120, 120, 120, 0.24));
+  border: 1px solid var(--cl-border);
   border-radius: 20px;
   padding: 14px;
-  background: var(--cl-card, #ffffff);
+  background: var(--cl-card);
 }
 
 .text-dev-json summary {
   cursor: pointer;
-  color: var(--cl-text, #111111);
+  color: var(--cl-text);
   font-weight: 950;
 }
 

@@ -6,6 +6,13 @@
  * RO:TEST — visual/manual checks in CrabLink full-tab browser in light and dark mode.
  */
 
+/*
+ * FINAL_BETA_PHASE2D16_AD_THEME_ADOPTION_V1
+ *
+ * Ad route presentation consumes shared light/dark semantic tokens.
+ * Draft-only behavior, tracking restrictions, and economic authority are unchanged.
+ */
+
 .ad-page {
   display: grid;
   gap: 1rem;
@@ -36,11 +43,7 @@
   padding: 1rem;
   border: 1px solid var(--cl-border);
   border-radius: 22px;
-  background: var(--cl-surface);
-}
-
-[data-theme='dark'] .ad-form-section {
-  background: #050505;
+  background: var(--cl-ad-panel);
 }
 
 .ad-form-section-head {
@@ -96,11 +99,7 @@
   padding: 0.85rem;
   border: 1px solid var(--cl-border);
   border-radius: 22px;
-  background: var(--cl-surface);
-}
-
-[data-theme='dark'] .ad-native-slot {
-  background: #050505;
+  background: var(--cl-ad-panel);
 }
 
 .ad-native-slot-label {
@@ -131,18 +130,16 @@
   border: 1px dashed var(--cl-border);
   border-radius: 16px;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 48%),
-    var(--cl-surface);
+    linear-gradient(
+      135deg,
+      var(--cl-ad-creative-sheen),
+      transparent 48%
+    ),
+    var(--cl-ad-panel);
   color: var(--cl-muted);
   font-size: 0.72rem;
   font-weight: 850;
   text-align: center;
-}
-
-[data-theme='dark'] .ad-native-creative {
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.045), transparent 48%),
-    #050505;
 }
 
 .ad-native-copy {
@@ -249,11 +246,7 @@
   padding: 0.85rem;
   border: 1px solid var(--cl-border);
   border-radius: 18px;
-  background: var(--cl-surface);
-}
-
-[data-theme='dark'] .ad-safety-list {
-  background: #050505;
+  background: var(--cl-ad-panel);
 }
 
 .ad-safety-list h3 {

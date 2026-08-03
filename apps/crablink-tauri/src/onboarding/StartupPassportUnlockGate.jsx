@@ -21,12 +21,21 @@ import {
   resetCompletedOnboardingAfterNativePassportAbsence,
 } from './onboardingPassportAbsenceReset.js';
 
+import DeveloperDisclosure from '../shared/components/DeveloperDisclosure.jsx';
+
+import {
+  projectStartupPassportPresentation,
+} from './startupPassportPresentation.js';
+
 import {
   STARTUP_PASSPORT_GATE_CODES,
   STARTUP_PASSPORT_GATE_STATES,
   createStartupPassportGateFailure,
   runStartupPassportUnlockAttempt,
 } from './startupPassportUnlockGate.js';
+
+const FINAL_BETA_PHASE4A4_STARTUP_LOCK_CLARITY =
+  'FINAL_BETA_PHASE4A4_STARTUP_LOCK_CLARITY_V1';
 
 let sharedStartupUnlockAttempt = null;
 
@@ -181,6 +190,11 @@ export default function StartupPassportUnlockGate({
     gateReview.code ===
       'passport_absence_reset_failed';
 
+  const presentation =
+    projectStartupPassportPresentation(
+      gateReview,
+    );
+
   return (
     <main
       className="cl-onboarding-gate"
@@ -190,46 +204,46 @@ export default function StartupPassportUnlockGate({
       data-startup-passport-code={
         gateReview.code
       }
+      data-final-beta-startup-lock={
+        FINAL_BETA_PHASE4A4_STARTUP_LOCK_CLARITY
+      }
     >
       <section className="cl-onboarding-gate__card">
         <p className="cl-onboarding-gate__eyebrow">
-          Local Passport security
+          Passport security
         </p>
 
-        <h1>Unlock your Passport</h1>
+        <h1>{presentation.title}</h1>
 
         <p className="cl-onboarding-step__lead">
-          CrabLink keeps the normal application
-          shell closed until native code confirms
-          that your locally stored Passport is
-          operationally unlocked.
+          {presentation.lead}
         </p>
 
         <div className="cl-onboarding-recovery__facts">
           <article>
-            <strong>Native PIN surface</strong>
+            <strong>PIN stays private</strong>
             <span>
-              PIN entry remains outside React and
-              is never sent through a WebView
-              command argument.
+              PIN entry happens in the native
+              desktop prompt, never inside this
+              CrabLink page.
             </span>
           </article>
 
           <article>
-            <strong>Restart protection</strong>
+            <strong>Protected at startup</strong>
             <span>
-              Completing onboarding does not
-              bypass the locked-vault boundary on
-              later application starts.
+              The local Passport must be unlocked
+              again when CrabLink starts after a
+              restart.
             </span>
           </article>
 
           <article>
-            <strong>Fail closed</strong>
+            <strong>CrabLink stays closed</strong>
             <span>
-              Cancelled, rejected, malformed, or
-              unavailable unlock results keep the
-              CrabLink shell closed.
+              Cancelling or failing the unlock
+              never opens the normal application
+              shell.
             </span>
           </article>
         </div>
@@ -250,21 +264,48 @@ export default function StartupPassportUnlockGate({
           {gateReview.message}
         </p>
 
-        <dl className="cl-onboarding-gate__status">
+        <dl
+          className="cl-onboarding-gate__status"
+          aria-label="Passport startup status"
+        >
           <div>
-            <dt>Gate state</dt>
+            <dt>CrabLink access</dt>
             <dd>
-              {gateReview.gateState}
+              {presentation.accessLabel}
             </dd>
           </div>
 
           <div>
-            <dt>Redacted result</dt>
+            <dt>Local Passport</dt>
             <dd>
-              {gateReview.code}
+              {presentation.passportLabel}
             </dd>
           </div>
         </dl>
+
+        <DeveloperDisclosure
+          title="Advanced startup details"
+          summary="Redacted startup gate state and result code"
+        >
+          <dl
+            className="cl-onboarding-gate__status"
+            aria-label="Advanced startup Passport details"
+          >
+            <div>
+              <dt>Gate state</dt>
+              <dd>
+                {gateReview.gateState}
+              </dd>
+            </div>
+
+            <div>
+              <dt>Result code</dt>
+              <dd>
+                {gateReview.code}
+              </dd>
+            </div>
+          </dl>
+        </DeveloperDisclosure>
 
         {!checking &&
         passportAbsenceResetAvailable ? (
@@ -286,7 +327,7 @@ export default function StartupPassportUnlockGate({
                 void resetAbsentPassportOnboarding();
               }}
             >
-              Reset completed onboarding and return to Welcome
+              {presentation.actionLabel}
             </button>
           </>
         ) : !checking ? (
@@ -299,7 +340,7 @@ export default function StartupPassportUnlockGate({
               });
             }}
           >
-            Retry native Passport unlock
+            {presentation.actionLabel}
           </button>
         ) : null}
       </section>

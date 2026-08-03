@@ -59,4 +59,74 @@
     rgba(0, 0, 0, 0.68);
 
   --cl-ad-bg: var(--cl-card-muted);
+
+  /*
+   * FINAL_BETA_PHASE2D16_DARK_AD_TOKEN_PROJECTION_V1
+   *
+   * Dark mode retains the existing near-black ad panels and restrained
+   * creative sheen through shared semantic presentation tokens.
+   */
+  --cl-ad-panel: var(--cl-media-canvas);
+  --cl-ad-creative-sheen: color-mix(
+    in srgb,
+    var(--cl-media-text) 4.5%,
+    transparent
+  );
+
+  /*
+   * FINAL_BETA_PHASE2D17_DARK_ALGO_PANEL_PROJECTION_V1
+   *
+   * Dark mode preserves the existing near-black algorithm panel surface.
+   */
+  --cl-algo-panel: var(--cl-media-canvas);
+
+  /*
+   * FINAL_BETA_PHASE2D19_DARK_CODE_PANEL_PROJECTION_V1
+   *
+   * Dark mode preserves the existing near-black code workspace panels.
+   */
+  --cl-code-panel: var(--cl-media-canvas);
+
+  /*
+   * FINAL_BETA_PHASE2D20_DARK_GAME_TOKEN_PROJECTION_V1
+   *
+   * Dark mode preserves the existing near-black game panels and subtle sheen.
+   */
+  --cl-game-panel: var(--cl-media-canvas);
+  --cl-game-cover-sheen: color-mix(
+    in srgb,
+    var(--cl-media-text) 4.5%,
+    transparent
+  );
+
+  /*
+   * FINAL_BETA_PHASE2D22_DARK_LYRICS_PANEL_PROJECTION_V1
+   *
+   * Dark mode preserves the existing near-black lyrics preview surface.
+   */
+  --cl-lyrics-panel: var(--cl-media-canvas);
+
+  /*
+   * FINAL_BETA_PHASE2D12_DARK_SURFACE_TOKEN_PROJECTION_V1
+   *
+   * Dark mode explicitly projects the shared muted surface and code-background semantics.
+   */
+  --cl-surface-muted: color-mix(in srgb, var(--cl-surface) 92%, var(--cl-bg) 8%);
+  --cl-soft: color-mix(in srgb, var(--cl-text) 3.5%, transparent);
+  --cl-code-bg: color-mix(in srgb, var(--cl-text) 7%, transparent);
+  /*
+   * FINAL_BETA_PHASE2D31_SHARED_MAKE_DARK_OVERRIDES_V1
+   *
+   * Dark-mode overrides for the shared Make workspace surface tokens.
+   * Exact legacy dark appearance is preserved without page-owned theme
+   * selectors.
+   */
+  --cl-make-command-deck-background: radial-gradient(circle at 9% 0%, color-mix(in srgb, var(--cl-studio-accent-strong) 20%, transparent), transparent 30%),
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-studio-white) 6%, transparent), color-mix(in srgb, var(--cl-studio-white) 1.8%, transparent)),
+    var(--cl-studio-near-black);
+  --cl-make-stat-pill-background: color-mix(in srgb, var(--cl-studio-white) 3.5%, transparent);
+  --cl-make-check-toggle-background: color-mix(in srgb, var(--cl-studio-white) 2.5%, transparent);
+  --cl-make-compact-status-background: color-mix(in srgb, var(--cl-studio-white) 2.5%, transparent);
+  --cl-make-debug-event-background: color-mix(in srgb, var(--cl-studio-white) 3.5%, transparent);
+
 }

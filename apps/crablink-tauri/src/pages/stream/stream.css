@@ -6,6 +6,17 @@
  * RO:TEST — visual/manual checks in CrabLink Tauri, including camera preview, stream descriptor publish, live loop, and responsive layout.
  */
 
+/*
+ * FINAL_BETA_PHASE2D29_STREAM_THEME_OWNERSHIP_V1
+ *
+ * Stream Creator Studio consumes canonical semantic tokens plus a shared
+ * fixed-pigment palette for exact legacy accent presentation.
+ *
+ * Local preview, explicit media permission, paid hold, backend session,
+ * live state, CID, stream URL, receipt, viewer entitlement, wallet, ledger,
+ * publication, and ROC authority remain unchanged.
+ */
+
 .cl-stream-page {
   display: grid;
   gap: 0.85rem;
@@ -294,8 +305,8 @@
     radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--cl-accent) 15%, transparent), transparent 28%),
     linear-gradient(
       135deg,
-      color-mix(in srgb, var(--cl-bg) 74%, black),
-      color-mix(in srgb, var(--cl-surface) 80%, black)
+      color-mix(in srgb, var(--cl-bg) 74%, var(--cl-stream-black)),
+      color-mix(in srgb, var(--cl-surface) 80%, var(--cl-stream-black))
     );
 }
 
@@ -367,8 +378,8 @@
 }
 
 .cl-stream-stage-badges span.is-on {
-  border-color: color-mix(in srgb, var(--cl-success, #2dd4bf) 50%, var(--cl-border));
-  color: color-mix(in srgb, var(--cl-success, #2dd4bf) 80%, var(--cl-text));
+  border-color: color-mix(in srgb, var(--cl-success) 50%, var(--cl-border));
+  color: color-mix(in srgb, var(--cl-success) 80%, var(--cl-text));
 }
 
 .cl-stream-stage-controls {
@@ -548,9 +559,9 @@
 .cl-stream-podcast-disabled {
   display: grid;
   gap: 0.28rem;
-  border: 1px solid color-mix(in srgb, var(--cl-warning, #f59e0b) 34%, var(--cl-border));
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 34%, var(--cl-border));
   border-radius: 18px;
-  background: color-mix(in srgb, var(--cl-warning, #f59e0b) 10%, var(--cl-card));
+  background: color-mix(in srgb, var(--cl-warning) 10%, var(--cl-card));
   padding: 0.82rem;
 }
 
@@ -563,9 +574,9 @@
 }
 
 .cl-stream-truth-box.is-warning {
-  border-color: color-mix(in srgb, #f59e0b 56%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-stream-amber-500) 56%, var(--cl-border));
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, #f59e0b 12%, transparent), transparent 42%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--cl-stream-amber-500) 12%, transparent), transparent 42%),
     color-mix(in srgb, var(--cl-card) 88%, transparent);
 }
 
@@ -659,9 +670,9 @@
 }
 
 .cl-stream-steps li.is-done::before {
-  border-color: color-mix(in srgb, var(--cl-success, #22c55e) 72%, var(--cl-border));
-  background: color-mix(in srgb, var(--cl-success, #22c55e) 72%, transparent);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--cl-success, #22c55e) 12%, transparent);
+  border-color: color-mix(in srgb, var(--cl-success) 72%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-success) 72%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--cl-success) 12%, transparent);
 }
 
 /* --------------------------------------------------------------------------
@@ -724,25 +735,25 @@
 
 .cl-stream-session-status-item.is-good,
 .cl-stream-status-chip.is-good {
-  border-color: color-mix(in srgb, var(--cl-success, #22c55e) 48%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-success) 48%, var(--cl-border));
   background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--cl-success, #22c55e) 15%, transparent), transparent 60%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--cl-success) 15%, transparent), transparent 60%),
     color-mix(in srgb, var(--cl-card) 90%, transparent);
 }
 
 .cl-stream-session-status-item.is-warn,
 .cl-stream-status-chip.is-warn {
-  border-color: color-mix(in srgb, var(--cl-warning, #f59e0b) 52%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-warning) 52%, var(--cl-border));
   background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--cl-warning, #f59e0b) 13%, transparent), transparent 60%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--cl-warning) 13%, transparent), transparent 60%),
     color-mix(in srgb, var(--cl-card) 90%, transparent);
 }
 
 .cl-stream-session-status-item.is-bad,
 .cl-stream-status-chip.is-bad {
-  border-color: color-mix(in srgb, var(--cl-danger, #ef4444) 52%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-danger) 52%, var(--cl-border));
   background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--cl-danger, #ef4444) 13%, transparent), transparent 60%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--cl-danger) 13%, transparent), transparent 60%),
     color-mix(in srgb, var(--cl-card) 90%, transparent);
 }
 
@@ -815,8 +826,8 @@
 }
 
 .cl-stream-publish-badges span.is-good {
-  border-color: color-mix(in srgb, #31d07d 54%, var(--cl-border));
-  color: color-mix(in srgb, #31d07d 84%, var(--cl-text));
+  border-color: color-mix(in srgb, var(--cl-stream-green-400) 54%, var(--cl-border));
+  color: color-mix(in srgb, var(--cl-stream-green-400) 84%, var(--cl-text));
 }
 
 .cl-stream-review-box,
@@ -841,7 +852,7 @@
 }
 
 .cl-stream-publish-success {
-  border-color: color-mix(in srgb, #31d07d 52%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-stream-green-400) 52%, var(--cl-border));
 }
 
 .cl-stream-details,
@@ -865,10 +876,10 @@
 .cl-stream-live-loop-card {
   display: grid;
   gap: 0.85rem;
-  border: 1px solid color-mix(in srgb, #31d07d 34%, var(--cl-border));
+  border: 1px solid color-mix(in srgb, var(--cl-stream-green-400) 34%, var(--cl-border));
   border-radius: 22px;
   background:
-    radial-gradient(circle at top right, color-mix(in srgb, #31d07d 13%, transparent), transparent 38%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--cl-stream-green-400) 13%, transparent), transparent 38%),
     color-mix(in srgb, var(--cl-card) 91%, transparent);
   padding: 1rem;
 }
@@ -928,9 +939,9 @@
 .cl-stream-session-result {
   display: grid;
   gap: 0.22rem;
-  border: 1px solid color-mix(in srgb, var(--cl-success, #2dd4bf) 38%, var(--cl-border));
+  border: 1px solid color-mix(in srgb, var(--cl-success) 38%, var(--cl-border));
   border-radius: 18px;
-  background: color-mix(in srgb, var(--cl-success, #2dd4bf) 8%, var(--cl-card));
+  background: color-mix(in srgb, var(--cl-success) 8%, var(--cl-card));
   padding: 0.82rem;
 }
 
@@ -974,7 +985,7 @@
   border: 1px solid var(--cl-border);
   border-radius: 16px;
   object-fit: contain;
-  background: color-mix(in srgb, var(--cl-bg) 86%, black);
+  background: color-mix(in srgb, var(--cl-bg) 86%, var(--cl-stream-black));
 }
 
 .cl-stream-session-segment p {
@@ -1111,13 +1122,13 @@
 }
 
 .cl-stream-media-item.is-good {
-  border-color: color-mix(in srgb, var(--cl-success, #2dd4bf) 38%, var(--cl-border));
-  background: color-mix(in srgb, var(--cl-success, #2dd4bf) 8%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-success) 38%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-success) 8%, var(--cl-card));
 }
 
 .cl-stream-media-item.is-warn {
-  border-color: color-mix(in srgb, var(--cl-warning, #f59e0b) 38%, var(--cl-border));
-  background: color-mix(in srgb, var(--cl-warning, #f59e0b) 8%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-warning) 38%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-warning) 8%, var(--cl-card));
 }
 
 .cl-stream-media-note,
@@ -1287,10 +1298,10 @@
 .cl-stream-error {
   grid-column: 1 / -1;
   margin: 0;
-  border: 1px solid color-mix(in srgb, var(--cl-danger, #ef4444) 48%, var(--cl-border));
+  border: 1px solid color-mix(in srgb, var(--cl-danger) 48%, var(--cl-border));
   border-radius: 16px;
-  background: color-mix(in srgb, var(--cl-danger, #ef4444) 10%, var(--cl-card));
-  color: color-mix(in srgb, var(--cl-danger, #ef4444) 76%, var(--cl-text));
+  background: color-mix(in srgb, var(--cl-danger) 10%, var(--cl-card));
+  color: color-mix(in srgb, var(--cl-danger) 76%, var(--cl-text));
   padding: 0.75rem 0.85rem;
   font-weight: 800;
   line-height: 1.45;
@@ -1454,7 +1465,7 @@
 }
 
 .cl-stream-scene-card.is-saved span {
-  color: color-mix(in srgb, var(--cl-success, #22c55e) 76%, var(--cl-text));
+  color: color-mix(in srgb, var(--cl-success) 76%, var(--cl-text));
 }
 
 .cl-stream-preset-manager {
@@ -1559,7 +1570,7 @@
   border-radius: inherit;
   background:
     radial-gradient(circle at 28% 18%, color-mix(in srgb, var(--cl-accent) 16%, transparent), transparent 34%),
-    linear-gradient(135deg, color-mix(in srgb, var(--cl-bg) 82%, black), black);
+    linear-gradient(135deg, color-mix(in srgb, var(--cl-bg) 82%, var(--cl-stream-black)), var(--cl-stream-black));
   object-fit: contain;
 }
 
@@ -1590,8 +1601,8 @@
 }
 
 .cl-stream-stage-badges span.is-warn {
-  border-color: color-mix(in srgb, var(--cl-warning, #f59e0b) 48%, var(--cl-border));
-  color: color-mix(in srgb, var(--cl-warning, #f59e0b) 80%, var(--cl-text));
+  border-color: color-mix(in srgb, var(--cl-warning) 48%, var(--cl-border));
+  color: color-mix(in srgb, var(--cl-warning) 80%, var(--cl-text));
 }
 
 @media (max-width: 720px) {
@@ -1647,9 +1658,9 @@
 }
 
 .cl-stream-look-head > span.is-on {
-  border-color: color-mix(in srgb, var(--cl-success, #22c55e) 58%, var(--cl-border));
-  color: color-mix(in srgb, var(--cl-success, #22c55e) 78%, var(--cl-text));
-  background: color-mix(in srgb, var(--cl-success, #22c55e) 10%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-success) 58%, var(--cl-border));
+  color: color-mix(in srgb, var(--cl-success) 78%, var(--cl-text));
+  background: color-mix(in srgb, var(--cl-success) 10%, var(--cl-card));
 }
 
 .cl-stream-look-presets {
@@ -1685,9 +1696,9 @@
 .cl-stream-look-presets i {
   width: 0.72rem;
   height: 0.72rem;
-  border: 1px solid color-mix(in srgb, white 32%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cl-stream-white) 32%, transparent);
   border-radius: 999px;
-  box-shadow: 0 0 0 1px color-mix(in srgb, black 36%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cl-stream-black) 36%, transparent);
 }
 
 .cl-stream-look-grid {
@@ -1741,7 +1752,7 @@
 .cl-stream-look-toggle input {
   width: 1.05rem;
   height: 1.05rem;
-  accent-color: color-mix(in srgb, var(--cl-success, #22c55e) 72%, var(--cl-accent));
+  accent-color: color-mix(in srgb, var(--cl-success) 72%, var(--cl-accent));
 }
 
 .cl-stream-look-note {
@@ -1845,10 +1856,10 @@
 .cl-stream-segmentation-status {
   display: grid;
   gap: 0.18rem;
-  border: 1px solid color-mix(in srgb, var(--cl-success, #22c55e) 34%, var(--cl-border));
+  border: 1px solid color-mix(in srgb, var(--cl-success) 34%, var(--cl-border));
   border-radius: 16px;
   background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--cl-success, #22c55e) 12%, transparent), transparent 52%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--cl-success) 12%, transparent), transparent 52%),
     color-mix(in srgb, var(--cl-card) 88%, transparent);
   padding: 0.72rem;
 }
@@ -1890,9 +1901,9 @@
 .cl-stream-go-live-panel {
   position: relative;
   overflow: hidden;
-  border-color: color-mix(in srgb, #22c55e 32%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-stream-green-500) 32%, var(--cl-border));
   background:
-    radial-gradient(circle at 88% 8%, color-mix(in srgb, #22c55e 18%, transparent), transparent 34%),
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--cl-stream-green-500) 18%, transparent), transparent 34%),
     linear-gradient(
       135deg,
       color-mix(in srgb, var(--cl-card) 94%, transparent),
@@ -1928,9 +1939,9 @@
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--cl-border) 80%, transparent);
   background:
-    radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--cl-card) 92%, white), transparent 26%),
+    radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--cl-card) 92%, var(--cl-stream-white)), transparent 26%),
     color-mix(in srgb, var(--cl-muted) 14%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, white 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cl-stream-white) 8%, transparent);
 }
 
 .cl-stream-live-orb span {
@@ -1941,25 +1952,25 @@
 }
 
 .cl-stream-live-orb.is-preview {
-  border-color: color-mix(in srgb, #f59e0b 58%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-stream-amber-500) 58%, var(--cl-border));
   background:
-    radial-gradient(circle at 38% 32%, color-mix(in srgb, #fde68a 62%, white), transparent 26%),
-    color-mix(in srgb, #f59e0b 28%, transparent);
+    radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--cl-stream-amber-200) 62%, var(--cl-stream-white)), transparent 26%),
+    color-mix(in srgb, var(--cl-stream-amber-500) 28%, transparent);
 }
 
 .cl-stream-live-orb.is-ready {
-  border-color: color-mix(in srgb, #22c55e 70%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-stream-green-500) 70%, var(--cl-border));
   background:
-    radial-gradient(circle at 38% 32%, color-mix(in srgb, #bbf7d0 70%, white), transparent 26%),
-    color-mix(in srgb, #22c55e 30%, transparent);
+    radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--cl-stream-green-200) 70%, var(--cl-stream-white)), transparent 26%),
+    color-mix(in srgb, var(--cl-stream-green-500) 30%, transparent);
   box-shadow:
-    0 0 0 5px color-mix(in srgb, #22c55e 10%, transparent),
-    0 18px 34px color-mix(in srgb, #22c55e 16%, transparent);
+    0 0 0 5px color-mix(in srgb, var(--cl-stream-green-500) 10%, transparent),
+    0 18px 34px color-mix(in srgb, var(--cl-stream-green-500) 16%, transparent);
 }
 
 .cl-stream-live-orb.is-ready span,
 .cl-stream-live-orb.is-preview span {
-  color: color-mix(in srgb, var(--cl-text) 86%, black);
+  color: color-mix(in srgb, var(--cl-text) 86%, var(--cl-stream-black));
 }
 
 .cl-stream-go-live-summary {
@@ -1997,11 +2008,11 @@
 }
 
 .cl-stream-go-live-fact.is-good {
-  border-color: color-mix(in srgb, #22c55e 40%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-stream-green-500) 40%, var(--cl-border));
 }
 
 .cl-stream-go-live-fact.is-warn {
-  border-color: color-mix(in srgb, #f59e0b 48%, var(--cl-border));
+  border-color: color-mix(in srgb, var(--cl-stream-amber-500) 48%, var(--cl-border));
 }
 
 .cl-stream-go-live-steps {
@@ -2024,8 +2035,8 @@
 }
 
 .cl-stream-go-live-steps li.is-done {
-  border-color: color-mix(in srgb, #22c55e 38%, var(--cl-border));
-  background: color-mix(in srgb, #22c55e 9%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-stream-green-500) 38%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-stream-green-500) 9%, var(--cl-card));
 }
 
 .cl-stream-go-live-step-index {
@@ -2041,8 +2052,8 @@
 }
 
 .cl-stream-go-live-steps li.is-done .cl-stream-go-live-step-index {
-  background: color-mix(in srgb, #22c55e 28%, transparent);
-  color: color-mix(in srgb, #22c55e 72%, var(--cl-text));
+  background: color-mix(in srgb, var(--cl-stream-green-500) 28%, transparent);
+  color: color-mix(in srgb, var(--cl-stream-green-500) 72%, var(--cl-text));
 }
 
 .cl-stream-go-live-steps strong,
@@ -2077,9 +2088,9 @@
 .cl-stream-go-live-boundary {
   margin: 0.75rem 0 0;
   padding: 0.6rem 0.7rem;
-  border: 1px solid color-mix(in srgb, #22c55e 24%, var(--cl-border));
+  border: 1px solid color-mix(in srgb, var(--cl-stream-green-500) 24%, var(--cl-border));
   border-radius: 14px;
-  background: color-mix(in srgb, #22c55e 7%, transparent);
+  background: color-mix(in srgb, var(--cl-stream-green-500) 7%, transparent);
   color: var(--cl-muted);
   font-size: 0.82rem;
   line-height: 1.45;
@@ -2101,7 +2112,7 @@
 }
 
 .cl-stream-advanced-live-controls > summary::marker {
-  color: color-mix(in srgb, #22c55e 70%, var(--cl-text));
+  color: color-mix(in srgb, var(--cl-stream-green-500) 70%, var(--cl-text));
 }
 
 .cl-stream-advanced-live-controls > summary span {
@@ -2147,10 +2158,10 @@
   gap: 0.72rem;
   margin: 0.85rem 0;
   padding: 0.78rem;
-  border: 1px solid color-mix(in srgb, #22c55e 22%, var(--cl-border));
+  border: 1px solid color-mix(in srgb, var(--cl-stream-green-500) 22%, var(--cl-border));
   border-radius: 18px;
   background:
-    radial-gradient(circle at 92% 6%, color-mix(in srgb, #22c55e 12%, transparent), transparent 30%),
+    radial-gradient(circle at 92% 6%, color-mix(in srgb, var(--cl-stream-green-500) 12%, transparent), transparent 30%),
     color-mix(in srgb, var(--cl-surface) 82%, transparent);
 }
 
@@ -2180,8 +2191,8 @@
 }
 
 .cl-stream-camera-frame-head button:hover {
-  border-color: color-mix(in srgb, #22c55e 42%, var(--cl-border));
-  background: color-mix(in srgb, #22c55e 9%, var(--cl-card));
+  border-color: color-mix(in srgb, var(--cl-stream-green-500) 42%, var(--cl-border));
+  background: color-mix(in srgb, var(--cl-stream-green-500) 9%, var(--cl-card));
 }
 
 .cl-stream-camera-frame-card .cl-stream-look-toggle {
