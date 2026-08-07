@@ -11,7 +11,8 @@
     ".": "./src/index.js",
     "./crab-url": "./src/crabUrl.js",
     "./route-metadata": "./src/routeMetadata.js",
-    "./receipt-display": "./src/receiptDisplay.js"
+    "./receipt-display": "./src/receiptDisplay.js",
+    "./publication-summary": "./src/publicationSummary.js"
   },
   "scripts": {
     "test": "node --test src/*.test.mjs",

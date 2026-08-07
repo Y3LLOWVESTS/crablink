@@ -9,6 +9,8 @@
  * RO:TEST — open crab://@skinnycrabby, confirm profile auto-reads through gateway and drawer cache remains populated.
  */
 
+// FINAL_BETA_PHASE7A3_PROFILE_TIMELINE_INTEGRATION_V1
+
 import { useEffect, useMemo, useState } from 'react';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
@@ -24,6 +26,17 @@ import {
   normalizePublicProfileResponse,
 } from '../../shared/api/identityClient.js';
 import {
+  createPublicationAdapter,
+} from '../../adapters/publicationAdapter.js';
+import ProfileTimelineSurface from './ProfileTimelineSurface.jsx';
+import {
+  createProfileTimelineModel,
+  normalizeProfileTimelineTab,
+} from './profileTimelineModel.js';
+import {
+  resolveOwnProfileHandle,
+} from './ownProfileIdentity.js';
+import {
   readPublicProfileCache,
   writePublicProfileCache,
 } from '../../shared/profile/publicProfileCache.js';
@@ -35,6 +48,14 @@ const EMPTY_STATE = Object.freeze({
   response: null,
   error: null,
   cacheHit: false,
+});
+
+const EMPTY_TIMELINE_STATE = Object.freeze({
+  status: 'idle',
+  checkedAt: '',
+  page: null,
+  error: null,
+  loadingMore: false,
 });
 
 export default function ProfilePublicView({ app, route }) {
@@ -52,6 +73,18 @@ export default function ProfilePublicView({ app, route }) {
     '',
   );
 
+  const ownHandle =
+    resolveOwnProfileHandle({
+      settings:
+        app?.settings || {},
+    });
+
+  const isOwner =
+    username.length > 0 &&
+    normalizeProfileUsername(
+      ownHandle,
+    ) === username;
+
   const identityClient = useMemo(() => {
     if (app?.clients?.identity?.getPassportProfile) {
       return app.clients.identity;
@@ -63,6 +96,32 @@ export default function ProfilePublicView({ app, route }) {
 
     return null;
   }, [app?.clients]);
+
+  const publicationClient =
+    useMemo(
+      () => {
+        if (
+          app?.clients?.publications
+            ?.listCreatorPublications
+        ) {
+          return app.clients.publications;
+        }
+
+        if (
+          app?.clients?.gateway
+            ?.request
+        ) {
+          return createPublicationAdapter(
+            app.clients.gateway,
+          );
+        }
+
+        return null;
+      },
+      [
+        app?.clients,
+      ],
+    );
 
   const [state, setState] = useState(() => {
     const cached = readMatchingCache(username);
@@ -81,6 +140,22 @@ export default function ProfilePublicView({ app, route }) {
 
     return EMPTY_STATE;
   });
+
+  const [
+    timelineTab,
+    setTimelineTab,
+  ] =
+    useState(
+      'posts',
+    );
+
+  const [
+    publicationState,
+    setPublicationState,
+  ] =
+    useState(
+      EMPTY_TIMELINE_STATE,
+    );
 
   useEffect(() => {
     let alive = true;
@@ -179,6 +254,294 @@ export default function ProfilePublicView({ app, route }) {
     identityClient,
     route?.refreshTick,
   ]);
+
+  useEffect(
+    () => {
+      let alive =
+        true;
+
+      async function readPublications() {
+        if (
+          username.length === 0
+        ) {
+          setPublicationState({
+            ...EMPTY_TIMELINE_STATE,
+            status:
+              'error',
+            error:
+              makePublicProfileError(
+                'Publication timeline requires an @username.',
+                'missing_publication_username',
+              ),
+          });
+
+          return;
+        }
+
+        setPublicationState(
+          (current) => ({
+            ...current,
+            status:
+              current.page
+                ? 'stale'
+                : 'loading',
+            error:
+              null,
+            loadingMore:
+              false,
+          }),
+        );
+
+        if (
+          publicationClient === null
+        ) {
+          setPublicationState(
+            (current) => ({
+              ...current,
+              status:
+                current.page
+                  ? 'offline'
+                  : 'error',
+              error:
+                makePublicProfileError(
+                  'Gateway publication client is unavailable.',
+                  'missing_publication_client',
+                ),
+              loadingMore:
+                false,
+            }),
+          );
+
+          return;
+        }
+
+        try {
+          const page =
+            await publicationClient
+              .listCreatorPublications({
+                username,
+                limit:
+                  20,
+              });
+
+          reviewTimelinePage(
+            username,
+            page,
+          );
+
+          if (
+            alive === false
+          ) {
+            return;
+          }
+
+          setPublicationState({
+            status:
+              'ready',
+            checkedAt:
+              new Date()
+                .toISOString(),
+            page,
+            error:
+              null,
+            loadingMore:
+              false,
+          });
+        } catch (error) {
+          if (
+            alive === false
+          ) {
+            return;
+          }
+
+          setPublicationState(
+            (current) => ({
+              ...current,
+              status:
+                timelineFailureStatus(
+                  error,
+                  Boolean(
+                    current.page,
+                  ),
+                ),
+              error,
+              loadingMore:
+                false,
+            }),
+          );
+        }
+      }
+
+      void readPublications();
+
+      return () => {
+        alive =
+          false;
+      };
+    },
+    [
+      username,
+      publicationClient,
+      route?.refreshTick,
+    ],
+  );
+
+  const timelineModel =
+    useMemo(
+      () => {
+        if (
+          username.length === 0
+        ) {
+          return null;
+        }
+
+        return createProfileTimelineModel({
+          username,
+          page:
+            publicationState.page,
+          activeTab:
+            timelineTab,
+          status:
+            publicationState.status,
+          isOwner,
+          errorMessage:
+            publicationState.error
+              ?.message || '',
+          lastUpdatedAt:
+            publicationState.checkedAt,
+        });
+      },
+      [
+        username,
+        publicationState.page,
+        publicationState.status,
+        publicationState.error,
+        publicationState.checkedAt,
+        timelineTab,
+        isOwner,
+      ],
+    );
+
+  function selectTimelineTab(
+    tab,
+  ) {
+    setTimelineTab(
+      normalizeProfileTimelineTab(
+        tab,
+      ),
+    );
+  }
+
+  async function loadMorePublications(
+    cursor,
+  ) {
+    if (
+      publicationClient === null ||
+      publicationState.page === null ||
+      publicationState.loadingMore
+    ) {
+      return;
+    }
+
+    const currentItems =
+      publicationState.page.items;
+
+    const remaining =
+      50 - currentItems.length;
+
+    if (
+      remaining <= 0
+    ) {
+      return;
+    }
+
+    setPublicationState(
+      (current) => ({
+        ...current,
+        loadingMore:
+          true,
+      }),
+    );
+
+    try {
+      const nextPage =
+        await publicationClient
+          .listCreatorPublications({
+            username,
+            cursor,
+            limit:
+              Math.min(
+                20,
+                remaining,
+              ),
+          });
+
+      reviewTimelinePage(
+        username,
+        nextPage,
+      );
+
+      const mergedPage =
+        mergeTimelinePages(
+          publicationState.page,
+          nextPage,
+        );
+
+      reviewTimelinePage(
+        username,
+        mergedPage,
+      );
+
+      setPublicationState({
+        status:
+          'ready',
+        checkedAt:
+          new Date()
+            .toISOString(),
+        page:
+          mergedPage,
+        error:
+          null,
+        loadingMore:
+          false,
+      });
+    } catch (error) {
+      setPublicationState(
+        (current) => ({
+          ...current,
+          status:
+            timelineFailureStatus(
+              error,
+              Boolean(
+                current.page,
+              ),
+            ),
+          error,
+          loadingMore:
+            false,
+        }),
+      );
+    }
+  }
+
+  function openTimelinePublication(
+    publicationRoute,
+  ) {
+    const normalized =
+      String(
+        publicationRoute || '',
+      ).trim();
+
+    if (
+      normalized.startsWith(
+        'crab://',
+      )
+    ) {
+      app?.navigate?.(
+        normalized,
+      );
+    }
+  }
 
   function openProfileWorkspace() {
     app?.navigate?.('crab://profile');
@@ -325,6 +688,30 @@ export default function ProfilePublicView({ app, route }) {
         </Card>
       )}
 
+      {timelineModel && (
+        <ProfileTimelineSurface
+          model={timelineModel}
+          about={{
+            displayName,
+            handle,
+            bio,
+            profileCrabUrl,
+          }}
+          onSelectTab={
+            selectTimelineTab
+          }
+          onLoadMore={
+            loadMorePublications
+          }
+          onOpenPublication={
+            openTimelinePublication
+          }
+          onEditProfile={
+            openProfileWorkspace
+          }
+        />
+      )}
+
       <Card
         eyebrow="Gateway facts"
         title="Public profile truth boundary"
@@ -368,6 +755,137 @@ export default function ProfilePublicView({ app, route }) {
       </Card>
     </section>
   );
+}
+
+function reviewTimelinePage(
+  username,
+  page,
+) {
+  createProfileTimelineModel({
+    username,
+    page,
+    activeTab:
+      'posts',
+    status:
+      'ready',
+    isOwner:
+      false,
+  });
+
+  return page;
+}
+
+function mergeTimelinePages(
+  currentPage,
+  nextPage,
+) {
+  const items = [];
+  const seen =
+    new Set();
+
+  for (
+    const item
+    of [
+      ...currentPage.items,
+      ...nextPage.items,
+    ]
+  ) {
+    const identifier =
+      String(
+        item?.publicationId ||
+        item?.id ||
+        '',
+      ).trim();
+
+    if (
+      identifier &&
+      seen.has(
+        identifier,
+      )
+    ) {
+      continue;
+    }
+
+    if (identifier) {
+      seen.add(
+        identifier,
+      );
+    }
+
+    items.push(
+      item,
+    );
+
+    if (
+      items.length >= 50
+    ) {
+      break;
+    }
+  }
+
+  const hasRoom =
+    items.length < 50;
+
+  const hasMore =
+    hasRoom &&
+    nextPage.hasMore === true &&
+    typeof nextPage.nextCursor ===
+      'string' &&
+    nextPage.nextCursor.length > 0;
+
+  return {
+    schema:
+      'crablink.publication-page.v1',
+    items,
+    nextCursor:
+      hasMore
+        ? nextPage.nextCursor
+        : null,
+    hasMore,
+  };
+}
+
+function timelineFailureStatus(
+  error,
+  hasPage,
+) {
+  const status =
+    Number(
+      error?.status ||
+      error?.response?.status ||
+      0,
+    );
+
+  const reason =
+    String(
+      error?.reason ||
+      error?.code ||
+      error?.message ||
+      '',
+    ).toLowerCase();
+
+  const offline =
+    status === 0 ||
+    reason.includes(
+      'connect',
+    ) ||
+    reason.includes(
+      'unavailable',
+    ) ||
+    reason.includes(
+      'offline',
+    ) ||
+    reason.includes(
+      'timeout',
+    );
+
+  if (hasPage) {
+    return offline
+      ? 'offline'
+      : 'stale';
+  }
+
+  return 'error';
 }
 
 function HeroStat({ label, value }) {

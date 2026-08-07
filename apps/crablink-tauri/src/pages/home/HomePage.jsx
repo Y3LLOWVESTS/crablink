@@ -10,6 +10,10 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+
+import {
+  isExplicitDeveloperSurface,
+} from '../../app/developerSurfaceMode.js';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
@@ -31,6 +35,9 @@ const FALLBACK_PROOF_SITE = 'crab://ron7';
 const FALLBACK_PROOF_REACT_IMAGE =
   'crab://ad1e9bef7834d7a37fde676abdf095c33c59de8e3d667fe99b5f091e6444e8d1.image';
 const PROOF_PROFILE = 'crab://profile';
+
+const FINAL_BETA_PHASE5A2_HOME_CONSUMER_MODE =
+  'FINAL_BETA_PHASE5A2_HOME_CONSUMER_MODE_V1';
 
 const EMPTY_CATALOG = Object.freeze({
   schema: 'crablink.local-catalog.v1',
@@ -65,17 +72,42 @@ export default function HomePage({ app }) {
   const proofImage = proof.image?.crabUrl || FALLBACK_PROOF_REACT_IMAGE;
   const proofProfile = proof.profile?.crabUrl || PROOF_PROFILE;
 
+  const developerSurfaceEnabled =
+    isExplicitDeveloperSurface({
+      buildDev:
+        import.meta.env?.DEV === true,
+
+      settings:
+        app?.settings,
+    });
+
+  if (!developerSurfaceEnabled) {
+    return (
+      <ConsumerHome
+        app={app}
+        passport={passport}
+        receiptCount={receipts.length}
+      />
+    );
+  }
+
   return (
-    <section className="cl-page home-page">
+    <section
+      className="cl-page home-page"
+      data-final-beta-home-mode="developer"
+      data-final-beta-developer-surface={
+        FINAL_BETA_PHASE5A2_HOME_CONSUMER_MODE
+      }
+    >
       <PageHeader
-        eyebrow="CrabLink React lane"
-        title="Route Smoke Dashboard"
-        copy="Use this page as the control room for testing built-in crab:// routes, reviewing local proof memory, and keeping backend truth separate from local display caches."
+        eyebrow="Developer Mode"
+        title="Engineering Dashboard"
+        copy="Route smoke tools, local proof memory, diagnostic context, and manual regression sequences are visible because explicit Developer Mode is enabled."
         meta={
           <>
-            <Badge tone="success">React-primary</Badge>
-            <Badge tone="neutral">gateway-only</Badge>
-            <Badge tone="info">local proof cache</Badge>
+            <Badge tone="warning">developer tools</Badge>
+            <Badge tone="neutral">local diagnostics</Badge>
+            <Badge tone="info">display only</Badge>
           </>
         }
       />
@@ -219,6 +251,170 @@ export default function HomePage({ app }) {
             <li>crab://video → crab://stream → crab://podcast → crab://music</li>
             <li>crab://ad → crab://algo → crab://code → crab://game</li>
           </ol>
+        </Card>
+      </section>
+    </section>
+  );
+}
+
+
+function ConsumerHome({
+  app,
+  passport,
+  receiptCount = 0,
+}) {
+  const safeReceiptCount =
+    Number.isSafeInteger(receiptCount) &&
+    receiptCount >= 0
+      ? receiptCount
+      : 0;
+
+  function open(route) {
+    app?.navigate?.(route);
+  }
+
+  return (
+    <section
+      className="cl-page home-page"
+      data-final-beta-home-mode="consumer"
+      data-final-beta-consumer-home={
+        FINAL_BETA_PHASE5A2_HOME_CONSUMER_MODE
+      }
+    >
+      <PageHeader
+        eyebrow="Home"
+        title="Welcome to CrabLink"
+        copy="Home will become your chronological following feed after the network-backed social projection is available. Until then, CrabLink provides direct access to your profile, library, receipts, and creation tools without inventing feed activity."
+        meta={
+          <>
+            <Badge tone="success">private beta</Badge>
+            <Badge tone="neutral">following feed pending</Badge>
+          </>
+        }
+      />
+
+      <TruthBoundary
+        tone="info"
+        title="No fabricated feed items"
+        copy="CrabLink does not turn local caches, route history, test fixtures, or diagnostic records into social posts. Home remains intentionally empty until real followed-profile publication summaries are returned by the network."
+      />
+
+      <section
+        className="cl-home-context-grid"
+        aria-label="CrabLink Home actions"
+      >
+        <Card
+          eyebrow="Your identity"
+          title={passport || 'Local Passport'}
+        >
+          <p>
+            Open Profile Studio to review your local profile draft,
+            public-profile route, and publishing identity.
+          </p>
+
+          <div className="cl-home-proof-actions">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => open('crab://profile')}
+            >
+              Open Profile Studio
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => open('crab://explore')}
+            >
+              Explore
+            </Button>
+          </div>
+        </Card>
+
+        <Card
+          eyebrow="Saved activity"
+          title={
+            safeReceiptCount === 1
+              ? '1 saved receipt'
+              : `${safeReceiptCount} saved receipts`
+          }
+        >
+          <p>
+            Receipts remain display-only local memory until refreshed
+            from backend wallet and ledger truth. Library entries never
+            prove ownership or paid access by themselves.
+          </p>
+
+          <div className="cl-home-proof-actions">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => open('crab://receipts')}
+            >
+              View receipts
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => open('crab://library')}
+            >
+              Open library
+            </Button>
+          </div>
+        </Card>
+      </section>
+
+      <section
+        className="cl-home-bottom-grid"
+        aria-label="Home status and creation"
+      >
+        <Card
+          eyebrow="Following feed"
+          title="Waiting for network-backed activity"
+        >
+          <p>
+            The beta feed will be chronological and limited to profiles
+            you explicitly follow. No opaque ranking, paid placement,
+            surveillance profile, or cache-created activity is shown.
+          </p>
+
+          <div className="cl-home-next-list">
+            <span>Chronological</span>
+            <span>Following only</span>
+            <span>Network derived</span>
+            <span>Bounded summaries</span>
+          </div>
+        </Card>
+
+        <Card
+          eyebrow="Create"
+          title="Publish through reviewed CrabLink routes"
+        >
+          <p>
+            Creator routes remain available while the social timeline
+            and following-feed contracts are built. Backend responses
+            remain the only source of publication identifiers and
+            receipts.
+          </p>
+
+          <div className="cl-home-proof-actions">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => open('crab://post')}
+            >
+              Create a post
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => open('crab://image')}
+            >
+              Create an image
+            </Button>
+          </div>
         </Card>
       </section>
     </section>

@@ -44,9 +44,10 @@ test('Phase 5A1 returns no route-smoke presentation in normal mode', () => {
       'if (!developerSurfaceEnabled)',
     );
 
+  // FINAL_BETA_PHASE5A1_MULTILINE_SECTION_TEST_REPAIR_V2
   const presentationIndex =
     source.indexOf(
-      '<section className="cl-home-actions"',
+      'data-final-beta-developer-surface=',
     );
 
   assert.ok(

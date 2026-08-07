@@ -10,6 +10,9 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import {
+  isExplicitDeveloperSurface,
+} from '../../app/developerSurfaceMode.js';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
@@ -44,6 +47,9 @@ const TEXT_KINDS = Object.freeze(['post', 'comment', 'article']);
 const TEXT_KIND_SET = new Set(TEXT_KINDS);
 const MANIFEST_KINDS = new Set(['manifest', 'root']);
 const IMAGE_LIKE_KIND = 'image';
+
+const FINAL_BETA_PHASE5A3_LIBRARY_ENGINEERING_QUARANTINE =
+  'FINAL_BETA_PHASE5A3_LIBRARY_ENGINEERING_QUARANTINE_V1';
 
 const TABS = Object.freeze([
   { id: 'all', label: 'All' },
@@ -81,6 +87,20 @@ export default function LibraryPage({ app }) {
 
   const activeItems = library.tabs[activeTab] || library.tabs.all;
   const textReady = library.counts.post > 0 && library.counts.comment > 0 && library.counts.article > 0;
+  const developerSurfaceEnabled =
+    isExplicitDeveloperSurface({
+      buildDev: import.meta.env?.DEV === true,
+      settings: app?.settings,
+    });
+  const visibleTabs = developerSurfaceEnabled
+    ? TABS
+    : TABS.filter((tab) => tab.id !== 'manifests');
+
+  useEffect(() => {
+    if (!developerSurfaceEnabled && activeTab === 'manifests') {
+      setActiveTab('all');
+    }
+  }, [activeTab, developerSurfaceEnabled]);
 
   function refreshLibrary() {
     dispatchLocalCatalogChanged();
@@ -139,17 +159,28 @@ export default function LibraryPage({ app }) {
   return (
     <section className="cl-page library-page">
       <PageHeader
-        eyebrow="CrabLink Library"
-        title="My CrabLink Library"
-        copy="Profiles, sites, assets, and receipts remembered by this browser from backend-confirmed responses and local display caches."
+        eyebrow={developerSurfaceEnabled ? 'Developer Library' : 'Library'}
+        title={developerSurfaceEnabled ? 'Local Proof Library' : 'Your Library'}
+        copy={
+          developerSurfaceEnabled
+            ? 'Inspect local display caches, proof references, manifests, roots, and receipt diagnostics without granting them network authority.'
+            : 'Browse profiles, sites, posts, images, and receipts saved on this device for convenient return access.'
+        }
         meta={
-          <>
-            <Badge tone="success">display cache</Badge>
-            <Badge tone="neutral">gateway-derived entries</Badge>
-            <Badge tone={textReady ? 'success' : 'warning'}>
-              {textReady ? 'text proof ready' : 'text proof open'}
-            </Badge>
-          </>
+          developerSurfaceEnabled ? (
+            <>
+              <Badge tone="warning">developer mode</Badge>
+              <Badge tone="neutral">display cache only</Badge>
+              <Badge tone={textReady ? 'success' : 'warning'}>
+                {textReady ? 'text proof ready' : 'text proof open'}
+              </Badge>
+            </>
+          ) : (
+            <>
+              <Badge tone="success">saved on this device</Badge>
+              <Badge tone="neutral">display only</Badge>
+            </>
+          )
         }
         actions={
           <div className="cl-library-header-actions">
@@ -159,94 +190,106 @@ export default function LibraryPage({ app }) {
             <Button variant="secondary" onClick={() => app?.navigate?.('crab://receipts')}>
               Receipts
             </Button>
-            <Button variant="secondary" onClick={() => app?.navigate?.('crab://text')}>
-              Text proof
-            </Button>
-            <Button variant="ghost" onClick={copyLibrarySummary}>
-              Copy summary
-            </Button>
+            {developerSurfaceEnabled && (
+              <>
+                <Button variant="secondary" onClick={() => app?.navigate?.('crab://text')}>
+                  Text proof
+                </Button>
+                <Button variant="ghost" onClick={copyLibrarySummary}>
+                  Copy diagnostic summary
+                </Button>
+              </>
+            )}
           </div>
         }
       />
 
-      {copyState && <p className="cl-library-copy-state">{copyState}</p>}
+      {developerSurfaceEnabled && copyState && (
+        <p className="cl-library-copy-state">{copyState}</p>
+      )}
 
       <section className="cl-library-stat-grid" aria-label="Library counters">
-        <LibraryStat label="Profiles" value={library.counts.profiles} detail="backend-confirmed public profile display memory" />
-        <LibraryStat label="Sites" value={library.counts.sites} detail="named crab:// sites seen by this browser" />
-        <LibraryStat label="Images" value={library.counts.images} detail="typed .image assets seen or published" />
+        <LibraryStat label="Profiles" value={library.counts.profiles} detail="public profiles saved for return access" />
+        <LibraryStat label="Sites" value={library.counts.sites} detail="sites saved for return access" />
+        <LibraryStat label="Images" value={library.counts.images} detail="images saved in this Library" />
         <LibraryStat label="Text assets" value={library.counts.text} detail={`${library.counts.post} post · ${library.counts.comment} comment · ${library.counts.article} article`} />
-        <LibraryStat label="Receipts" value={library.counts.receipts} detail="recent backend-returned receipt display memory" />
+        <LibraryStat label="Receipts" value={library.counts.receipts} detail="recent receipt details" />
       </section>
 
-      <TruthBoundary
-        tone={textReady ? 'success' : 'warning'}
-        title={textReady ? 'Library sees post/comment/article proof' : 'Library text proof still open'}
-        copy={
-          textReady
-            ? 'The library can see at least one post, comment, and article in local display memory. This supports the NEXT_LEVEL proof path but does not unlock QuickChain by itself.'
-            : 'Open or import fresh typed text URLs so the library can show post/comment/article local proof. Backend publication, receipts, and ledger replay remain separate truth.'
-        }
-      />
+      {developerSurfaceEnabled && (
+        <div data-final-beta-library-developer-surface={FINAL_BETA_PHASE5A3_LIBRARY_ENGINEERING_QUARANTINE}>
+          <TruthBoundary
+            tone={textReady ? 'success' : 'warning'}
+            title={textReady ? 'Library sees post/comment/article proof' : 'Library text proof still open'}
+            copy={
+              textReady
+                ? 'The library can see at least one post, comment, and article in local display memory. This supports the NEXT_LEVEL proof path but does not unlock QuickChain by itself.'
+                : 'Open or import fresh typed text URLs so the library can show post/comment/article local proof. Backend publication, receipts, and ledger replay remain separate truth.'
+            }
+          />
 
-      <section className="cl-library-proof-grid" aria-label="Library proof groups">
-        <ProofGroup
-          title="Profiles"
-          count={library.counts.profiles}
-          route="crab://profile"
-          tab="profiles"
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          app={app}
-        />
-        <ProofGroup
-          title="Sites"
-          count={library.counts.sites}
-          route="crab://site"
-          tab="sites"
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          app={app}
-        />
-        <ProofGroup
-          title="Images"
-          count={library.counts.images}
-          route="crab://image"
-          tab="images"
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          app={app}
-        />
-        <ProofGroup
-          title="Posts"
-          count={library.counts.post}
-          route="crab://post"
-          tab="posts"
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          app={app}
-        />
-        <ProofGroup
-          title="Comments"
-          count={library.counts.comment}
-          route="crab://comment"
-          tab="comments"
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          app={app}
-        />
-        <ProofGroup
-          title="Articles"
-          count={library.counts.article}
-          route="crab://article"
-          tab="articles"
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          app={app}
-        />
-      </section>
+          <section className="cl-library-proof-grid" aria-label="Library proof groups">
+            <ProofGroup
+              title="Profiles"
+              count={library.counts.profiles}
+              route="crab://profile"
+              tab="profiles"
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              app={app}
+            />
+            <ProofGroup
+              title="Sites"
+              count={library.counts.sites}
+              route="crab://site"
+              tab="sites"
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              app={app}
+            />
+            <ProofGroup
+              title="Images"
+              count={library.counts.images}
+              route="crab://image"
+              tab="images"
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              app={app}
+            />
+            <ProofGroup
+              title="Posts"
+              count={library.counts.post}
+              route="crab://post"
+              tab="posts"
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              app={app}
+            />
+            <ProofGroup
+              title="Comments"
+              count={library.counts.comment}
+              route="crab://comment"
+              tab="comments"
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              app={app}
+            />
+            <ProofGroup
+              title="Articles"
+              count={library.counts.article}
+              route="crab://article"
+              tab="articles"
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              app={app}
+            />
+          </section>
 
-      <Card className="cl-library-toolbar" eyebrow="Browse local memory" title="Filter and group">
+        </div>
+      )}
+
+      <Card className="cl-library-toolbar" eyebrow={developerSurfaceEnabled ? 'Browse local memory' : 'Browse Library'}
+        title={developerSurfaceEnabled ? 'Filter and inspect' : 'Find saved items'}>
         <div className="cl-library-toolbar-grid">
           <label className="cl-library-search">
             <span>Search local catalog</span>
@@ -254,7 +297,11 @@ export default function LibraryPage({ app }) {
               type="search"
               value={filter}
               onChange={(event) => setFilter(event.target.value)}
-              placeholder="Search crab URL, title, kind, CID, txid, source..."
+              placeholder={
+                developerSurfaceEnabled
+                  ? 'Search crab URL, title, kind, CID, txid, source...'
+                  : 'Search routes, titles, and content types...'
+              }
             />
           </label>
 
@@ -262,14 +309,16 @@ export default function LibraryPage({ app }) {
             <Button variant="secondary" onClick={() => setFilter('')}>
               Clear filter
             </Button>
-            <Button variant="ghost" onClick={clearDisplayCaches}>
-              Clear display caches
-            </Button>
+            {developerSurfaceEnabled && (
+              <Button variant="ghost" onClick={clearDisplayCaches}>
+                Clear display caches
+              </Button>
+            )}
           </div>
         </div>
 
         <div className="cl-library-tabs" role="tablist" aria-label="Library tabs">
-          {TABS.map((tab) => (
+          {visibleTabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
@@ -287,7 +336,12 @@ export default function LibraryPage({ app }) {
       {activeTab === 'all' ? (
         <LibraryOverview library={library} app={app} filter={filter} />
       ) : activeTab === 'text' ? (
-        <TextAssetSection library={library} app={app} filter={filter} />
+        <TextAssetSection
+          library={library}
+          app={app}
+          filter={filter}
+          developerSurfaceEnabled={developerSurfaceEnabled}
+        />
       ) : (
         <section className="cl-library-list" aria-label={`${activeTab} entries`}>
           {activeItems.length === 0 ? (
@@ -304,9 +358,10 @@ export default function LibraryPage({ app }) {
         </section>
       )}
 
-      <details className="cl-library-dev-json">
-        <summary>Developer library JSON</summary>
-        <JsonPreview
+      {developerSurfaceEnabled && (
+        <details className="cl-library-dev-json">
+          <summary>Developer library JSON</summary>
+          <JsonPreview
           label="Local library"
           data={{
             schema: 'crablink.library.v1',
@@ -333,8 +388,9 @@ export default function LibraryPage({ app }) {
             truth_boundary:
               'Browser-local display cache only. Not a backend public catalog, ownership index, wallet/ledger truth, or authorization source.',
           }}
-        />
-      </details>
+          />
+        </details>
+      )}
     </section>
   );
 }
@@ -380,31 +436,31 @@ function LibraryOverview({ library, app, filter }) {
       id: 'profiles',
       title: 'Profiles',
       items: library.tabs.profiles,
-      copy: 'Backend-confirmed public profile display memory.',
+      copy: 'Profiles saved for return access.',
     },
     {
       id: 'sites',
       title: 'Sites',
       items: library.tabs.sites,
-      copy: 'Named crab:// site pages resolved or visited in this browser.',
+      copy: 'Sites saved for return access.',
     },
     {
       id: 'images',
       title: 'Images',
       items: library.tabs.images,
-      copy: 'Typed .image assets opened, published, or remembered locally.',
+      copy: 'Images saved for return access.',
     },
     {
       id: 'text',
       title: 'Text assets',
       items: library.tabs.text,
-      copy: 'Typed .post, .comment, and .article proof entries.',
+      copy: 'Saved posts, comments, and articles.',
     },
     {
       id: 'receipts',
       title: 'Receipts',
       items: library.tabs.receipts,
-      copy: 'Recent backend-returned wallet/payment receipt display memory.',
+      copy: 'Recent receipt details.',
     },
   ];
 
@@ -424,41 +480,45 @@ function LibraryOverview({ library, app, filter }) {
   );
 }
 
-function TextAssetSection({ library, app, filter }) {
+function TextAssetSection({ library, app, filter, developerSurfaceEnabled }) {
   return (
     <section className="cl-library-section-stack" aria-label="Text asset groups">
-      <Card
-        eyebrow="Text primitive proof"
-        title="Posts, Comments, Articles"
-        actions={
-          <div className="cl-library-card-actions">
-            <Button variant="secondary" onClick={() => app?.navigate?.('crab://text')}>
-              Open text proof
-            </Button>
-            <Button variant="ghost" onClick={() => app?.navigate?.('crab://quickchain')}>
-              QuickChain gate
-            </Button>
-          </div>
-        }
-      >
-        <p className="cl-library-section-copy">
-          Text assets are b3-backed published primitives. This browser only displays local proof memory from
-          opened/imported typed URLs; backend publication and receipts remain authoritative.
-        </p>
+      {developerSurfaceEnabled && (
+        <div data-final-beta-library-text-proof="developer-only">
+          <Card
+            eyebrow="Text primitive proof"
+            title="Posts, Comments, Articles"
+            actions={
+              <div className="cl-library-card-actions">
+                <Button variant="secondary" onClick={() => app?.navigate?.('crab://text')}>
+                  Open text proof
+                </Button>
+                <Button variant="ghost" onClick={() => app?.navigate?.('crab://quickchain')}>
+                  QuickChain gate
+                </Button>
+              </div>
+            }
+          >
+            <p className="cl-library-section-copy">
+              Text assets are b3-backed published primitives. This browser only displays local proof memory from
+              opened/imported typed URLs; backend publication and receipts remain authoritative.
+            </p>
 
-        <div className="cl-library-text-readiness">
-          <ReadinessPill label="Post" count={library.counts.post} />
-          <ReadinessPill label="Comment" count={library.counts.comment} />
-          <ReadinessPill label="Article" count={library.counts.article} />
+            <div className="cl-library-text-readiness">
+              <ReadinessPill label="Post" count={library.counts.post} />
+              <ReadinessPill label="Comment" count={library.counts.comment} />
+              <ReadinessPill label="Article" count={library.counts.article} />
+            </div>
+          </Card>
         </div>
-      </Card>
+      )}
 
       <LibrarySection
         title="Posts"
         copy="Short/social text assets attached to site context."
         items={library.tabs.posts}
         app={app}
-        emptyCopy={filter ? 'No posts match this filter.' : 'No local post entries yet. Open or import a fresh .post URL.'}
+        emptyCopy={filter ? 'No posts match this filter.' : 'No saved posts yet. Create or open a post to add it to your Library.'}
       />
 
       <LibrarySection
@@ -466,7 +526,7 @@ function TextAssetSection({ library, app, filter }) {
         copy="Comment assets attached to a site and parent target."
         items={library.tabs.comments}
         app={app}
-        emptyCopy={filter ? 'No comments match this filter.' : 'No local comment entries yet. Open or import a fresh .comment URL.'}
+        emptyCopy={filter ? 'No comments match this filter.' : 'No saved comments yet. Create or open a comment to add it to your Library.'}
       />
 
       <LibrarySection
@@ -474,7 +534,7 @@ function TextAssetSection({ library, app, filter }) {
         copy="Long-form text assets attached to site context."
         items={library.tabs.articles}
         app={app}
-        emptyCopy={filter ? 'No articles match this filter.' : 'No local article entries yet. Open or import a fresh .article URL.'}
+        emptyCopy={filter ? 'No articles match this filter.' : 'No saved articles yet. Create or open an article to add it to your Library.'}
       />
     </section>
   );
@@ -526,6 +586,22 @@ function LibraryCard({ item, app }) {
   const proof = item.receiptHash || item.txid || item.cid || item.manifestCid || item.rootDocumentCid || '';
   const canOpen = Boolean(route && app?.navigate);
   const kind = item.kind || item.type || 'entry';
+  const developerSurfaceEnabled =
+    isExplicitDeveloperSurface({
+      buildDev: import.meta.env?.DEV === true,
+      settings: app?.settings,
+    });
+  const visibleProof = developerSurfaceEnabled ? proof : '';
+  const statusLabel = developerSurfaceEnabled
+    ? item.status || item.action || item.source || 'local display'
+    : item.type === 'receipt'
+      ? 'receipt'
+      : 'saved';
+  const detailLabel = developerSurfaceEnabled
+    ? item.detail || item.action || item.source || 'local display cache'
+    : item.type === 'receipt'
+      ? 'Receipt details saved for display'
+      : 'Saved in your Library';
 
   function openItem() {
     if (canOpen) {
@@ -538,24 +614,28 @@ function LibraryCard({ item, app }) {
       <header>
         <div>
           <span>{labelForType(item.type, item.kind)}</span>
-          <strong title={item.title || item.name || route || proof || 'Local entry'}>
-            {formatCardTitle(item, route, proof)}
+          <strong title={item.title || item.name || route || visibleProof || 'Saved entry'}>
+            {formatCardTitle(item, route, visibleProof)}
           </strong>
         </div>
         <Badge tone={badgeToneForKind(kind)}>
-          {item.status || item.action || item.source || 'local display'}
+          {statusLabel}
         </Badge>
       </header>
 
       <div className="cl-library-card-main">
         <LibraryFact label="Route" value={route || 'not returned'} monospace />
-        <LibraryFact label="Detail" value={item.detail || item.action || item.source || 'local display cache'} />
+        <LibraryFact label="Detail" value={detailLabel} />
         {item.type === 'receipt' && (
           <LibraryFact label="Payment" value={receiptPaymentLine(item)} />
         )}
-        <LibraryFact label="CID" value={item.cid || item.manifestCid || item.rootDocumentCid || 'not returned'} monospace />
-        <LibraryFact label="Proof" value={item.receiptHash || item.txid || 'not returned'} monospace />
-        <LibraryFact label="Source" value={item.source || 'local library'} />
+        {developerSurfaceEnabled && (
+          <>
+            <LibraryFact label="CID" value={item.cid || item.manifestCid || item.rootDocumentCid || 'not returned'} monospace />
+            <LibraryFact label="Proof" value={item.receiptHash || item.txid || 'not returned'} monospace />
+            <LibraryFact label="Source" value={item.source || 'local library'} />
+          </>
+        )}
         <LibraryFact label="Created / seen" value={formatTimestamp(item.createdAt || item.created_at || item.storedAt)} />
       </div>
 
@@ -569,7 +649,9 @@ function LibraryCard({ item, app }) {
           Open
         </Button>
         <CopyButton text={route} label="Copy route" disabled={!route} />
-        <CopyButton text={proof} label="Copy proof" disabled={!proof} />
+        {developerSurfaceEnabled && (
+          <CopyButton text={proof} label="Copy proof" disabled={!proof} />
+        )}
       </footer>
     </article>
   );
@@ -589,7 +671,12 @@ function LibraryFact({ label, value, monospace = false }) {
 }
 
 function EmptyLibraryState({ activeTab, filter, app }) {
-  const copy = filter ? 'No local display entries match this filter.' : emptyCopyForTab(activeTab);
+  const copy = filter ? 'No saved entries match this filter.' : emptyCopyForTab(activeTab);
+  const developerSurfaceEnabled =
+    isExplicitDeveloperSurface({
+      buildDev: import.meta.env?.DEV === true,
+      settings: app?.settings,
+    });
 
   return (
     <Card className="cl-library-empty" eyebrow="No entries" title={`No ${tabLabel(activeTab)} entries`}>
@@ -597,9 +684,11 @@ function EmptyLibraryState({ activeTab, filter, app }) {
 
       {activeTab === 'text' && (
         <div className="cl-library-card-actions">
-          <Button variant="secondary" onClick={() => app?.navigate?.('crab://text')}>
-            Open text proof
-          </Button>
+          {developerSurfaceEnabled && (
+            <Button variant="secondary" onClick={() => app?.navigate?.('crab://text')}>
+              Open text proof
+            </Button>
+          )}
           <Button variant="ghost" onClick={() => app?.navigate?.('crab://post')}>
             Post workspace
           </Button>

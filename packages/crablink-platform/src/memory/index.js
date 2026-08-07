@@ -18,3 +18,7 @@ export {
   cloneMemoryValue,
   freezeMemorySnapshot,
 } from './memorySnapshot.js';
+
+export {
+  createMemoryPublicationAdapter,
+} from './publicationMemoryAdapter.js';

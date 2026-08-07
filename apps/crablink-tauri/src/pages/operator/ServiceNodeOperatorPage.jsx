@@ -27,6 +27,9 @@ import {
 } from '../../shared/operator/serviceNodeOperatorModel.js';
 import './operator.css';
 
+const FINAL_BETA_PHASE5A5_EXPLICIT_OPERATOR_MODE_ENTRY =
+  'FINAL_BETA_PHASE5A5_EXPLICIT_OPERATOR_MODE_ENTRY_V1';
+
 export default function ServiceNodeOperatorPage({ app }) {
   const [config, setConfig] = useState(DEFAULT_OPERATOR_CONFIG);
   const [status, setStatus] = useState(INITIAL_OPERATOR_STATUS);
@@ -390,8 +393,27 @@ export default function ServiceNodeOperatorPage({ app }) {
     }
   };
 
+  if (!config.enabled) {
+    return (
+      <OperatorModeEntry
+        app={app}
+        onEnable={() =>
+          updateConfig({
+            enabled: true,
+          })
+        }
+      />
+    );
+  }
+
   return (
-    <section className="cl-page cl-operator-page">
+    <section
+      className="cl-page cl-operator-page"
+      data-final-beta-operator-mode="enabled"
+      data-final-beta-operator-surface={
+        FINAL_BETA_PHASE5A5_EXPLICIT_OPERATOR_MODE_ENTRY
+      }
+    >
       <PageHeader
         eyebrow="Phase 21 · Optional controller"
         title="Service Node Operator Mode"
@@ -1094,6 +1116,75 @@ export default function ServiceNodeOperatorPage({ app }) {
         status={status}
         refreshStatus={checkStatus}
       />
+    </section>
+  );
+}
+
+
+function OperatorModeEntry({
+  app,
+  onEnable,
+}) {
+  return (
+    <section
+      className="cl-page cl-operator-page"
+      data-final-beta-operator-mode="disabled"
+      data-final-beta-operator-entry={
+        FINAL_BETA_PHASE5A5_EXPLICIT_OPERATOR_MODE_ENTRY
+      }
+    >
+      <PageHeader
+        eyebrow="Advanced"
+        title="Service Node Operator Mode"
+        copy="This advanced route is intended for people who operate a Service Node. Normal CrabLink use does not require Operator Mode."
+        meta={
+          <div className="cl-operator-badges">
+            <Badge tone="neutral">disabled by default</Badge>
+            <Badge tone="neutral">route-memory only</Badge>
+          </div>
+        }
+      />
+
+      <TruthBoundary
+        tone="warning"
+        title="Operator controls are off"
+        copy="The node connection form, administrator credential field, reward binding, moderation review, persistence review, and diagnostic status controls remain unmounted until you explicitly enable Operator Mode."
+      />
+
+      <Card
+        eyebrow="Explicit activation"
+        title="Enable only when operating a Service Node"
+      >
+        <p>
+          Enabling Operator Mode does not start a daemon, attach to a
+          node, persist a credential, activate policy, write durable
+          bytes, create rewards, mutate a wallet or ledger, or claim
+          finality.
+        </p>
+
+        <p>
+          Activation is held only in this mounted route. Leaving or
+          reloading the route returns Operator Mode to its disabled
+          posture.
+        </p>
+
+        <div className="cl-operator-actions">
+          <Button
+            onClick={onEnable}
+          >
+            Enable Operator Mode
+          </Button>
+
+          <Button
+            variant="secondary"
+            onClick={() =>
+              app?.navigate?.('crab://home')
+            }
+          >
+            Return Home
+          </Button>
+        </div>
+      </Card>
     </section>
   );
 }

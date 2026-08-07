@@ -52,3 +52,5 @@ export {
 } from './receiptDisplay.js';
 
 export * from './onboardingContract.js';
+
+export * from './publicationSummary.js';

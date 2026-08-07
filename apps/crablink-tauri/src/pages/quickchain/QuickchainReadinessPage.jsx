@@ -19,6 +19,9 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import {
+  isExplicitDeveloperSurface,
+} from '../../app/developerSurfaceMode.js';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
@@ -35,6 +38,9 @@ import {
   subscribeRecentReceipts,
 } from '../../shared/receipts/recentReceipts.js';
 import './quickchain.css';
+
+const FINAL_BETA_PHASE5A4_QUICKCHAIN_ENGINEERING_QUARANTINE =
+  'FINAL_BETA_PHASE5A4_QUICKCHAIN_ENGINEERING_QUARANTINE_V1';
 
 const EMPTY_CATALOG = Object.freeze({
   schema: 'crablink.local-catalog.v1',
@@ -572,6 +578,31 @@ const MILESTONES = Object.freeze([
 ]);
 
 export default function QuickchainReadinessPage({ app }) {
+  const developerSurfaceEnabled =
+    isExplicitDeveloperSurface({
+      buildDev:
+        import.meta.env?.DEV === true,
+
+      settings:
+        app?.settings,
+    });
+
+  if (!developerSurfaceEnabled) {
+    return (
+      <QuickchainConsumerStatus
+        app={app}
+      />
+    );
+  }
+
+  return (
+    <QuickchainDeveloperDashboard
+      app={app}
+    />
+  );
+}
+
+function QuickchainDeveloperDashboard({ app }) {
   const [catalog, setCatalog] = useState(() => safeReadCatalog());
   const [receipts, setReceipts] = useState(() => safeReadReceipts());
 
@@ -594,7 +625,13 @@ export default function QuickchainReadinessPage({ app }) {
     'CrabLink: display backend-derived external posture evidence/status, selected anchor-only posture labels, compact commitment references, b3 artifact references, timestamp labels, and source service labels only as display-only external posture metadata; never use external posture evidence for paid unlock, balances, receipts, finality, settlement, bridge truth, external-chain ROC truth, wallet truth, ledger truth, or cache entitlement truth.';
 
   return (
-    <section className="cl-page quickchain-page">
+    <section
+      className="cl-page quickchain-page"
+      data-final-beta-quickchain-mode="developer"
+      data-final-beta-developer-surface={
+        FINAL_BETA_PHASE5A4_QUICKCHAIN_ENGINEERING_QUARANTINE
+      }
+    >
       <PageHeader
         eyebrow="QuickChain readiness"
         title="Do not start the chain until the economy proves itself"
@@ -1010,6 +1047,85 @@ export default function QuickchainReadinessPage({ app }) {
           }}
         />
       </details>
+    </section>
+  );
+}
+
+
+function QuickchainConsumerStatus({ app }) {
+  return (
+    <section
+      className="cl-page quickchain-page"
+      data-final-beta-quickchain-mode="consumer"
+      data-final-beta-quickchain-consumer={
+        FINAL_BETA_PHASE5A4_QUICKCHAIN_ENGINEERING_QUARANTINE
+      }
+    >
+      <PageHeader
+        eyebrow="Advanced"
+        title="QuickChain"
+        copy="QuickChain engineering status is hidden in normal CrabLink mode. The desktop beta continues to rely on backend wallet and ledger receipts for payment truth and paid access."
+        meta={
+          <>
+            <Badge tone="neutral">private beta</Badge>
+            <Badge tone="success">wallet and ledger truth preserved</Badge>
+          </>
+        }
+        actions={
+          <div className="quickchain-header-actions">
+            <Button
+              variant="primary"
+              onClick={() => app?.navigate?.('crab://receipts')}
+            >
+              View receipts
+            </Button>
+
+            <Button
+              variant="secondary"
+              onClick={() => app?.navigate?.('crab://home')}
+            >
+              Return Home
+            </Button>
+          </div>
+        }
+      />
+
+      <TruthBoundary
+        tone="info"
+        title="Developer Mode required"
+        copy="Detailed milestones, local proof anchors, replay and committee boundaries, validator and bond posture, anchor and data-availability diagnostics, test commands, and raw readiness JSON are available only in a development build with explicit Developer Mode enabled."
+      />
+
+      <section
+        className="quickchain-progress-grid"
+        aria-label="QuickChain status"
+      >
+        <ProgressCard
+          label="Normal mode"
+          value="ENGINEERING DETAILS HIDDEN"
+          detail="No local cache, proof artifact, readiness label, anchor reference, or QuickChain display unlocks paid content or changes wallet and ledger truth."
+          tone="neutral"
+        />
+
+        <ProgressCard
+          label="Payment authority"
+          value="BACKEND RECEIPTS"
+          detail="Accepted backend wallet and ledger receipts remain the only payment and paid-access authority."
+          tone="success"
+        />
+      </section>
+
+      <Card
+        eyebrow="Private beta posture"
+        title="QuickChain activation remains a later controlled phase"
+      >
+        <p>
+          Normal CrabLink users do not need committee, validator,
+          replay, bond, anchor, archive, challenge, or external
+          posture diagnostics. Those engineering surfaces remain
+          preserved for explicit development review.
+        </p>
+      </Card>
     </section>
   );
 }

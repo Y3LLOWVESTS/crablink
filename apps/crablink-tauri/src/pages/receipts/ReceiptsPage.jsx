@@ -17,6 +17,9 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import {
+  isExplicitDeveloperSurface,
+} from '../../app/developerSurfaceMode.js';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
@@ -45,10 +48,21 @@ import {
 } from '../../shared/receipts/recentReceipts.js';
 import './receipts.css';
 
+const FINAL_BETA_PHASE5A6_RECEIPT_ADVANCED_DETAIL_QUARANTINE =
+  'FINAL_BETA_PHASE5A6_RECEIPT_ADVANCED_DETAIL_QUARANTINE_V1';
+
 export default function ReceiptsPage({ app }) {
   const [receipts, setReceipts] = useState(() => safeReadReceipts());
   const [activeFilter, setActiveFilter] = useState('all');
   const [copyState, setCopyState] = useState('');
+
+  const developerSurfaceEnabled =
+    isExplicitDeveloperSurface({
+      buildDev:
+        import.meta.env?.DEV === true,
+      settings:
+        app?.settings,
+    });
 
   useEffect(() => subscribeRecentReceipts(setReceipts), []);
 
@@ -92,7 +106,17 @@ export default function ReceiptsPage({ app }) {
   }
 
   return (
-    <section className="cl-page receipts-page">
+    <section
+      className="cl-page receipts-page"
+      data-final-beta-receipts-mode={
+        developerSurfaceEnabled
+          ? 'developer'
+          : 'consumer'
+      }
+      data-final-beta-receipts-surface={
+        FINAL_BETA_PHASE5A6_RECEIPT_ADVANCED_DETAIL_QUARANTINE
+      }
+    >
       <PageHeader
         eyebrow="Receipt history"
         title="Receipts"
@@ -115,9 +139,15 @@ export default function ReceiptsPage({ app }) {
             <Button variant="secondary" onClick={() => app?.navigate?.('crab://quickchain')}>
               QuickChain
             </Button>
-            <Button variant="ghost" onClick={copyReceiptSummary} disabled={normalized.length === 0}>
-              Copy summary
-            </Button>
+            {developerSurfaceEnabled && (
+              <Button
+                variant="ghost"
+                onClick={copyReceiptSummary}
+                disabled={normalized.length === 0}
+              >
+                Copy summary
+              </Button>
+            )}
           </div>
         }
       />
@@ -157,9 +187,14 @@ export default function ReceiptsPage({ app }) {
           <Button variant="secondary" onClick={refreshReceipts}>
             Refresh display cache
           </Button>
-          <Button variant="ghost" onClick={clearReceipts}>
-            Clear display cache
-          </Button>
+          {developerSurfaceEnabled && (
+            <Button
+              variant="ghost"
+              onClick={clearReceipts}
+            >
+              Clear display cache
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -173,27 +208,39 @@ export default function ReceiptsPage({ app }) {
       ) : (
         <section className="receipts-list" aria-label="Receipt list">
           {filtered.map((receipt, index) => (
-            <ReceiptCard key={receiptKey(receipt, index)} receipt={receipt} app={app} />
+            <ReceiptCard
+              key={receiptKey(receipt, index)}
+              receipt={receipt}
+              app={app}
+              developerSurfaceEnabled={
+                developerSurfaceEnabled
+              }
+            />
           ))}
         </section>
       )}
 
-      <details className="receipts-dev-json">
-        <summary>Developer receipt JSON</summary>
-        <JsonPreview
-          label="Recent receipts"
-          data={{
-            schema: 'crablink.receipts-page.v1',
-            generated_at: new Date().toISOString(),
-            active_filter: activeFilter,
-            counts,
-            receipts: normalized,
-            filtered,
-            truth_boundary:
-              'Browser-local display cache only. Backend wallet and ledger remain authoritative.',
-          }}
-        />
-      </details>
+      {developerSurfaceEnabled && (
+        <details
+          className="receipts-dev-json"
+          data-final-beta-receipt-detail="developer-json"
+        >
+          <summary>Developer receipt JSON</summary>
+          <JsonPreview
+            label="Recent receipts"
+            data={{
+              schema: 'crablink.receipts-page.v1',
+              generated_at: new Date().toISOString(),
+              active_filter: activeFilter,
+              counts,
+              receipts: normalized,
+              filtered,
+              truth_boundary:
+                'Browser-local display cache only. Backend wallet and ledger remain authoritative.',
+            }}
+          />
+        </details>
+      )}
     </section>
   );
 }
@@ -208,7 +255,11 @@ function ReceiptStat({ label, value, detail }) {
   );
 }
 
-function ReceiptCard({ receipt, app }) {
+function ReceiptCard({
+  receipt,
+  app,
+  developerSurfaceEnabled,
+}) {
   const action = receipt.action || receipt.kind || 'receipt';
   const route = receipt.crabUrl || receipt.route || '';
   const amount = receipt.amountDisplay || formatAmount(receipt.amountMinor, receipt.asset);
@@ -226,10 +277,25 @@ function ReceiptCard({ receipt, app }) {
         <Badge tone={receipt.backendDerived === true ? 'success' : toneForReceipt(action)}>{sourceLabel}</Badge>
       </header>
 
-      <div className="receipts-proof-strip">
-        <ReceiptMini label="Amount" value={amount || 'not returned'} />
-        <ReceiptMini label="Nonce" value={receipt.nonce || 'not returned'} />
-        <ReceiptMini label="Asset" value={String(receipt.asset || 'roc').toUpperCase()} />
+      <div
+        className="receipts-proof-strip"
+        data-final-beta-receipt-detail="consumer-summary"
+      >
+        <ReceiptMini
+          label="Amount"
+          value={amount || 'not returned'}
+        />
+        <ReceiptMini
+          label="Created"
+          value={formatTimestamp(
+            receipt.createdAt ||
+              receipt.storedAt,
+          )}
+        />
+        <ReceiptMini
+          label="Source"
+          value={sourceLabel}
+        />
       </div>
 
       <div className="receipts-source-strip" aria-label="Receipt source boundary">
@@ -238,23 +304,143 @@ function ReceiptCard({ receipt, app }) {
         <ReceiptMini label="Display cache" value="display-only; not paid entitlement" />
       </div>
 
-      <div className="receipts-fact-grid">
-        <ReceiptFact label="Action" value={action || 'not returned'} />
-        <ReceiptFact label="Crab URL" value={route || 'not returned'} monospace />
-        <ReceiptFact label="From" value={receipt.payer || receipt.from || 'not returned'} monospace />
-        <ReceiptFact label="To" value={receipt.recipient || receipt.to || 'not returned'} monospace />
-        <ReceiptFact label="Txid" value={receipt.txid || 'not returned'} monospace />
-        <ReceiptFact label="Receipt hash" value={receipt.receiptHash || 'not returned'} monospace />
-        <ReceiptFact label="Ledger root" value={receipt.ledgerRoot || 'not returned'} monospace />
-        <ReceiptFact label="Manifest CID" value={receipt.manifestCid || 'not returned'} monospace />
-        <ReceiptFact label="Root CID" value={receipt.rootDocumentCid || 'not returned'} monospace />
-        <ReceiptFact label="Idempotency" value={receipt.idempotencyKey || 'not returned'} monospace />
-        <ReceiptFact label="Created" value={formatTimestamp(receipt.createdAt || receipt.storedAt)} />
-        <ReceiptFact label="Source" value={receipt.source || 'local_display_cache'} />
-        <ReceiptFact label="Source boundary" value={sourceLabel} />
-        <ReceiptFact label="Backend-derived" value={backendLabel} />
-        <ReceiptFact label="Display cache" value="display-only; not paid entitlement" />
+      <div
+        className="receipts-fact-grid"
+        data-final-beta-receipt-detail="consumer"
+      >
+        <ReceiptFact
+          label="Action"
+          value={action || 'not returned'}
+        />
+        <ReceiptFact
+          label="Crab URL"
+          value={route || 'not returned'}
+          monospace
+        />
+        <ReceiptFact
+          label="From"
+          value={
+            receipt.payer ||
+            receipt.from ||
+            'not returned'
+          }
+          monospace
+        />
+        <ReceiptFact
+          label="To"
+          value={
+            receipt.recipient ||
+            receipt.to ||
+            'not returned'
+          }
+          monospace
+        />
+        <ReceiptFact
+          label="Txid"
+          value={receipt.txid || 'not returned'}
+          monospace
+        />
+        <ReceiptFact
+          label="Receipt hash"
+          value={
+            receipt.receiptHash ||
+            'not returned'
+          }
+          monospace
+        />
+        <ReceiptFact
+          label="Created"
+          value={formatTimestamp(
+            receipt.createdAt ||
+              receipt.storedAt,
+          )}
+        />
+        <ReceiptFact
+          label="Source"
+          value={
+            receipt.source ||
+            'local_display_cache'
+          }
+        />
+        <ReceiptFact
+          label="Source boundary"
+          value={sourceLabel}
+        />
+        <ReceiptFact
+          label="Backend-derived"
+          value={backendLabel}
+        />
+        <ReceiptFact
+          label="Display cache"
+          value="display-only; not paid entitlement"
+        />
       </div>
+
+      {developerSurfaceEnabled && (
+        <section
+          className="receipts-developer-detail"
+          data-final-beta-receipt-detail="developer"
+        >
+          <div className="receipts-proof-strip">
+            <ReceiptMini
+              label="Nonce"
+              value={
+                receipt.nonce ||
+                'not returned'
+              }
+            />
+            <ReceiptMini
+              label="Asset"
+              value={String(
+                receipt.asset ||
+                'roc',
+              ).toUpperCase()}
+            />
+            <ReceiptMini
+              label="Ledger root"
+              value={
+                receipt.ledgerRoot ||
+                'not returned'
+              }
+            />
+          </div>
+
+          <div className="receipts-fact-grid">
+            <ReceiptFact
+              label="Ledger root"
+              value={
+                receipt.ledgerRoot ||
+                'not returned'
+              }
+              monospace
+            />
+            <ReceiptFact
+              label="Manifest CID"
+              value={
+                receipt.manifestCid ||
+                'not returned'
+              }
+              monospace
+            />
+            <ReceiptFact
+              label="Root CID"
+              value={
+                receipt.rootDocumentCid ||
+                'not returned'
+              }
+              monospace
+            />
+            <ReceiptFact
+              label="Idempotency"
+              value={
+                receipt.idempotencyKey ||
+                'not returned'
+              }
+              monospace
+            />
+          </div>
+        </section>
+      )}
 
       <footer className="receipts-card-actions">
         <Button variant="primary" onClick={() => app?.navigate?.(route)} disabled={!route || !app?.navigate}>
@@ -263,7 +449,13 @@ function ReceiptCard({ receipt, app }) {
         <CopyButton text={route} label="Copy route" disabled={!route} />
         <CopyButton text={receipt.txid || ''} label="Copy txid" disabled={!receipt.txid} />
         <CopyButton text={receipt.receiptHash || ''} label="Copy receipt" disabled={!receipt.receiptHash} />
-        <CopyButton text={proofText} label="Copy proof" disabled={!proofText} />
+        {developerSurfaceEnabled && (
+          <CopyButton
+            text={proofText}
+            label="Copy proof"
+            disabled={!proofText}
+          />
+        )}
       </footer>
     </article>
   );

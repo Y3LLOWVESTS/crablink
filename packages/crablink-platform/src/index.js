@@ -32,3 +32,7 @@ export {
 export {
   createReceiptsPort,
 } from './contracts/receiptsPort.js';
+
+export {
+  createPublicationPort,
+} from './contracts/publicationPort.js';
