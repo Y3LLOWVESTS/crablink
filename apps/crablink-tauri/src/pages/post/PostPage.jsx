@@ -9,7 +9,10 @@
  * RO:TEST — npm run build; check-react-lane; manual crab://post route smoke.
  */
 
-import { useCallback } from 'react';
+import {
+  useCallback,
+  useMemo,
+} from 'react';
 import CreatorWorkspaceLayout from '../../shared/components/CreatorWorkspaceLayout.jsx';
 import RouteTruthPanel from '../../shared/components/RouteTruthPanel.jsx';
 import useCreatorDraft from '../../shared/hooks/useCreatorDraft.js';
@@ -21,6 +24,12 @@ import {
   getPostCompleteness,
   statsForPostDraft,
 } from './postDraftModel.js';
+
+import {
+  applyForumThreadIntent,
+  consumeForumThreadIntent,
+} from '../site/forumProductFlow.js';
+
 import './post.css';
 
 const PRINCIPLES = Object.freeze([
@@ -42,13 +51,32 @@ const PRINCIPLES = Object.freeze([
 ]);
 
 export default function PostPage({ app, route }) {
+  const forumThreadIntent =
+    useMemo(
+      () =>
+        consumeForumThreadIntent(),
+      [],
+    );
+
+  const initialDraft =
+    useMemo(
+      () =>
+        applyForumThreadIntent(
+          DEFAULT_POST_DRAFT,
+          forumThreadIntent,
+        ),
+      [
+        forumThreadIntent,
+      ],
+    );
+
   const buildManifest = useCallback(
     (draft) => buildPostManifestDraft(draft, { app, route }),
     [app, route],
   );
 
   const draftState = useCreatorDraft({
-    initialDraft: DEFAULT_POST_DRAFT,
+    initialDraft,
     buildManifest,
     buildStats: statsForPostDraft,
     getCompleteness: getPostCompleteness,

@@ -9,7 +9,7 @@
  * RO:TEST — npm run build; manual crab://image simple mint and bundle mint smoke.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import Card from '../../shared/components/Card.jsx';
@@ -34,6 +34,10 @@ import {
   generateImageRenditions,
   revokeGeneratedImageRenditions,
 } from './imageRenditionGenerator.js';
+import {
+  applyImageboardThreadIntent,
+  consumeImageboardThreadIntent,
+} from '../site/imageboardProductFlow.js';
 import './image.css';
 
 export default function ImagePage({ app, route }) {
@@ -69,6 +73,25 @@ export default function ImagePage({ app, route }) {
     };
   }, []);
 
+  const imageboardThreadIntent =
+    useMemo(
+      () =>
+        consumeImageboardThreadIntent(),
+      [],
+    );
+
+  const initialDraft =
+    useMemo(
+      () =>
+        applyImageboardThreadIntent(
+          DEFAULT_IMAGE_DRAFT,
+          imageboardThreadIntent,
+        ),
+      [
+        imageboardThreadIntent,
+      ],
+    );
+
   const buildManifest = useCallback(
     (draft) => buildImageManifestDraft(draft, { app, route, fileFacts, localRenditions }),
     [app, route, fileFacts, localRenditions],
@@ -85,7 +108,7 @@ export default function ImagePage({ app, route }) {
   );
 
   const draftState = useCreatorDraft({
-    initialDraft: DEFAULT_IMAGE_DRAFT,
+    initialDraft,
     buildManifest,
     buildStats,
     getCompleteness,

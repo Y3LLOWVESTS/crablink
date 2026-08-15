@@ -29,6 +29,12 @@ import {
   toWalletHoldApiBody,
 } from '../../shared/api/walletClient.js';
 
+import {
+  beginForumReplyIntent,
+  readForumProductContext,
+  rememberPublishedForumThread,
+} from '../site/forumProductFlow.js';
+
 const DEFAULT_ESCROW_ACCOUNT = 'escrow_paid_write';
 const MAX_SIMPLE_POST_BYTES = 128 * 1024;
 
@@ -54,6 +60,7 @@ export default function PostPublishFlow({ app, draftState }) {
   const [prepareState, setPrepareState] = useState(IDLE_RESULT);
   const [holdState, setHoldState] = useState(IDLE_RESULT);
   const [publishState, setPublishState] = useState(IDLE_RESULT);
+  const [forumThreadState, setForumThreadState] = useState(null);
   const [escrowAccount, setEscrowAccount] = useState(DEFAULT_ESCROW_ACCOUNT);
   const [holdNonce, setHoldNonce] = useState(() => loadNextNonceHint(settings.walletAccount));
   const [holdReviewOpen, setHoldReviewOpen] = useState(false);
@@ -62,6 +69,30 @@ export default function PostPublishFlow({ app, draftState }) {
 
   const draft = draftState?.draft || {};
   const manifest = draftState?.manifest || null;
+
+  const forumContext =
+    readForumProductContext();
+
+  const draftSiteCrabUrl =
+    String(
+      draft.siteContextCrabUrl ||
+        '',
+    )
+      .trim()
+      .toLowerCase();
+
+  const forumThreadMode =
+    Boolean(
+      forumContext &&
+      draftSiteCrabUrl &&
+      forumContext.siteCrabUrl ===
+        draftSiteCrabUrl &&
+      normalizeTags(
+        draft.tags,
+      ).includes(
+        'forum',
+      ),
+    );
 
   const contentEnvelope = useMemo(() => buildPostContentEnvelope(draft, manifest), [draft, manifest]);
   const postBytes = useMemo(() => measureJsonBytes(contentEnvelope), [contentEnvelope]);
@@ -84,6 +115,7 @@ export default function PostPublishFlow({ app, draftState }) {
     setPrepareState(IDLE_RESULT);
     setHoldState(IDLE_RESULT);
     setPublishState(IDLE_RESULT);
+    setForumThreadState(null);
     setHoldReviewOpen(false);
     setPublishReviewOpen(false);
   }, [workflowKey]);
@@ -349,6 +381,8 @@ export default function PostPublishFlow({ app, draftState }) {
       return;
     }
 
+    setForumThreadState(null);
+
     setPublishState({
       status: 'sending',
       response: null,
@@ -376,6 +410,34 @@ export default function PostPublishFlow({ app, draftState }) {
       const data = firstObject(response?.data, response);
       const crabUrl = extractPostAssetUrl(data);
 
+      let forumThread =
+        null;
+
+      if (
+        forumThreadMode &&
+        crabUrl
+      ) {
+        try {
+          forumThread =
+            rememberPublishedForumThread(
+              {
+                siteCrabUrl:
+                  draftSiteCrabUrl,
+
+                threadCrabUrl:
+                  crabUrl,
+              },
+            );
+        } catch (_error) {
+          forumThread =
+            null;
+        }
+      }
+
+      setForumThreadState(
+        forumThread,
+      );
+
       setPublishState({
         status: 'ok',
         response,
@@ -395,12 +457,31 @@ export default function PostPublishFlow({ app, draftState }) {
       await app?.refreshWallet?.(settings.walletAccount);
 
       app?.notify?.({
-        title: 'Post publish complete',
-        message: crabUrl ? `Opening ${crabUrl}` : 'Publish returned without a crab URL.',
-        tone: crabUrl ? 'success' : 'warning',
+        title:
+          forumThread
+            ? 'Forum thread published'
+            : 'Post publish complete',
+
+        message:
+          forumThread
+            ? `Forum thread ready: ${crabUrl}`
+            : crabUrl
+              ? `Opening ${crabUrl}`
+              : 'Publish returned without a crab URL.',
+
+        tone:
+          crabUrl
+            ? 'success'
+            : 'warning',
       });
 
-      if (crabUrl && typeof app?.navigate === 'function') {
+      if (
+        crabUrl &&
+        typeof app?.navigate ===
+          'function' &&
+        forumThread ===
+          null
+      ) {
         if (autoOpenTimer.current) {
           window.clearTimeout(autoOpenTimer.current);
         }
@@ -410,6 +491,10 @@ export default function PostPublishFlow({ app, draftState }) {
         }, 900);
       }
     } catch (error) {
+      setForumThreadState(
+        null,
+      );
+
       setPublishState({
         status: 'error',
         response: null,
@@ -437,6 +522,77 @@ export default function PostPublishFlow({ app, draftState }) {
   function openReturnedAsset() {
     if (publishCrabUrl && typeof app?.navigate === 'function') {
       app.navigate(publishCrabUrl);
+    }
+  }
+
+  function replyToPublishedForumThread() {
+    const threadCrabUrl =
+      String(
+        forumThreadState
+          ?.latestThreadCrabUrl ||
+          '',
+      ).trim();
+
+    const siteCrabUrl =
+      String(
+        forumThreadState
+          ?.siteCrabUrl ||
+          '',
+      ).trim();
+
+    if (
+      threadCrabUrl ===
+        '' ||
+      siteCrabUrl ===
+        ''
+    ) {
+      return;
+    }
+
+    if (
+      typeof app?.navigate ===
+        'function'
+    ) {
+      try {
+        if (
+          autoOpenTimer.current
+        ) {
+          window.clearTimeout(
+            autoOpenTimer.current,
+          );
+
+          autoOpenTimer.current =
+            0;
+        }
+
+        beginForumReplyIntent({
+          siteCrabUrl,
+
+          threadCrabUrl,
+
+          parentCrabUrl:
+            threadCrabUrl,
+
+          creatorDisplay:
+            draft.creatorDisplay,
+        });
+
+        app.navigate(
+          'crab://comment',
+        );
+      } catch (error) {
+        app?.notify?.({
+          title:
+            'Forum reply unavailable',
+
+          message:
+            error?.message ||
+            'Could not prepare the Forum reply context.',
+
+          tone:
+            'warning',
+        });
+      }
     }
   }
 
@@ -617,6 +773,16 @@ export default function PostPublishFlow({ app, draftState }) {
           <Button variant="secondary" disabled={!publishCrabUrl} onClick={openReturnedAsset}>
             Open Post Asset
           </Button>
+
+          {forumThreadState && (
+            <Button
+              variant="primary"
+              onClick={replyToPublishedForumThread}
+            >
+              Reply to Thread
+            </Button>
+          )}
+
           <CopyButton text={publishCrabUrl} label="Copy crab URL" disabled={!publishCrabUrl} />
         </div>
 

@@ -20,6 +20,7 @@ import Card from '../../shared/components/Card.jsx';
 import CopyButton from '../../shared/components/CopyButton.jsx';
 import PageHeader from '../../shared/components/PageHeader.jsx';
 import TruthBoundary from '../../shared/components/TruthBoundary.jsx';
+import FeedCard from '../../shared/components/FeedCard.jsx';
 import {
   readLocalCatalog,
   subscribeLocalCatalog,
@@ -28,6 +29,22 @@ import {
   readRecentReceipts,
   subscribeRecentReceipts,
 } from '../../shared/receipts/recentReceipts.js';
+import {
+  createPublicationAdapter,
+} from '../../adapters/publicationAdapter.js';
+import {
+  localFollowingPort,
+} from '../../adapters/localFollowingAdapter.js';
+import {
+  readLocalFollowingFeedCache,
+  writeLocalFollowingFeedCache,
+} from '../../adapters/localFollowingFeedCacheAdapter.js';
+import {
+  refreshLocalFollowingFeed,
+} from './localFollowingFeedRefresh.js';
+import {
+  loadOfflineLocalFollowingFeed,
+} from './localFollowingOfflineFeedProjection.js';
 import HomeQuickActions from './HomeQuickActions.jsx';
 import './home.css';
 
@@ -39,6 +56,9 @@ const PROOF_PROFILE = 'crab://profile';
 const FINAL_BETA_PHASE5A2_HOME_CONSUMER_MODE =
   'FINAL_BETA_PHASE5A2_HOME_CONSUMER_MODE_V1';
 
+const FINAL_BETA_PHASE9A12_HOME_FEED_CONSUMER =
+  'FINAL_BETA_PHASE9A12_HOME_FEED_CONSUMER_WIRING_V1';
+
 const EMPTY_CATALOG = Object.freeze({
   schema: 'crablink.local-catalog.v1',
   generatedAt: '',
@@ -47,6 +67,26 @@ const EMPTY_CATALOG = Object.freeze({
   assets: [],
   all: [],
 });
+
+const HOME_FEED_CACHE_PORT =
+  Object.freeze({
+    readLocalFollowingFeedCache,
+    writeLocalFollowingFeedCache,
+  });
+
+const EMPTY_CONSUMER_FEED_STATE =
+  Object.freeze({
+    status:
+      'idle',
+    source:
+      'none',
+    items:
+      Object.freeze([]),
+    cachedAt:
+      null,
+    message:
+      '',
+  });
 
 export default function HomePage({ app }) {
   const settings = app?.settings || {};
@@ -258,6 +298,11 @@ export default function HomePage({ app }) {
 }
 
 
+// FINAL_BETA_PHASE10A1_HOME_LOCAL_PRESENTATION_PAGINATION_V1
+
+const HOME_FEED_PRESENTATION_PAGE_SIZE =
+  10;
+
 function ConsumerHome({
   app,
   passport,
@@ -269,9 +314,276 @@ function ConsumerHome({
       ? receiptCount
       : 0;
 
+  const publicationClient =
+    useMemo(
+      () => {
+        if (
+          app?.clients?.publications
+            ?.listCreatorPublications
+        ) {
+          return app.clients.publications;
+        }
+
+        if (
+          app?.clients?.gateway
+            ?.request
+        ) {
+          return createPublicationAdapter(
+            app.clients.gateway,
+          );
+        }
+
+        return null;
+      },
+      [
+        app?.clients,
+      ],
+    );
+
+  const [
+    feedState,
+    setFeedState,
+  ] =
+    useState(
+      EMPTY_CONSUMER_FEED_STATE,
+    );
+
+  const [
+    refreshSequence,
+    setRefreshSequence,
+  ] =
+    useState(
+      0,
+    );
+
+
+  const [
+    visibleFeedCount,
+    setVisibleFeedCount,
+  ] =
+    useState(
+      HOME_FEED_PRESENTATION_PAGE_SIZE,
+    );
   function open(route) {
     app?.navigate?.(route);
   }
+
+  useEffect(
+    () => {
+      if (
+        app?.isActiveTab ===
+          false
+      ) {
+        return undefined;
+      }
+
+      let alive =
+        true;
+
+      async function projectOffline(
+        liveFailure,
+      ) {
+        try {
+          const offline =
+            await loadOfflineLocalFollowingFeed({
+              followingPort:
+                localFollowingPort,
+              cachePort:
+                HOME_FEED_CACHE_PORT,
+            });
+
+          if (
+            alive ===
+              false
+          ) {
+            return;
+          }
+
+          if (
+            offline.status ===
+              'stale-offline' &&
+            offline.items.length >
+              0
+          ) {
+            setFeedState(
+              freezeConsumerFeedState({
+                status:
+                  'stale-offline',
+                source:
+                  'cache',
+                items:
+                  offline.items,
+                cachedAt:
+                  offline.cachedAt,
+                message:
+                  'Showing previously verified public summaries from this device because live refresh is unavailable.',
+              }),
+            );
+
+            return;
+          }
+
+          setFeedState(
+            freezeConsumerFeedState({
+              status:
+                'offline-empty',
+              source:
+                'none',
+              items:
+                [],
+              cachedAt:
+                offline.cachedAt,
+              message:
+                liveFailure
+                  ? 'Live following activity is unavailable and there is no usable offline activity for currently followed profiles.'
+                  : 'There is no usable offline following activity for currently followed profiles.',
+            }),
+          );
+        } catch (_offlineError) {
+          if (
+            alive ===
+              false
+          ) {
+            return;
+          }
+
+          setFeedState(
+            freezeConsumerFeedState({
+              status:
+                'error',
+              source:
+                'none',
+              items:
+                [],
+              cachedAt:
+                null,
+              message:
+                'CrabLink could not load live following activity or a valid local offline projection.',
+            }),
+          );
+        }
+      }
+
+      async function loadFollowingFeed() {
+        setVisibleFeedCount(
+          HOME_FEED_PRESENTATION_PAGE_SIZE,
+        );
+
+        setFeedState(
+          freezeConsumerFeedState({
+            status:
+              'loading',
+            source:
+              feedState.source,
+            items:
+              feedState.items,
+            cachedAt:
+              feedState.cachedAt,
+            message:
+              '',
+          }),
+        );
+
+        if (
+          publicationClient ===
+            null
+        ) {
+          await projectOffline(
+            true,
+          );
+
+          return;
+        }
+
+        try {
+          const refresh =
+            await refreshLocalFollowingFeed({
+              followingPort:
+                localFollowingPort,
+              publicationPort:
+                publicationClient,
+              cachePort:
+                HOME_FEED_CACHE_PORT,
+              refreshedAt:
+                new Date().toISOString(),
+            });
+
+          if (
+            alive ===
+              false
+          ) {
+            return;
+          }
+
+          if (
+            refresh.status ===
+              'error'
+          ) {
+            await projectOffline(
+              true,
+            );
+
+            return;
+          }
+
+          setFeedState(
+            freezeConsumerFeedState({
+              status:
+                refresh.status,
+              source:
+                'live',
+              items:
+                refresh.feed.items,
+              cachedAt:
+                refresh.cachePersistence
+                  ?.cachedAt ||
+                null,
+              message:
+                refresh.status ===
+                  'partial'
+                  ? 'Some followed profiles could not be refreshed. The activity shown below comes only from successful public timeline responses.'
+                  : '',
+            }),
+          );
+        } catch (_liveError) {
+          await projectOffline(
+            true,
+          );
+        }
+      }
+
+      void loadFollowingFeed();
+
+      return () => {
+        alive =
+          false;
+      };
+    },
+    [
+      app?.isActiveTab,
+      publicationClient,
+      refreshSequence,
+    ],
+  );
+
+  const feedItems =
+    feedState.items;
+
+  const visibleFeedItems =
+    feedItems.slice(
+      0,
+      visibleFeedCount,
+    );
+
+  const hasMoreFeedItems =
+    visibleFeedItems.length <
+      feedItems.length;
+
+  const feedTitle =
+    feedItems.length ===
+      1
+      ? '1 followed publication'
+      : `${feedItems.length} followed publications`;
 
   return (
     <section
@@ -280,24 +592,246 @@ function ConsumerHome({
       data-final-beta-consumer-home={
         FINAL_BETA_PHASE5A2_HOME_CONSUMER_MODE
       }
+      data-final-beta-home-feed={
+        FINAL_BETA_PHASE9A12_HOME_FEED_CONSUMER
+      }
     >
       <PageHeader
         eyebrow="Home"
-        title="Welcome to CrabLink"
-        copy="Home will become your chronological following feed after the network-backed social projection is available. Until then, CrabLink provides direct access to your profile, library, receipts, and creation tools without inventing feed activity."
+        title="Your following feed"
+        copy="Recent public publication summaries from profiles you follow are combined locally in chronological order. CrabLink requests each followed creator timeline separately and does not upload your complete following list."
         meta={
           <>
-            <Badge tone="success">private beta</Badge>
-            <Badge tone="neutral">following feed pending</Badge>
+            <Badge tone="success">
+              private beta
+            </Badge>
+
+            <Badge
+              tone={
+                feedState.status ===
+                  'stale-offline'
+                  ? 'warning'
+                  : feedState.status ===
+                      'error'
+                    ? 'warning'
+                    : 'neutral'
+              }
+            >
+              {consumerFeedStatusLabel(
+                feedState.status,
+              )}
+            </Badge>
           </>
         }
       />
 
       <TruthBoundary
-        tone="info"
-        title="No fabricated feed items"
-        copy="CrabLink does not turn local caches, route history, test fixtures, or diagnostic records into social posts. Home remains intentionally empty until real followed-profile publication summaries are returned by the network."
+        tone={
+          feedState.status ===
+            'stale-offline'
+            ? 'warning'
+            : 'info'
+        }
+        title="Local following, public timelines"
+        copy="Your following list remains private local device state. Feed items come from reviewed public creator publication summaries. Offline cache entries are labeled stale and never establish deletion, freshness, ownership, entitlement, receipt, wallet, ledger, QuickChain, ROX, or Solana truth."
       />
+
+      <Card
+        eyebrow="Following feed"
+        title={feedTitle}
+        className="cl-home-feed-card"
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={
+              feedState.status ===
+                'loading'
+            }
+            onClick={() => {
+              setRefreshSequence(
+                (value) =>
+                  value + 1,
+              );
+            }}
+          >
+            {feedState.status ===
+              'loading'
+              ? 'Refreshing'
+              : 'Refresh'}
+          </Button>
+        }
+      >
+        {feedState.status ===
+          'loading' &&
+        feedItems.length ===
+          0 ? (
+          <p className="cl-home-muted">
+            Refreshing public activity from
+            your locally followed profiles.
+          </p>
+        ) : null}
+
+        {feedState.message ? (
+          <p
+            className="cl-home-feed-notice"
+            role="status"
+          >
+            {feedState.message}
+          </p>
+        ) : null}
+
+        {feedState.status ===
+          'stale-offline' &&
+        feedState.cachedAt ? (
+          <p className="cl-home-muted">
+            Offline cache timestamp:{' '}
+            {formatFeedTimestamp(
+              feedState.cachedAt,
+            )}
+          </p>
+        ) : null}
+
+        {feedItems.length >
+          0 ? (
+          <div
+            className="cl-home-feed-list"
+            aria-label="Followed creator activity"
+          >
+            {visibleFeedItems.map(
+              (publication) => (
+                <FeedCard
+                  key={
+                    `${publication.creator.username}:${publication.publicationId}`
+                  }
+                  contextLabel={
+                    feedState.status ===
+                      'stale-offline'
+                      ? 'Cached followed activity'
+                      : 'Followed activity'
+                  }
+                  kind={
+                    publicationKindLabel(
+                      publication.kind,
+                    )
+                  }
+                  title={
+                    publication.title ||
+                    publication.publicationId
+                  }
+                  summary={
+                    publication.summary
+                  }
+                  creator={
+                    `@${publication.creator.username}`
+                  }
+                  timeLabel={
+                    formatFeedTimestamp(
+                      publication.publishedAt,
+                    )
+                  }
+                  paidLabel={
+                    publication.access ===
+                      'paid'
+                      ? 'Paid'
+                      : ''
+                  }
+                  statusLabel={
+                    feedState.status ===
+                      'stale-offline'
+                      ? 'Stale offline'
+                      : ''
+                  }
+                  openLabel="Open publication"
+                  onOpen={
+                    publication.crabUrl
+                      ?.startsWith(
+                        'crab://',
+                      )
+                      ? () =>
+                          open(
+                            publication.crabUrl,
+                          )
+                      : null
+                  }
+                />
+              ),
+            )}
+          </div>
+        ) : feedState.status !==
+          'loading' ? (
+          <div className="cl-home-feed-empty">
+            <h3>
+              No followed activity yet
+            </h3>
+
+            <p>
+              Follow public creator profiles
+              to build this local-first feed.
+              Empty network responses and
+              cache misses never create
+              placeholder posts.
+            </p>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                open(
+                  'crab://explore',
+                )
+              }
+            >
+              Explore creators
+            </Button>
+          </div>
+        ) : null}
+
+            {feedItems.length >
+              0 ? (
+              <div
+                className="cl-home-feed-pagination"
+                aria-label="Following feed pagination"
+              >
+                <span>
+                  Showing{' '}
+                  {visibleFeedItems.length}
+                  {' '}of{' '}
+                  {feedItems.length}
+                </span>
+
+                {hasMoreFeedItems ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setVisibleFeedCount(
+                        (value) =>
+                          Math.min(
+                            value +
+                              HOME_FEED_PRESENTATION_PAGE_SIZE,
+                            feedItems.length,
+                          ),
+                      );
+                    }}
+                  >
+                    Load more
+                  </Button>
+                ) : (
+                  <span>
+                    All loaded
+                  </span>
+                )}
+              </div>
+            ) : null}
+
+        <div className="cl-home-next-list">
+          <span>Chronological</span>
+          <span>Following only</span>
+          <span>Public timelines</span>
+          <span>Bounded summaries</span>
+        </div>
+      </Card>
 
       <section
         className="cl-home-context-grid"
@@ -305,18 +839,27 @@ function ConsumerHome({
       >
         <Card
           eyebrow="Your identity"
-          title={passport || 'Local Passport'}
+          title={
+            passport ||
+            'Local Passport'
+          }
         >
           <p>
-            Open Profile Studio to review your local profile draft,
-            public-profile route, and publishing identity.
+            Open Profile Studio to review
+            your local profile draft,
+            public-profile route, and
+            publishing identity.
           </p>
 
           <div className="cl-home-proof-actions">
             <Button
               variant="primary"
               size="sm"
-              onClick={() => open('crab://profile')}
+              onClick={() =>
+                open(
+                  'crab://profile',
+                )
+              }
             >
               Open Profile Studio
             </Button>
@@ -324,7 +867,11 @@ function ConsumerHome({
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => open('crab://explore')}
+              onClick={() =>
+                open(
+                  'crab://explore',
+                )
+              }
             >
               Explore
             </Button>
@@ -334,22 +881,30 @@ function ConsumerHome({
         <Card
           eyebrow="Saved activity"
           title={
-            safeReceiptCount === 1
+            safeReceiptCount ===
+              1
               ? '1 saved receipt'
               : `${safeReceiptCount} saved receipts`
           }
         >
           <p>
-            Receipts remain display-only local memory until refreshed
-            from backend wallet and ledger truth. Library entries never
-            prove ownership or paid access by themselves.
+            Receipts remain display-only
+            local memory until refreshed
+            from backend wallet and ledger
+            truth. Library entries never
+            prove ownership or paid access
+            by themselves.
           </p>
 
           <div className="cl-home-proof-actions">
             <Button
               variant="primary"
               size="sm"
-              onClick={() => open('crab://receipts')}
+              onClick={() =>
+                open(
+                  'crab://receipts',
+                )
+              }
             >
               View receipts
             </Button>
@@ -357,7 +912,11 @@ function ConsumerHome({
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => open('crab://library')}
+              onClick={() =>
+                open(
+                  'crab://library',
+                )
+              }
             >
               Open library
             </Button>
@@ -365,60 +924,199 @@ function ConsumerHome({
         </Card>
       </section>
 
-      <section
-        className="cl-home-bottom-grid"
-        aria-label="Home status and creation"
+      <Card
+        eyebrow="Create"
+        title="Publish through reviewed CrabLink routes"
       >
-        <Card
-          eyebrow="Following feed"
-          title="Waiting for network-backed activity"
-        >
-          <p>
-            The beta feed will be chronological and limited to profiles
-            you explicitly follow. No opaque ranking, paid placement,
-            surveillance profile, or cache-created activity is shown.
-          </p>
+        <p>
+          Creator routes remain separate
+          from feed composition. Backend
+          responses remain the source of
+          publication identifiers and
+          receipts.
+        </p>
 
-          <div className="cl-home-next-list">
-            <span>Chronological</span>
-            <span>Following only</span>
-            <span>Network derived</span>
-            <span>Bounded summaries</span>
-          </div>
-        </Card>
+        <div className="cl-home-proof-actions">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() =>
+              open(
+                'crab://post',
+              )
+            }
+          >
+            Create a post
+          </Button>
 
-        <Card
-          eyebrow="Create"
-          title="Publish through reviewed CrabLink routes"
-        >
-          <p>
-            Creator routes remain available while the social timeline
-            and following-feed contracts are built. Backend responses
-            remain the only source of publication identifiers and
-            receipts.
-          </p>
-
-          <div className="cl-home-proof-actions">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => open('crab://post')}
-            >
-              Create a post
-            </Button>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => open('crab://image')}
-            >
-              Create an image
-            </Button>
-          </div>
-        </Card>
-      </section>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() =>
+              open(
+                'crab://image',
+              )
+            }
+          >
+            Create an image
+          </Button>
+        </div>
+      </Card>
     </section>
   );
+}
+
+function freezeConsumerFeedState(
+  value,
+) {
+  return Object.freeze({
+    status:
+      value.status,
+    source:
+      value.source,
+    items:
+      Object.freeze([
+        ...(Array.isArray(
+          value.items,
+        )
+          ? value.items
+          : []),
+      ]),
+    cachedAt:
+      value.cachedAt ||
+      null,
+    message:
+      String(
+        value.message ||
+        '',
+      )
+        .trim()
+        .slice(
+          0,
+          320,
+        ),
+  });
+}
+
+function consumerFeedStatusLabel(
+  status,
+) {
+  if (
+    status ===
+      'ready'
+  ) {
+    return 'live';
+  }
+
+  if (
+    status ===
+      'partial'
+  ) {
+    return 'partial';
+  }
+
+  if (
+    status ===
+      'stale-offline'
+  ) {
+    return 'stale offline';
+  }
+
+  if (
+    status ===
+      'loading'
+  ) {
+    return 'refreshing';
+  }
+
+  if (
+    status ===
+      'error'
+  ) {
+    return 'unavailable';
+  }
+
+  if (
+    status ===
+      'offline-empty'
+  ) {
+    return 'offline';
+  }
+
+  if (
+    status ===
+      'empty'
+  ) {
+    return 'empty';
+  }
+
+  return 'local first';
+}
+
+function publicationKindLabel(
+  kind,
+) {
+  const normalized =
+    String(
+      kind ||
+      'publication',
+    )
+      .trim()
+      .toLowerCase();
+
+  if (
+    normalized.length ===
+      0
+  ) {
+    return 'Publication';
+  }
+
+  return (
+    normalized
+      .charAt(
+        0,
+      )
+      .toUpperCase() +
+    normalized.slice(
+      1,
+    )
+  );
+}
+
+function formatFeedTimestamp(
+  value,
+) {
+  const raw =
+    String(
+      value ||
+      '',
+    )
+      .trim();
+
+  if (
+    raw.length ===
+      0
+  ) {
+    return '';
+  }
+
+  const parsed =
+    Date.parse(
+      raw,
+    );
+
+  if (
+    Number.isFinite(
+      parsed,
+    ) ===
+      false
+  ) {
+    return raw;
+  }
+
+  return new Date(
+    parsed,
+  ).toLocaleString();
 }
 
 function onboardingIdentityLabel(settings = {}) {

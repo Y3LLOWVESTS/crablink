@@ -9,7 +9,7 @@
  * RO:TEST — npm run build; check-react-lane; manual crab://comment route smoke.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import CreatorWorkspaceLayout from '../../shared/components/CreatorWorkspaceLayout.jsx';
 import RouteTruthPanel from '../../shared/components/RouteTruthPanel.jsx';
 import useCreatorDraft from '../../shared/hooks/useCreatorDraft.js';
@@ -21,6 +21,19 @@ import {
   getCommentCompleteness,
   statsForCommentDraft,
 } from './commentDraftModel.js';
+import {
+  consumeBlogCommentIntent,
+} from '../site/blogProductFlow.js';
+import {
+  applyImageboardReplyIntent,
+  consumeImageboardReplyIntent,
+} from '../site/imageboardProductFlow.js';
+
+import {
+  applyForumReplyIntent,
+  consumeForumReplyIntent,
+} from '../site/forumProductFlow.js';
+
 import './comment.css';
 
 const PRINCIPLES = Object.freeze([
@@ -32,7 +45,7 @@ const PRINCIPLES = Object.freeze([
   {
     title: 'Required context',
     copy:
-      'A publishable comment needs a site context plus a parent post/comment target, while the comment bytes stay independently content-addressed.',
+      'A publishable comment needs a site context plus a parent article/post/comment target, while the comment bytes stay independently content-addressed.',
   },
   {
     title: 'Publish boundary',
@@ -42,13 +55,84 @@ const PRINCIPLES = Object.freeze([
 ]);
 
 export default function CommentPage({ app, route }) {
+  const initialDraft =
+    useMemo(
+      () => {
+        const intent =
+          consumeBlogCommentIntent();
+
+        if (
+          intent == null
+        ) {
+          return DEFAULT_COMMENT_DRAFT;
+        }
+
+        return {
+          ...DEFAULT_COMMENT_DRAFT,
+
+          siteContextCrabUrl:
+            intent.siteCrabUrl,
+
+          parentCrabUrl:
+            intent.articleCrabUrl,
+
+          creatorDisplay:
+            intent.creatorDisplay,
+
+          tags:
+            'comment, blog',
+        };
+      },
+      [],
+    );
+
   const buildManifest = useCallback(
     (draft) => buildCommentManifestDraft(draft, { app, route }),
     [app, route],
   );
 
+  const imageboardReplyIntent =
+    useMemo(
+      () =>
+        consumeImageboardReplyIntent(),
+      [],
+    );
+
+  const imageboardInitialDraft =
+    useMemo(
+      () =>
+        applyImageboardReplyIntent(
+          initialDraft,
+          imageboardReplyIntent,
+        ),
+      [
+        imageboardReplyIntent,
+        initialDraft,
+      ],
+    );
+
+  const forumReplyIntent =
+    useMemo(
+      () =>
+        consumeForumReplyIntent(),
+      [],
+    );
+
+  const forumInitialDraft =
+    useMemo(
+      () =>
+        applyForumReplyIntent(
+          imageboardInitialDraft,
+          forumReplyIntent,
+        ),
+      [
+        forumReplyIntent,
+        imageboardInitialDraft,
+      ],
+    );
+
   const draftState = useCreatorDraft({
-    initialDraft: DEFAULT_COMMENT_DRAFT,
+    initialDraft: forumInitialDraft,
     buildManifest,
     buildStats: statsForCommentDraft,
     getCompleteness: getCommentCompleteness,
@@ -58,7 +142,7 @@ export default function CommentPage({ app, route }) {
     <CreatorWorkspaceLayout
       eyebrow="crab://comment"
       title="Comment Workspace"
-      copy="Draft and publish the second site-attached text primitive. Comments should point at a parent post/comment plus site context, then become their own b3-backed assets when the backend route exists."
+      copy="Draft and publish the second site-attached text primitive. Comments should point at a parent article/post/comment plus site context, then become their own b3-backed assets when the backend route exists."
       badges={[
         { label: 'React lane', tone: 'neutral' },
         { label: 'Comment primitive', tone: 'warning' },

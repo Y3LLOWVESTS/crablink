@@ -10,6 +10,15 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import {
+  isExplicitDeveloperSurface,
+} from '../../app/developerSurfaceMode.js';
+import {
+  acceptSiteCustomHtml,
+} from './siteCustomHtmlPolicy.js';
+import {
+  SAFE_HTML_VERSION,
+} from '../../shared/embed/safeHtml.js';
 import Badge from '../../shared/components/Badge.jsx';
 import Button from '../../shared/components/Button.jsx';
 import CopyButton from '../../shared/components/CopyButton.jsx';
@@ -17,12 +26,24 @@ import Field from '../../shared/components/Field.jsx';
 import TextArea from '../../shared/components/TextArea.jsx';
 import TextInput from '../../shared/components/TextInput.jsx';
 import { normalizeCid, normalizeSiteName } from './siteDraftModel.js';
-import { SITE_TEMPLATES, buildSiteTemplatePatch } from './siteTemplates.js';
+import {
+  DEVELOPER_CUSTOM_HTML_TEMPLATE_ID,
+  DEVELOPER_CUSTOM_HTML_TEMPLATE_VERSION,
+  SITE_TEMPLATES,
+  buildSiteTemplatePatch,
+} from './siteTemplates.js';
 
 export default function SiteGuidedSetup({ app, draftState, rootDocumentCid = '' }) {
   const { draft, updateDraft, replaceDraft, stats } = draftState;
   const [selectedTemplateId, setSelectedTemplateId] = useState(SITE_TEMPLATES[0]?.id || '');
   const creator = useMemo(() => getCurrentCreatorIdentity(app, draft), [app, draft]);
+  const customCodeEnabled =
+    isExplicitDeveloperSurface({
+      buildDev:
+        import.meta.env.DEV === true,
+      settings:
+        app?.settings,
+    });
   const siteName = normalizeSiteName(draft.siteName);
   const siteUrl = siteName ? `crab://${siteName}` : 'crab://<site-name>';
   const rootCid = normalizeCid(rootDocumentCid || draft.rootDocumentCid);
@@ -59,7 +80,48 @@ export default function SiteGuidedSetup({ app, draftState, rootDocumentCid = '' 
   ]);
 
   function updateField(key) {
-    return (event) => updateDraft(key, event.target.value);
+    return (event) => {
+      const value =
+        event.target.value;
+
+      if (
+        key ===
+        'rootHtml'
+      ) {
+        const reviewed =
+          acceptSiteCustomHtml(
+            value,
+          );
+
+        if (
+          reviewed.accepted ===
+          false
+        ) {
+          return;
+        }
+
+        replaceDraft({
+          ...draft,
+          rootHtml:
+            reviewed.html,
+          rootDocumentCid:
+            '',
+          templateId:
+            DEVELOPER_CUSTOM_HTML_TEMPLATE_ID,
+          templateVersion:
+            DEVELOPER_CUSTOM_HTML_TEMPLATE_VERSION,
+          rendererVersion:
+            SAFE_HTML_VERSION,
+        });
+
+        return;
+      }
+
+      updateDraft(
+        key,
+        value,
+      );
+    };
   }
 
   function selectTemplate(event) {
@@ -83,20 +145,58 @@ export default function SiteGuidedSetup({ app, draftState, rootDocumentCid = '' 
   }
 
   function importHtml(event) {
-    const file = event.target.files?.[0];
+    const input =
+      event.target;
 
-    if (!file) {
+    const file =
+      input.files?.[0];
+
+    if (
+      file == null
+    ) {
       return;
     }
 
-    const reader = new FileReader();
+    const reader =
+      new FileReader();
 
-    reader.onload = () => {
-      updateDraft('rootHtml', String(reader.result || ''));
-      updateDraft('rootDocumentCid', '');
-    };
+    reader.onload =
+      () => {
+        const reviewed =
+          acceptSiteCustomHtml(
+            String(
+              reader.result ?? '',
+            ),
+          );
 
-    reader.readAsText(file);
+        if (
+          reviewed.accepted ===
+          false
+        ) {
+          input.value =
+            '';
+
+          return;
+        }
+
+        replaceDraft({
+          ...draft,
+          rootHtml:
+            reviewed.html,
+          rootDocumentCid:
+            '',
+          templateId:
+            DEVELOPER_CUSTOM_HTML_TEMPLATE_ID,
+          templateVersion:
+            DEVELOPER_CUSTOM_HTML_TEMPLATE_VERSION,
+          rendererVersion:
+            SAFE_HTML_VERSION,
+        });
+      };
+
+    reader.readAsText(
+      file,
+    );
   }
 
   function clearRootHtml() {
@@ -193,7 +293,8 @@ export default function SiteGuidedSetup({ app, draftState, rootDocumentCid = '' 
             Use Template
           </Button>
 
-          <label className="site-file-button site-launch-file-button">
+          {customCodeEnabled && (
+<label className="site-file-button site-launch-file-button">
             Import HTML
             <input
               type="file"
@@ -201,6 +302,7 @@ export default function SiteGuidedSetup({ app, draftState, rootDocumentCid = '' 
               onChange={importHtml}
             />
           </label>
+)}
         </div>
       </div>
 
@@ -209,7 +311,8 @@ export default function SiteGuidedSetup({ app, draftState, rootDocumentCid = '' 
         <span>{rootGuard.reason}</span>
       </div>
 
-      <Field
+      {customCodeEnabled && (
+<Field
         label="Root HTML"
         help="Paste or import the page HTML here. Scripts are stripped in preview; Store Root HTML mints the real b3 root CID."
       >
@@ -220,15 +323,18 @@ export default function SiteGuidedSetup({ app, draftState, rootDocumentCid = '' 
           spellCheck={false}
         />
       </Field>
+)}
 
       <div className="site-launch-root-row">
         <MiniFact label="Local bytes" value={formatBytes(stats.rootHtmlBytes || 0)} />
         <MiniFact label="Backend root CID" value={rootCid || 'not stored yet'} monospace />
         <MiniFact label="Next root step" value={rootCid ? 'create site pointer' : 'store root HTML'} />
         <div className="site-launch-root-actions">
-          <Button variant="ghost" onClick={clearRootHtml}>
+          {customCodeEnabled && (
+<Button variant="ghost" onClick={clearRootHtml}>
             Clear HTML
           </Button>
+)}
           <CopyButton text={rootCid || ''} label="Copy Root CID" disabled={!rootCid} />
         </div>
       </div>

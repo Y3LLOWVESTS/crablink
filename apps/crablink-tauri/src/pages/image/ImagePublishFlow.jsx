@@ -35,6 +35,11 @@ import {
   sanitizeImageForPublish,
   summarizeImagePrivacy,
 } from './imageMetadataSanitizer.js';
+import {
+  beginImageboardReplyIntent,
+  readImageboardProductContext,
+  rememberPublishedImageboardThread,
+} from '../site/imageboardProductFlow.js';
 
 const DEFAULT_ESCROW_ACCOUNT = 'escrow_paid_write';
 const MAX_SINGLE_IMAGE_BYTES = 25 * 1024 * 1024;
@@ -73,6 +78,20 @@ export default function ImagePublishFlow({
   const [publishPlan, setPublishPlan] = useState(null);
 
   const draft = draftState?.draft || {};
+  const imageboardContext =
+    readImageboardProductContext();
+
+  const imageboardThreadMode =
+    Boolean(
+      imageboardContext?.siteCrabUrl &&
+      draft.linkedSiteCrabUrl &&
+      imageboardContext.siteCrabUrl ===
+        String(
+          draft.linkedSiteCrabUrl,
+        )
+          .trim()
+          .toLowerCase(),
+    );
   const entries = Array.isArray(publishPlan?.renditionEntries)
     ? publishPlan.renditionEntries
     : Array.isArray(localRenditions?.entries)
@@ -426,6 +445,39 @@ export default function ImagePublishFlow({
         });
       }
 
+      let imageboardThread =
+        null;
+
+      if (
+        imageboardThreadMode &&
+        originalCrabUrl
+      ) {
+        try {
+          imageboardThread =
+            rememberPublishedImageboardThread({
+              siteCrabUrl:
+                draft.linkedSiteCrabUrl,
+
+              imageCrabUrl:
+                originalCrabUrl,
+
+              creatorDisplay:
+                draft.creatorDisplay,
+
+              category:
+                imageboardContext?.category ||
+                'general',
+
+              contentCid:
+                originalCid ||
+                '',
+            });
+        } catch (_error) {
+          imageboardThread =
+            null;
+        }
+      }
+
       const bundle = {
         schema: 'crablink.image-bundle-result.v1',
         backendVerified: true,
@@ -445,6 +497,9 @@ export default function ImagePublishFlow({
           privacy: plan.privacy,
         },
         renditions: mintedRenditions,
+
+        imageboard:
+          imageboardThread,
       };
 
       setProgress({ index: total, total, label: 'Bundle mint complete.' });
@@ -607,7 +662,10 @@ export default function ImagePublishFlow({
       {uploadState.status === 'error' && <ErrorBlock title="Mint failed" error={uploadState.error} />}
 
       {uploadState.status === 'ok' && (
-        <ImageBundleResult bundle={uploadState.data} />
+        <ImageBundleResult
+          app={app}
+          bundle={uploadState.data}
+        />
       )}
 
       <details className="image-publish-debug">
@@ -634,7 +692,7 @@ export default function ImagePublishFlow({
   );
 }
 
-function ImageBundleResult({ bundle }) {
+function ImageBundleResult({ app, bundle }) {
   const original = bundle?.original || {};
   const renditions = Array.isArray(bundle?.renditions) ? bundle.renditions : [];
 
@@ -647,6 +705,44 @@ function ImageBundleResult({ bundle }) {
         </div>
         <Badge tone="success">Backend returned</Badge>
       </header>
+
+      {bundle?.imageboard?.siteCrabUrl &&
+        original.crabUrl && (
+        <div className="image-bundle-row-actions">
+          <Button
+            variant="primary"
+            onClick={() => {
+              beginImageboardReplyIntent({
+                siteCrabUrl:
+                  bundle.imageboard.siteCrabUrl,
+
+                imageCrabUrl:
+                  original.crabUrl,
+
+                creatorDisplay:
+                  bundle.imageboard.creatorDisplay,
+              });
+
+              app?.navigate?.(
+                'crab://comment',
+              );
+            }}
+          >
+            Reply to Thread
+          </Button>
+
+          <Button
+            variant="secondary"
+            onClick={() =>
+              app?.navigate?.(
+                bundle.imageboard.siteCrabUrl,
+              )
+            }
+          >
+            Open Imageboard
+          </Button>
+        </div>
+      )}
 
       <BundleAssetRow
         label="Original"

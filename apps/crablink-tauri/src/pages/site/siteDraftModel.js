@@ -9,7 +9,14 @@
  * RO:TEST — npm run build; scripts/check-react-lane.sh; manual crab://site route smoke.
  */
 
-import { DEFAULT_SITE_TEMPLATE } from './siteTemplates.js';
+import {
+  DEFAULT_SITE_THEME_TOKENS,
+  normalizeSiteThemeTokens,
+} from './siteThemePolicy.js';
+import {
+  DEFAULT_SITE_TEMPLATE,
+  buildSiteTemplatePatch,
+} from './siteTemplates.js';
 
 export const SITE_VIEW_OPTIONS = Object.freeze([
   { value: 'builder', label: 'Builder' },
@@ -47,17 +54,23 @@ export const SITE_PAYOUT_OPTIONS = Object.freeze([
 
 export const DEFAULT_SITE_DRAFT = Object.freeze({
   siteName: 'my-crab-site',
+  templateId: DEFAULT_SITE_TEMPLATE.id,
+  templateVersion: DEFAULT_SITE_TEMPLATE.version,
+  rendererVersion: DEFAULT_SITE_TEMPLATE.rendererVersion,
+  themeTokens: DEFAULT_SITE_THEME_TOKENS,
   title: DEFAULT_SITE_TEMPLATE.patch.title,
   description: DEFAULT_SITE_TEMPLATE.patch.description,
   creatorDisplay: '',
   ownerPassport: '',
   ownerWallet: '',
   rootDocumentCid: '',
-  rootHtml: DEFAULT_SITE_TEMPLATE.buildHtml({
-    title: DEFAULT_SITE_TEMPLATE.patch.title,
-    description: DEFAULT_SITE_TEMPLATE.patch.description,
-    creatorDisplay: 'CrabLink Creator',
-  }),
+  rootHtml: buildSiteTemplatePatch(
+      DEFAULT_SITE_TEMPLATE.id,
+      {
+        creatorDisplay:
+          'CrabLink Creator',
+      },
+    ).rootHtml,
   routeMapJson: DEFAULT_SITE_TEMPLATE.patch.routeMapJson,
   assetMapJson: DEFAULT_SITE_TEMPLATE.patch.assetMapJson,
   tags: DEFAULT_SITE_TEMPLATE.patch.tags,
@@ -121,6 +134,7 @@ export function buildSiteManifestDraft(draft, { app, route } = {}) {
       policy: safeDraft.renderPolicy,
       sandbox: 'iframe_srcdoc_no_scripts',
       crab_embeds_supported_here: 'preview_only',
+      theme_tokens: safeDraft.themeTokens,
     },
     access_policy: {
       mode: safeDraft.accessMode,
@@ -142,6 +156,11 @@ export function buildSiteManifestDraft(draft, { app, route } = {}) {
       backend_verified: false,
     },
     provenance: {
+      template_id: cleanOrNull(safeDraft.templateId),
+      template_version:
+        Number(safeDraft.templateVersion || 0) ||
+        null,
+      renderer_version: cleanOrNull(safeDraft.rendererVersion),
       note: cleanOrNull(safeDraft.provenanceNote),
       backend_verified: false,
     },
@@ -200,6 +219,10 @@ export function normalizeSiteDraft(draft, app) {
   return {
     ...DEFAULT_SITE_DRAFT,
     ...(draft || {}),
+    themeTokens:
+      normalizeSiteThemeTokens(
+        draft?.themeTokens,
+      ),
     ownerPassport:
       cleanOrNull(draft?.ownerPassport) ||
       cleanOrNull(settings.passportSubject) ||

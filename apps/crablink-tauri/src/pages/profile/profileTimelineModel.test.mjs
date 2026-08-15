@@ -7,24 +7,99 @@ import {
   PROFILE_TIMELINE_TABS,
 } from './profileTimelineModel.js';
 
+const HASH_A =
+  'a'.repeat(
+    64,
+  );
+
+const HASH_B =
+  'b'.repeat(
+    64,
+  );
+
+const HASH_C =
+  'c'.repeat(
+    64,
+  );
+
 function publication(
   overrides = {},
 ) {
+  const kind =
+    typeof overrides.kind ===
+      'string'
+      ? overrides.kind
+      : 'post';
+
   return {
     schema:
       'crablink.publication-summary.v1',
+
     publicationId:
       'publication-001',
-    kind:
-      'post',
+
+    kind,
+
+    crabUrl:
+      `crab://${HASH_A}.${kind}`,
+
     title:
       'First public post',
-    pinned:
-      false,
+
+    summary:
+      'Canonical public publication summary.',
+
     creator: {
       username:
         'rusty_crab',
+
+      displayName:
+        'Rusty Crab',
+
+      profileUrl:
+        'crab://@rusty_crab',
+
+      avatarCid:
+        `b3:${HASH_B}`,
     },
+
+    publishedAt:
+      '2026-08-10T01:00:00.000Z',
+
+    updatedAt:
+      '2026-08-10T01:00:00.000Z',
+
+    visibility:
+      'public',
+
+    access:
+      'free',
+
+    thumbnail: {
+      kind:
+        'image',
+
+      cid:
+        `b3:${HASH_C}`,
+
+      alt:
+        'Publication thumbnail',
+    },
+
+    references: {
+      manifestCid:
+        `b3:${HASH_A}`,
+
+      contentCid:
+        `b3:${HASH_B}`,
+
+      siteUrl:
+        'crab://site/example',
+    },
+
+    pinned:
+      false,
+
     ...overrides,
   };
 }

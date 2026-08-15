@@ -27,6 +27,13 @@ import {
   normalizeSiteName,
   statsForSiteDraft,
 } from './siteDraftModel.js';
+import {
+  beginBlogArticleIntent,
+} from './blogProductFlow.js';
+import {
+  beginImageboardThreadIntent,
+} from './imageboardProductFlow.js';
+
 import './site.css';
 
 export default function SitePage({ app, route }) {
@@ -57,6 +64,47 @@ export default function SitePage({ app, route }) {
     buildStats,
     getCompleteness,
   });
+
+  const blogTemplateMode =
+    draftState.draft?.templateId ===
+    'blog';
+
+  const publishedBlogSiteName =
+    normalizeSiteName(
+      draftState.draft
+        ?.publishedSiteName ||
+      '',
+    );
+
+  const publishedBlogCrabUrl =
+    publishedBlogSiteName
+      ? `crab://${publishedBlogSiteName}`
+      : '';
+
+  function beginBlogArticle() {
+    if (
+      Boolean(
+        publishedBlogCrabUrl,
+      ) ===
+      false
+    ) {
+      return;
+    }
+
+    beginBlogArticleIntent({
+      siteCrabUrl:
+        publishedBlogCrabUrl,
+
+      creatorDisplay:
+        draftState.draft
+          ?.creatorDisplay ||
+        '',
+    });
+
+    app?.navigate?.(
+      'crab://article',
+    );
+  }
 
   if (namedSiteMode) {
     return (
@@ -114,6 +162,23 @@ export default function SitePage({ app, route }) {
   }
 
   const developerMode = draftState.viewMode === 'developer' || app?.settings?.devMode === true;
+
+  const imageboardDraftMode =
+    draftState.draft.templateId ===
+    'imageboard';
+
+  const publishedImageboardSiteName =
+    imageboardDraftMode
+      ? normalizeSiteName(
+          draftState.draft.publishedSiteName ||
+          '',
+        )
+      : '';
+
+  const publishedImageboardCrabUrl =
+    publishedImageboardSiteName
+      ? `crab://${publishedImageboardSiteName}`
+      : '';
 
   return (
     <section className="cl-page site-page site-page-clean">
@@ -175,10 +240,135 @@ export default function SitePage({ app, route }) {
         />
       )}
 
+      {imageboardDraftMode && (
+        <Card
+          eyebrow="Imageboard"
+          title="Create image thread"
+          actions={
+            <div className="site-page-actions">
+              <Button
+                variant="primary"
+                disabled={
+                  !publishedImageboardCrabUrl
+                }
+                onClick={() => {
+                  beginImageboardThreadIntent({
+                    siteCrabUrl:
+                      publishedImageboardCrabUrl,
+
+                    creatorDisplay:
+                      draftState.draft.creatorDisplay,
+
+                    category:
+                      'general',
+                  });
+
+                  app?.navigate?.(
+                    'crab://image',
+                  );
+                }}
+              >
+                Create Image Thread
+              </Button>
+
+              {publishedImageboardCrabUrl && (
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    app?.navigate?.(
+                      publishedImageboardCrabUrl,
+                    )
+                  }
+                >
+                  Open Imageboard
+                </Button>
+              )}
+            </div>
+          }
+        >
+          <p>
+            Publish the named Imageboard first. New threads then use
+            CrabLink's existing Image mint workspace, and only a real
+            backend-returned typed Image URL can become the thread root.
+          </p>
+
+          {!publishedImageboardCrabUrl && (
+            <p>
+              Launch this Imageboard before creating its first thread.
+            </p>
+          )}
+        </Card>
+      )}
+
       <main className="site-clean-main">
         <div id="site-launch-flow" className="site-anchor-target">
           <SiteLaunchFlow app={app} route={route} draftState={draftState} />
         </div>
+
+        {blogTemplateMode && (
+          <Card
+            eyebrow="Blog publishing"
+            title="Articles and comments"
+            actions={
+              <Badge
+                tone={
+                  publishedBlogCrabUrl
+                    ? 'success'
+                    : 'warning'
+                }
+              >
+                {publishedBlogCrabUrl
+                  ? 'site published'
+                  : 'publish site first'}
+              </Badge>
+            }
+          >
+            <p>
+              Blog articles reuse CrabLink's typed Article publisher.
+              Publish the named Blog pointer first so every article can
+              carry the required Site context.
+            </p>
+
+            <div className="site-page-actions">
+              <Button
+                variant="primary"
+                disabled={
+                  Boolean(
+                    publishedBlogCrabUrl,
+                  ) ===
+                  false
+                }
+                onClick={
+                  beginBlogArticle
+                }
+              >
+                Write Blog Article
+              </Button>
+
+              <Button
+                variant="secondary"
+                disabled={
+                  Boolean(
+                    publishedBlogCrabUrl,
+                  ) ===
+                  false
+                }
+                onClick={() =>
+                  app?.navigate?.(
+                    publishedBlogCrabUrl,
+                  )
+                }
+              >
+                Open Blog
+              </Button>
+            </div>
+
+            <small>
+              Article and Comment publication remain separate typed
+              gateway assets. This panel only carries navigation context.
+            </small>
+          </Card>
+        )}
 
         <div id="site-preview" className="site-anchor-target">
           <SiteRender app={app} route={route} draftState={draftState} mode="draft" />

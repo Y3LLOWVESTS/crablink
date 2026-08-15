@@ -17,6 +17,7 @@ import {
   normalizeAssetResolveProblem,
 } from '../../shared/api/assetClient.js';
 import AssetHydratedView from './AssetHydratedView.jsx';
+import ImageboardRelationReplies from './ImageboardRelationReplies.jsx';
 
 export default function AssetResolver({ route, app }) {
   const gateway = app?.clients?.gateway || app?.gateway || null;
@@ -83,7 +84,21 @@ export default function AssetResolver({ route, app }) {
     return <AssetResolveProblem error={state.error} app={app} route={route} />;
   }
 
-  return <AssetHydratedView route={route} app={app} result={state.result} assetClient={assetClient} />;
+  return (
+    <>
+      <AssetHydratedView
+        route={route}
+        app={app}
+        result={state.result}
+        assetClient={assetClient}
+      />
+
+      <ImageboardRelationReplies
+        route={route}
+        app={app}
+      />
+    </>
+  );
 }
 
 function AssetResolveProblem({ error, app, route }) {

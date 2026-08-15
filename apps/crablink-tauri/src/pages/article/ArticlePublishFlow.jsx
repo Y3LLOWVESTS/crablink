@@ -33,6 +33,11 @@ import {
   stableIdempotencyKey,
   toWalletHoldApiBody,
 } from '../../shared/api/walletClient.js';
+import {
+  beginBlogCommentIntent,
+  readBlogProductContext,
+  rememberPublishedBlogArticle,
+} from '../site/blogProductFlow.js';
 
 const DEFAULT_ESCROW_ACCOUNT = 'escrow_paid_write';
 const MAX_SIMPLE_ARTICLE_BYTES = 512 * 1024;
@@ -71,6 +76,24 @@ export default function ArticlePublishFlow({ app, draftState }) {
   const siteUrl = attachedCrabUrl(manifest?.site_connection) || draft.siteContextCrabUrl || '';
   const heroImageUrl = attachedCrabUrl(manifest?.reference_graph?.hero_image) || draft.heroImageCrabUrl || '';
   const sourceUrl = attachedCrabUrl(manifest?.reference_graph?.source) || draft.linkedSourceCrabUrl || '';
+
+  const blogProductContext =
+    readBlogProductContext();
+
+  const blogArticleMode =
+    Boolean(
+      blogProductContext
+        ?.siteCrabUrl,
+    ) &&
+    String(
+      blogProductContext
+        .siteCrabUrl,
+    ).toLowerCase() ===
+      String(
+        siteUrl,
+      )
+        .trim()
+        .toLowerCase();
 
   const contentEnvelope = useMemo(
     () => buildArticleContentEnvelope({ draft, siteUrl, heroImageUrl, sourceUrl }),
@@ -404,6 +427,25 @@ export default function ArticlePublishFlow({ app, draftState }) {
       const data = firstObject(response?.data, response);
       const crabUrl = extractArticleAssetUrl(data);
 
+      if (
+        crabUrl &&
+        blogArticleMode
+      ) {
+        rememberPublishedBlogArticle({
+          siteCrabUrl:
+            siteUrl,
+
+          articleCrabUrl:
+            crabUrl,
+
+          creatorDisplay:
+            draft.creatorDisplay ||
+            blogProductContext
+              ?.creatorDisplay ||
+            '',
+        });
+      }
+
       setPublishReviewOpen(false);
 
       setPublishState({
@@ -423,12 +465,29 @@ export default function ArticlePublishFlow({ app, draftState }) {
       await app?.refreshWallet?.(settings.walletAccount);
 
       app?.notify?.({
-        title: 'Article publish complete',
-        message: crabUrl ? `Opening ${crabUrl}` : 'Publish returned without a crab URL.',
-        tone: crabUrl ? 'success' : 'warning',
+        title:
+          'Article publish complete',
+
+        message:
+          crabUrl
+            ? blogArticleMode
+              ? `Published ${crabUrl}. You can open it or start a typed comment.`
+              : `Opening ${crabUrl}`
+            : 'Publish returned without a crab URL.',
+
+        tone:
+          crabUrl
+            ? 'success'
+            : 'warning',
       });
 
-      if (crabUrl && typeof app?.navigate === 'function') {
+      if (
+        blogArticleMode ===
+          false &&
+        crabUrl &&
+        typeof app?.navigate ===
+          'function'
+      ) {
         if (autoOpenTimer.current) {
           window.clearTimeout(autoOpenTimer.current);
         }
@@ -467,6 +526,41 @@ export default function ArticlePublishFlow({ app, draftState }) {
     if (publishCrabUrl && typeof app?.navigate === 'function') {
       app.navigate(publishCrabUrl);
     }
+  }
+
+  function openBlogCommentWorkspace() {
+    if (
+      blogArticleMode ===
+        false ||
+      Boolean(
+        publishCrabUrl,
+      ) ===
+        false ||
+      Boolean(
+        siteUrl,
+      ) ===
+        false
+    ) {
+      return;
+    }
+
+    beginBlogCommentIntent({
+      siteCrabUrl:
+        siteUrl,
+
+      articleCrabUrl:
+        publishCrabUrl,
+
+      creatorDisplay:
+        draft.creatorDisplay ||
+        blogProductContext
+          ?.creatorDisplay ||
+        '',
+    });
+
+    app?.navigate?.(
+      'crab://comment',
+    );
   }
 
   return (
@@ -647,6 +741,22 @@ export default function ArticlePublishFlow({ app, draftState }) {
           <Button variant="secondary" disabled={!publishCrabUrl} onClick={openReturnedAsset}>
             Open Article Asset
           </Button>
+          {blogArticleMode && (
+            <Button
+              variant="primary"
+              disabled={
+                Boolean(
+                  publishCrabUrl,
+                ) ===
+                false
+              }
+              onClick={
+                openBlogCommentWorkspace
+              }
+            >
+              Comment on Article
+            </Button>
+          )}
           <CopyButton text={publishCrabUrl} label="Copy crab URL" disabled={!publishCrabUrl} />
         </div>
 

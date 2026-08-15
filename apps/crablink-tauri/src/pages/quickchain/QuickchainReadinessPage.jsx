@@ -30,6 +30,10 @@ import JsonPreview from '../../shared/components/JsonPreview.jsx';
 import PageHeader from '../../shared/components/PageHeader.jsx';
 import TruthBoundary from '../../shared/components/TruthBoundary.jsx';
 import {
+  normalizePhase19QuickchainDisplayStatus,
+  phase19StatusLabel,
+} from './phase19FinalityDisplay.js';
+import {
   readLocalCatalog,
   subscribeLocalCatalog,
 } from '../../shared/catalog/localCatalog.js';
@@ -619,6 +623,15 @@ function QuickchainDeveloperDashboard({ app }) {
   );
 
   const progress = useMemo(() => calculateProgress(MILESTONES, proof), [proof]);
+
+  const phase19NetworkStatus =
+    useMemo(
+      () =>
+        normalizePhase19QuickchainDisplayStatus(
+          app?.backendQuickchainStatus,
+        ),
+      [app?.backendQuickchainStatus],
+    );
   const nextBackendBatch =
     'RustyOnions backend: Phase 5 Round 3 has selected the external posture as anchor-only/evidence-only metadata. External integration remains evidence/anchoring only, internal wallet/ledger truth remains canonical, and there is still no external settlement, no public bridge, no ROX/Solana active runtime, no staking, no liquidity, and no exchange-facing logic.';
   const nextCrabLinkBatch =
@@ -688,6 +701,59 @@ function QuickchainDeveloperDashboard({ app }) {
           value={`${proof.textKindsReady}/3`}
           detail={`${proof.textCounts.post} post · ${proof.textCounts.comment} comment · ${proof.textCounts.article} article`}
           tone={proof.textKindsReady === 3 ? 'success' : proof.textKindsReady > 0 ? 'warning' : 'neutral'}
+        />
+
+        <ProgressCard
+          label="Phase 19 network"
+          value={phase19StatusLabel(phase19NetworkStatus.network)}
+          detail={`Source: ${phase19NetworkStatus.sourceLabel}`}
+          tone={
+            phase19NetworkStatus.network === 'ready'
+              ? 'success'
+              : phase19NetworkStatus.network === 'degraded'
+                ? 'warning'
+                : 'neutral'
+          }
+        />
+
+        <ProgressCard
+          label="Phase 19 checkpoint"
+          value={phase19StatusLabel(phase19NetworkStatus.checkpointObserved)}
+          detail={
+            phase19NetworkStatus.checkpointHash
+              || 'No backend-derived checkpoint observation supplied'
+          }
+          tone={
+            phase19NetworkStatus.checkpointObserved === 'observed'
+              ? 'success'
+              : 'neutral'
+          }
+        />
+
+        <ProgressCard
+          label="Phase 19 verification"
+          value={phase19StatusLabel(phase19NetworkStatus.verification)}
+          detail="Backend-derived verification display only; CrabLink does not verify or decide finality."
+          tone={
+            phase19NetworkStatus.verification === 'accepted'
+              ? 'success'
+              : phase19NetworkStatus.verification === 'challenge_required'
+                || phase19NetworkStatus.verification === 'rejected'
+                ? 'warning'
+                : 'neutral'
+          }
+        />
+
+        <ProgressCard
+          label="Phase 19 challenge"
+          value={phase19StatusLabel(phase19NetworkStatus.challenge)}
+          detail="Challenge transport/result display is not challenge acceptance, ledger mutation, or finality authority."
+          tone={
+            phase19NetworkStatus.challenge === 'challenge_required'
+              || phase19NetworkStatus.challenge === 'queued_for_transport'
+              ? 'warning'
+              : 'neutral'
+          }
         />
 
         <ProgressCard
@@ -890,6 +956,28 @@ function QuickchainDeveloperDashboard({ app }) {
           </ul>
         </Card>
 
+        <Card
+          eyebrow="FINAL_BETA Phase 19"
+          title="Display network truth, never decide finality"
+        >
+          <p>
+            CrabLink may display backend-derived network readiness,
+            checkpoint observation, verification results, challenge
+            transport/results, and degraded state. Missing status stays
+            unavailable. CrabLink does not calculate checkpoint finality
+            from signatures, quorum counts, receipts, caches, or local
+            proof memory.
+          </p>
+
+          <ul className="quickchain-mini-list">
+            <li>Network ready and degraded are backend-derived display labels only.</li>
+            <li>Checkpoint observed means an upstream read-only status supplied a checkpoint observation; CrabLink does not produce the checkpoint.</li>
+            <li>Verification and challenge labels remain evidence/status display only.</li>
+            <li>Transport acknowledgement is not challenge acceptance.</li>
+            <li>CrabLink has no checkpoint-finality, wallet, ledger, settlement, or paid-unlock authority.</li>
+          </ul>
+        </Card>
+
         <Card eyebrow="Phase 5 anchor rule" title="Display anchor status, never authority">
           <p>{PHASE5_ANCHOR_BOUNDARY.summary}</p>
           <ul className="quickchain-mini-list">
@@ -995,6 +1083,7 @@ function QuickchainDeveloperDashboard({ app }) {
             phase5_anchor_boundary: PHASE5_ANCHOR_BOUNDARY,
             phase5_da_fallback_boundary: PHASE5_DA_FALLBACK_BOUNDARY,
             phase5_external_posture_boundary: PHASE5_EXTERNAL_POSTURE_BOUNDARY,
+            final_beta_phase19_network_status: phase19NetworkStatus,
             next_backend_batch: nextBackendBatch,
             next_crablink_batch: nextCrabLinkBatch,
             forbidden_scope: [

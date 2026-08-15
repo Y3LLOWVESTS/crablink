@@ -13,6 +13,9 @@ import { useEffect, useMemo, useState } from 'react';
 import LoadingState from '../../shared/components/LoadingState.jsx';
 import RouteProblemPanel from '../../shared/components/RouteProblemPanel.jsx';
 import { createSiteClient } from '../../shared/api/siteClient.js';
+import BlogReaderPresentation from './BlogReaderPresentation.jsx';
+import ForumReaderPresentation from './ForumReaderPresentation.jsx';
+import ImageboardReaderPresentation from './ImageboardReaderPresentation.jsx';
 import SiteResolvedProof from './SiteResolvedProof.jsx';
 import SiteSandboxPreview from './SiteSandboxPreview.jsx';
 import SiteVisitAccess, { deriveSiteVisitPolicy, siteVisitCanRender } from './SiteVisitAccess.jsx';
@@ -230,6 +233,28 @@ function ResolvedSiteView({ app, result, rootStatus, siteClient }) {
         siteClient={siteClient}
         onAccessChange={setVisitAccess}
       />
+
+      {canRenderPreview && (
+        <BlogReaderPresentation
+          app={app}
+          result={result}
+        />
+      )}
+
+      {canRenderPreview && (
+        <ForumReaderPresentation
+          app={app}
+          result={result}
+        />
+      )}
+
+      {canRenderPreview && (
+        <ImageboardReaderPresentation
+          app={app}
+          result={result}
+          siteClient={siteClient}
+        />
+      )}
 
       {canRenderPreview ? (
         <SiteSandboxPreview

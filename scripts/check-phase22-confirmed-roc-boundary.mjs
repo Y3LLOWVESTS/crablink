@@ -49,7 +49,7 @@ const balancePath =
   'apps/crablink-tauri/src/app/shell/BalanceChip.jsx';
 
 const nativePath =
-  'apps/crablink-tauri/src-tauri/src/confirmed_roc.rs';
+  'crates/crablink-native-core/src/confirmed_roc.rs';
 
 const model = read(modelPath);
 const wallet = read(walletPath);

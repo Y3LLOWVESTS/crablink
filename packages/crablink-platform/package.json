@@ -15,7 +15,8 @@
     "./catalog": "./src/contracts/catalogPort.js",
     "./publications": "./src/contracts/publicationPort.js",
     "./receipts": "./src/contracts/receiptsPort.js",
-    "./memory": "./src/memory/index.js"
+    "./memory": "./src/memory/index.js",
+    "./local-following": "./src/contracts/localFollowingPort.js"
   },
   "scripts": {
     "test": "node --test src/contracts/adapterContracts.test.mjs",

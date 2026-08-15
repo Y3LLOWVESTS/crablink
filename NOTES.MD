@@ -38110,3 +38110,13155 @@ These notes are ready to paste into the next session as the authoritative handof
 
 
 ### END NOTE - AUGUST 3 2026 - 01:10 CST
+
+### BEGIN NOTE - AUGUST 7 2026 - 10:30 CST
+
+Phase 7A3 is fully **GREEN**: all 29 timeline tests passed and the integrated `ProfilePublicView` bundled successfully. The next session should begin with the **Phase 7 profile-timeline closeout**, not with another implementation subphase.
+
+Below is the full carry-over document. I also reconciled an important planning conflict: the original Phase 8 language in `FINAL_BETA.md` describes a server-owned signed follow graph, but the later **Local Following / QuickChain addendum explicitly supersedes that design**. For the beta, following remains private/local, with no public follower counts or server social graph.  
+
+# RustyOnions / CrabLink — FINAL_BETA.md Carry-Over Notes
+
+## Session Handoff — August 7, 2026
+
+---
+
+# 1. Executive Status
+
+The active project is the **CrabLink Desktop FINAL_BETA.md implementation**.
+
+Primary repositories:
+
+```text
+CrabLink:
+  /Users/mymac/Desktop/crablink
+
+RustyOnions:
+  /Users/mymac/Desktop/RustyOnions
+
+ROX Anchor:
+  /Users/mymac/Desktop/rox-anchor
+```
+
+Primary product target:
+
+```text
+CrabLink Desktop
+Primary physical beta platform: macOS
+```
+
+Parked platforms:
+
+```text
+CrabLink TV / Android TV
+CrabLink Android phone/tablet
+CrabLink iOS
+```
+
+The desktop product remains the reference implementation. The buildplan deliberately parks TV/mobile while the desktop product model, visual language, social/profile experience, site templates, QuickChain behavior, ROX private-testnet behavior, and release posture are stabilized. 
+
+Current high-level status:
+
+```text
+FINAL_BETA_PHASE0=GREEN
+FINAL_BETA_PHASE1=GREEN
+FINAL_BETA_PHASE2=GREEN
+FINAL_BETA_PHASE3=GREEN
+FINAL_BETA_PHASE4=GREEN
+FINAL_BETA_PHASE5=GREEN
+FINAL_BETA_PHASE6=GREEN
+
+FINAL_BETA_PHASE7A1=GREEN
+FINAL_BETA_PHASE7A2=GREEN
+FINAL_BETA_PHASE7A3=GREEN
+
+FINAL_BETA_PHASE7_FORMAL_CLOSEOUT=NOT_YET_RUN
+
+IMMEDIATE_NEXT_ACTION:
+  BEGIN_PHASE7_PROFILE_TIMELINE_CLOSEOUT
+```
+
+The current FINAL_BETA milestone position is:
+
+```text
+Milestone A — Desktop reference product:
+  Phases 0–5
+  COMPLETE
+
+Milestone B — Social product:
+  Phases 6–10
+  Phase 6 complete
+  Phase 7 implementation complete pending formal closeout
+  Phase 8+ not yet started
+```
+
+The buildplan defines Milestone B as publication summaries, profile timelines, following behavior, following feed, and consumer Home. 
+
+---
+
+# 2. Critical Instruction for the Next Session
+
+Do **not** start Phase 8 immediately.
+
+The correct next sequence is:
+
+```text
+1. Build a Phase 7 formal closeout apply-only patch.
+2. Review the apply output.
+3. Run a separate Phase 7 verification-only block.
+4. At Phase 7 closeout, run the appropriate combined Phase 7 tests and
+   frontend production build.
+5. Only after Phase 7 is formally GREEN should Phase 8 begin.
+```
+
+Expected Phase 7 buildplan acceptance:
+
+```text
+FINAL_BETA_PHASE7_PROFILE_TIMELINE=GREEN
+PUBLIC_PROFILE_POSTS=GREEN
+PROFILE_CONTENT_BACKEND_DERIVED=YES
+OWNER_EDIT_BOUNDARY=GREEN
+LOCAL_CATALOG_AUTHORITY=NO
+NEXT_PHASE=FINAL_BETA_PHASE8_FOLLOW_GRAPH
+```
+
+The buildplan's Phase 7 goal is to make profiles display what creators publish, including Posts, About, Sites where appropriate, publication cards, pinned content, bounded pagination, empty/offline states, and owner-edit behavior. 
+
+However, the `NEXT_PHASE=...FOLLOW_GRAPH` label must be interpreted through the newer local-following addendum described later in these notes.
+
+---
+
+# 3. Required Development Workflow
+
+These rules are mandatory unless the user explicitly changes them.
+
+## 3.1 Two-step patches
+
+Every source mutation is split into two turns:
+
+```text
+Turn 1:
+  apply-only patch
+
+Turn 2:
+  verification-only block after apply output is reviewed
+```
+
+Do not combine a large mutation and verification suite into one patch.
+
+## 3.2 No repository-management commands
+
+Never include any of:
+
+```text
+git
+git status
+git diff
+git add
+git commit
+git push
+git apply
+```
+
+The user handles repository operations separately.
+
+## 3.3 Patch format
+
+All terminal blocks must be paste-ready:
+
+```text
+~~~~bash
+...
+~~~~
+```
+
+## 3.4 zsh-safe construction
+
+The user runs zsh.
+
+Do not rely on:
+
+```text
+unsetopt BANG_HIST
+```
+
+Instead make all patches safe by construction.
+
+Avoid literal exclamation marks inside shell blocks, including heredocs.
+
+When generated JavaScript/Rust requires an exclamation mark, the established safe technique is:
+
+```python
+bang = chr(33)
+```
+
+and use a placeholder such as:
+
+```text
+BANG
+```
+
+inside the heredoc, replacing it from Python before installing the file.
+
+This pattern has been used successfully throughout the current work.
+
+## 3.5 Tiered verification
+
+Use:
+
+```text
+Apply-only patch:
+  no tests
+  no Node
+  no Cargo
+  no Vite
+  no Tauri build
+
+Frontend-only routine patch:
+  focused Node/source tests
+  targeted esbuild/import smoke when useful
+
+Rust/native patch:
+  focused Cargo test/check for changed code
+
+Integration boundary / phase closeout:
+  broader focused suite
+  Vite production build where justified
+
+Major native/release milestone:
+  Tauri/release/macOS bundle checks
+```
+
+Compilation is allowed when it is genuinely useful.
+
+Do not compile after every small patch.
+
+## 3.6 Failure handling
+
+Mandatory:
+
+```text
+Fix the first reported failure.
+Do not continue to later failures.
+Do not broaden scope.
+Do not patch hypothetical future failures.
+```
+
+## 3.7 Codebundle policy
+
+Do not regenerate the codebundle after every patch.
+
+Use codebundle regeneration only:
+
+```text
+major milestone
+session wrap-up
+explicit user request
+or when exact current source cannot otherwise be recovered
+```
+
+No codebundle was regenerated during the latest Phase 6/7 work.
+
+## 3.8 Manual acceptance
+
+Do not give the user interactive questionnaire shell scripts.
+
+Present a concise manual checklist in chat.
+
+User reports:
+
+```text
+GREEN
+RED
+SKIPPED
+```
+
+Then encode confirmed results in a later apply-only patch if needed.
+
+---
+
+# 4. Locked Product Doctrine
+
+## 4.1 Desktop-first beta
+
+```text
+DESKTOP_REFERENCE_PRODUCT=YES
+TV_RESUME_AFTER_DESKTOP_MODEL_FREEZE=YES
+ANDROID_RESUME_AFTER_DESKTOP_MODEL_FREEZE=YES
+IOS_DEFERRED=YES
+```
+
+The buildplan's intended launch is a desktop decentralized private beta, not a public mainnet launch. 
+
+## 4.2 Passport custody
+
+Locked:
+
+```text
+PASSPORT_MODEL=WALLET_LIKE_LOCAL_CUSTODY
+CLOUD_LOGIN=FORBIDDEN
+CLOUD_PASSPORT_SECRET_CUSTODY=FORBIDDEN
+RAW_SECRET_IN_REACT=FORBIDDEN
+PIN_AND_RECOVERY_NATIVE_ONLY=YES
+```
+
+React must never become the owner of:
+
+```text
+PIN
+recovery phrase
+private keys
+raw capabilities
+device private material
+```
+
+## 4.3 Economic truth
+
+Locked:
+
+```text
+SILENT_SPEND=FORBIDDEN
+FAKE_RECEIPT=FORBIDDEN
+FAKE_BALANCE=FORBIDDEN
+CACHE_ONLY_PAID_UNLOCK=FORBIDDEN
+
+RECEIPT_TRUTH=BACKEND_DERIVED
+CONFIRMED_ROC_TRUTH=BACKEND_DERIVED
+```
+
+## 4.4 Site security
+
+Locked:
+
+```text
+NORMAL_CUSTOM_CODE=FORBIDDEN
+NORMAL_RAW_HTML_IMPORT=FORBIDDEN
+NORMAL_ROOT_HTML_EDITOR=FORBIDDEN
+ARBITRARY_SITE_JAVASCRIPT=FORBIDDEN
+
+SCRIPTLESS_STRUCTURED_TEMPLATES=REQUIRED
+
+INITIAL_TEMPLATES:
+  BLOG
+  IMAGEBOARD
+  FORUM
+```
+
+## 4.5 QuickChain
+
+Locked:
+
+```text
+QUICKCHAIN_PRIVATE_NETWORK_ONLY=YES
+QUICKCHAIN_CLIENT_EVIDENCE_IS_AUTHORITY=NO
+CRABLINK_FINALITY_AUTHORITY=NO
+```
+
+## 4.6 ROX
+
+Locked:
+
+```text
+ROX_PRIVATE_SOLANA_TESTNET_ONLY=YES
+PUBLIC_BRIDGE=FORBIDDEN
+PUBLIC_MINT_BURN=FORBIDDEN
+STAKING=FORBIDDEN
+LIQUIDITY=FORBIDDEN
+EXCHANGE_FACING_BEHAVIOR=FORBIDDEN
+```
+
+---
+
+# 5. CRITICAL Phase 8 / Following Doctrine
+
+This is extremely important for the next session.
+
+The original body of `FINAL_BETA.md` still contains older Phase 8 language that says:
+
+```text
+real signed follows
+svc-index relationship storage
+followers/following counts
+network follow/unfollow routes
+server relationship lookup
+```
+
+That old language is superseded by the later:
+
+```text
+FINAL_BETA_LOCAL_FOLLOWING_QUICKCHAIN_ADDENDUM_V1
+```
+
+The addendum explicitly supersedes conflicting requirements for:
+
+```text
+public follower counts
+public following counts
+public follower lists
+public following lists
+backend-custodied following lists
+server-owned social graph edges
+network follow/unfollow mutations
+```
+
+Current locked beta direction:
+
+```text
+FOLLOWING_LIST_OWNER=LOCAL_CRABLINK_APP
+FOLLOWING_LIST_DEFAULT_STORAGE=LOCAL_DEVICE_STORAGE
+
+PUBLIC_FOLLOWER_COUNT=FORBIDDEN
+PUBLIC_FOLLOWING_COUNT=FORBIDDEN
+PUBLIC_FOLLOWER_LIST=FORBIDDEN
+PUBLIC_FOLLOWING_LIST=FORBIDDEN
+
+NETWORK_FOLLOW_MUTATION=NOT_REQUIRED
+SERVER_SOCIAL_GRAPH=NOT_REQUIRED_FOR_BETA
+```
+
+Core doctrine:
+
+```text
+Public content lives on the network.
+Personal content selection lives on the user's device.
+Verified delivery and eligible consumption evidence remain network-aware.
+```
+
+Correct local follow flow:
+
+```text
+user opens public creator profile
+→ validates reviewed public profile reference
+→ user presses Follow
+→ CrabLink writes creator to reviewed local following record
+→ profile displays local Following state
+→ Home includes that creator during later public-timeline hydration
+```
+
+Correct unfollow:
+
+```text
+user presses Unfollow
+→ local entry removed
+→ later Home hydration excludes creator
+→ existing cached items expire/remove under cache policy
+```
+
+Follow/unfollow must not:
+
+```text
+mutate svc-index relationship truth
+create a public graph edge
+change a follower counter
+create an economic event
+create a receipt
+notify creator by default
+claim network confirmation
+require QuickChain
+require ROX
+require Solana
+```
+
+The public profile may display:
+
+```text
+identity
+username
+avatar
+bio
+public links
+public publications
+public media
+public sites
+pinned public content
+local Follow / Following state
+```
+
+It must not display:
+
+```text
+public follower count
+public following count
+public follower list
+public following list
+social popularity rank based on follows
+```
+
+The addendum explicitly says the user's complete following list must not be uploaded merely to generate Home. 
+
+The corresponding Home design is:
+
+```text
+HOME_FEED_COMPOSITION=LOCAL_FIRST
+HOME_FEED_CONTENT_SOURCE=PUBLIC_NETWORK_TIMELINES
+HOME_FEED_NETWORK_HYDRATION=REQUIRED_WHEN_ONLINE
+HOME_FEED_OFFLINE_CACHE=OPTIONAL_AND_BOUNDED
+HOME_FEED_ORDER=CHRONOLOGICAL
+HOME_FEED_PUBLIC_SOCIAL_GRAPH_REQUIRED=NO
+HOME_FEED_LOCAL_FOLLOW_LIST_REQUIRED=YES
+```
+
+Correct path:
+
+```text
+local following list
+→ request each followed creator's public timeline
+→ retrieve public publication records
+→ verify metadata/content
+→ merge timelines locally
+→ deduplicate locally
+→ chronological ordering
+→ bounded verified local cache
+→ render Home
+```
+
+This design is already supported by the Phase 6 creator-timeline work completed in this session. 
+
+Therefore:
+
+```text
+DO_NOT_IMPLEMENT_OLD_SERVER_FOLLOW_GRAPH=YES
+DO_NOT_ADD_PUBLIC_FOLLOW_COUNTS=YES
+DO_NOT_UPLOAD_COMPLETE_FOLLOWING_LIST=YES
+```
+
+---
+
+# 6. FINAL_BETA Phases 0–5 — Completed Before This Session
+
+## Phase 0 — Scope freeze
+
+Completed.
+
+Desktop reference-product direction locked.
+
+Android TV/Android/iOS parked.
+
+## Phase 1 — Clean desktop baseline
+
+Completed as an audit/baseline phase.
+
+Important interpretation:
+
+```text
+PHASE1_GREEN_MEANS=AUDIT_COMPLETE_NOT_FEATURE_COMPLETE
+```
+
+Recorded:
+
+```text
+clean first run
+restart/unlock posture
+profile handoff
+content-publication baseline
+paid/receipt baseline
+UI problem inventory
+```
+
+Known gaps were explicitly deferred into later implementation phases.
+
+## Phase 2 — Design system
+
+Completed.
+
+Design-system and theme cleanup included broad migration of page-local styling into the shared token system.
+
+Production frontend builds were green during the phase.
+
+## Phase 3 — Shell
+
+Completed.
+
+Locked:
+
+```text
+HOME_ICON_TARGET=crab://home
+PRIMARY_NAV=CONSUMER_FACING
+ADVANCED_SURFACES=QUARANTINED
+ADDRESS_FIELD=PRESERVED
+BACK_FORWARD=PRESERVED
+BROWSER_TABS=SECONDARY
+DEFAULT_SHELL_MODE=SIMPLE
+NORMAL_SHELL_RAW_JSON=ABSENT
+PASSPORT_STATUS=CONCISE
+ROC_STATUS=CONCISE
+```
+
+## Phase 4 — Identity/Profile coherence
+
+Completed.
+
+Important implemented behavior included:
+
+```text
+own-profile identity seed
+Profile Studio/public profile bridge
+Passport drawer consumer mode
+startup lock clarity
+formal Phase 4 closeout
+```
+
+Security preserved:
+
+```text
+PIN_IN_REACT=NO
+RECOVERY_WORDS_IN_REACT=NO
+```
+
+## Phase 5 — Developer quarantine
+
+Completed.
+
+Normal mode hides/quarantines engineering surfaces.
+
+Advanced/operator behavior requires explicit posture.
+
+Latest project status before Phase 6 had:
+
+```text
+65/65 focused Phase 5 tests
+Vite production build GREEN
+NORMAL_MODE_ENGINEERING_DASHBOARD=ABSENT
+DEVELOPMENT_BYPASSES=NOT_RELEASE_VISIBLE
+```
+
+---
+
+# 7. Phase 6 — Canonical Publication Contract
+
+## FULLY GREEN
+
+Phase 6 implemented the common publication contract needed by:
+
+```text
+public profiles
+future Home
+future Explore
+site templates
+```
+
+The original buildplan requires:
+
+```text
+PublicationSummaryV1
+strict bounds
+unknown-field rejection
+typed kinds
+creator identity
+timestamps
+paid/visibility posture
+thumbnail/reference fields
+pagination cursor
+svc-index creator publication projection
+gateway/omnigate read route
+CrabLink adapter
+memory/test adapter
+```
+
+Phase 6 is now fully complete. 
+
+---
+
+# 8. Phase 6A1 — Shared Publication Contract
+
+Added in:
+
+```text
+/Users/mymac/Desktop/crablink/packages/crablink-core/src/publicationSummary.js
+/Users/mymac/Desktop/crablink/packages/crablink-core/src/publicationSummary.test.mjs
+```
+
+Also exported through the crablink-core root/package surface.
+
+Contract includes:
+
+```text
+PublicationSummaryV1
+PublicationPageV1
+bounded page request normalization
+typed publication kinds
+typed visibility/access posture
+typed thumbnail kinds
+creator identity coherence
+canonical timestamps
+B3 references
+strict unknown-field rejection
+deep-frozen normalized output
+opaque cursors
+default page limit 20
+maximum page limit 50
+```
+
+Explicitly excluded authority:
+
+```text
+economic truth
+wallet truth
+ledger truth
+receipt truth
+paid entitlement truth
+follow truth
+settlement truth
+```
+
+Focused tests:
+
+```text
+12 Phase 6A1 tests
+```
+
+Shared-core aggregate at the time:
+
+```text
+46/46 GREEN
+```
+
+Important schema identifiers:
+
+```text
+crablink.publication-summary.v1
+crablink.publication-page.v1
+```
+
+---
+
+# 9. Phase 6B1 — svc-index Publication Projection
+
+Added:
+
+```text
+RustyOnions/crates/svc-index/src/publications.rs
+RustyOnions/crates/svc-index/tests/final_beta_phase6_creator_publication_projection.rs
+```
+
+Modified:
+
+```text
+crates/svc-index/src/lib.rs
+crates/svc-index/src/store/keys.rs
+crates/svc-index/src/store/mod.rs
+sled backend prefix scan support
+memory backend prefix scan support
+```
+
+Behavior:
+
+```text
+Rust wire models for publication summary/page
+strict unknown fields
+identity validation
+timestamp validation
+B3 validation
+public visibility filtering
+deterministic ordering
+pinned-first
+newest-first regular ordering
+opaque bounded cursor
+default 20
+max 50
+corrupt stored records fail closed
+read-only projection
+```
+
+No economic/follow/settlement authority added.
+
+Focused verification:
+
+```text
+8/8 projection tests GREEN
+cargo check -p svc-index --all-targets --all-features GREEN
+```
+
+### OpenTelemetry compatibility repair
+
+The Phase 6B1 compile surfaced existing OpenTelemetry version drift.
+
+Aligned:
+
+```text
+opentelemetry = 0.24
+opentelemetry_sdk = 0.24
+opentelemetry-otlp = 0.17
+tracing-opentelemetry = 0.25
+```
+
+The tracing integration now passes the actual SDK tracer to the tracing layer.
+
+Batch tracing and optional telemetry behavior were preserved.
+
+This was a real compiler repair necessary to make the current `svc-index` surface compile.
+
+---
+
+# 10. Phase 6B2 — svc-index HTTP Publication Routes
+
+Added:
+
+```text
+crates/svc-index/src/http/routes/creator_publications.rs
+crates/svc-index/tests/final_beta_phase6_creator_publication_http.rs
+```
+
+Routes:
+
+```text
+GET /v1/index/creators/:username/publications
+
+GET /v1/index/creators/:username/publications/:publication_id
+```
+
+Behavior:
+
+```text
+strict query shape
+unknown query fields rejected
+bounded opaque pagination
+public list only
+non-public detail → NotFound
+cross-creator detail → NotFound
+read-only projection
+```
+
+No:
+
+```text
+wallet authority
+ledger authority
+receipt authority
+paid entitlement authority
+follow authority
+settlement authority
+```
+
+Focused verification:
+
+```text
+6/6 tests GREEN
+cargo check -p svc-index --all-targets --all-features GREEN
+```
+
+One stale/format-sensitive test guard was repaired by whitespace-normalizing router source.
+
+Production route behavior was not changed by that repair.
+
+---
+
+# 11. Phase 6B3 — Omnigate Publication Proxy
+
+## GREEN
+
+Added:
+
+```text
+crates/omnigate/src/routes/v1/creator_publications.rs
+
+crates/omnigate/tests/final_beta_phase6_creator_publication_route.rs
+```
+
+Routes exposed through Omnigate:
+
+```text
+GET /v1/creators/:username/publications
+
+GET /v1/creators/:username/publications/:publication_id
+```
+
+They proxy to svc-index:
+
+```text
+/v1/index/creators/:username/publications
+
+/v1/index/creators/:username/publications/:publication_id
+```
+
+Behavior locked:
+
+```text
+strict cursor/limit query
+unknown query fields rejected
+URL-safe query encoding
+bounded username
+bounded publication ID
+upstream status passthrough
+upstream body passthrough
+404 passthrough
+transport/body failure → structured 502
+hop-by-hop headers filtered
+authorization/request/correlation headers forwarded
+read-only
+```
+
+### Phase 6B3 failure history
+
+First compiler failure:
+
+```text
+serde_json::json!(Problem { ... },)
+```
+
+The `json!` macro rejected the struct expression plus trailing comma.
+
+No production-code defect.
+
+The test fixture was changed to:
+
+```text
+serde_json::to_value(
+    Problem { ... },
+)
+.expect(...)
+```
+
+The first repair script itself failed because it used a whitespace-sensitive exact anchor.
+
+A V2 semantic branch-boundary repair then succeeded.
+
+Final verification:
+
+```text
+7/7 tests GREEN
+
+cargo check \
+  -p omnigate \
+  --all-targets
+
+GREEN
+```
+
+Final marker:
+
+```text
+FINAL_BETA_PHASE6B3_OMNIGATE_PUBLICATION_READ_ROUTE=GREEN
+```
+
+---
+
+# 12. Phase 6B4 — svc-gateway Publication Proxy
+
+## GREEN
+
+Modified:
+
+```text
+RustyOnions/crates/svc-gateway/src/routes/product.rs
+```
+
+Added test:
+
+```text
+RustyOnions/crates/svc-gateway/tests/final_beta_phase6_creator_publication_gateway.rs
+```
+
+Public gateway routes:
+
+```text
+GET /creators/:username/publications
+
+GET /creators/:username/publications/:publication_id
+```
+
+Upstream Omnigate routes:
+
+```text
+/v1/creators/:username/publications
+
+/v1/creators/:username/publications/:publication_id
+```
+
+Locked behavior:
+
+```text
+query passthrough
+opaque cursor passthrough
+status passthrough
+body passthrough
+404 passthrough
+upstream query rejection passthrough
+transport failure → structured 502
+existing product-header forwarding policy reused
+hop-by-hop filtering
+correlation headers forwarded
+```
+
+Crucially:
+
+```text
+DIRECT_SVC_INDEX_ACCESS=NO
+```
+
+The gateway does not bypass Omnigate.
+
+Final verification:
+
+```text
+7/7 focused tests GREEN
+
+cargo check \
+  -p svc-gateway \
+  --all-targets
+
+GREEN
+```
+
+Final marker:
+
+```text
+FINAL_BETA_PHASE6B4_GATEWAY_PUBLICATION_READ_ROUTE=GREEN
+```
+
+---
+
+# 13. Phase 6C1 — CrabLink Publication Adapters
+
+## GREEN
+
+Added platform-neutral contract:
+
+```text
+packages/crablink-platform/src/contracts/publicationPort.js
+packages/crablink-platform/src/contracts/publicationPort.test.mjs
+```
+
+Port methods:
+
+```text
+listCreatorPublications
+getCreatorPublication
+```
+
+The port is immutable.
+
+No publication mutation method exists.
+
+Added memory adapter:
+
+```text
+packages/crablink-platform/src/memory/publicationMemoryAdapter.js
+packages/crablink-platform/src/memory/publicationMemoryAdapter.test.mjs
+```
+
+Memory behavior:
+
+```text
+immutable fixture snapshots
+creator isolation
+missing page → canonical empty page
+missing detail → null
+bounded request validation
+no mutation authority
+```
+
+Added desktop adapter:
+
+```text
+apps/crablink-tauri/src/adapters/publicationAdapter.js
+apps/crablink-tauri/src/adapters/publicationAdapter.test.mjs
+```
+
+Desktop transport path:
+
+```text
+CrabLink publication adapter
+→ existing GatewayClient.request
+→ svc-gateway public publication routes
+```
+
+No direct:
+
+```text
+svc-index access
+Omnigate access
+```
+
+Limits:
+
+```text
+default 20
+maximum 50
+```
+
+### Phase 6C1 test failure history
+
+First run:
+
+```text
+14 passed
+1 failed
+```
+
+Failure:
+
+```text
+forbidden publication adapter authority: svc-index
+```
+
+This was a false-positive source guard.
+
+The adapter comment said:
+
+```text
+no direct svc-index
+```
+
+which contained the forbidden literal `svc-index`.
+
+Test-only repair:
+
+```text
+'svc-index'
+```
+
+was replaced with the code-shaped guard:
+
+```text
+'svcIndex'
+```
+
+while preserving checks for:
+
+```text
+/v1/index/
+svc_index
+omnigate.request
+```
+
+No production adapter behavior changed.
+
+Final verification:
+
+```text
+15/15 focused tests GREEN
+```
+
+Import smoke:
+
+```text
+PUBLICATION_PORT_EXPORT=GREEN
+MEMORY_PUBLICATION_ADAPTER_EXPORT=GREEN
+DESKTOP_PUBLICATION_ADAPTER_EXPORT=GREEN
+```
+
+---
+
+# 14. Phase 6 Formal Closeout
+
+## GREEN
+
+Added:
+
+```text
+apps/crablink-tauri/src/finalBeta/phase6PublicationContractCloseout.js
+
+apps/crablink-tauri/src/finalBeta/phase6PublicationContractCloseout.test.mjs
+```
+
+Formal lock records:
+
+```text
+FINAL_BETA_PHASE6_PUBLICATION_CONTRACT
+status GREEN
+profile publication projection GREEN
+pagination BOUNDED
+unknown fields REJECTED
+economic truth in projection NO
+next phase FINAL_BETA_PHASE7_PROFILE_TIMELINE
+```
+
+Closeout combined JavaScript suite:
+
+```text
+32 tests
+32 passed
+0 failed
+```
+
+This covered:
+
+```text
+Phase 6A1 publication contract
+Phase 6C1 publication port
+Phase 6C1 memory adapter
+Phase 6C1 desktop adapter
+Phase 6 closeout contract
+```
+
+Phase 6 frontend production build:
+
+```text
+vite v5.4.21
+362 modules transformed
+built successfully in approximately 5 seconds
+```
+
+Final markers included:
+
+```text
+FINAL_BETA_PHASE6_PUBLICATION_CONTRACT=GREEN
+FINAL_BETA_PHASE6_PUBLICATION_CONTRACT_CLOSEOUT=GREEN
+FORMAL_PHASE6_ACCEPTANCE_GATE=GREEN
+
+PHASE6A1_SHARED_PUBLICATION_CONTRACT=GREEN
+PHASE6B1_SVC_INDEX_PROJECTION=GREEN
+PHASE6B2_SVC_INDEX_HTTP=GREEN
+PHASE6B3_OMNIGATE_READ_ROUTE=GREEN
+PHASE6B4_GATEWAY_READ_ROUTE=GREEN
+PHASE6C1_CRABLINK_ADAPTERS=GREEN
+
+CANONICAL_PUBLICATION_SUMMARY_V1=GREEN
+CANONICAL_PUBLICATION_PAGE_V1=GREEN
+PROFILE_PUBLICATION_PROJECTION=GREEN
+PAGINATION=BOUNDED
+UNKNOWN_FIELDS=REJECTED
+OPAQUE_CURSOR=SUPPORTED
+PAGE_DEFAULT_LIMIT=20
+PAGE_MAX_LIMIT=50
+
+ECONOMIC_TRUTH_IN_PROJECTION=NO
+PUBLICATION_MUTATION=NO
+FOLLOW_MUTATION=NO
+WALLET_MUTATION=NO
+LEDGER_MUTATION=NO
+RECEIPT_AUTHORITY=NO
+PAID_ENTITLEMENT_AUTHORITY=NO
+SETTLEMENT_AUTHORITY=NO
+```
+
+The Rust Phase 6 focused suites/all-target checks had already gone green immediately before closeout and therefore were not redundantly rerun.
+
+---
+
+# 15. Phase 7A1 — Profile Timeline Model
+
+## GREEN
+
+Added:
+
+```text
+apps/crablink-tauri/src/pages/profile/profileTimelineModel.js
+
+apps/crablink-tauri/src/pages/profile/profileTimelineModel.test.mjs
+```
+
+Marker:
+
+```text
+FINAL_BETA_PHASE7A1_PROFILE_TIMELINE_MODEL_V1
+```
+
+Model schema:
+
+```text
+crablink.profile-timeline-model.v1
+```
+
+Tabs:
+
+```text
+Posts
+About
+Sites
+```
+
+Sites is conditional.
+
+Model behavior:
+
+```text
+pinned publication separated
+regular publication order preserved
+site publications separated
+bounded pagination
+max page 50
+opaque cursor preserved
+empty profile state
+loading state
+error state
+stale state
+offline state
+owner edit action only for owner
+visitor edit absent
+```
+
+The model intentionally exposes:
+
+```text
+followAction = null
+relationshipContractReady = false
+```
+
+This prevented Phase 7 from inventing follow behavior before the local-following contract is built.
+
+Authority posture:
+
+```text
+publication source = backend publication projection
+local catalog authority = false
+profile mutation authority = false
+relationship authority = false
+economic authority = false
+```
+
+Caller data is cloned/reviewed and model output is deep frozen.
+
+Verification:
+
+```text
+10/10 tests GREEN
+```
+
+Import smoke:
+
+```text
+PROFILE_TIMELINE_MODEL_EXPORT=GREEN
+PROFILE_TIMELINE_TAB_EXPORT=GREEN
+PROFILE_TIMELINE_STATUS_EXPORT=GREEN
+MODEL_OUTPUT_IMMUTABLE=YES
+```
+
+---
+
+# 16. Phase 7A2 — Profile Timeline React Surface
+
+## GREEN
+
+Added:
+
+```text
+apps/crablink-tauri/src/pages/profile/ProfileTimelineSurface.jsx
+
+apps/crablink-tauri/src/pages/profile/profileTimeline.css
+
+apps/crablink-tauri/src/pages/profile/ProfileTimelineSurface.source.test.mjs
+```
+
+Marker:
+
+```text
+FINAL_BETA_PHASE7A2_PROFILE_TIMELINE_SURFACE_V1
+```
+
+Surface includes:
+
+```text
+Posts tab
+About tab
+conditional Sites tab
+publication content cards
+media/content presentation bands
+pinned publication display
+regular publication collection
+empty state
+loading state
+error state
+stale state
+offline state
+bounded Load more
+owner edit action from reviewed model
+```
+
+No Follow button yet.
+
+No public follower/following counts.
+
+Authority footer explicitly says:
+
+```text
+Public content source: backend publication projection
+Local catalog authority: none
+```
+
+Styling:
+
+```text
+shared --cl-* tokens
+no raw hex colors
+no raw rgb colors
+responsive <= 720px handling
+```
+
+Focused verification:
+
+```text
+9/9 source tests GREEN
+```
+
+Targeted esbuild JSX bundle:
+
+```text
+ProfileTimelineSurface.js
+approximately 14.0 kB
+GREEN
+```
+
+No full Vite production build was run at this subphase because it was not yet the Phase 7 integration closeout.
+
+---
+
+# 17. Phase 7A3 — Profile Timeline Integration
+
+## GREEN
+
+Phase 7A3 integrates the timeline model/surface into:
+
+```text
+apps/crablink-tauri/src/pages/profile/ProfilePublicView.jsx
+```
+
+Added focused test:
+
+```text
+apps/crablink-tauri/src/pages/profile/ProfilePublicView.timelineIntegration.source.test.mjs
+```
+
+Marker:
+
+```text
+FINAL_BETA_PHASE7A3_PROFILE_TIMELINE_INTEGRATION_V1
+```
+
+Integration behavior:
+
+```text
+ProfilePublicView
+→ app publication client if already present
+→ otherwise createPublicationAdapter(app.clients.gateway)
+→ GatewayClient
+→ svc-gateway
+→ Omnigate
+→ svc-index creator publication projection
+```
+
+Initial publication request:
+
+```text
+limit = 20
+```
+
+The reviewed `PublicationPageV1` is passed into:
+
+```text
+createProfileTimelineModel
+```
+
+then rendered via:
+
+```text
+ProfileTimelineSurface
+```
+
+### Tabs
+
+Local UI state controls:
+
+```text
+Posts
+About
+Sites
+```
+
+with:
+
+```text
+normalizeProfileTimelineTab
+```
+
+### Owner detection
+
+Existing Phase 4 identity projection reused:
+
+```text
+resolveOwnProfileHandle
+```
+
+Owner matching determines whether:
+
+```text
+Edit profile
+```
+
+is available.
+
+No second identity state machine was introduced.
+
+### Publication navigation
+
+Only reviewed routes beginning with:
+
+```text
+crab://
+```
+
+are navigated through:
+
+```text
+app.navigate
+```
+
+### Pagination
+
+Load-more:
+
+```text
+preserves opaque backend cursor
+requests at most 20 at a time
+caps accumulated profile timeline at 50
+```
+
+No cursor math is invented.
+
+### Merge behavior
+
+Pages are merged:
+
+```text
+current backend page first
+then next backend page
+```
+
+Publication IDs are deduplicated without re-ranking.
+
+Backend order is preserved.
+
+### Failure behavior
+
+States:
+
+```text
+ready
+stale
+offline
+error
+loading
+```
+
+Existing page data can remain visible as stale/offline rather than being replaced with invented content.
+
+### Authority exclusions
+
+Still absent:
+
+```text
+direct svc-index access
+direct Omnigate access
+local catalog authority
+publication mutation
+relationship mutation
+wallet mutation
+receipt authority
+paid entitlement authority
+settlement authority
+```
+
+---
+
+# 18. Phase 7A3 Apply Failure and Repair History
+
+The first Phase 7A3 apply attempt failed before installing anything.
+
+Failure:
+
+```text
+FINAL_BETA_PHASE7A3_PROFILE_TIMELINE_INTEGRATION=RED
+FIRST_FAILURE=SCRIPTED_PHASE7A3_PATCH_FAILED
+PATCH_RESULT=RED:PROFILE_PUBLIC_VIEW_FRAGMENT_MISSING:publicationClient.listCreatorPublications
+PRODUCTION_SOURCE_CHANGED=NO
+```
+
+Cause:
+
+The generated source formatted the call as:
+
+```text
+publicationClient
+  .listCreatorPublications
+```
+
+while the patch's final guard searched for one contiguous literal:
+
+```text
+publicationClient.listCreatorPublications
+```
+
+This was not a code defect.
+
+It was a whitespace-sensitive validation defect.
+
+V2 changed validation to a whitespace-normalized semantic check.
+
+V2 applied successfully:
+
+```text
+FINAL_BETA_PHASE7A3_PROFILE_TIMELINE_INTEGRATION_V2=APPLIED
+FIRST_FAILURE_FIXED=WHITESPACE_SENSITIVE_PUBLICATION_CLIENT_GUARD
+PATCH_VALIDATION=WHITESPACE_NORMALIZED_SEMANTIC_SOURCE
+```
+
+Production integration then installed cleanly.
+
+This is another reminder for future source guards:
+
+```text
+Prefer semantic/whitespace-normalized matching where formatting is expected
+to wrap function calls or JSX props.
+```
+
+Do not use brittle contiguous-string guards for rustfmt/prettier-style source.
+
+---
+
+# 19. Latest Phase 7A3 Verification
+
+## FULLY GREEN
+
+Latest terminal output:
+
+```text
+DISCOVERED_PHASE7_TIMELINE_TESTS=29
+```
+
+Results:
+
+```text
+29 tests
+29 passed
+0 failed
+0 cancelled
+0 skipped
+```
+
+Breakdown:
+
+```text
+Phase 7A3 integration tests:
+  10
+
+Phase 7A2 surface tests:
+  9
+
+Phase 7A1 model tests:
+  10
+
+TOTAL:
+  29
+```
+
+All 10 Phase 7A3 checks passed:
+
+```text
+ProfilePublicView timeline marker
+existing gateway publication boundary reused
+bounded initial creator publication read
+reviewed model before render
+tab state integration
+opaque cursor preservation
+50-item cap
+deduplication without backend reorder
+owner identity reuse
+crab:// navigation only
+honest failure states
+forbidden authority absence
+```
+
+Phase 7A3 targeted bundle smoke:
+
+```text
+ProfilePublicView.js
+approximately 82.0 kB
+
+esbuild completed successfully
+```
+
+Final output:
+
+```text
+FINAL_BETA_PHASE7A3_PROFILE_TIMELINE_INTEGRATION=GREEN
+
+FINAL_BETA_PHASE7A3_WHITESPACE_GUARD_REPAIR=GREEN
+
+SOURCE_GUARD=GREEN
+
+PHASE7_TIMELINE_TESTS=29
+PHASE7_TIMELINE_TESTS_PASS=29
+PHASE7_TIMELINE_TESTS_FAIL=0
+
+NODE_TEST_RUN=YES
+JSX_BUNDLE_SMOKE_RUN=YES
+PROFILE_PUBLIC_VIEW_BUNDLE_SMOKE=GREEN
+
+PHASE7A1_PROFILE_TIMELINE_MODEL=GREEN
+PHASE7A2_PROFILE_TIMELINE_SURFACE=GREEN
+PROFILE_PUBLIC_VIEW_INTEGRATION=GREEN
+
+PUBLICATION_CLIENT_SOURCE=APP_CLIENT_OR_GATEWAY_ADAPTER
+
+PUBLICATION_INITIAL_READ=GREEN
+PUBLICATION_INITIAL_LIMIT=20
+
+POSTS_ABOUT_SITES_TABS=GREEN
+PINNED_PUBLICATION=GREEN
+
+LOADING_STATE=GREEN
+ERROR_STATE=GREEN
+STALE_STATE=GREEN
+OFFLINE_STATE=GREEN
+
+OPAQUE_CURSOR=PRESERVED
+BOUNDED_LOAD_MORE=GREEN
+TIMELINE_ACCUMULATION_LIMIT=50
+PUBLICATION_DEDUPLICATION=GREEN
+BACKEND_PAGE_ORDER=PRESERVED
+
+OWNER_IDENTITY_PROJECTION=REUSED
+OWNER_EDIT_ACTION=GREEN
+PUBLICATION_CRAB_ROUTE_NAVIGATION=GREEN
+
+DIRECT_SVC_INDEX_ACCESS=NO
+DIRECT_OMNIGATE_ACCESS=NO
+LOCAL_CATALOG_AUTHORITY=NO
+
+PUBLICATION_MUTATION=NO
+RELATIONSHIP_MUTATION=NO
+FOLLOW_ACTION=ABSENT_PENDING_PHASE8
+
+WALLET_MUTATION=NO
+RECEIPT_AUTHORITY=NO
+PAID_ENTITLEMENT_AUTHORITY=NO
+SETTLEMENT_AUTHORITY=NO
+
+PROFILE_IDENTITY_READ_BEHAVIOR=PRESERVED
+PROFILE_CACHE_BEHAVIOR=PRESERVED
+
+FRONTEND_BUILD_RUN=NO
+TAURI_BUILD_RUN=NO
+MACOS_BUNDLE_RUN=NO
+
+RUSTYONIONS_MUTATED=NO
+CRABLINK_REPOSITORY_MUTATED=NO
+CODEBUNDLE_REGENERATED=NO
+
+NEXT_ACTION=BEGIN_PHASE7_PROFILE_TIMELINE_CLOSEOUT
+```
+
+This is the exact current stopping point.
+
+---
+
+# 20. Immediate Next Session Work — Phase 7 Closeout
+
+The next assistant should begin by inspecting the Phase 7 source and buildplan and creating an **apply-only formal closeout contract** similar in spirit to Phase 6.
+
+Suggested closeout scope:
+
+```text
+Phase 7A1 model marker
+Phase 7A2 surface marker
+Phase 7A3 integration marker
+
+ProfilePublicView integration
+
+Posts tab
+About tab
+conditional Sites tab
+
+pinned publication
+backend-derived publication cards
+
+bounded pagination
+opaque cursor
+50-item accumulation cap
+
+loading
+error
+stale
+offline
+empty states
+
+owner edit boundary
+
+no local catalog authority
+no follower counts
+no network follow claims
+no economic authority
+```
+
+Formal Phase 7 acceptance should correspond to the buildplan:
+
+```text
+FINAL_BETA_PHASE7_PROFILE_TIMELINE=GREEN
+PUBLIC_PROFILE_POSTS=GREEN
+PROFILE_CONTENT_BACKEND_DERIVED=YES
+OWNER_EDIT_BOUNDARY=GREEN
+LOCAL_CATALOG_AUTHORITY=NO
+```
+
+Likely next phase label:
+
+```text
+NEXT_PHASE=FINAL_BETA_PHASE8_LOCAL_FOLLOWING
+```
+
+Even if the original buildplan uses:
+
+```text
+FINAL_BETA_PHASE8_FOLLOW_GRAPH
+```
+
+the implementation must respect the superseding local-following addendum.
+
+### Closeout verification
+
+At this integration boundary, it is reasonable to run:
+
+```text
+Phase 7A1 10 tests
+Phase 7A2 9 tests
+Phase 7A3 10 tests
+formal closeout tests
+relevant profile regressions
+Vite production build
+```
+
+Do not rerun Rust Phase 6 Cargo suites unless a Phase 7 change touches Rust/backend code.
+
+Phase 7 has so far been CrabLink/frontend-only.
+
+---
+
+# 21. Phase 8 — Correct Beta Interpretation
+
+Do not blindly implement the old Phase 8 network graph specification.
+
+Correct next product milestone:
+
+```text
+LOCAL FOLLOWING
+```
+
+Likely architecture:
+
+```text
+packages/crablink-core
+  LocalFollowingRecordV1 normalization/validation if appropriate
+
+packages/crablink-platform
+  following persistence port
+
+packages/crablink-platform/src/memory
+  deterministic memory following adapter
+
+apps/crablink-tauri
+  reviewed local persistence adapter
+  profile Follow / Following / Unfollow UI
+
+Home later:
+  reads local following record
+  fetches public creator timelines using the Phase 6 publication adapter
+  locally merges them
+```
+
+Potential record shape already captured by the addendum:
+
+```text
+{
+  "schema": "crablink.local-following.v1",
+  "entries": [
+    {
+      "profileRef": "public-profile-reference",
+      "username": "example",
+      "followedAt": "ISO-8601 timestamp",
+      "lastTimelineCursor": null,
+      "lastRefreshAt": null
+    }
+  ],
+  "updatedAt": "ISO-8601 timestamp"
+}
+```
+
+Stored identity reference must be an already-reviewed public identity/profile reference.
+
+Must not contain:
+
+```text
+Passport private material
+device private key
+PIN
+recovery phrase
+raw capability
+wallet authority
+private profile information
+invented usernames
+invented ownership claims
+```
+
+The list should live behind a reviewed persistence adapter.
+
+Do not scatter it directly across React state/localStorage calls.
+
+---
+
+# 22. Phase 9 — Correct Home Feed Interpretation
+
+The original generic buildplan says "following feed backend," but the superseding design means the beta should not upload the complete local follow list to a server feed endpoint.
+
+Correct architecture:
+
+```text
+local following record
+→ for each followed creator:
+     Phase 6 public creator timeline reads
+→ validate PublicationPageV1
+→ merge locally
+→ deduplicate
+→ chronological order
+→ bounded cache
+→ Home rendering
+```
+
+Network provides public truth.
+
+Client provides private selection.
+
+Home feed should be:
+
+```text
+chronological
+transparent
+no engagement ranking
+no paid ranking
+no surveillance-based ranking
+```
+
+Offline cache may render prior verified summaries with stale/offline labels.
+
+It may not invent:
+
+```text
+new follows
+new posts
+deletion truth
+paid entitlement
+freshness
+```
+
+---
+
+# 23. Phase 10 — Consumer Home
+
+Goal remains:
+
+```text
+crab://home becomes the following feed
+```
+
+Expected normal Home:
+
+```text
+Following feed
+Create shortcut
+refresh
+bounded pagination/hydration
+offline/stale state
+empty-following guidance
+```
+
+Explore remains separate:
+
+```text
+public creators
+recent public content
+template sites
+transparent categories
+```
+
+Developer proof dashboard remains:
+
+```text
+Advanced
+Diagnostics
+or explicit developer route
+```
+
+Not normal Home.
+
+---
+
+# 24. Remaining FINAL_BETA Roadmap
+
+The authoritative desktop buildplan extends through Phase 26. 
+
+## Phase 8 — Local following, superseding old graph language
+
+Current implementation doctrine:
+
+```text
+local Follow / Following / Unfollow
+reviewed persistence
+no public graph
+no follower counters
+no network relationship mutation
+```
+
+## Phase 9 — Local-first network-hydrated Home feed
+
+```text
+fetch public creator timelines
+merge locally
+deduplicate locally
+chronological ordering
+bounded local cache
+truthful failure states
+```
+
+## Phase 10 — Consumer Home/Explore separation
+
+```text
+Home = following feed
+Explore = transparent public discovery
+developer dashboard removed from normal Home
+```
+
+This completes the social-product milestone.
+
+---
+
+# 25. Phase 11 — Site Security Boundary
+
+Buildplan requires:
+
+```text
+remove Import HTML from normal mode
+remove raw Root HTML editor from normal mode
+gate development custom-code features
+reject scripts
+reject arbitrary forms
+reject iframes
+reject event handlers
+reject remote scripts/resources as required
+record template ID/version
+record renderer version
+bounded theme tokens
+bounded declarative embeds
+retain sandbox defense in depth
+```
+
+Acceptance includes:
+
+```text
+FINAL_BETA_PHASE11_SITE_SECURITY=GREEN
+NORMAL_IMPORT_HTML=ABSENT
+NORMAL_ROOT_HTML_EDITOR=ABSENT
+CUSTOM_JAVASCRIPT=FORBIDDEN
+IFRAMES=FORBIDDEN
+ARBITRARY_FORMS=FORBIDDEN
+REMOTE_SCRIPT=FORBIDDEN
+```
+
+---
+
+# 26. Phase 12 — Shared Site Template Engine
+
+Define:
+
+```text
+SiteTemplateDefinitionV1
+SiteTemplateInstanceV1
+```
+
+Build:
+
+```text
+allowed blocks
+theme tokens
+navigation schema
+content query sections
+thread/list/detail sections
+scriptless rendering
+B3/manifest references
+template migration/version behavior
+snapshot tests
+malicious-input tests
+```
+
+Required:
+
+```text
+ONE_SHARED_ENGINE=YES
+SCRIPTLESS_OUTPUT=YES
+DECLARATIVE_BLOCKS_ONLY=YES
+```
+
+---
+
+# 27. Phase 13 — Blog Template
+
+Required:
+
+```text
+blog landing
+featured article
+chronological posts/articles
+tags/categories
+article detail
+creator/profile integration
+comments
+archive
+empty/loading/error states
+bounded themes
+site launch/update
+```
+
+Acceptance:
+
+```text
+FINAL_BETA_PHASE13_BLOG=GREEN
+```
+
+---
+
+# 28. Phase 14 — Imageboard Template
+
+Required:
+
+```text
+board categories
+image thread creation
+thumbnail grid
+thread detail
+replies/comments
+content warning
+moderation projection
+pagination
+deleted/blocked projection
+B3 image verification
+```
+
+Acceptance:
+
+```text
+FINAL_BETA_PHASE14_IMAGEBOARD=GREEN
+```
+
+The buildplan explicitly lists these requirements. 
+
+---
+
+# 29. Phase 15 — Forum Template
+
+Required:
+
+```text
+categories
+thread list
+thread creation
+reply chain
+sticky
+locked
+moderation labels
+pagination
+latest activity
+reviewed moderator controls
+```
+
+Forum and imageboard should share the same underlying thread/post/reply contracts.
+
+Acceptance:
+
+```text
+FINAL_BETA_PHASE15_FORUM=GREEN
+SHARED_THREAD_ENGINE=YES
+```
+
+
+
+---
+
+# 30. Phase 16 — Site Product Acceptance
+
+End-to-end safe site flow:
+
+```text
+choose template
+→ choose site name
+→ structured settings
+→ preview
+→ publish root/manifest
+→ resolve named site
+→ create content
+→ update
+→ visit
+→ comment/reply
+→ paid visit where configured
+→ receipt
+```
+
+Additional work:
+
+```text
+shared manifest helpers
+remove parser drift
+gateway route tests
+restart/recreate tests
+paid-site tests
+template migration tests
+malicious-input tests
+sandbox tests
+```
+
+Acceptance:
+
+```text
+FINAL_BETA_PHASE16_SITE_ACCEPTANCE=GREEN
+BLOG_END_TO_END=GREEN
+IMAGEBOARD_END_TO_END=GREEN
+FORUM_END_TO_END=GREEN
+CUSTOM_CODE_NORMAL_MODE=NO
+NAMED_SITE_RESOLUTION=GREEN
+PAID_SITE_RECEIPT=GREEN
+```
+
+
+
+---
+
+# 31. Phase 17 — Economic Product Stabilization
+
+Goal:
+
+```text
+Make paid access, receipts, and confirmed ROC feel like a finished product.
+```
+
+Work:
+
+```text
+simplify ROC display
+simplify receipt list/detail
+pending/confirmed/failed states
+explicit spend confirmation
+cancel behavior
+idempotent retry
+paid site/content behavior
+offline/stale labels
+receipt source labels
+confirmed ROC refresh
+no-cache-unlock checks
+repeatability runner
+```
+
+Acceptance:
+
+```text
+FINAL_BETA_PHASE17_ECONOMIC_PRODUCT=GREEN
+SILENT_SPEND=NO
+EXPLICIT_CONFIRMATION=YES
+FAILED_PAYMENT_UNLOCK=NO
+CANCELLED_PAYMENT_MUTATION=NO
+RECEIPT_BACKEND_DERIVED=YES
+CONFIRMED_ROC_BACKEND_DERIVED=YES
+CACHE_ONLY_UNLOCK=NO
+```
+
+
+
+---
+
+# 32. Phase 18 — QuickChain Activation Foundation
+
+Goal:
+
+```text
+Move from boundary/readiness work into actual private QuickChain proof.
+```
+
+Required eventual acceptance:
+
+```text
+FINAL_BETA_PHASE18_QUICKCHAIN_FOUNDATION=GREEN
+CANONICAL_BYTES=LOCKED
+GOLDEN_VECTORS=LOCKED
+DETERMINISTIC_ROOTS=GREEN
+REPLAY_REBUILD=GREEN
+TAMPER_REJECTION=GREEN
+```
+
+Do not duplicate QuickChain consensus/finality rules inside CrabLink. 
+
+---
+
+# 33. Phase 19 — QuickChain Multi-Node
+
+Required:
+
+```text
+multiple Service Nodes
+at least one User Node verifier
+deterministic operation batches
+candidate roots/checkpoints
+committee/validator lifecycle
+quorum/finality rules
+duplicate/replay rejection
+member failure handling
+restart/recovery
+challenge path
+DA/archive fallback where required
+ledger-confirmed reward evidence
+soak
+chaos
+```
+
+CrabLink may display:
+
+```text
+network ready
+checkpoint observed
+verification result
+challenge result
+degraded state
+```
+
+CrabLink may not decide finality.
+
+Acceptance:
+
+```text
+FINAL_BETA_PHASE19_QUICKCHAIN_MULTI_NODE=GREEN
+MULTI_NODE_TOPOLOGY=GREEN
+CHECKPOINTS=GREEN
+QUORUM=GREEN
+FAILURE_RECOVERY=GREEN
+CHAOS=GREEN
+SOAK=GREEN
+CRABLINK_FINALITY_AUTHORITY=NO
+```
+
+
+
+---
+
+# 34. Phase 20 — ROX Anchor Private Testnet
+
+Required:
+
+```text
+negative drills
+invalid proof drills
+replay drills
+halt drills
+recovery drills
+authority separation
+key rotation
+upgrade-authority handling
+RustyOnions dry-run handoff
+CrabLink display-only private-testnet status
+receipt reconciliation
+private-testnet closeout
+```
+
+Controlled ROC → ROX:
+
+```text
+internal ROC evidence
+→ proof package
+→ ROX validation
+→ coordinator
+→ relayer simulation
+→ explicitly approved capped testnet send
+→ test-only Solana mutation
+→ RPC readback
+→ redacted reconciliation
+```
+
+Controlled ROX → ROC:
+
+```text
+test burn/finalization evidence
+→ RPC proof
+→ deterministic review
+→ coordinator
+→ dry-run ROC release intent
+→ no direct ROC mutation
+```
+
+Acceptance:
+
+```text
+PUBLIC_MAINNET=NO
+PUBLIC_BRIDGE=NO
+PRODUCTION_MINT_BURN=NO
+HALT_RECOVERY=GREEN
+AUTHORITY_SEPARATION=GREEN
+RPC_READBACK=GREEN
+RECONCILIATION=GREEN
+```
+
+
+
+---
+
+# 35. Phase 21 — Full System Demonstration
+
+The controlled desktop beta demonstration eventually proves:
+
+```text
+private RustyOnions network
+multiple Service Nodes
+User Node verifier
+clean CrabLink Desktop
+Passport create/restore
+username
+profile
+local following
+publication
+public profile timeline
+Home following feed
+blog
+imageboard
+forum
+site resolution
+paid content/site
+receipt
+confirmed ROC
+QuickChain evidence
+redacted QuickChain status
+capped ROC → ROX testnet path
+ROX → ROC dry run
+revocation/halt/failure
+restart/reconciliation
+```
+
+The original plan lists a 24-step controlled demonstration. 
+
+Because the local-following addendum supersedes the old graph model, the "follow another profile" step should be interpreted as local following, not a public network relationship mutation.
+
+---
+
+# 36. Phase 22 — Security, Moderation, Privacy
+
+Security:
+
+```text
+Tauri allowlist
+capability audit
+URL/origin audit
+secret scan
+log/crash redaction
+no PIN/recovery React
+no arbitrary release HTML
+sandbox malicious corpus
+parser fuzzing
+bounded bodies
+decompression guards
+replay tests
+privilege separation
+```
+
+Abuse controls:
+
+```text
+block
+mute
+unfollow
+profile suspension projection
+post deletion/tombstone
+report
+local hide
+rate limits
+spam controls
+thread limits
+```
+
+Site moderation:
+
+```text
+operator block
+global deny
+owner tombstone
+quarantine
+template moderation
+forum/imageboard locks
+no ROC reward for denied content service
+```
+
+Privacy:
+
+```text
+no public User Node IP
+no direct-provider fallback
+no secret/high-cardinality metrics
+no public alt linkage
+cache clear
+local-data clear
+redacted diagnostic export
+```
+
+Acceptance is defined in the buildplan. 
+
+---
+
+# 37. Phase 23 — UX / Accessibility / Performance
+
+UX:
+
+```text
+consistent navigation
+clear CTA
+meaningful empty states
+useful onboarding
+no unexplained acronyms in normal mode
+no raw hashes unless requested
+clear offline state
+clear paid state
+clear Passport lock state
+coherent profile/site/feed flow
+```
+
+Accessibility:
+
+```text
+keyboard navigation
+focus order
+semantic controls
+screen-reader labels
+contrast
+font scaling
+reduced motion
+no color-only state
+```
+
+Performance:
+
+```text
+cold launch
+warm launch
+Home first render
+profile timeline
+site render
+image memory
+media cleanup
+large local catalog
+receipt list
+node polling
+long-session leak review
+```
+
+
+
+---
+
+# 38. Phase 24 — Desktop Packaging
+
+Primary artifact:
+
+```text
+macOS
+```
+
+Required:
+
+```text
+release profile
+dev/production config separation
+signing identity
+remove obsolete development certificate
+notarization decision/implementation
+app-data path review
+upgrade migration
+uninstall/reinstall policy
+Passport preservation
+backup/export guidance
+crash-safe update
+diagnostic bundle
+version display
+release notes
+```
+
+Windows/Linux:
+
+```text
+compile checks
+platform sealer tests
+package config checks
+```
+
+Physical beta artifacts for additional platforms should wait for their hardware/CI acceptance.
+
+
+
+---
+
+# 39. Phase 25 — Private Beta Operations
+
+Required:
+
+```text
+invite list
+beta environment identity
+Service Node operator list
+emergency contacts
+issue intake
+privacy notice
+beta disclaimer
+content policy
+moderation response
+emergency halt
+Passport recovery support boundary
+no server recovery promise
+release channel
+update procedure
+rollback procedure
+known issue list
+network health review
+```
+
+Data policy:
+
+```text
+no conversations exposed to advertisers
+no Passport secrets exposed
+redacted diagnostics
+no sale of user data
+no cloud Passport custody
+no hidden telemetry
+```
+
+
+
+---
+
+# 40. Phase 26 — Final Beta Acceptance
+
+Automated gates include:
+
+```text
+CrabLink React build
+Tauri Rust check
+focused Clippy
+Passport regressions
+onboarding
+profile timeline
+following/feed tests
+template tests
+sandbox tests
+paid flow
+receipts/ROC
+QuickChain multi-node
+ROX testnet
+security boundaries
+installer/package checks
+```
+
+Manual gates include:
+
+```text
+clean user
+returning user
+wrong PIN
+cancel PIN
+recovery
+local follow/unfollow
+feed refresh
+publish post
+create three site templates
+paid content
+offline mode
+degraded node mode
+degraded QuickChain
+ROX halted mode
+restart
+upgrade
+uninstall/reinstall policy
+```
+
+Final release markers include:
+
+```text
+CRABLINK_DESKTOP_FINAL_BETA=GREEN
+DESKTOP_REFERENCE_PRODUCT=GREEN
+HOME_FOLLOWING_FEED=GREEN
+PUBLIC_PROFILE_TIMELINE=GREEN
+BLOG_TEMPLATE=GREEN
+IMAGEBOARD_TEMPLATE=GREEN
+FORUM_TEMPLATE=GREEN
+ARBITRARY_SITE_CODE=DISABLED
+PASSPORT=GREEN
+PAID_ACCESS=GREEN
+RECEIPTS=GREEN
+CONFIRMED_ROC=GREEN
+QUICKCHAIN_PRIVATE_NETWORK=GREEN
+ROX_PRIVATE_TESTNET=GREEN
+SECURITY=GREEN
+MODERATION=GREEN
+MACOS_BETA_ARTIFACT=GREEN
+
+ANDROID_TV_REQUIRED_FOR_DESKTOP_BETA=NO
+ANDROID_REQUIRED_FOR_DESKTOP_BETA=NO
+IOS_REQUIRED_FOR_DESKTOP_BETA=NO
+```
+
+The old final marker:
+
+```text
+FOLLOW_GRAPH=GREEN
+```
+
+should be reconciled with the local-following addendum before final acceptance, because a public/network follower graph is explicitly not required for the beta.
+
+Correct launch language remains:
+
+```text
+CrabLink Desktop decentralized private beta
+QuickChain private-network beta
+ROX Anchor private Solana testnet demonstration
+```
+
+Incorrect launch claims:
+
+```text
+public blockchain live
+public ROX bridge live
+mainnet live
+production mint/burn live
+staking live
+liquidity live
+exchange ready
+arbitrary decentralized code-hosting live
+```
+
+
+
+---
+
+# 41. Authority Boundaries to Preserve
+
+```text
+React:
+  display
+  local feed composition
+  explicit user intent
+
+Tauri:
+  native privilege
+  reviewed local persistence
+  secure Passport surfaces
+  bounded native operations
+
+svc-passport:
+  Passport identity
+  device authorization
+  capability truth
+
+svc-index:
+  public lookup
+  public creator timeline projections
+  public content indexes
+  no economic truth
+  no required beta follower graph
+
+svc-wallet:
+  approved economic mutation ingress
+
+ron-ledger:
+  durable balances
+  receipts
+  economic truth
+
+ron-accounting:
+  deterministic accounting snapshots
+  not balance truth
+
+svc-rewarder:
+  bounded reward planning
+  no direct ledger mutation
+
+QuickChain:
+  deterministic evidence commitment
+  replay
+  confirmation
+  challenge
+  not client authority
+
+ROX Anchor:
+  controlled private-testnet external anchor
+  not the internal ROC ledger
+```
+
+These boundaries are explicitly captured in the final-beta notes. 
+
+---
+
+# 42. Forbidden Regressions
+
+Never introduce into the beta:
+
+```text
+public follower counts
+public following counts
+public follower-list APIs
+server-owned following custody
+complete following-list upload
+arbitrary site JavaScript
+normal arbitrary HTML authoring
+cloud-custodied Passport
+React PIN
+React recovery words
+fake balances
+fake receipts
+fake follows
+fake feed items
+fake B3 verification
+silent spend
+cache-only paid unlock
+cache-only creator rewards
+cache-only QuickChain finality
+public ROX mint/burn
+public bridge settlement
+staking
+liquidity
+exchange-facing behavior
+```
+
+
+
+---
+
+# 43. Important Source Files Created in This Session
+
+## CrabLink
+
+```text
+packages/crablink-core/src/publicationSummary.js
+packages/crablink-core/src/publicationSummary.test.mjs
+
+packages/crablink-platform/src/contracts/publicationPort.js
+packages/crablink-platform/src/contracts/publicationPort.test.mjs
+
+packages/crablink-platform/src/memory/publicationMemoryAdapter.js
+packages/crablink-platform/src/memory/publicationMemoryAdapter.test.mjs
+
+apps/crablink-tauri/src/adapters/publicationAdapter.js
+apps/crablink-tauri/src/adapters/publicationAdapter.test.mjs
+
+apps/crablink-tauri/src/finalBeta/phase6PublicationContractCloseout.js
+apps/crablink-tauri/src/finalBeta/phase6PublicationContractCloseout.test.mjs
+
+apps/crablink-tauri/src/pages/profile/profileTimelineModel.js
+apps/crablink-tauri/src/pages/profile/profileTimelineModel.test.mjs
+
+apps/crablink-tauri/src/pages/profile/ProfileTimelineSurface.jsx
+apps/crablink-tauri/src/pages/profile/profileTimeline.css
+apps/crablink-tauri/src/pages/profile/ProfileTimelineSurface.source.test.mjs
+
+apps/crablink-tauri/src/pages/profile/ProfilePublicView.timelineIntegration.source.test.mjs
+```
+
+Major modified existing file:
+
+```text
+apps/crablink-tauri/src/pages/profile/ProfilePublicView.jsx
+```
+
+## RustyOnions
+
+```text
+crates/svc-index/src/publications.rs
+
+crates/svc-index/src/http/routes/creator_publications.rs
+
+crates/svc-index/tests/final_beta_phase6_creator_publication_projection.rs
+
+crates/svc-index/tests/final_beta_phase6_creator_publication_http.rs
+
+crates/omnigate/src/routes/v1/creator_publications.rs
+
+crates/omnigate/tests/final_beta_phase6_creator_publication_route.rs
+
+crates/svc-gateway/tests/final_beta_phase6_creator_publication_gateway.rs
+```
+
+Major modified existing files include:
+
+```text
+svc-index module registration
+svc-index store keys/store implementation
+sled/memory prefix scans
+omnigate v1 route registration
+svc-gateway product route registration
+relevant Cargo telemetry dependency alignment
+```
+
+---
+
+# 44. Current End-to-End Publication Read Path
+
+This entire read chain now exists:
+
+```text
+ProfilePublicView
+→ publicationAdapter
+→ GatewayClient.request
+→ svc-gateway
+→ Omnigate
+→ svc-index
+→ creator publication projection
+```
+
+Specifically:
+
+```text
+CrabLink public list:
+  /creators/:username/publications
+
+Gateway → Omnigate:
+  /v1/creators/:username/publications
+
+Omnigate → svc-index:
+  /v1/index/creators/:username/publications
+```
+
+Detail equivalents also exist.
+
+This is the central reusable network primitive for:
+
+```text
+public profile timelines
+future local-first Home feed
+future Explore
+future site-template creator content sections
+```
+
+Do not create another parallel publication transport path.
+
+---
+
+# 45. Verification Summary for the Latest Work
+
+Phase 6:
+
+```text
+Publication contract:
+  12 focused tests
+
+svc-index projection:
+  8 focused tests
+  all-target/all-feature check GREEN
+
+svc-index HTTP:
+  6 focused tests
+  all-target/all-feature check GREEN
+
+Omnigate:
+  7 focused tests
+  all-target check GREEN
+
+svc-gateway:
+  7 focused tests
+  all-target check GREEN
+
+CrabLink adapters:
+  15 focused tests
+  import smoke GREEN
+
+Phase 6 closeout:
+  32/32 Node tests
+  Vite production build GREEN
+```
+
+Phase 7:
+
+```text
+Phase 7A1:
+  10/10 model tests
+  import smoke GREEN
+
+Phase 7A2:
+  9/9 surface tests
+  targeted JSX bundle GREEN
+
+Phase 7A3:
+  10/10 integration tests
+
+Combined Phase 7 A1+A2+A3:
+  29/29 tests GREEN
+
+ProfilePublicView targeted bundle:
+  GREEN
+  approximately 82.0 kB
+```
+
+Only missing Phase 7 step:
+
+```text
+FORMAL_PHASE7_CLOSEOUT
+```
+
+---
+
+# 46. Known Non-Issues / Do Not Re-Fix
+
+The following were already diagnosed and repaired:
+
+```text
+Phase 6B3 serde_json macro trailing comma
+Phase 6B3 whitespace-sensitive fixture repair anchor
+Phase 6C1 svc-index comment false-positive guard
+Phase 7A3 publicationClient whitespace-sensitive apply guard
+OpenTelemetry 0.24 compatibility alignment
+```
+
+Do not redo these unless a new test demonstrates a regression.
+
+---
+
+# 47. Verification Philosophy Learned From This Session
+
+Several failures were caused by brittle source assertions rather than production behavior.
+
+Future source tests/patch guards should prefer:
+
+```text
+semantic markers
+regex across whitespace
+split_whitespace normalization
+whitespace-stripped compact source
+behavioral focused tests
+```
+
+Avoid assuming formatting like:
+
+```text
+foo.bar()
+```
+
+when actual source may format as:
+
+```text
+foo
+  .bar()
+```
+
+Similarly, do not forbid generic words that are present in explanatory comments.
+
+Prefer code-shaped forbidden guards such as:
+
+```text
+/v1/index/
+svcIndex
+svc_index
+omnigate.request
+```
+
+over generic prose tokens.
+
+---
+
+# 48. Current Social/Product State in Plain English
+
+CrabLink now has a real backend-derived public publication timeline foundation.
+
+A creator profile can now be modeled and rendered with:
+
+```text
+Posts
+About
+Sites
+pinned publication
+regular publication cards
+loading/error/offline/stale states
+bounded pagination
+owner edit action
+```
+
+The integrated public profile can now read real creator publication pages through the actual CrabLink → Gateway → Omnigate → svc-index chain.
+
+What it **does not** yet do:
+
+```text
+local Follow/Following/Unfollow
+Home following feed
+local following persistence
+local feed merge
+site templates
+final economic stabilization
+full QuickChain private network
+ROX final testnet drills
+release packaging
+```
+
+This is exactly where the project should be.
+
+---
+
+# 49. Recommended First Message/Action in the Next Session
+
+The next assistant should treat the latest state as:
+
+```text
+PHASE6=GREEN
+PHASE7A1=GREEN
+PHASE7A2=GREEN
+PHASE7A3=GREEN
+PHASE7_FORMAL_CLOSEOUT=PENDING
+```
+
+The next development action should be:
+
+```text
+FINAL_BETA_PHASE7_PROFILE_TIMELINE_CLOSEOUT
+```
+
+Use:
+
+```text
+apply-only closeout patch
+```
+
+first.
+
+Do not immediately give a verification block in the same turn.
+
+After user posts APPLIED:
+
+```text
+verification-only closeout
+```
+
+should run the full Phase 7 profile surface plus production Vite build.
+
+Only after that returns green:
+
+```text
+BEGIN_PHASE8_LOCAL_FOLLOWING
+```
+
+---
+
+# 50. Suggested Phase 7 Closeout Locks
+
+The closeout should lock at least:
+
+```text
+FINAL_BETA_PHASE7_PROFILE_TIMELINE=GREEN
+
+PUBLIC_PROFILE_POSTS=GREEN
+ABOUT_TAB=GREEN
+SITES_TAB=CONDITIONAL
+
+PINNED_PUBLICATION=GREEN
+
+PROFILE_CONTENT_BACKEND_DERIVED=YES
+
+PUBLICATION_READ_CHAIN=
+  CRABLINK_TO_GATEWAY_TO_OMNIGATE_TO_SVC_INDEX
+
+INITIAL_PAGE_LIMIT=20
+MAX_ACCUMULATED_TIMELINE=50
+OPAQUE_CURSOR=PRESERVED
+PUBLICATION_DEDUPLICATION=GREEN
+BACKEND_ORDER=PRESERVED
+
+EMPTY_PROFILE_STATE=GREEN
+LOADING_STATE=GREEN
+ERROR_STATE=GREEN
+STALE_STATE=GREEN
+OFFLINE_STATE=GREEN
+
+OWNER_EDIT_BOUNDARY=GREEN
+VISITOR_EDIT_ACTION=ABSENT
+
+LOCAL_CATALOG_AUTHORITY=NO
+
+FOLLOW_ACTION=DEFERRED_TO_LOCAL_FOLLOWING_PHASE
+PUBLIC_FOLLOWER_COUNTS=FORBIDDEN
+PUBLIC_FOLLOWING_COUNTS=FORBIDDEN
+
+PUBLICATION_MUTATION=NO
+RELATIONSHIP_NETWORK_MUTATION=NO
+WALLET_MUTATION=NO
+ECONOMIC_AUTHORITY=NO
+
+PIN_IN_REACT=NO
+RECOVERY_WORDS_IN_REACT=NO
+
+NEXT_PHASE=FINAL_BETA_PHASE8_LOCAL_FOLLOWING
+```
+
+---
+
+# 51. Final Session State
+
+At session end:
+
+```text
+Phase 6:
+  FORMALLY CLOSED GREEN
+
+Phase 7:
+  implementation through A3 GREEN
+  formal closeout pending
+
+Current latest verification:
+  29/29 GREEN
+  ProfilePublicView bundle GREEN
+
+RustyOnions mutation during latest verify:
+  NO
+
+CrabLink mutation during latest verify:
+  NO
+
+Codebundle regenerated:
+  NO
+
+Next exact action:
+  BEGIN_PHASE7_PROFILE_TIMELINE_CLOSEOUT
+```
+
+No unresolved compiler/test failure exists at the stopping point.
+
+The code is not currently red.
+
+The next session begins from a clean green boundary.
+
+---
+
+# 52. Final Product Direction Reminder
+
+The intended desktop beta is:
+
+```text
+pleasant CrabLink desktop product
+wallet-like local Passport
+real public creator profiles
+real backend-derived creator publication timelines
+private local following
+local-first network-hydrated chronological Home feed
+safe baked Blog/Imageboard/Forum templates
+real B3 content verification
+real paid access
+real receipts
+real confirmed ROC
+private QuickChain network
+private Solana-testnet ROX demonstration
+real failure/halt/recovery behavior
+signed macOS beta artifact
+```
+
+It is not:
+
+```text
+a public follower surveillance graph
+a server-custodied social selection system
+an arbitrary-code web host
+a public bridge
+mainnet ROC/ROX mint-burn
+staking
+liquidity
+exchange integration
+fake blockchain finality
+```
+
+The project is now well into the **social product milestone** and has crossed an important architectural boundary: public creator timelines are no longer a placeholder or local-catalog fiction; they now have a canonical contract and an actual backend-to-UI read path.
+
+The immediate job is to formally close Phase 7, then build the private/local following layer on top of that foundation.
+
+The key point for the next instance is the Phase 8 reconciliation: **the local-following addendum is the newer governing design and explicitly supersedes the older server-follow-graph requirements**.  The broader remaining roadmap still runs through safe templates, economic stabilization, private QuickChain, ROX testnet, security/UX, macOS packaging, private-beta operations, and final Phase 26 acceptance.   
+
+
+### END NOTE - AUGUST 7 2026 - 10:30 CST
+
+
+### BEGIN NOTE - AUGUST 10 2026 - 14:55 CST
+
+
+# RustyOnions / CrabLink — FINAL_BETA Carry-Over Notes
+
+## Session Closeout — 2026-08-10
+
+## Phase 10 Closed / Phase 11 Active
+
+---
+
+# 1. Purpose of These Notes
+
+These notes are the authoritative handoff for the next RustyOnions / CrabLink development session.
+
+They are intentionally repo-neutral and should be stored in both:
+
+```text
+/Users/mymac/Desktop/crablink
+/Users/mymac/Desktop/RustyOnions
+```
+
+The active product/buildplan is:
+
+```text
+FINAL_BETA.md
+```
+
+The immediate project priority remains:
+
+```text
+finish CrabLink Desktop
+→ prove the desktop private-beta product
+→ launch the live/private desktop beta
+→ only then return to parked TV/mobile work
+```
+
+This session completed the remainder of FINAL_BETA Phase 10 and began FINAL_BETA Phase 11.
+
+Current high-level status:
+
+```text
+FINAL_BETA_PHASES_0_THROUGH_10=COMPLETE_GREEN
+INITIAL_SOCIAL_PRODUCT_MILESTONE=COMPLETE_GREEN
+
+FINAL_BETA_PHASE11=ACTIVE
+PHASE11A1_CUSTOM_CODE_QUARANTINE=GREEN
+PHASE11A2_CUSTOM_HTML_REJECTION=GREEN
+
+NEXT_MAJOR_WORK=FINISH_PHASE11_SITE_SECURITY_BOUNDARY
+```
+
+No RustyOnions runtime source was changed during this session.
+
+All actual runtime source mutations in this session were in the CrabLink repository.
+
+---
+
+# 2. Project Direction Remains Locked
+
+The product direction has not changed.
+
+CrabLink Desktop is the reference product.
+
+Platform posture:
+
+```text
+CRABLINK_DESKTOP=ACTIVE_BETA_CRITICAL_PATH
+CRABLINK_TV=PAUSED_AT_PHYSICAL_DEVICE_GATE
+CRABLINK_ANDROID=PAUSED_BEFORE_ACTIVE_IMPLEMENTATION
+CRABLINK_IOS=DEFERRED
+```
+
+The point of this desktop-first sequence is to finish:
+
+```text
+product model
+navigation
+identity
+social flow
+site-template model
+paid flow
+QuickChain integration
+ROX private-testnet integration
+security
+packaging
+beta operations
+```
+
+before copying incomplete UX or protocol assumptions into Android TV, Android, or iOS.
+
+The desktop beta remains a:
+
+```text
+decentralized private beta
+```
+
+It is not yet:
+
+```text
+public mainnet
+public ROC ↔ ROX bridge
+production public ROX mint/burn
+staking
+liquidity
+exchange-facing infrastructure
+arbitrary code hosting
+general-purpose user JavaScript hosting
+```
+
+---
+
+# 3. Important Superseding Social Product Doctrine
+
+The old generic FINAL_BETA language around a server-hosted Follow Graph was superseded by the later local-following product decision.
+
+Do not accidentally regress to the old architecture.
+
+The locked current model is:
+
+```text
+FOLLOWING_LIST_OWNER=LOCAL_CRABLINK_APP
+FOLLOWING_LIST_DEFAULT_STORAGE=LOCAL_DEVICE_STORAGE
+
+PUBLIC_FOLLOWER_COUNT=FORBIDDEN
+PUBLIC_FOLLOWING_COUNT=FORBIDDEN
+PUBLIC_FOLLOWER_LIST=FORBIDDEN
+PUBLIC_FOLLOWING_LIST=FORBIDDEN
+
+NETWORK_FOLLOW_MUTATION=NOT_REQUIRED
+SERVER_SOCIAL_GRAPH=NOT_REQUIRED_FOR_BETA
+COMPLETE_FOLLOWING_LIST_UPLOAD=FORBIDDEN
+```
+
+Product doctrine:
+
+```text
+public content lives on the network
+personal selection lives on the user's device
+```
+
+Follow and unfollow are local user-selection operations.
+
+They are not:
+
+```text
+wallet operations
+ledger operations
+QuickChain operations
+receipts
+network relationship mutations
+economic events
+```
+
+Creators may still receive QuickChain/ROC rewards through the independent content/economic system.
+
+The client does not need a global follower graph to create the Home experience.
+
+---
+
+# 4. Home Feed Architecture That Must Remain Locked
+
+The Home feed architecture is:
+
+```text
+local following record
+→ read each followed creator's public timeline
+→ validate canonical publication pages
+→ merge locally
+→ deduplicate locally
+→ deterministic chronological ordering
+→ bounded display
+→ bounded verified local cache
+```
+
+The network provides:
+
+```text
+public creator/content truth
+```
+
+The client provides:
+
+```text
+private selection of creators to follow
+```
+
+Home ordering remains:
+
+```text
+chronological
+```
+
+Explicitly forbidden:
+
+```text
+opaque engagement ranking
+paid ranking
+surveillance-based ranking
+global feed cursor authority
+complete following-list upload
+public follower counters
+public following counters
+```
+
+---
+
+# 5. State Entering This Session
+
+The session began after the major Phase 10 product implementation was already largely complete.
+
+Already completed before this session:
+
+```text
+Phase 10A1 — Home presentation pagination
+Phase 10A2 — Home / Explore separation
+Phase 10A3 — Explore discovery full stack and UI
+Phase 10A4 — Profile Follow → Home refresh behavior
+Phase 10A5 — Profile / Home canonical publication parity
+```
+
+Important pre-session Phase 10 state:
+
+```text
+Home = local-first Following feed
+Explore = independent public discovery surface
+Profile Follow = local following selection
+Profile and Home = same canonical PublicationSummaryV1
+developer proof dashboard = not normal consumer Home
+```
+
+This session began at:
+
+```text
+Phase 10A6 — Offline Cache Acceptance
+```
+
+---
+
+# 6. Phase 10A6 — Offline Cache Acceptance
+
+## 6.1 Apply state
+
+The Phase 10A6 proof-only acceptance file was already applied when this session began.
+
+File:
+
+```text
+apps/crablink-tauri/src/finalBeta/phase10OfflineCacheAcceptance.test.mjs
+```
+
+This was proof-only.
+
+No production source was changed by A6.
+
+The apply markers included:
+
+```text
+FINAL_BETA_PHASE10A6_OFFLINE_CACHE_ACCEPTANCE=APPLIED
+EXPECTED_FOCUSED_TEST_COUNT=10
+ACCEPTANCE_STYLE=PROOF_ONLY
+PRODUCTION_SOURCE_MUTATED=NO
+```
+
+## 6.2 Focused acceptance result
+
+The focused test command ran successfully.
+
+Final result:
+
+```text
+tests 10
+pass 10
+fail 0
+```
+
+Observed marker:
+
+```text
+FINAL_BETA_PHASE10A6_OFFLINE_CACHE_ACCEPTANCE=GREEN
+```
+
+## 6.3 What A6 proves
+
+The local Home cache remains:
+
+```text
+schema:
+  crablink.local-following-feed-cache.v1
+
+maximum items:
+  50
+
+content:
+  validated public publication summaries only
+
+ordering:
+  deterministic chronology
+```
+
+Current local follows gate cached visibility.
+
+Therefore:
+
+```text
+CURRENT_LOCAL_FOLLOWS_GATE_VISIBILITY=YES
+UNFOLLOW_HIDES_CACHED_CREATOR=YES
+ABSENT_FOLLOWING_TRUTH_SHOWS_CACHE=NO
+```
+
+An old cached creator does not remain visible after that creator is no longer locally followed.
+
+The cache does not rewrite itself merely because the user unfollows someone.
+
+The projection simply stops exposing that creator.
+
+## 6.4 Offline truth posture
+
+Offline cache status is always:
+
+```text
+stale-offline
+```
+
+It does not claim:
+
+```text
+freshness
+deletion truth
+relationship truth
+ranking truth
+network confirmation
+```
+
+The Home UI visibly labels stale cached content as previously verified local display.
+
+Existing user-facing stale copy was proven present.
+
+The cache may help display prior verified public summaries.
+
+It may not become a truth oracle.
+
+## 6.5 Paid-content boundary
+
+A cached publication may preserve:
+
+```text
+access: paid
+```
+
+but that is only display metadata.
+
+The cache cannot create:
+
+```text
+paid entitlement
+paid unlock
+receipt authority
+wallet authority
+ledger authority
+network confirmation
+```
+
+The paid asset and paid site access components were checked and remain dependent on live backend payment/confirmation behavior.
+
+Therefore:
+
+```text
+CACHE_PAID_ENTITLEMENT_AUTHORITY=NO
+CACHE_PAID_UNLOCK_AUTHORITY=NO
+CACHE_RECEIPT_AUTHORITY=NO
+CACHE_WALLET_AUTHORITY=NO
+CACHE_LEDGER_AUTHORITY=NO
+
+PAID_ASSET_GATE=LIVE_BACKEND_ONLY
+PAID_SITE_GATE=LIVE_BACKEND_ONLY
+```
+
+## 6.6 Cache persistence boundary
+
+Desktop cache persistence remains behind fixed native commands:
+
+```text
+local_following_feed_cache_read
+local_following_feed_cache_write
+```
+
+No new browser-storage bypass was introduced.
+
+No direct network fetch path was added to the cache adapter.
+
+---
+
+# 7. Phase 10 Formal Closeout
+
+After A6 passed, Phase 10 was ready for formal closeout.
+
+A consolidated proof-only closeout suite was added:
+
+```text
+apps/crablink-tauri/src/finalBeta/phase10HomeFeedCloseout.test.mjs
+```
+
+No production source was changed by the closeout proof.
+
+---
+
+# 8. Phase 10 Closeout — First Run RED
+
+The initial consolidated closeout run discovered:
+
+```text
+tests 8
+pass 5
+fail 3
+```
+
+This was classified correctly as:
+
+```text
+FINAL_BETA_PHASE10_HOME_FEED_CLOSEOUT=RED
+FIRST_FAILURE=FORMAL_PHASE10_CLOSEOUT_ACCEPTANCE
+```
+
+Important:
+
+```text
+THIS WAS NOT THREE PRODUCTION FAILURES.
+```
+
+The three failures came from incorrect assumptions in the newly created closeout test.
+
+---
+
+# 9. Phase 10 Closeout False Assumptions and Repair
+
+## 9.1 Offline marker false assumption
+
+The closeout test searched the A6 source for the literal banner-style string:
+
+```text
+CURRENT_LOCAL_FOLLOWS_GATE_VISIBILITY
+```
+
+That marker existed in terminal acceptance output but was not embedded in the test source itself.
+
+The behavior was already proven by the A6 tests.
+
+Repair:
+
+```text
+remove marker-string assumption
+assert actual A6 behavioral test names / behavior instead
+```
+
+## 9.2 Navigation API false assumption
+
+The initial closeout test incorrectly called:
+
+```text
+primaryNavigationIdForRoute('crab://home')
+```
+
+The actual API expects a parsed route object.
+
+Correct usage:
+
+```text
+primaryNavigationIdForRoute({
+  kind: 'home',
+})
+```
+
+The initial test also used the wrong `navigatePrimaryItem` call shape.
+
+Correct contract:
+
+```text
+navigatePrimaryItem(
+  navigation,
+  itemOrId,
+)
+```
+
+This was a test-contract mismatch only.
+
+No navigation production repair was required.
+
+Important next-session warning:
+
+```text
+DO_NOT_REINTRODUCE:
+primaryNavigationIdForRoute('crab://home')
+
+DO_USE:
+primaryNavigationIdForRoute({ kind: 'home' })
+```
+
+## 9.3 Follow marker false assumption
+
+The closeout suite searched for:
+
+```text
+NETWORK_FOLLOW_MUTATION
+```
+
+inside the A4 test source.
+
+Again, that was a terminal/banner marker rather than a literal source marker.
+
+The existing A4 behavior test already proves:
+
+```text
+local following controller grants no network relationship authority
+```
+
+The closeout test was repaired to assert actual behavior instead of invented marker placement.
+
+## 9.4 Scope of repair
+
+The repair changed only:
+
+```text
+phase10HomeFeedCloseout.test.mjs
+```
+
+It did not change:
+
+```text
+HomePage.jsx
+ProfilePublicView.jsx
+navigation production code
+offline cache production code
+RustyOnions
+```
+
+---
+
+# 10. Phase 10 Formal Closeout Final Result
+
+After the assertion repair:
+
+```text
+tests 8
+pass 8
+fail 0
+```
+
+Observed final markers:
+
+```text
+FINAL_BETA_PHASE10_HOME_FEED_CLOSEOUT=GREEN
+FORMAL_CLOSEOUT_TESTS=8
+FORMAL_CLOSEOUT_PASS=8
+FORMAL_CLOSEOUT_FAIL=0
+
+FINAL_BETA_PHASE10=GREEN
+INITIAL_SOCIAL_PRODUCT_MILESTONE=GREEN
+```
+
+Important evidence discipline:
+
+The authoritative buildplan's canonical acceptance label is:
+
+```text
+FINAL_BETA_PHASE10_HOME_FEED=GREEN
+```
+
+The terminal runner in this session printed:
+
+```text
+FINAL_BETA_PHASE10=GREEN
+```
+
+Do not falsely claim that the exact canonical label appeared in the terminal output.
+
+Semantically the Phase 10 acceptance requirements were proven.
+
+---
+
+# 11. Phase 10 Final Accepted Product State
+
+The closeout suite proved all of the following:
+
+```text
+HOME_IS_FOLLOWING_FEED=YES
+HOME_REFRESH=YES
+HOME_PAGINATION=YES
+HOME_OFFLINE_STALE_POSTURE=YES
+
+HOME_ICON_OPENS_FEED=YES
+
+PROFILE_FOLLOW_UPDATES_FEED=YES
+PROFILE_POSTS_MATCH_FEED_OBJECTS=YES
+
+EXPLORE_SEPARATE=YES
+
+PROOF_DASHBOARD_NORMAL_HOME=NO
+```
+
+Social authority boundaries remained:
+
+```text
+FOLLOWING_LIST_OWNER=LOCAL_CRABLINK_APP
+NETWORK_FOLLOW_MUTATION=NO
+SERVER_SOCIAL_GRAPH=NO
+
+FOLLOWER_COUNTS=NO
+FOLLOWING_COUNTS=NO
+
+OPAQUE_RANKING=NO
+PAID_RANKING=NO
+```
+
+Economic/network authority remained:
+
+```text
+WALLET_MUTATION=NO
+LEDGER_MUTATION=NO
+RECEIPT_AUTHORITY=NO
+PAID_ENTITLEMENT_AUTHORITY=NO
+QUICKCHAIN_MUTATION=NO
+ROX_INTERACTION=NO
+SOLANA_INTERACTION=NO
+```
+
+Phase 10 is now closed and parked.
+
+Do not reopen Phase 10 unless a later regression specifically breaks one of these boundaries.
+
+---
+
+# 12. Meaning of the Phase 10 Milestone
+
+Phase 10 closes the initial social-product milestone.
+
+The desktop product now has a coherent social spine:
+
+```text
+public profiles
+→ canonical publication summaries
+→ local Following
+→ Home feed
+→ profile / feed object parity
+→ Explore separation
+→ offline cache
+```
+
+This is an important product milestone.
+
+The desktop app has moved substantially away from being an engineering dashboard and toward being the intended creator/social product.
+
+---
+
+# 13. Phase 11 — Site Security Boundary Started
+
+After Phase 10 closed, work immediately moved into:
+
+```text
+FINAL_BETA Phase 11
+Site Security Boundary and Custom-Code Quarantine
+```
+
+Buildplan goal:
+
+```text
+Remove arbitrary site code from normal beta creation.
+```
+
+Authoritative Phase 11 work list:
+
+```text
+- Add release-mode custom-code boundary test.
+- Remove Import HTML from normal mode.
+- Remove raw Root HTML editor from normal mode.
+- Gate both behind development-only build flag if retained.
+- Reject script, form, iframe, event, and remote-resource inputs.
+- Add template ID/version to site manifests.
+- Add renderer version.
+- Add safe theme-token allowlist.
+- Add declarative embed allowlist.
+- Keep sandbox defense in depth.
+```
+
+Authoritative Phase 11 final acceptance:
+
+```text
+FINAL_BETA_PHASE11_SITE_SECURITY=GREEN
+NORMAL_IMPORT_HTML=ABSENT
+NORMAL_ROOT_HTML_EDITOR=ABSENT
+CUSTOM_JAVASCRIPT=FORBIDDEN
+IFRAMES=FORBIDDEN
+ARBITRARY_FORMS=FORBIDDEN
+REMOTE_SCRIPT=FORBIDDEN
+TEMPLATE_VERSION_RECORDED=YES
+NEXT_PHASE=FINAL_BETA_PHASE12_TEMPLATE_ENGINE
+```
+
+Phase 11 is NOT yet formally closed.
+
+---
+
+# 14. Phase 11A1 — Custom-Code Quarantine
+
+The first Phase 11 objective was:
+
+```text
+normal beta:
+  no Import HTML control
+  no raw Root HTML editor
+
+internal development:
+  retained tools may exist only behind explicit development boundary
+```
+
+The existing shared developer-mode contract was deliberately reused instead of creating a second independent gate.
+
+Required posture:
+
+```text
+development build required
+AND
+explicit devMode required
+```
+
+A stale `devMode=true` value in a release build must fail closed.
+
+---
+
+# 15. Phase 11A1 False Starts — Important History
+
+There were several failed A1 patch attempts.
+
+They are worth recording so the next session does not repeat the same mistakes.
+
+All of these failed attempts rolled back completely.
+
+No partial production mutation survived them.
+
+---
+
+# 16. A1 v1 Failure — Wrong Component and Brittle Copy Anchor
+
+The first A1 attempt targeted:
+
+```text
+SiteLaunchFlow.jsx
+```
+
+It attempted to:
+
+```text
+add custom-code boundary
+gate Import HTML
+gate Root HTML
+change template copy
+```
+
+Failure:
+
+```text
+RuntimeError:
+SiteLaunchFlow template copy anchor missing or ambiguous
+```
+
+Result:
+
+```text
+ROLLBACK=COMPLETE
+```
+
+No tests or builds ran.
+
+---
+
+# 17. A1 v2 Failure — Still Targeting Wrong Component
+
+The second attempt tried a more structural template-copy match but still targeted:
+
+```text
+SiteLaunchFlow.jsx
+```
+
+Failure:
+
+```text
+RuntimeError:
+template description structure missing or ambiguous
+```
+
+Again:
+
+```text
+ROLLBACK=COMPLETE
+```
+
+---
+
+# 18. A1 v3 Failure — Root Cause Became Clear
+
+A third attempt stripped the patch down to the actual controls but still targeted:
+
+```text
+SiteLaunchFlow.jsx
+```
+
+Failure:
+
+```text
+RuntimeError:
+Import HTML token missing or ambiguous
+```
+
+This exposed the actual issue:
+
+```text
+THE CONTROLS WERE NOT OWNED BY SiteLaunchFlow.jsx.
+```
+
+---
+
+# 19. Correct A1 Ownership Discovery
+
+Source inspection showed that the custom-code controls actually live in:
+
+```text
+apps/crablink-tauri/src/pages/site/SiteGuidedSetup.jsx
+```
+
+That component owns:
+
+```text
+Import HTML
+Root HTML
+Clear HTML
+```
+
+`SiteLaunchFlow.jsx` embeds/uses the guided setup but does not own these controls directly.
+
+This is the ownership model to preserve.
+
+---
+
+# 20. A1 v4 Failure — Correct File, Python Syntax Mistake
+
+The fourth attempt targeted the correct component:
+
+```text
+SiteGuidedSetup.jsx
+```
+
+but the Python heredoc accidentally contained a shell-style standalone:
+
+```text
+:
+```
+
+Python rejected this at parse time:
+
+```text
+SyntaxError: invalid syntax
+```
+
+Because Python failed before running mutation logic, no patch body executed.
+
+The shell rollback restored the source.
+
+Observed result:
+
+```text
+FINAL_BETA_PHASE11A1_CUSTOM_CODE_QUARANTINE_V4=RED
+ROLLBACK=COMPLETE
+```
+
+This was a patch-script syntax bug, not a project/source bug.
+
+---
+
+# 21. Phase 11A1 v5 — Successful Implementation
+
+The successful A1 patch was deliberately simplified.
+
+It changed:
+
+```text
+apps/crablink-tauri/src/pages/site/SiteGuidedSetup.jsx
+```
+
+It added focused proof:
+
+```text
+apps/crablink-tauri/src/pages/site/
+  SiteGuidedSetup.customCodeBoundary.source.test.mjs
+```
+
+No separate `siteCustomCodeBoundary.js` module remains from the failed attempts.
+
+The final implementation directly reuses:
+
+```text
+apps/crablink-tauri/src/app/developerSurfaceMode.js
+```
+
+through:
+
+```text
+isExplicitDeveloperSurface
+```
+
+---
+
+# 22. Phase 11A1 Developer Boundary
+
+`SiteGuidedSetup.jsx` now derives:
+
+```text
+customCodeEnabled
+```
+
+from the shared explicit developer surface contract.
+
+The effective requirement is:
+
+```text
+import.meta.env.DEV === true
+AND
+app.settings.devMode === true
+```
+
+Therefore:
+
+```text
+release build + devMode false:
+  hidden
+
+release build + stale devMode true:
+  hidden
+
+development build + devMode false:
+  hidden
+
+development build + devMode true:
+  retained internal custom-code controls may appear
+```
+
+This preserves a useful internal testing surface without exposing it to normal beta users.
+
+---
+
+# 23. Phase 11A1 Controls Quarantined
+
+The following Site creation controls are now development-gated:
+
+```text
+Import HTML
+Root HTML editor
+Clear HTML
+```
+
+Observed acceptance markers:
+
+```text
+NORMAL_IMPORT_HTML=QUARANTINED
+NORMAL_ROOT_HTML_EDITOR=QUARANTINED
+NORMAL_CLEAR_HTML=QUARANTINED
+```
+
+Interpretation:
+
+```text
+normal beta:
+  controls absent from usable surface
+
+internal explicit dev surface:
+  controls retained
+```
+
+This is consistent with the buildplan's requirement that normal beta users do not receive arbitrary site-code entry.
+
+---
+
+# 24. Phase 11A1 Verification
+
+Focused suite:
+
+```text
+SiteGuidedSetup.customCodeBoundary.source.test.mjs
+```
+
+Result:
+
+```text
+tests 8
+pass 8
+fail 0
+```
+
+Observed marker:
+
+```text
+FINAL_BETA_PHASE11A1_CUSTOM_CODE_QUARANTINE=GREEN
+```
+
+The eight tests proved:
+
+```text
+1. custom-code surface hidden by default
+2. release build fails closed with stale Developer Mode
+3. development build alone cannot expose custom-code tools
+4. development build + explicit Developer Mode may expose retained tools
+5. SiteGuidedSetup uses the shared developer contract
+6. Import HTML is gated
+7. Root HTML editor is gated
+8. Clear HTML is gated
+```
+
+---
+
+# 25. Known A1 UI Cleanup Still Worth Checking
+
+The successful v5 patch intentionally stopped trying to rewrite surrounding copy because earlier patches had become unnecessarily brittle.
+
+Therefore, in the next session, inspect the live `SiteGuidedSetup.jsx` copy around template selection.
+
+A pre-A1 version contained language similar to:
+
+```text
+Choose a starter or import your own HTML file below.
+```
+
+The successful v5 patch did not intentionally rewrite this text.
+
+Therefore the next session should verify whether normal-mode copy still advertises an Import HTML action that is now hidden.
+
+If it does, change the normal copy to something like:
+
+```text
+Choose a reviewed starter template.
+```
+
+while optionally using development-only wording when the developer surface is enabled.
+
+This is a UX consistency cleanup, not a security-boundary blocker.
+
+Do not blindly assume the stale copy still exists.
+
+Inspect live current source first.
+
+---
+
+# 26. Phase 11A2 — Retained Custom HTML Rejection Boundary
+
+After A1 turned arbitrary HTML entry into an explicit development-only feature, A2 added a second defense:
+
+```text
+development-only custom HTML must still be reviewed and rejected when unsafe
+```
+
+This is important because:
+
+```text
+hidden behind Developer Mode
+```
+
+does not mean:
+
+```text
+safe to accept arbitrary executable HTML
+```
+
+---
+
+# 27. Phase 11A2 New Policy Module
+
+New file:
+
+```text
+apps/crablink-tauri/src/pages/site/siteCustomHtmlPolicy.js
+```
+
+Policy schema/version:
+
+```text
+crablink.site-custom-html-policy.v1
+```
+
+Primary functions:
+
+```text
+reviewSiteCustomHtml(value)
+acceptSiteCustomHtml(value)
+```
+
+The policy is:
+
+```text
+deterministic
+local
+pure
+fail-closed for the targeted forbidden classes
+```
+
+It does not make backend/network calls.
+
+It does not mutate wallet, ledger, QuickChain, or ROX state.
+
+---
+
+# 28. Phase 11A2 Forbidden Custom HTML Classes
+
+The policy now rejects the following required classes.
+
+## JavaScript elements
+
+Example:
+
+```html
+<script>...</script>
+```
+
+Finding:
+
+```text
+custom_javascript
+```
+
+## JavaScript URLs
+
+Examples in:
+
+```text
+href
+src
+action
+formaction
+```
+
+such as:
+
+```text
+javascript:...
+```
+
+Finding:
+
+```text
+custom_javascript
+```
+
+## Arbitrary forms
+
+The policy rejects:
+
+```html
+<form>
+```
+
+and standalone form controls including:
+
+```html
+<input>
+<select>
+<textarea>
+```
+
+Finding:
+
+```text
+arbitrary_form
+```
+
+## Iframes
+
+Rejected:
+
+```html
+<iframe>
+```
+
+Finding:
+
+```text
+iframe
+```
+
+## Inline event handlers
+
+Rejected patterns include attributes such as:
+
+```text
+onclick=
+onload=
+onerror=
+...
+```
+
+Finding:
+
+```text
+event_handler
+```
+
+## Remote HTTP/HTTPS resources
+
+The policy checks remote references in:
+
+```text
+src
+href
+poster
+action
+formaction
+```
+
+including protocol-relative URLs.
+
+Finding:
+
+```text
+remote_resource
+```
+
+## Remote srcset resources
+
+Remote URLs in:
+
+```text
+srcset
+```
+
+are rejected.
+
+## Remote CSS imports/resources
+
+The policy rejects remote resource usage through:
+
+```css
+@import ...
+url(...)
+```
+
+when those target HTTP(S) or protocol-relative external resources.
+
+Finding:
+
+```text
+remote_resource
+```
+
+---
+
+# 29. Phase 11A2 Accepted Baseline
+
+A basic static local HTML example remains acceptable.
+
+The focused test proved acceptance of content such as:
+
+```html
+<main>
+  <h1>Hello</h1>
+  <a href="crab://profile/alice">Alice</a>
+</main>
+```
+
+This is important.
+
+The policy is not:
+
+```text
+reject all HTML
+```
+
+It is:
+
+```text
+reject the targeted executable / interactive / framed / event /
+remote-resource classes required by the beta security boundary
+```
+
+---
+
+# 30. Phase 11A2 Integration into Both Retained Entry Paths
+
+A2 modifies:
+
+```text
+SiteGuidedSetup.jsx
+```
+
+Both development-only custom HTML entry paths now use:
+
+```text
+acceptSiteCustomHtml
+```
+
+## Raw Root HTML editor
+
+When the changed field is:
+
+```text
+rootHtml
+```
+
+the new value is reviewed before draft mutation.
+
+If rejected:
+
+```text
+draft is not changed
+```
+
+Observed invariant:
+
+```text
+REJECTED_HTML_DRAFT_MUTATION=NO
+```
+
+## Import HTML
+
+Imported file contents are reviewed before they are written into:
+
+```text
+draft.rootHtml
+```
+
+If rejected:
+
+```text
+rootHtml is not changed
+file input is cleared
+```
+
+Only accepted HTML proceeds into the draft.
+
+---
+
+# 31. Phase 11A2 Did Not Change Built-In Templates
+
+Very important:
+
+The A2 custom HTML review path applies to the retained development-only user HTML entry paths.
+
+It did not rewrite:
+
+```text
+built-in template generation
+site prepare flow
+site root storage flow
+site creation flow
+manifest schema
+paid site behavior
+wallet behavior
+RustyOnions
+```
+
+Observed markers:
+
+```text
+BUILTIN_TEMPLATE_GENERATION_MUTATED=NO
+SITE_PREPARE_FLOW_MUTATED=NO
+SITE_ROOT_STORE_FLOW_MUTATED=NO
+SITE_CREATE_FLOW_MUTATED=NO
+MANIFEST_SCHEMA_MUTATED=NO
+WALLET_MUTATION_LOGIC_CHANGED=NO
+PAID_SITE_LOGIC_CHANGED=NO
+RUSTYONIONS_MUTATED=NO
+```
+
+---
+
+# 32. Phase 11A2 Test File
+
+New focused test:
+
+```text
+apps/crablink-tauri/src/pages/site/siteCustomHtmlPolicy.test.mjs
+```
+
+Final result:
+
+```text
+tests 13
+pass 13
+fail 0
+```
+
+Observed marker:
+
+```text
+FINAL_BETA_PHASE11A2_CUSTOM_HTML_REJECTION=GREEN
+```
+
+---
+
+# 33. Phase 11A2 Test Coverage
+
+The 13 tests prove:
+
+```text
+1. custom HTML policy version is locked
+
+2. static local HTML is accepted
+
+3. script elements are rejected
+
+4. JavaScript URLs are rejected
+
+5. arbitrary forms are rejected
+
+6. standalone form controls are rejected
+
+7. iframes are rejected
+
+8. inline event handlers are rejected
+
+9. remote HTTP resources are rejected
+
+10. protocol-relative remote resources are rejected
+
+11. CSS remote resources are rejected
+
+12. rejected content returns no accepted HTML
+
+13. both retained Site HTML entry paths use the rejection boundary
+```
+
+Final terminal markers include:
+
+```text
+CUSTOM_HTML_POLICY=crablink.site-custom-html-policy.v1
+
+CUSTOM_JAVASCRIPT=REJECTED
+JAVASCRIPT_URLS=REJECTED
+ARBITRARY_FORMS=REJECTED
+IFRAMES=REJECTED
+INLINE_EVENT_HANDLERS=REJECTED
+
+REMOTE_HTTP_RESOURCES=REJECTED
+REMOTE_PROTOCOL_RELATIVE_RESOURCES=REJECTED
+REMOTE_CSS_RESOURCES=REJECTED
+
+IMPORT_HTML_REJECTION_BOUNDARY=GREEN
+ROOT_HTML_EDITOR_REJECTION_BOUNDARY=GREEN
+```
+
+---
+
+# 34. Important Security Interpretation of A2
+
+Do not overclaim what A2 is.
+
+A2 is a deterministic rejection boundary for the explicit beta-forbidden classes.
+
+It is not a complete general-purpose HTML security proof.
+
+Do not claim:
+
+```text
+all possible hostile markup is impossible
+all HTML parser edge cases are solved
+all CSS attacks are solved
+all SVG attacks are solved
+all browser sandbox escapes are solved
+```
+
+Phase 11 still requires:
+
+```text
+safe theme token allowlist
+declarative embed allowlist
+sandbox defense in depth
+formal malicious-input / release-mode closeout
+```
+
+Phase 22 later performs broader:
+
+```text
+sandbox malicious corpus
+parser fuzzing
+origin review
+capability review
+secret review
+privilege separation
+```
+
+Therefore A2 should be viewed as:
+
+```text
+required beta input rejection boundary
++
+one layer of defense in depth
+```
+
+not:
+
+```text
+the only site security mechanism
+```
+
+---
+
+# 35. Current A2 UX Behavior
+
+Rejected raw HTML currently fails closed.
+
+The session did not add a new detailed user-facing rejection message.
+
+For the raw editor:
+
+```text
+unsafe proposed value is ignored
+```
+
+For file import:
+
+```text
+unsafe content is not written
+input is cleared
+```
+
+The next session may decide whether an explicit development-only error/status message would improve internal testing.
+
+Do not weaken the fail-closed behavior merely to improve messaging.
+
+---
+
+# 36. Current Phase 11 Completion Matrix
+
+## Complete / GREEN
+
+```text
+release-mode custom-code boundary:
+  substantially complete through shared developer gate
+
+normal Import HTML:
+  quarantined / absent from normal usable mode
+
+normal Root HTML editor:
+  quarantined / absent from normal usable mode
+
+normal Clear HTML:
+  quarantined
+
+development custom-code gate:
+  green
+
+release stale devMode bypass:
+  blocked
+
+custom JavaScript rejection:
+  green
+
+JavaScript URL rejection:
+  green
+
+arbitrary form rejection:
+  green
+
+iframe rejection:
+  green
+
+event-handler rejection:
+  green
+
+remote resource rejection:
+  green
+
+sandbox defense:
+  existing defense preserved
+```
+
+## Still Remaining
+
+```text
+template ID/version in site manifests
+renderer version
+safe bounded theme-token allowlist
+declarative embed allowlist
+normal-mode copy consistency review
+sandbox / malicious-input closeout proof
+Phase 11 formal aggregate acceptance
+frontend production integration build at Phase 11 closeout
+```
+
+Phase 11 is therefore:
+
+```text
+ACTIVE
+NOT YET FORMALLY GREEN
+```
+
+---
+
+# 37. Exact Recommended Next Action
+
+The next session should begin by inspecting current live Site manifest/template source.
+
+Do not immediately invent a new manifest type.
+
+Find the actual current ownership path for:
+
+```text
+site manifest creation
+template selection
+template ID
+template version
+renderer version
+root/manifest storage
+site resolution
+```
+
+The next buildplan requirement is:
+
+```text
+Add template ID/version to site manifests.
+Add renderer version.
+```
+
+Recommended next implementation slice:
+
+```text
+Phase 11A3 — Template and Renderer Provenance
+```
+
+Suggested objective:
+
+```text
+every safe generated Site manifest can truthfully record:
+
+template_id
+template_version
+renderer_version
+```
+
+Requirements:
+
+```text
+strict bounded values
+no arbitrary executable metadata
+no client fabrication of network ownership
+preserve existing B3/root semantics
+preserve paid-site semantics
+preserve site resolution
+preserve sandbox behavior
+```
+
+Before patching:
+
+```text
+inspect current manifest types/helpers
+inspect SiteGuidedSetup
+inspect template registry
+inspect site prepare/store/create path
+inspect existing tests
+```
+
+If template/version fields already exist somewhere, reuse them.
+
+Do not create duplicate parallel metadata.
+
+---
+
+# 38. Suggested Remaining Phase 11 Order
+
+This order is recommended, not an additional buildplan.
+
+## 11A3 — Template / renderer provenance
+
+```text
+template ID
+template version
+renderer version
+manifest recording
+focused tests
+```
+
+This directly satisfies the remaining canonical acceptance requirement:
+
+```text
+TEMPLATE_VERSION_RECORDED=YES
+```
+
+## 11A4 — Safe theme-token allowlist
+
+Define the bounded theme customization surface.
+
+Allow known declarative values only.
+
+Examples conceptually:
+
+```text
+approved palette token
+approved typography token
+density token
+spacing/layout token
+hero/logo references
+section visibility
+```
+
+Do not accept:
+
+```text
+arbitrary CSS
+remote CSS
+style injection
+custom JavaScript
+unbounded freeform theme objects
+```
+
+Reuse the Phase 2 design token system where appropriate rather than inventing an unrelated site palette system.
+
+## 11A5 — Declarative embed allowlist
+
+Review existing CrabLink declarative embed support.
+
+Allow only explicitly reviewed embed/object types.
+
+Likely relevant existing concepts include typed:
+
+```text
+crab-image
+crab-post
+crab-comment
+crab-article
+B3-backed references
+```
+
+Do not convert the embed layer into arbitrary browser embeds.
+
+Explicitly reject or omit:
+
+```text
+iframe
+script
+remote arbitrary object
+unreviewed plugin
+remote execution
+```
+
+## 11A6 — Sandbox / malicious-input / release closeout
+
+Aggregate the Phase 11 boundary.
+
+Run:
+
+```text
+A1 custom-code boundary tests
+A2 custom HTML policy tests
+new provenance tests
+theme allowlist tests
+embed allowlist tests
+existing site sandbox regressions
+relevant site setup regressions
+frontend production build
+```
+
+Only then print:
+
+```text
+FINAL_BETA_PHASE11_SITE_SECURITY=GREEN
+```
+
+---
+
+# 39. Why a Frontend Build Was Not Run Yet
+
+This session intentionally followed the tiered verification policy.
+
+A1/A2 used focused Node/source behavior tests.
+
+The session did NOT run:
+
+```text
+frontend production build
+Tauri build
+macOS bundle
+Cargo
+RustyOnions workspace tests
+```
+
+That was deliberate.
+
+However, unlike A6 and the Phase 10 closeout, Phase 11A1/A2 did change production frontend source.
+
+Therefore at the **Phase 11 formal closeout boundary**, run a production Vite build.
+
+Do not run a full Tauri/macOS release build after every small Phase 11 patch.
+
+Preferred sequence:
+
+```text
+small frontend patch
+→ focused tests
+
+small frontend patch
+→ focused tests
+
+Phase 11 boundary
+→ focused aggregate regressions
+→ production Vite build
+```
+
+A Tauri native build is only needed if Phase 11 ends up changing native/Rust code or if the frontend integration exposes a native issue.
+
+---
+
+# 40. Exact Files Changed or Added This Session
+
+## Phase 10 proof files
+
+```text
+apps/crablink-tauri/src/finalBeta/
+  phase10OfflineCacheAcceptance.test.mjs
+
+apps/crablink-tauri/src/finalBeta/
+  phase10HomeFeedCloseout.test.mjs
+```
+
+`phase10HomeFeedCloseout.test.mjs` was repaired after the initial 5/8 closeout run.
+
+## Phase 11A1 production source
+
+```text
+apps/crablink-tauri/src/pages/site/
+  SiteGuidedSetup.jsx
+```
+
+## Phase 11A1 focused test
+
+```text
+apps/crablink-tauri/src/pages/site/
+  SiteGuidedSetup.customCodeBoundary.source.test.mjs
+```
+
+## Phase 11A2 policy
+
+```text
+apps/crablink-tauri/src/pages/site/
+  siteCustomHtmlPolicy.js
+```
+
+## Phase 11A2 focused test
+
+```text
+apps/crablink-tauri/src/pages/site/
+  siteCustomHtmlPolicy.test.mjs
+```
+
+No RustyOnions source file was intentionally mutated during this session.
+
+---
+
+# 41. Files That Should NOT Exist Merely Because of Failed A1 Attempts
+
+Several failed early A1 patches proposed a separate file:
+
+```text
+siteCustomCodeBoundary.js
+```
+
+The failed patches rolled back and removed their created targets.
+
+The successful final A1 implementation directly reused:
+
+```text
+developerSurfaceMode.js
+```
+
+inside:
+
+```text
+SiteGuidedSetup.jsx
+```
+
+Therefore do not assume a new:
+
+```text
+siteCustomCodeBoundary.js
+```
+
+should exist.
+
+If such a file is unexpectedly present, inspect provenance before relying on it.
+
+---
+
+# 42. Failed-Patch Lessons to Carry Forward
+
+## Lesson 1 — Verify actual component ownership first
+
+Do not assume:
+
+```text
+SiteLaunchFlow
+```
+
+owns controls merely because it is the page-level flow.
+
+The real control owner was:
+
+```text
+SiteGuidedSetup
+```
+
+Inspect live ownership first.
+
+## Lesson 2 — Avoid brittle full-copy anchors
+
+Do not anchor mutation correctness to large exact prose strings unless absolutely necessary.
+
+Prefer:
+
+```text
+function names
+component tags
+unique field labels
+stable imports
+stable DTO/schema names
+```
+
+## Lesson 3 — Python inside shell must be Python
+
+Do not use shell idioms such as standalone:
+
+```text
+:
+```
+
+inside Python heredocs.
+
+Use:
+
+```python
+pass
+```
+
+## Lesson 4 — Test behavior, not invented terminal markers
+
+Do not assert that test source contains terminal output labels unless the source intentionally defines those labels.
+
+Prefer actual behavior/assertions.
+
+## Lesson 5 — Respect actual function contracts
+
+Do not infer signatures from names.
+
+Example:
+
+```text
+primaryNavigationIdForRoute
+```
+
+expects a parsed route shape, not necessarily a route string.
+
+Inspect implementation or existing regressions.
+
+---
+
+# 43. Shell / Terminal Rules That Remain Mandatory
+
+All future terminal patches must remain compatible with the established workflow.
+
+## No Git commands
+
+Do not include:
+
+```text
+git status
+git diff
+git add
+git commit
+git push
+git apply
+```
+
+or any other Git commands.
+
+The user handles repository operations separately.
+
+## Two-step mutation / verification flow
+
+Preferred:
+
+```text
+Turn 1:
+  APPLY-ONLY
+
+user pastes output
+
+Turn 2:
+  VERIFICATION-ONLY
+```
+
+Do not bake large verification suites into mutation patches.
+
+## zsh safety
+
+Avoid shell content that can trigger zsh history expansion.
+
+Especially avoid literal unsafe unquoted:
+
+```text
+!
+```
+
+Do not solve this by changing shell history settings.
+
+Write inherently safe shell blocks.
+
+## Functions
+
+Prefer:
+
+```bash
+some_patch_function() {
+  ...
+  return 0
+}
+```
+
+Do not use:
+
+```bash
+exit
+```
+
+inside patches intended for interactive terminal paste.
+
+## Fix first failure
+
+When RED:
+
+```text
+identify the first real failure
+patch only that failure
+rerun the focused check
+```
+
+Do not expand scope while the first failure remains.
+
+---
+
+# 44. Verification Policy That Remains Locked
+
+Use tiered verification.
+
+## Apply-only frontend mutation
+
+```text
+no build
+no tests
+```
+
+## Frontend-only verification
+
+Use:
+
+```text
+focused Node tests
+source checks
+syntax checks where useful
+```
+
+## Rust/native change
+
+Use:
+
+```text
+focused cargo check
+focused cargo test
+```
+
+for the changed crate/surface.
+
+## Major integration or phase closeout
+
+Use:
+
+```text
+relevant regression aggregate
+production frontend build
+focused native checks if relevant
+```
+
+## Full Tauri/macOS release builds
+
+Reserve for:
+
+```text
+native integration boundaries
+major milestone closeout
+release-candidate gate
+packaging
+failure-driven need
+```
+
+Do not run them after every UI/security patch.
+
+---
+
+# 45. Manual Acceptance Workflow
+
+If manual acceptance is required later:
+
+Do not create an interactive terminal questionnaire.
+
+Instead:
+
+```text
+assistant provides concise checklist in chat
+user reports GREEN / RED / SKIPPED
+later apply-only patch records confirmed results if needed
+```
+
+Never convert an untested or skipped manual path into GREEN.
+
+---
+
+# 46. Codebundle Policy
+
+No codebundle was regenerated during this session.
+
+Observed terminal markers repeatedly confirmed:
+
+```text
+CODEBUNDLE_REGENERATED=NO
+```
+
+That was intentional.
+
+Important consequence:
+
+The existing August 10 codebundle predates the final Phase 11A1/A2 modifications.
+
+Therefore:
+
+```text
+DO NOT TREAT THE CURRENT CODEBUNDLE AS AUTHORITATIVE
+FOR THE NEW SiteGuidedSetup / siteCustomHtmlPolicy STATE.
+```
+
+In the next session:
+
+```text
+inspect the live repo for changed files
+```
+
+A fresh codebundle is appropriate:
+
+```text
+at Phase 11 formal closeout
+or
+at another major session/milestone boundary
+or
+when explicitly requested
+```
+
+Do not regenerate one after every patch.
+
+---
+
+# 47. RustyOnions Posture From This Session
+
+RustyOnions was not mutated by A6, Phase 10 closeout, A1, or A2.
+
+Observed repeatedly:
+
+```text
+RUSTYONIONS_MUTATED=NO
+```
+
+No RustyOnions Cargo run occurred during the final A1/A2 work.
+
+That is correct.
+
+The Site security work completed here is a CrabLink frontend/client product boundary.
+
+Do not add backend/RustyOnions complexity unless later Phase 11 source inspection proves that manifest provenance or site-template truth actually belongs in a shared/native/backend layer.
+
+The notes are being placed in RustyOnions so future backend work understands the client security/product contract.
+
+---
+
+# 48. Passport / Identity Security Invariants Still Locked
+
+The Passport remains wallet-like local custody.
+
+Do not change this while finishing sites.
+
+Locked rules:
+
+```text
+CLOUD_LOGIN=FORBIDDEN
+BACKEND_PASSPORT_SECRET_CUSTODY=FORBIDDEN
+
+PIN_IN_REACT=NO
+RECOVERY_WORDS_IN_REACT=NO
+
+RAW_DEVICE_KEY_TO_WEBVIEW=NO
+RAW_CAPABILITY_TO_WEBVIEW=NO
+PRIVATE_MATERIAL_EXPORTED=NO
+```
+
+Backend/network may verify:
+
+```text
+proof
+identity
+authorization
+entitlement
+```
+
+but must not become custodian of Passport secrets.
+
+User preference remains:
+
+```text
+export filename:
+  passport.dat
+
+startup:
+  require coherent PIN/local unlock behavior
+```
+
+---
+
+# 49. Economic Authority Invariants Still Locked
+
+React owns:
+
+```text
+display
+explicit user intent
+```
+
+Tauri owns:
+
+```text
+native privilege
+```
+
+RustyOnions services own:
+
+```text
+durable network truth
+```
+
+Economic ownership remains:
+
+```text
+svc-wallet:
+  approved economic mutation ingress
+
+ron-ledger:
+  economic truth
+```
+
+CrabLink must never fabricate:
+
+```text
+wallet balance
+ROC balance
+receipt
+paid entitlement
+paid unlock
+settlement
+QuickChain finality
+ROX settlement
+```
+
+Cache/display state must not become economic authority.
+
+---
+
+# 50. QuickChain Boundary Still Locked
+
+Phase 10/11 work does not authorize CrabLink to become QuickChain authority.
+
+CrabLink may later display:
+
+```text
+network readiness
+checkpoint observed
+verification status
+challenge status
+degraded state
+```
+
+CrabLink may not decide:
+
+```text
+finality
+ledger truth
+settlement
+validator quorum
+reward truth
+```
+
+Phase 18 and 19 remain the real FINAL_BETA QuickChain activation/multi-node phases.
+
+Do not pull those responsibilities forward into the site-template work.
+
+---
+
+# 51. ROX Anchor Boundary Still Locked
+
+ROX Anchor remains:
+
+```text
+controlled private Solana testnet path
+```
+
+Not:
+
+```text
+public production bridge
+public mint/burn
+mainnet
+staking
+liquidity
+exchange integration
+```
+
+Phase 20 remains the dedicated FINAL_BETA ROX private-testnet closeout.
+
+Current Phase 11 work must not introduce:
+
+```text
+live wallet calls
+live Solana RPC submission
+ROX mutation
+bridge settlement
+```
+
+Observed this session:
+
+```text
+ROX_INTERACTION=NO
+SOLANA_INTERACTION=NO
+```
+
+through the Phase 10 closeout.
+
+---
+
+# 52. Remaining FINAL_BETA Roadmap
+
+Current state:
+
+```text
+Phase 0–10:
+  complete / green
+
+Phase 11:
+  active
+
+Phase 12–26:
+  remaining
+```
+
+## Phase 11 — Finish Site Security Boundary
+
+Remaining:
+
+```text
+template ID/version
+renderer version
+bounded themes
+declarative embed allowlist
+sandbox/closeout
+frontend integration build
+formal Phase 11 green
+```
+
+## Phase 12 — Shared Structured Site Template Engine
+
+Define/build:
+
+```text
+SiteTemplateDefinitionV1
+SiteTemplateInstanceV1
+
+allowed blocks
+theme tokens
+navigation schema
+content query sections
+thread/list/detail sections
+scriptless render output
+B3/manifest references
+template migration/version behavior
+snapshot tests
+malicious input tests
+```
+
+Required end state:
+
+```text
+ONE_SHARED_ENGINE=YES
+SCRIPTLESS_OUTPUT=YES
+THEME_TOKENS_BOUNDED=YES
+DECLARATIVE_BLOCKS_ONLY=YES
+```
+
+## Phase 13 — Blog
+
+Build the polished creator/personal blog template.
+
+## Phase 14 — Imageboard
+
+Build the safe image-first board.
+
+## Phase 15 — Forum
+
+Build the discussion/community template.
+
+Forum and imageboard should share thread/post/reply contracts.
+
+## Phase 16 — Site Product Acceptance
+
+Prove end-to-end:
+
+```text
+choose template
+→ configure
+→ preview
+→ publish root/manifest
+→ resolve named site
+→ create content
+→ update
+→ visit
+→ comment/reply
+→ paid visit where configured
+→ receipt
+```
+
+## Phase 17 — Paid Access / Receipts / Confirmed ROC Stabilization
+
+Make the existing internal ROC loop product-ready.
+
+## Phase 18 — QuickChain Beta Activation Foundation
+
+Lock:
+
+```text
+canonical serialization
+golden vectors
+deterministic roots
+replay rebuild
+tamper rejection
+idempotency
+economic ownership
+```
+
+## Phase 19 — QuickChain Multi-Node / Committee / Finality Proof
+
+Prove:
+
+```text
+multiple nodes
+checkpoint production/verification
+quorum
+failure recovery
+challenge path
+soak
+chaos
+```
+
+CrabLink remains display-only for finality authority.
+
+## Phase 20 — ROX Anchor Private-Testnet Completion
+
+Run:
+
+```text
+negative drills
+invalid proof drills
+replay drills
+halt/recovery
+authority separation
+key rotation
+upgrade authority
+RustyOnions handoff
+RPC readback
+reconciliation
+```
+
+No public mainnet.
+
+## Phase 21 — Full Desktop Decentralized Beta Demonstration
+
+Run the complete product flow:
+
+```text
+private RustyOnions network
+Service Nodes
+User Node verifier
+clean CrabLink Desktop
+Passport
+username
+profile
+following
+Home
+publish
+blog
+imageboard
+forum
+paid flow
+receipt
+ROC
+QuickChain
+ROX private testnet
+failure drills
+restart/reconciliation
+```
+
+## Phase 22 — Security / Moderation / Privacy / Abuse
+
+Broad hardening:
+
+```text
+Tauri allowlist
+capability audit
+origin audit
+secret scan
+redaction
+sandbox malicious corpus
+parser fuzzing
+bounded bodies
+replay
+privilege separation
+
+block
+mute
+unfollow
+suspension
+deletion/tombstone
+report
+local hide
+rate limits
+spam limits
+site moderation
+```
+
+## Phase 23 — UX / Accessibility / Performance
+
+Acceptance for:
+
+```text
+pleasant normal UX
+keyboard
+screen reader
+contrast
+font scaling
+reduced motion
+startup
+Home render
+profile render
+site render
+media lifecycle
+long session
+```
+
+## Phase 24 — Desktop Packaging / Signing / Update / Recovery
+
+Primary physical beta:
+
+```text
+macOS
+```
+
+Work includes:
+
+```text
+release profile
+prod/dev separation
+signing
+notarization decision
+upgrade migration
+Passport preservation
+backup/export guidance
+crash-safe update
+diagnostics
+version/release notes
+```
+
+## Phase 25 — Private Beta Operations
+
+Prepare:
+
+```text
+invite flow
+beta environment
+operators
+incident intake
+privacy notice
+beta disclaimer
+content/moderation policy
+halt procedure
+release/update/rollback process
+known issues
+network health review
+```
+
+## Phase 26 — Final Beta Acceptance / Launch
+
+Only after all automated and manual gates are honest and green.
+
+Correct release description:
+
+```text
+CrabLink Desktop decentralized private beta
+QuickChain private-network beta
+ROX Anchor private Solana testnet demonstration
+```
+
+Do not call it:
+
+```text
+public blockchain live
+public bridge live
+production ROX mint/burn live
+mainnet live
+staking live
+liquidity live
+exchange ready
+arbitrary decentralized code hosting live
+```
+
+---
+
+# 53. Current Milestone View
+
+FINAL_BETA milestones:
+
+```text
+Milestone A — Desktop reference product
+Phases 0–5
+COMPLETE
+
+Milestone B — Social product
+Phases 6–10
+COMPLETE
+
+Milestone C — Safe site launch
+Phases 11–16
+ACTIVE
+
+Milestone D — Economic and network truth
+Phases 17–21
+FUTURE
+
+Milestone E — Release
+Phases 22–26
+FUTURE
+```
+
+We are now in the first phase of Milestone C.
+
+---
+
+# 54. What Not to Do Next Session
+
+Do not:
+
+```text
+reopen Phase 10 without a regression
+build a server follower graph
+add follower counts
+upload the local following list
+add opaque feed ranking
+add paid ranking
+
+start Blog before Phase 11/12 foundation is ready
+start Imageboard before shared engine exists
+start Forum as a separate backend
+
+allow custom JavaScript
+allow iframe escape hatches
+allow arbitrary remote resources
+allow arbitrary CSS injection
+
+invent duplicate site manifest types
+invent duplicate template/version ownership
+duplicate developer-mode gating
+
+run full Tauri/macOS builds after every frontend patch
+regenerate codebundle after every patch
+
+touch RustyOnions unless source ownership requires it
+start QuickChain Phase 18 work early
+start ROX Phase 20 work early
+resume Android/TV now
+```
+
+---
+
+# 55. What to Do First Next Session
+
+Recommended opening sequence:
+
+```text
+1. Read these carry-over notes.
+2. Read the current FINAL_BETA Phase 11 section.
+3. Inspect live current SiteGuidedSetup.jsx.
+4. Confirm the A1 gates and A2 policy files are present.
+5. Inspect current site manifest/template registry/generator ownership.
+6. Verify whether normal-mode Site copy still advertises HTML import.
+7. Begin Phase 11A3 with the smallest real template/renderer provenance patch.
+8. Apply only.
+9. Review terminal output.
+10. Run focused verification only.
+```
+
+Do not begin with a giant workspace build.
+
+Do not begin by regenerating a codebundle.
+
+---
+
+# 56. Recommended Next-Session Opening Message
+
+Paste something equivalent to this:
+
+```text
+We are continuing FINAL_BETA.md for CrabLink Desktop.
+
+FINAL_BETA Phases 0 through 10 are complete / green / parked.
+The initial social-product milestone is complete.
+
+Phase 11 — Site Security Boundary and Custom-Code Quarantine — is active.
+
+Phase 11A1 is GREEN:
+- Import HTML is absent from normal mode / developer-gated.
+- raw Root HTML editor is absent from normal mode / developer-gated.
+- Clear HTML is developer-gated.
+- release builds fail closed even if stale devMode=true exists.
+- focused result: 8/8.
+
+Phase 11A2 is GREEN:
+- site custom HTML policy is crablink.site-custom-html-policy.v1.
+- scripts, JavaScript URLs, forms/form controls, iframes, inline event handlers,
+  HTTP/HTTPS/protocol-relative resources, and remote CSS resources reject.
+- both retained development-only HTML entry paths use the rejection boundary.
+- focused result: 13/13.
+
+Do not reopen Phase 10.
+Do not build a server social graph.
+Do not use Git commands.
+Use apply-only then verification-only patches.
+Keep shell blocks zsh-safe.
+Use tiered verification.
+
+Start by inspecting the live site manifest/template source and current SiteGuidedSetup copy.
+The next Phase 11 requirements are template ID/version, renderer version, bounded
+theme tokens, declarative embed allowlisting, sandbox closeout, then formal Phase 11 acceptance.
+```
+
+---
+
+# 57. Suggested Immediate Next Marker
+
+The next implementation slice should probably use a name along the lines of:
+
+```text
+FINAL_BETA_PHASE11A3_SITE_TEMPLATE_PROVENANCE
+```
+
+Expected conceptual outcomes:
+
+```text
+TEMPLATE_ID_RECORDED=YES
+TEMPLATE_VERSION_RECORDED=YES
+RENDERER_VERSION_RECORDED=YES
+MANIFEST_PROVENANCE=STRICT
+CUSTOM_CODE_AUTHORITY=NO
+```
+
+Do not lock exact field names until current manifest source has been inspected.
+
+---
+
+# 58. Phase 11 Formal Closeout Target
+
+When all Phase 11 work is complete, the final closeout must truthfully establish:
+
+```text
+FINAL_BETA_PHASE11_SITE_SECURITY=GREEN
+
+NORMAL_IMPORT_HTML=ABSENT
+NORMAL_ROOT_HTML_EDITOR=ABSENT
+
+CUSTOM_JAVASCRIPT=FORBIDDEN
+IFRAMES=FORBIDDEN
+ARBITRARY_FORMS=FORBIDDEN
+REMOTE_SCRIPT=FORBIDDEN
+
+TEMPLATE_VERSION_RECORDED=YES
+
+THEME_TOKENS=BOUNDED
+DECLARATIVE_EMBEDS=ALLOWLISTED
+SANDBOX_DEFENSE_IN_DEPTH=GREEN
+
+NEXT_PHASE=FINAL_BETA_PHASE12_TEMPLATE_ENGINE
+```
+
+Recommended closeout verification tier:
+
+```text
+A1 focused boundary tests
+A2 custom HTML policy tests
+A3 provenance tests
+theme allowlist tests
+embed allowlist tests
+existing sandbox/site regressions
+production Vite build
+```
+
+Only run Rust/native/Tauri builds if Phase 11 ends up changing those layers.
+
+---
+
+# 59. Session Test Summary
+
+## Phase 10A6
+
+```text
+10 tests
+10 pass
+0 fail
+GREEN
+```
+
+## Phase 10 initial formal closeout
+
+```text
+8 tests
+5 pass
+3 fail
+RED
+```
+
+Failure classification:
+
+```text
+new closeout test assumptions
+not production failures
+```
+
+## Phase 10 repaired formal closeout
+
+```text
+8 tests
+8 pass
+0 fail
+GREEN
+```
+
+## Phase 11A1
+
+```text
+8 tests
+8 pass
+0 fail
+GREEN
+```
+
+## Phase 11A2
+
+```text
+13 tests
+13 pass
+0 fail
+GREEN
+```
+
+Final session stopping point:
+
+```text
+PHASE10=CLOSED
+PHASE11A1=GREEN
+PHASE11A2=GREEN
+NEXT=PHASE11A3
+```
+
+---
+
+# 60. Session Build / Mutation Summary
+
+During the ending Phase 11 work:
+
+```text
+NODE_TESTS_RUN=YES
+CARGO_RUN=NO
+FRONTEND_BUILD_RUN=NO
+TAURI_BUILD_RUN=NO
+MACOS_BUNDLE_RUN=NO
+RUSTYONIONS_MUTATED=NO
+CODEBUNDLE_REGENERATED=NO
+```
+
+Production CrabLink frontend source was changed by:
+
+```text
+Phase 11A1
+Phase 11A2
+```
+
+Therefore the next formal Phase 11 closeout should include a frontend production build.
+
+---
+
+# 61. Important Product Security Result of This Session
+
+Before Phase 11A1:
+
+```text
+normal Site creation exposed arbitrary HTML entry controls
+```
+
+After Phase 11A1:
+
+```text
+normal Site creation no longer exposes those controls
+```
+
+Before Phase 11A2:
+
+```text
+retained developer HTML could be inserted without the new explicit rejection policy
+```
+
+After Phase 11A2:
+
+```text
+retained developer HTML is rejected for the required forbidden classes before draft acceptance
+```
+
+This means the Site model is now moving toward the intended beta architecture:
+
+```text
+normal user
+→ reviewed templates
+→ structured fields
+→ declarative safe rendering
+```
+
+instead of:
+
+```text
+normal user
+→ arbitrary website code
+```
+
+That is the central purpose of Phase 11.
+
+---
+
+# 62. Product Architecture We Are Moving Toward
+
+Normal beta Site creation should become:
+
+```text
+choose reviewed template
+→ choose site name
+→ fill bounded structured fields
+→ choose bounded theme tokens
+→ choose reviewed declarative content/embed blocks
+→ preview
+→ produce reviewed scriptless output
+→ record template/version/renderer provenance
+→ B3-address/store
+→ resolve through normal site routes
+```
+
+Not:
+
+```text
+paste HTML
+paste JavaScript
+load remote CSS
+load remote scripts
+arbitrary form actions
+iframe external applications
+execute plugins
+```
+
+---
+
+# 63. Phase 12 Relationship to Current Work
+
+Do not prematurely build Phase 12 inside Phase 11.
+
+Phase 11 establishes:
+
+```text
+what is forbidden
+what provenance must exist
+what customization is bounded
+what embeds are allowed
+```
+
+Phase 12 then builds the actual reusable structured engine:
+
+```text
+SiteTemplateDefinitionV1
+SiteTemplateInstanceV1
+```
+
+So the desired sequence remains:
+
+```text
+Phase 11:
+  security boundary
+
+then
+
+Phase 12:
+  shared template engine
+
+then
+
+Phase 13:
+  Blog
+
+Phase 14:
+  Imageboard
+
+Phase 15:
+  Forum
+```
+
+This ordering avoids implementing three templates on top of an unsafe or unstable substrate.
+
+---
+
+# 64. One-Sentence Technical Handoff
+
+```text
+Resume FINAL_BETA Phase 11 after GREEN A1/A2, inspect live site-manifest/template ownership, implement the smallest strict template-ID/template-version/renderer-version provenance slice with focused tests, preserve the shared release-fail-closed developer gate and crablink.site-custom-html-policy.v1 rejection boundary, do not reopen Phase 10 or introduce a server social graph, and defer the production Vite build until the Phase 11 integration/closeout boundary.
+```
+
+---
+
+# 65. Final Session Status
+
+```text
+DATE=2026-08-10
+
+FINAL_BETA_PHASE0_THROUGH_PHASE9=COMPLETE_GREEN
+
+FINAL_BETA_PHASE10_HOME_FEED_CLOSEOUT=GREEN
+FORMAL_CLOSEOUT_TESTS=8
+FORMAL_CLOSEOUT_PASS=8
+FORMAL_CLOSEOUT_FAIL=0
+FINAL_BETA_PHASE10=GREEN
+INITIAL_SOCIAL_PRODUCT_MILESTONE=GREEN
+
+FINAL_BETA_PHASE11=ACTIVE
+
+FINAL_BETA_PHASE11A1_CUSTOM_CODE_QUARANTINE=GREEN
+PHASE11A1_TESTS=8_GREEN
+
+NORMAL_IMPORT_HTML=QUARANTINED
+NORMAL_ROOT_HTML_EDITOR=QUARANTINED
+NORMAL_CLEAR_HTML=QUARANTINED
+SHARED_DEVELOPER_SURFACE_CONTRACT=GREEN
+DEVELOPMENT_BUILD_REQUIRED=YES
+EXPLICIT_DEVELOPER_MODE_REQUIRED=YES
+RELEASE_STALE_DEVMODE_BYPASS=NO
+
+FINAL_BETA_PHASE11A2_CUSTOM_HTML_REJECTION=GREEN
+PHASE11A2_TESTS=13_GREEN
+
+CUSTOM_HTML_POLICY=crablink.site-custom-html-policy.v1
+CUSTOM_JAVASCRIPT=REJECTED
+JAVASCRIPT_URLS=REJECTED
+ARBITRARY_FORMS=REJECTED
+IFRAMES=REJECTED
+INLINE_EVENT_HANDLERS=REJECTED
+REMOTE_HTTP_RESOURCES=REJECTED
+REMOTE_PROTOCOL_RELATIVE_RESOURCES=REJECTED
+REMOTE_CSS_RESOURCES=REJECTED
+
+IMPORT_HTML_REJECTION_BOUNDARY=GREEN
+ROOT_HTML_EDITOR_REJECTION_BOUNDARY=GREEN
+REJECTED_HTML_DRAFT_MUTATION=NO
+
+BUILTIN_TEMPLATE_GENERATION_MUTATED=NO
+SITE_PREPARE_FLOW_MUTATED=NO
+SITE_ROOT_STORE_FLOW_MUTATED=NO
+SITE_CREATE_FLOW_MUTATED=NO
+MANIFEST_SCHEMA_MUTATED=NO
+WALLET_MUTATION_LOGIC_CHANGED=NO
+PAID_SITE_LOGIC_CHANGED=NO
+
+RUSTYONIONS_MUTATED=NO
+CARGO_RUN=NO
+FRONTEND_BUILD_RUN=NO
+TAURI_BUILD_RUN=NO
+CODEBUNDLE_REGENERATED=NO
+
+NEXT_ACTION=FINAL_BETA_PHASE11A3_SITE_TEMPLATE_AND_RENDERER_PROVENANCE
+```
+
+---
+
+# 66. Final Handoff
+
+The desktop social product milestone is now complete.
+
+The active work has moved into the safe-site milestone.
+
+The Site surface now has two important layers that did not exist at the start of Phase 11:
+
+```text
+Layer 1:
+  arbitrary HTML controls are absent from normal beta mode
+  and require explicit development posture
+
+Layer 2:
+  even retained development-only HTML is rejected when it contains
+  the required forbidden executable/interactive/remote-resource classes
+```
+
+The next session should not spend time rebuilding those layers.
+
+Build forward from them.
+
+The immediate objective is to finish the remaining Phase 11 provenance and allowlist work, formally close Site Security, and then move into the shared scriptless template engine that will support the Blog, Imageboard, and Forum beta templates.
+
+That is the exact current project position.
+
+
+
+### END NOTE - AUGUST 10 2026 - 14:55 CST
+
+
+### BEGIN NOTE - AUGUST 12 2026 - 23:40 CST
+
+Below is a repo-ready carryover record intended to be copied into **both the RustyOnions repo and the CrabLink repo**. It records the technical state at the end of this session, including the latest patch as **applied but not yet verified**.
+
+# RustyOnions / CrabLink FINAL_BETA Carryover Notes
+
+**Session closeout:** August 12, 2026, America/Chicago
+**Primary build plan:** `FINAL_BETA.md`
+**Active milestone:** FINAL_BETA Phase 15 — Forum Template
+**Current subphase:** Phase 15A4 backend/public-read foundation
+**Immediate next action:** Verify the just-applied Phase 15A4A2B2 Omnigate Post → Site-publication-root write before performing any further mutation.
+
+---
+
+# 1. Executive state
+
+The project remains focused on finishing the **CrabLink Desktop reference product first**, then proceeding toward a controlled live desktop beta. Android TV, Android, and iOS are not on the desktop beta critical path. The current FINAL_BETA safe-site milestone consists of Blog, Imageboard, Forum, and then full Site Product Acceptance. The formal Phase 15 goal includes categories, thread lists, thread creation, reply chains, sticky/locked state, moderation labels, pagination, latest activity, and reviewed creator/moderator controls, with Forum and Imageboard required to reuse the same Post/Comment/thread/reply contracts. 
+
+Current high-level state:
+
+```text
+FINAL_BETA_PHASE14_IMAGEBOARD=TECHNICALLY_GREEN
+PHASE14_LIVE_VISUAL_ACCEPTANCE=DEFERRED
+
+FINAL_BETA_PHASE15_FORUM=ACTIVE
+PHASE15_COMPLETE=NO
+
+PHASE15A1_FORUM_MODEL=GREEN
+PHASE15A2_FORUM_TEMPLATE_REGISTRATION=GREEN
+PHASE15A3A_FORUM_PRODUCT_HANDOFF=GREEN
+PHASE15A3B_FORUM_POST_SUCCESS_HANDOFF=GREEN
+
+PHASE15A4A1_CREATOR_PUBLICATION_WRITE_BOUNDARY=GREEN
+PHASE15A4A2A_PASSPORT_SUBJECT_PROFILE_LOOKUP=GREEN
+PHASE15A4A2A2_DOTTED_USERNAME_COMPATIBILITY=GREEN
+PHASE15A4A2B1_SITE_PUBLICATION_ROOT_PROJECTION=GREEN
+
+PHASE15A4A2B2_OMNIGATE_POST_SITE_PUBLICATION_WRITE=APPLIED
+PHASE15A4A2B2_VERIFIED=NO
+
+NEXT_ACTION=
+  cargo test -p omnigate --test text_asset_publish
+  then, only if green:
+  cargo check -p omnigate
+```
+
+**Do not begin another feature patch before running that verification.**
+
+---
+
+# 2. Absolute repository locations used in this session
+
+```text
+RUSTYONIONS_ROOT=/Users/mymac/Desktop/RustyOnions
+
+CRABLINK_ROOT=/Users/mymac/Desktop/crablink
+
+CRABLINK_TAURI_ROOT=
+  /Users/mymac/Desktop/crablink/apps/crablink-tauri
+
+CRABLINK_CORE_ROOT=
+  /Users/mymac/Desktop/crablink/packages/crablink-core
+```
+
+Terminal location moved between these repositories during the session. The final patch was applied from the RustyOnions repository.
+
+---
+
+# 3. Mandatory development workflow to preserve
+
+The next session should continue the established mutation discipline.
+
+```text
+PATCH_WORKFLOW:
+  1. inspect when necessary
+  2. apply-only mutation block
+  3. inspect user terminal output
+  4. verification-only block
+  5. fix first failure before expanding scope
+
+DO_NOT:
+  combine mutation and verification
+  include git commands
+  regenerate codebundle after every patch
+  run full release builds after trivial changes
+  use Node --check on JSX
+  use top-level set -euo pipefail
+  rely on zsh history-expansion workarounds
+  include unsafe unquoted exclamation syntax
+
+VERIFICATION_POLICY:
+  JS/model/source changes:
+    focused Node tests / source tests
+
+  JSX:
+    Vite transform/parser validation where needed
+
+  Rust:
+    focused cargo test/check for changed crate
+
+  full frontend/Tauri/release build:
+    phase closeout
+    major integration boundary
+    release gate
+    or when failures genuinely require it
+
+MANUAL_ACCEPTANCE:
+  use concise chat checklist
+  user reports GREEN / RED / SKIPPED
+  do not force an interactive questionnaire script
+```
+
+No `git status`, `git diff`, `git add`, `git commit`, `git push`, or other Git commands should be included in assistant-generated terminal patches.
+
+---
+
+# 4. Locked product and authority boundaries
+
+These rules remain fundamental and were actively protected during this session.
+
+```text
+CRABLINK:
+  display + user intent
+
+TAURI:
+  native privileged client boundary
+
+RUSTYONIONS:
+  durable backend/network truth
+
+svc-passport:
+  identity / Passport claim truth
+
+svc-index:
+  lookup/discovery/projection metadata
+  NOT wallet or identity ownership authority
+
+svc-wallet:
+  approved economic ingress
+
+ron-ledger:
+  internal ROC economic truth
+
+QUICKCHAIN:
+  network/finality rules remain backend-owned
+  CrabLink display-only for finality
+
+ROX_ANCHOR:
+  private Solana-testnet anchor path
+  NOT internal ROC ledger
+```
+
+The FINAL_BETA architecture explicitly keeps durable truth in RustyOnions services and prevents client/display state from becoming economic or consensus authority. Arbitrary decentralized code execution, public ROX bridging, production mint/burn, staking, liquidity, and exchange-facing behavior remain outside the desktop beta. 
+
+Other locked product decisions:
+
+```text
+DESKTOP_REFERENCE_PRODUCT=YES
+PRIMARY_BETA_OS=MACOS
+
+ANDROID_TV_REQUIRED_FOR_DESKTOP_BETA=NO
+ANDROID_REQUIRED_FOR_DESKTOP_BETA=NO
+IOS_REQUIRED_FOR_DESKTOP_BETA=NO
+
+PASSPORT_LOCAL_CUSTODY=YES
+CLOUD_LOGIN=NO
+BACKEND_PASSPORT_SECRET_CUSTODY=NO
+
+PUBLIC_FOLLOWER_COUNT=FORBIDDEN
+PUBLIC_FOLLOWING_COUNT=FORBIDDEN
+PUBLIC_FOLLOWER_LIST=FORBIDDEN
+PUBLIC_FOLLOWING_LIST=FORBIDDEN
+
+FOLLOWING_SELECTION_OWNER=LOCAL_CRABLINK_APP
+SERVER_SOCIAL_GRAPH_FOR_BETA=NO
+
+ARBITRARY_SITE_CODE_NORMAL_BETA_MODE=NO
+CUSTOM_JAVASCRIPT_NORMAL_SITE_MODE=NO
+
+FAKE_ROC_BALANCE=NO
+FAKE_RECEIPT=NO
+FAKE_FINALITY=NO
+FAKE_SETTLEMENT=NO
+FAKE_CREATOR_IDENTITY=NO
+```
+
+---
+
+# 5. State entering this session
+
+Phase 14 Imageboard had reached technical GREEN.
+
+Important Phase 14 results already established:
+
+```text
+VITE_PRODUCTION_BUILD=GREEN
+
+A6F1_NATIVE_B3_TESTS=3_OF_3_GREEN
+
+TAURI_CARGO_CHECK=GREEN
+
+FINAL_BETA_PHASE14_PRODUCTION_CLOSEOUT=GREEN
+FINAL_BETA_PHASE14_IMAGEBOARD=GREEN
+
+IMAGEBOARD_CREATE=GREEN
+IMAGE_THREAD=GREEN
+IMAGE_REPLIES=GREEN
+PAGINATION=GREEN
+B3_IMAGE_VERIFY=GREEN
+MODERATION_PROJECTION=GREEN
+
+AUTHORITY_BOUNDARIES=PRESERVED
+```
+
+The live visual/runtime acceptance was intentionally deferred because the necessary node/ROC runtime was not available. No fake ROC balance, fake node state, or economics bypass should be introduced merely to visually exercise the Site templates.
+
+Phase 15 therefore began from a sound structured-template substrate rather than building a separate Forum backend.
+
+---
+
+# 6. Phase 15A1 — Forum core model — GREEN
+
+Created:
+
+```text
+apps/crablink-tauri/src/pages/site/forumModel.js
+
+apps/crablink-tauri/src/pages/site/forumModel.test.mjs
+```
+
+Schemas introduced:
+
+```text
+crablink.forum-model.v1
+
+crablink.forum-thread.v1
+
+crablink.forum-reply.v1
+```
+
+Key behavior established:
+
+```text
+Forum thread root:
+  canonical Post
+
+Forum reply:
+  canonical Comment
+
+Nested reply parent:
+  Post or Comment
+
+Thread root:
+  remains canonical Post
+
+Site context:
+  exact named crab:// Site
+
+MAX_CATEGORIES=12
+
+THREAD_PAGE_MAX=50
+
+REPLY_PAGE_MAX=100
+```
+
+Visibility behavior:
+
+```text
+public:
+  visible
+
+public_preview:
+  visible
+
+private:
+  omitted
+
+unlisted:
+  omitted
+
+deleted:
+  placeholder
+
+blocked:
+  placeholder
+
+moderated:
+  placeholder
+```
+
+Ordering:
+
+```text
+sticky threads first
+then latest activity
+```
+
+Critical moderation invariant:
+
+```text
+STICKY_SOURCE=reviewed_policy
+LOCKED_SOURCE=reviewed_policy
+
+PUBLICATION_PINNED_IS_FORUM_STICKY=NO
+```
+
+This matters. The existing generic publication `pinned` property must **never** silently become Forum sticky truth.
+
+Locked threads remain readable but reject replyability.
+
+Site/thread mismatch is rejected.
+
+Replies are oldest-first.
+
+B3 content CID remains evidence/reference and is not transformed into fake verification truth.
+
+Result:
+
+```text
+PHASE15A1_TESTS=13_OF_13_GREEN
+```
+
+---
+
+# 7. Phase 15A2 — Forum template registration — GREEN
+
+Forum was registered as the next reviewed structured Site template.
+
+Template ordering after this work:
+
+```text
+foundation templates:
+  4
+
+Blog:
+  fifth
+
+Imageboard:
+  sixth
+
+Forum:
+  seventh
+```
+
+The original default template remains unchanged:
+
+```text
+DEFAULT_TEMPLATE=reference_graph_smoke
+```
+
+Forum template characteristics:
+
+```text
+SHARED_SITE_ENGINE=YES
+SCRIPTLESS=YES
+DECLARATIVE=YES
+
+SECTION=thread_list
+DEFAULT_LIMIT=20
+ORDER=latest_activity
+DEFAULT_CATEGORY=general
+```
+
+There is no Forum-specific renderer, publication type, wallet path, or backend authority.
+
+One initial apply attempt produced RED because a checker falsely treated a lowercase `crablink` string as a forbidden marker. That attempt rolled back cleanly. The checker was repaired and the real V2 patch was applied.
+
+Focused closeout:
+
+```text
+PHASE15A2_TEST_FILES=5
+PHASE15A2_TESTS=40_OF_40_GREEN
+
+BLOG_COMPATIBILITY=GREEN
+IMAGEBOARD_COMPATIBILITY=GREEN
+PHASE12_SHARED_ENGINE_REGRESSION=GREEN
+```
+
+Do not revisit the false-positive problem unless it genuinely reappears.
+
+---
+
+# 8. Phase 15A3A — Forum product context/navigation handoff — GREEN
+
+Created:
+
+```text
+apps/crablink-tauri/src/pages/site/forumProductFlow.js
+
+apps/crablink-tauri/src/pages/site/forumProductFlow.test.mjs
+```
+
+Modified:
+
+```text
+apps/crablink-tauri/src/pages/post/PostPage.jsx
+
+apps/crablink-tauri/src/pages/comment/CommentPage.jsx
+```
+
+Schemas:
+
+```text
+crablink.forum-product-context.v1
+
+crablink.forum-thread-intent.v1
+
+crablink.forum-reply-intent.v1
+```
+
+Implemented:
+
+```text
+one-shot thread intent
+one-shot reply intent
+
+optional persistent session navigation context
+
+exact named Site context
+
+Post root required for thread
+
+Comment parent:
+  Post
+  or Comment
+
+thread root:
+  always Post
+```
+
+Forum thread draft handoff injects:
+
+```text
+siteContextCrabUrl=<forum Site>
+
+creatorDisplay=<context creator when available>
+
+tags:
+  forum
+  forum-category:<category>
+```
+
+Forum reply handoff injects:
+
+```text
+Site
+
+parent:
+  Post or Comment
+
+thread root:
+  Post
+
+creator
+
+tags:
+  forum
+  forum-reply
+```
+
+No Post or Comment canonical field schema was changed.
+
+Blog and Imageboard behavior remained layered beneath/alongside Forum rather than being replaced.
+
+`rememberPublishedForumThread` only accepts a canonical `.post` root.
+
+No publish recording occurred at A3A; this phase only prepared product/context behavior.
+
+An initial focused test expected the literal source spelling `initialDraft:` even though the JSX intentionally used valid shorthand syntax. Runtime code was correct. Only the test was repaired.
+
+Final result:
+
+```text
+PHASE15A3A_TESTS=12_OF_12_GREEN
+
+POSTPAGE_VITE_JSX_PARSE=GREEN
+COMMENTPAGE_VITE_JSX_PARSE=GREEN
+
+FINAL_BETA_PHASE15A3A_CLOSEOUT=GREEN
+```
+
+---
+
+# 9. Phase 15A3B — successful Post publish → Forum reply handoff — GREEN
+
+Modified:
+
+```text
+apps/crablink-tauri/src/pages/post/PostPublishFlow.jsx
+```
+
+Created:
+
+```text
+apps/crablink-tauri/src/pages/post/forumPostPublishHandoff.source.test.mjs
+```
+
+Important behavior:
+
+Forum thread mode is entered only when all of these are true:
+
+```text
+active Forum session context exists
+
+draft has Site context
+
+draft Site exactly equals Forum Site context
+
+normalized draft tags contain:
+  forum
+```
+
+Recording of a published Forum thread occurs only after:
+
+```text
+postClient.publishPost(...)
+  succeeds
+
+AND
+
+extractPostAssetUrl(data)
+  produces canonical Post URL
+```
+
+No thread success is recorded before backend success.
+
+No thread success is recorded after backend failure.
+
+Recording/storage errors are not turned into fake publication success.
+
+Outside Forum mode:
+
+```text
+generic delayed Post auto-open remains unchanged
+```
+
+Inside successfully recorded Forum mode:
+
+```text
+generic delayed auto-open is suppressed
+```
+
+Existing success UI remains:
+
+```text
+Open Post Asset
+```
+
+Forum success additionally provides:
+
+```text
+Reply to Thread
+```
+
+The reply action:
+
+```text
+begins forum reply intent
+
+site = active Forum Site
+
+thread root = published Post
+
+parent = published Post
+
+cancels delayed auto-open timer
+
+navigates to existing:
+  crab://comment
+```
+
+No Forum-specific backend, route, or publication kind was introduced.
+
+Verification:
+
+```text
+PHASE15A3B_TESTS=6_OF_6_GREEN
+
+POSTPUBLISHFLOW_VITE_JSX_PARSE=GREEN
+
+BACKEND_SUCCESS_BEFORE_RECORDING=GREEN
+CANONICAL_POST_EXTRACTOR_REUSED=GREEN
+EXACT_FORUM_SITE_CONTEXT=GREEN
+FORUM_TAG_REQUIRED=GREEN
+GENERIC_AUTO_OPEN_PRESERVED=GREEN
+FORUM_AUTO_OPEN_SUPPRESSED_AFTER_RECORDING=GREEN
+OPEN_POST_ASSET_PRESERVED=GREEN
+FORUM_REPLY_BUTTON=GREEN
+FORUM_REPLY_TARGET=crab://comment
+PARENT_THREAD_ROOT=PUBLISHED_POST
+TIMER_CANCEL=GREEN
+```
+
+---
+
+# 10. Phase 15A4 started as a public-read/category problem
+
+The original A4 objective was straightforward:
+
+```text
+Forum thread list must be built from durable public backend data.
+
+Forum category must come from durable public truth.
+
+Forum replies must come from the existing durable Comment relation system.
+
+Forum sticky/locked truth must come from reviewed policy.
+
+Latest activity must be backend-derived.
+
+Pagination must remain bounded.
+```
+
+The first architectural inspection found a real gap.
+
+CrabLink A3A already wrote:
+
+```text
+forum
+
+forum-category:<category>
+```
+
+into the canonical Post tags.
+
+Omnigate already transported Post tags into the immutable manifest.
+
+However, the existing canonical `PublicationSummaryV1` public creator projection did **not** expose tags.
+
+This meant:
+
+```text
+Forum creation:
+  knew category
+
+immutable Post manifest:
+  knew category
+
+public creator PublicationSummaryV1:
+  LOST category
+```
+
+Defaulting all publicly-read threads to `general` would have been incorrect.
+
+Using `sessionStorage` or the local creation intent as public truth would also have been incorrect.
+
+This drove the deeper A4 inspection rather than implementing a fake local workaround.
+
+---
+
+# 11. Important discovery: creator-publication projection had no production write path
+
+The next inspection found that `svc-index` already had:
+
+```text
+PublicationSummaryV1
+
+Store::put_creator_publication(...)
+
+GET creator publication
+
+LIST creator publications
+```
+
+but there was no real production writer feeding the creator-publication projection.
+
+Most existing appearances of `PublicationSummaryV1` construction were fixtures/tests.
+
+This was broader than Forum.
+
+The public timeline/feed/Explore/read models could exist structurally while their durable production projection remained unpopulated.
+
+That led to A4A1.
+
+---
+
+# 12. Phase 15A4A1 — generic creator-publication PUT boundary — GREEN
+
+Modified RustyOnions:
+
+```text
+crates/svc-index/src/http/routes/creator_publications.rs
+
+crates/svc-index/src/router.rs
+```
+
+Created:
+
+```text
+crates/svc-index/tests/final_beta_phase15a4_creator_publication_write.rs
+```
+
+Added:
+
+```text
+PUT /v1/index/creators/:username/publications/:publication_id
+```
+
+The existing GET on the exact same detail path remains.
+
+The PUT accepts the existing:
+
+```text
+PublicationSummaryV1
+```
+
+and requires this order:
+
+```text
+1. validate PublicationSummaryV1 body
+2. body creator.username must equal route :username
+3. body publication_id must equal route :publication_id
+4. only then Store::put_creator_publication(...)
+```
+
+Success:
+
+```text
+204 No Content
+```
+
+No Forum-specific route.
+
+No new economic authority.
+
+No new publication transport.
+
+No DTO shape change.
+
+No taxonomy field added here.
+
+Two initial apply attempts failed because their source edit expected exact multiline router formatting.
+
+Results:
+
+```text
+A4A1_V1=RED
+REASON=FORMAT_SENSITIVE_ROUTER_ANCHOR
+ROLLBACK=COMPLETE
+
+A4A1_V2=RED
+REASON=FORMAT_SENSITIVE_ROUTER_ANCHOR
+ROLLBACK=COMPLETE
+```
+
+V3 replaced exact whitespace matching with a balanced-route structural edit.
+
+V3:
+
+```text
+A4A1_V3=APPLIED
+```
+
+Verification:
+
+```text
+TESTS=5_OF_5_GREEN
+
+cargo check -p svc-index=GREEN
+```
+
+This route still exists in the tree.
+
+**Critical current decision:** it is deliberately **not wired from Omnigate yet** because later security inspection showed we do not have sufficient proof of creator ownership to truthfully populate verified creator identity.
+
+Do not remove this route just because it is currently unwired. It is a valid internal projection primitive for later use.
+
+Do not expose/proxy it as an untrusted client authorship primitive.
+
+---
+
+# 13. Phase 15A4A2A — Passport subject → public profile lookup — GREEN
+
+The public creator projection requires:
+
+```text
+canonical username
+display name
+profile URL
+```
+
+The Post publish path carried a Passport subject, but not a backend-confirmed username.
+
+Inspection found that `svc-passport` already maintains:
+
+```text
+passport_subject -> username
+```
+
+inside its claim store.
+
+Rather than derive a username from the Passport subject or trust a username header, a proper `svc-passport` read primitive was added.
+
+Modified:
+
+```text
+crates/svc-passport/src/profile.rs
+
+crates/svc-passport/src/http/handlers/profile.rs
+
+crates/svc-passport/src/http/router.rs
+```
+
+Created:
+
+```text
+crates/svc-passport/tests/final_beta_phase15a4_passport_subject_profile_lookup.rs
+```
+
+Added core method:
+
+```text
+public_profile_for_passport_subject(...)
+```
+
+Added read route:
+
+```text
+GET /v1/passport/profile/by-subject/:passport_subject
+```
+
+Behavior:
+
+```text
+lookup source:
+  existing by_passport_subject claim index
+
+username derivation from Passport text:
+  NO
+
+username header authority:
+  NO
+
+creatorDisplay used as username:
+  NO
+
+unknown subject:
+  404
+
+reverse-index corruption:
+  fail closed
+
+existing GET /profile/:username:
+  preserved
+```
+
+Verification:
+
+```text
+TESTS=5_OF_5_GREEN
+
+cargo check -p svc-passport=GREEN
+```
+
+This primitive remains useful, but later investigation established that knowing a subject exists is **not the same thing as proving the current publisher controls that subject**.
+
+---
+
+# 14. Phase 15A4A2A2 — canonical dotted username compatibility — GREEN
+
+The next cross-contract inspection found a subtle identity mismatch.
+
+`svc-passport` already legitimately allows canonical usernames containing `.`.
+
+Example:
+
+```text
+alice.dev
+```
+
+But both of these older publication validators rejected dots:
+
+```text
+RustyOnions:
+  svc-index PublicationSummaryV1
+
+CrabLink:
+  packages/crablink-core PublicationSummaryV1
+```
+
+That would allow a valid Passport username to exist while making that creator impossible to represent in public publication projections.
+
+The fix was intentionally narrow.
+
+Modified RustyOnions:
+
+```text
+crates/svc-index/src/publications.rs
+
+crates/svc-index/tests/final_beta_phase6_creator_publication_projection.rs
+```
+
+Modified CrabLink:
+
+```text
+packages/crablink-core/src/publicationSummary.js
+
+packages/crablink-core/src/publicationSummary.test.mjs
+```
+
+Change:
+
+```text
+old allowed username continuation:
+  [a-z0-9_-]
+
+new:
+  [a-z0-9_.-]
+```
+
+Preserved:
+
+```text
+username start rule
+username length
+creator/profile exact-match rule
+DTO shape
+schema version
+all economic/security semantics
+```
+
+Verification:
+
+```text
+svc-index publication projection:
+  9_OF_9_GREEN
+
+CrabLink publicationSummary:
+  13_OF_13_GREEN
+```
+
+This compatibility repair is complete and should remain.
+
+---
+
+# 15. Critical security correction made during A4
+
+At this point the plan was initially:
+
+```text
+Post publish
+→ resolve owner Passport subject in svc-passport
+→ construct verified PublicationSummaryV1
+→ write creator-publication projection
+```
+
+That plan was deliberately **stopped** after deeper inspection.
+
+Reason:
+
+```text
+request.owner_passport_subject
+```
+
+is not itself proof that the caller controls that Passport.
+
+Likewise:
+
+```text
+x-ron-passport
+```
+
+is context, not sufficient user ownership proof.
+
+The existing `svc-passport /verify` surface was also inspected.
+
+It verifies an Ed25519 envelope but does not give a trustworthy binding equivalent to:
+
+```text
+the current desktop publisher cryptographically proved control
+of this local Passport subject for this publication
+```
+
+The current native desktop bridge does not expose an appropriate user-Passport authorship-signature/capability primitive for this exact purpose.
+
+Therefore:
+
+```text
+DO_NOT:
+  use owner_passport_subject as verified authorship
+
+DO_NOT:
+  use x-ron-passport as verified authorship
+
+DO_NOT:
+  parse username from Passport subject
+
+DO_NOT:
+  use creatorDisplay as canonical username
+
+DO_NOT:
+  pretend /verify proves publisher ownership when it does not
+```
+
+This was an important architectural correction.
+
+Consequences:
+
+```text
+creator-publication PUT:
+  remains implemented
+  remains GREEN
+  remains intentionally unwired
+
+svc-passport by-subject lookup:
+  remains implemented
+  remains GREEN
+  but does not alone prove current publisher control
+
+Forum public read:
+  shifted to Site-root projection with display-only creator text
+```
+
+This must be preserved in the next session.
+
+---
+
+# 16. Existing Comment relation architecture inspected
+
+The existing durable relation subsystem was examined as a possible Forum root source.
+
+It is intentionally:
+
+```text
+schema:
+  crablink.publication-relation.v1
+
+publication kind:
+  Comment only
+
+keying:
+  exact parent crab URL
+
+supports:
+  parent
+  optional thread root
+  exact Site
+  creatorDisplay
+  created_at_ms
+  visibility
+  manifest/content/Site references
+```
+
+Validation explicitly rejects non-Comment relation sources.
+
+The store uses:
+
+```text
+publication_relation:<parent>:<publication-id>
+```
+
+The HTTP surface:
+
+```text
+PUT /v1/index/publication-relations
+
+GET /v1/index/publication-relations?parentCrabUrl=<typed asset>
+```
+
+This model is correct for replies, but wrong for Site-level thread discovery.
+
+Widening it to include Post roots would have blurred:
+
+```text
+Site root discovery
+
+vs.
+
+parent/reply topology
+```
+
+Therefore it was left unchanged.
+
+The uploaded inspection confirms the relation model is Comment-only and exact-parent keyed, while no prior Site-publication keyspace existed. 
+
+---
+
+# 17. Phase 15A4A2B1 — generic Site-publication root projection — GREEN
+
+A new generic Site-level projection was added as a sibling of publication relations.
+
+Created:
+
+```text
+crates/svc-index/src/site_publications.rs
+
+crates/svc-index/src/http/routes/site_publications.rs
+
+crates/svc-index/tests/final_beta_phase15_site_publication_roots.rs
+```
+
+Modified:
+
+```text
+crates/svc-index/src/lib.rs
+
+crates/svc-index/src/http/routes/mod.rs
+
+crates/svc-index/src/store/keys.rs
+
+crates/svc-index/src/store/mod.rs
+
+crates/svc-index/src/router.rs
+```
+
+Schemas:
+
+```text
+crablink.site-publication.v1
+
+crablink.site-publication-page.v1
+```
+
+Allowed root kinds:
+
+```text
+post
+image
+article
+```
+
+Forbidden root kind:
+
+```text
+comment
+```
+
+Comments remain owned by the existing publication-relation subsystem.
+
+Site keyspace:
+
+```text
+site_publication:<named-site>:<publication-id>
+```
+
+HTTP:
+
+```text
+PUT /v1/index/site-publications
+
+GET /v1/index/site-publications?siteCrabUrl=<named-site>
+```
+
+Site-publication fields include:
+
+```text
+schema
+
+publicationId
+
+kind
+
+crabUrl
+
+title
+
+summary
+
+creatorDisplay
+
+createdAtMs
+
+visibility
+
+references:
+  manifestCid
+  contentCid
+  siteUrl
+
+tags
+
+siteCrabUrl
+```
+
+Important identity rule:
+
+```text
+creatorDisplay:
+  display-only text
+
+verified creator username:
+  NOT stored
+
+profile URL:
+  NOT stored
+
+Passport ownership claim:
+  NOT stored
+```
+
+Taxonomy limits:
+
+```text
+MAX_TAGS=32
+
+MAX_TAG_LENGTH=128
+```
+
+Pagination:
+
+```text
+DEFAULT_LIMIT=20
+MAX_LIMIT=100
+OPAQUE_CURSOR=YES
+```
+
+Ordering:
+
+```text
+createdAtMs descending
+```
+
+Public visibility:
+
+```text
+public:
+  included
+
+public_preview:
+  included
+
+private:
+  omitted
+
+unlisted:
+  omitted
+
+deleted:
+  preserved for placeholder
+
+blocked:
+  preserved for placeholder
+
+moderated:
+  preserved for placeholder
+```
+
+Exact Site match is required between:
+
+```text
+siteCrabUrl
+
+and
+
+references.siteUrl
+```
+
+The Site-publication model requires:
+
+```text
+manifestCid
+contentCid
+siteUrl
+```
+
+rather than permitting a partial reference record.
+
+Forum taxonomy is now representable durably through:
+
+```text
+forum
+
+forum-category:<category>
+```
+
+No Forum-specific service was added.
+
+Verification:
+
+```text
+TESTS=8_OF_8_GREEN
+
+cargo check -p svc-index=GREEN
+```
+
+---
+
+# 18. Latest patch: Phase 15A4A2B2 — APPLIED, NOT VERIFIED
+
+This is the exact stopping point.
+
+Modified:
+
+```text
+crates/omnigate/src/routes/v1/text_assets.rs
+
+crates/omnigate/tests/text_asset_publish.rs
+```
+
+The patch was applied successfully.
+
+Terminal final markers:
+
+```text
+FINAL_BETA_PHASE15A4A2B2_OMNIGATE_POST_SITE_PUBLICATION_WRITE=APPLIED
+
+ASSET_KIND_WIRED=post
+
+SITE_PUBLICATION_ROUTE=/v1/index/site-publications
+
+SITE_PUBLICATION_SCHEMA=crablink.site-publication.v1
+
+COMMENT_RELATION_ROUTE=PRESERVED
+
+COMMENT_SITE_ROOT_WRITE=NO
+
+ARTICLE_SITE_ROOT_WRITE=NO
+
+IMAGE_SITE_ROOT_WRITE=NO
+
+CONTENT_UPLOAD_MUST_SUCCEED_FIRST=YES
+
+MANIFEST_MUST_EXIST_FIRST=YES
+
+ASSET_INDEX_POINTER_MUST_STORE_FIRST=YES
+
+CREATED_AT_SOURCE=IMMUTABLE_CONTENT_ENVELOPE
+
+FORUM_TAG_PRESERVED=YES
+
+FORUM_CATEGORY_TAG_PRESERVED=YES
+
+CREATOR_DISPLAY=DISPLAY_ONLY
+
+VERIFIED_CREATOR_USERNAME_WRITTEN=NO
+
+PROFILE_URL_WRITTEN=NO
+
+PASSPORT_OWNERSHIP_CLAIM_WRITTEN=NO
+
+SITE_PUBLICATION_STATUS_RETURNED=YES
+
+SITE_PUBLICATION_FAILURE_BEHAVIOR=WARNING_NOT_FAKE_SUCCESS
+
+EXISTING_PAID_STORAGE_FLOW_CHANGED=NO
+
+EXISTING_WALLET_HOLD_FLOW_CHANGED=NO
+
+EXISTING_COMMENT_RELATION_MODEL_CHANGED=NO
+
+CREATOR_PUBLICATION_PUT_WIRED=NO
+
+SVC_INDEX_CHANGED=NO
+SVC_GATEWAY_CHANGED=NO
+CRABLINK_CHANGED=NO
+
+CARGO_TEST_RUN=NO
+CARGO_CHECK_RUN=NO
+
+NEXT_ACTION=
+RUN_PHASE15A4A2B2_FOCUSED_OMNIGATE_POST_TESTS_AND_CHECK
+```
+
+### What A4A2B2 changed
+
+`TextAssetPublishResponse` now has an optional:
+
+```text
+site_publication_index
+```
+
+status object for Post publication.
+
+A Site-publication write is attempted for:
+
+```text
+TextAssetKind::Post
+```
+
+only.
+
+Not currently:
+
+```text
+Article
+Image
+Comment
+```
+
+Comment continues to use:
+
+```text
+publication_relation
+```
+
+### Ordering enforced by the new logic
+
+The intended sequence is:
+
+```text
+paid content upload succeeds
+→ canonical asset CID exists
+→ manifest write exists
+→ existing asset→manifest index pointer stores successfully
+→ canonical Post crab URL exists
+→ Site-publication root write is attempted
+```
+
+The Site-publication write is skipped if the existing asset index pointer did not reach:
+
+```text
+stored
+```
+
+This deliberately prevents public Site discovery from outrunning the core asset/manifest index.
+
+### Timestamp source
+
+The patch changed timestamp extraction into a reusable:
+
+```text
+publication_created_at_ms
+```
+
+read from the already-created immutable content envelope.
+
+Comment relation ordering continues to use that value.
+
+Post Site-root ordering also uses it.
+
+This avoids creating a new index-write-time timestamp.
+
+### Site-root Post write body
+
+The Omnigate helper constructs:
+
+```text
+schema:
+  crablink.site-publication.v1
+
+publicationId:
+  raw B3 hash
+
+kind:
+  post
+
+crabUrl:
+  canonical .post URL
+
+title:
+  canonical Post title projection
+
+summary:
+  bounded relation_summary_text(body)
+
+creatorDisplay:
+  display-only request value
+
+createdAtMs:
+  immutable content envelope timestamp
+
+visibility:
+  request visibility
+
+references:
+  manifestCid
+  contentCid
+  siteUrl
+
+tags:
+  normalized original Post tags
+
+siteCrabUrl:
+  exact Site
+```
+
+This is exactly how Forum category information reaches durable public discovery:
+
+```text
+Forum draft:
+  forum
+  forum-category:<category>
+
+→ Post request
+
+→ immutable manifest
+
+→ Site-publication projection
+
+→ future Forum public reader
+```
+
+### Failure behavior
+
+A failure writing the Site projection does **not** pretend that indexing succeeded.
+
+It reports:
+
+```text
+stored
+failed
+or skipped
+```
+
+plus truthful warnings.
+
+It also does not retroactively claim that successfully stored immutable Post bytes never existed.
+
+This is the correct distinction between:
+
+```text
+content publication success
+
+and
+
+secondary discovery projection success
+```
+
+### Existing integration test extension
+
+`crates/omnigate/tests/text_asset_publish.rs` was extended so the dummy index accepts:
+
+```text
+PUT /v1/index/site-publications
+```
+
+and checks the Site-publication payload.
+
+The test Post now carries:
+
+```text
+post
+backend
+forum
+forum-category:general
+```
+
+The existing successful Post publish test was extended to require:
+
+```text
+site_publication_index.status = stored
+
+site_publication_index.route =
+  /v1/index/site-publications
+
+site_publication_index.http_status = 202
+```
+
+**None of this has been compiled/tested yet.**
+
+---
+
+# 19. Exact first action for next session
+
+Do not write another patch first.
+
+Start in:
+
+```text
+/Users/mymac/Desktop/RustyOnions
+```
+
+Run:
+
+```bash
+cargo test -p omnigate --test text_asset_publish
+```
+
+If and only if that is GREEN:
+
+```bash
+cargo check -p omnigate
+```
+
+Expected procedure:
+
+```text
+IF TEST RED:
+  inspect first compiler/test failure
+  patch only that failure
+  rerun focused test
+  do not expand scope
+
+IF TEST GREEN BUT CHECK RED:
+  fix first cargo-check failure
+  rerun focused check
+
+IF BOTH GREEN:
+  mark Phase15A4A2B2 closed
+  inspect the read/proxy path for Site-publication roots
+  continue A4 public Forum read work
+```
+
+Do **not** assume a particular test count for `text_asset_publish`; run the complete existing integration test target and use the actual output.
+
+---
+
+# 20. Specific A4A2B2 watch points during verification
+
+These are not known failures. They are the most important things the compiler/tests now need to prove.
+
+```text
+1. TextAssetPublishResponse
+   Verify every initializer has the new optional
+   site_publication_index field where required.
+
+2. Post immutable envelope timestamp
+   Confirm Post content really supplies created_at_ms.
+   The new Site-root write depends on this.
+   If Post lacks it, the projection will truthfully skip and
+   the integration assertion expecting "stored" will fail.
+
+3. Dummy index Router construction
+   Confirm the new /site-publications test route composes
+   correctly with existing asset-index routes.
+
+4. Site publication DTO compatibility
+   Confirm generated JSON exactly satisfies:
+     manifest CID
+     content CID
+     Site URL
+     post typed URL
+     visibility
+     bounded tags
+
+5. Existing Comment publishing
+   Confirm no regression to:
+     publication-relations
+     parent/thread behavior
+     created_at ordering
+
+6. Existing paid Post publication
+   Confirm no regression to:
+     storage upload
+     wallet-hold proof path
+     manifest write
+     asset index pointer
+     publish response
+
+7. Failure semantics
+   Secondary Site-index failure must remain warning/status,
+   not fabricated success and not economic mutation.
+```
+
+Again: these are verification targets, not established defects.
+
+---
+
+# 21. What remains in Phase 15 after A4A2B2 verifies
+
+The current Phase 15 backend now has nearly all the primitives needed for real public Forum reads, but the product is not formally complete.
+
+The next likely work sequence should remain incremental.
+
+## 21.1 Site-publication read transport
+
+Inspect how existing CrabLink public Site/template readers reach `svc-index`.
+
+Determine whether:
+
+```text
+/v1/index/site-publications
+```
+
+already needs:
+
+```text
+Omnigate read adapter
+
+and/or
+
+svc-gateway proxy/route
+
+and/or
+
+CrabLink GatewayClient adapter
+```
+
+Do not guess.
+
+Reuse the existing publication-relation and Blog/publication read patterns.
+
+Do not create:
+
+```text
+Forum-only backend route
+
+Forum-only storage
+
+Forum-only network protocol
+```
+
+## 21.2 CrabLink Site-publication client/parser
+
+Add a strict bounded client/parser for:
+
+```text
+crablink.site-publication-page.v1
+```
+
+It should preserve the same strict wire rules used elsewhere.
+
+The reader should not invent creator identity.
+
+`creatorDisplay` remains display-only.
+
+## 21.3 Forum public thread projection
+
+Build Forum threads from Site-publication roots.
+
+Required rules:
+
+```text
+root kind:
+  post
+
+required root tag:
+  forum
+
+category:
+  derived from exactly one safe
+  forum-category:<category> tag
+
+Site:
+  must match exact active Forum Site
+
+thread URL:
+  canonical Post
+
+created:
+  backend Site-publication createdAtMs
+
+visibility:
+  preserve public/public_preview
+
+deleted/blocked/moderated:
+  placeholder behavior
+
+private/unlisted:
+  omit
+```
+
+Never use:
+
+```text
+sessionStorage
+local creation intent
+default "general"
+```
+
+as durable public category truth when backend data exists.
+
+## 21.4 Replies
+
+Continue using the existing:
+
+```text
+publicationRelationAdapter
+```
+
+and durable:
+
+```text
+/publication-relations
+```
+
+Comment projection.
+
+Do not copy Imageboard-specific `.image` assumptions into Forum.
+
+Forum replies may have:
+
+```text
+parent = Post
+
+or
+
+parent = Comment
+
+thread root = Post
+```
+
+## 21.5 Latest activity
+
+Forum thread list ordering must eventually use:
+
+```text
+max(
+  root createdAtMs,
+  latest valid public reply activity
+)
+```
+
+with the exact product rules already represented in `forumModel.js`.
+
+Do not make client-local activity the durable ordering source.
+
+## 21.6 Sticky and locked state
+
+The Forum model already enforces:
+
+```text
+sticky/locked source = reviewed_policy
+```
+
+The public read path must preserve that.
+
+Never map:
+
+```text
+PublicationSummaryV1.pinned
+```
+
+or any Site-publication property into Forum sticky state unless reviewed policy explicitly says so.
+
+## 21.7 Moderator controls
+
+Phase 15 requires creator/moderator controls **through reviewed policy**, not direct client authority. The build plan explicitly calls out creator/moderator controls as part of Forum acceptance. 
+
+Any lock/sticky/moderation mutation must therefore be attached to the existing reviewed-policy authority surface rather than invented inside the Forum renderer.
+
+## 21.8 Presentation/UI
+
+Once the durable read model is working:
+
+```text
+Forum categories
+
+thread list
+
+thread detail
+
+reply chain
+
+latest activity
+
+sticky label
+
+locked label
+
+moderation placeholders
+
+pagination controls
+
+thread creation
+
+reply action
+
+empty/loading/error state
+```
+
+can be wired into the structured Forum Site presentation.
+
+## 21.9 Phase 15 closeout
+
+Only after the above should the formal Phase 15 markers be claimed:
+
+```text
+FINAL_BETA_PHASE15_FORUM=GREEN
+
+FORUM_CREATE=GREEN
+
+FORUM_THREAD=GREEN
+
+FORUM_REPLY=GREEN
+
+FORUM_LOCK_STICKY=GREEN
+
+SHARED_THREAD_ENGINE=YES
+```
+
+Those are the actual build-plan acceptance markers. 
+
+---
+
+# 22. Important data-model split now established
+
+The next session must understand the distinction between the three public metadata systems.
+
+## Creator-publication projection
+
+```text
+PublicationSummaryV1
+
+key:
+  creator username + publication ID
+
+purpose:
+  creator timeline
+  Home/Explore/profile-style publication discovery
+
+identity shape:
+  canonical creator username/profile
+
+current writer:
+  generic svc-index PUT exists
+
+production Omnigate wiring:
+  intentionally NO
+```
+
+Reason it is unwired:
+
+```text
+current publish request lacks sufficient proof
+that caller controls claimed Passport subject
+```
+
+## Site-publication root projection
+
+```text
+crablink.site-publication.v1
+
+key:
+  named Site + publication ID
+
+purpose:
+  Site-level root discovery
+  Forum Post roots
+  later potentially Image/Article roots
+
+identity shape:
+  creatorDisplay only
+
+current writer:
+  Omnigate Post path applied
+  awaiting verification
+```
+
+## Publication relation projection
+
+```text
+crablink.publication-relation.v1
+
+key:
+  exact parent + relation publication ID
+
+purpose:
+  Comment/reply topology
+
+root kind:
+  Comment only
+
+current writer:
+  existing Omnigate Comment path
+
+status:
+  established and preserved
+```
+
+This separation is intentional.
+
+Do not collapse these models together.
+
+---
+
+# 23. Forum tag contract
+
+The Forum category contract is now:
+
+```text
+generic Forum marker:
+  forum
+
+category marker:
+  forum-category:<normalized-category>
+```
+
+A Forum-created Post gets these tags through `forumProductFlow.js`.
+
+`PostPublishFlow.jsx` passes tags into the real Post publish payload.
+
+Omnigate already normalizes/preserves them in the Post publication/manifest path.
+
+The new Site-publication root projection also carries those normalized tags.
+
+This solves the original A4 category-truth problem without adding a Forum-specific database field.
+
+---
+
+# 24. Creator identity posture to preserve
+
+This is one of the most important session outcomes.
+
+```text
+creatorDisplay:
+  convenience/display text
+
+creatorDisplay:
+  NOT identity authority
+
+owner_passport_subject:
+  publication ownership/reference context
+
+owner_passport_subject:
+  NOT proof of caller control by itself
+
+x-ron-passport:
+  context
+
+x-ron-passport:
+  NOT sufficient authorship proof
+
+svc-passport by-subject lookup:
+  confirms a stored claim exists
+
+svc-passport by-subject lookup:
+  DOES NOT by itself prove current caller controls subject
+
+verified creator username in Site root:
+  NO
+
+profile URL in Site root:
+  NO
+```
+
+A future creator-publication writer should only be wired when the system has a real caller-to-Passport authorship proof that cannot be forged by simply naming another subject.
+
+Do not weaken this in order to make timelines populate faster.
+
+---
+
+# 25. RustyOnions files touched during this session
+
+Current known RustyOnions Phase-15/A4 mutations include:
+
+```text
+crates/svc-index/src/http/routes/creator_publications.rs
+
+crates/svc-index/src/router.rs
+
+crates/svc-index/tests/final_beta_phase15a4_creator_publication_write.rs
+
+
+crates/svc-passport/src/profile.rs
+
+crates/svc-passport/src/http/handlers/profile.rs
+
+crates/svc-passport/src/http/router.rs
+
+crates/svc-passport/tests/final_beta_phase15a4_passport_subject_profile_lookup.rs
+
+
+crates/svc-index/src/publications.rs
+
+crates/svc-index/tests/final_beta_phase6_creator_publication_projection.rs
+
+
+crates/svc-index/src/site_publications.rs
+  NEW
+
+crates/svc-index/src/http/routes/site_publications.rs
+  NEW
+
+crates/svc-index/src/lib.rs
+
+crates/svc-index/src/http/routes/mod.rs
+
+crates/svc-index/src/store/keys.rs
+
+crates/svc-index/src/store/mod.rs
+
+crates/svc-index/src/router.rs
+
+crates/svc-index/tests/final_beta_phase15_site_publication_roots.rs
+  NEW
+
+
+crates/omnigate/src/routes/v1/text_assets.rs
+
+crates/omnigate/tests/text_asset_publish.rs
+```
+
+No codebundle was regenerated after the latest work.
+
+---
+
+# 26. CrabLink files touched during this Phase 15 work
+
+Known Phase 15 CrabLink surfaces include:
+
+```text
+apps/crablink-tauri/src/pages/site/forumModel.js
+
+apps/crablink-tauri/src/pages/site/forumModel.test.mjs
+
+Forum template / Site registry integration surfaces
+
+apps/crablink-tauri/src/pages/site/forumProductFlow.js
+
+apps/crablink-tauri/src/pages/site/forumProductFlow.test.mjs
+
+apps/crablink-tauri/src/pages/post/PostPage.jsx
+
+apps/crablink-tauri/src/pages/comment/CommentPage.jsx
+
+apps/crablink-tauri/src/pages/post/PostPublishFlow.jsx
+
+apps/crablink-tauri/src/pages/post/forumPostPublishHandoff.source.test.mjs
+
+
+packages/crablink-core/src/publicationSummary.js
+
+packages/crablink-core/src/publicationSummary.test.mjs
+```
+
+The exact Forum template registration files should be inspected from the live repo rather than reconstructed from memory if future edits are necessary.
+
+Do not assume the current codebundle includes the latest cross-repo A4 changes; codebundle regeneration was explicitly deferred.
+
+---
+
+# 27. Verification ledger from this session
+
+```text
+PHASE15A1
+  Forum model
+  13 / 13 GREEN
+
+PHASE15A2
+  Forum template registration/shared-engine regressions
+  40 / 40 GREEN
+
+PHASE15A3A
+  Forum navigation/product handoff
+  12 / 12 GREEN
+  PostPage JSX parse GREEN
+  CommentPage JSX parse GREEN
+
+PHASE15A3B
+  Post success → Forum thread/reply handoff
+  6 / 6 GREEN
+  PostPublishFlow JSX parse GREEN
+
+PHASE15A4A1
+  svc-index generic creator-publication PUT
+  5 / 5 GREEN
+  cargo check -p svc-index GREEN
+
+PHASE15A4A2A
+  svc-passport Passport-subject profile lookup
+  5 / 5 GREEN
+  cargo check -p svc-passport GREEN
+
+PHASE15A4A2A2
+  dotted canonical username compatibility
+  svc-index tests 9 / 9 GREEN
+  CrabLink core tests 13 / 13 GREEN
+
+PHASE15A4A2B1
+  generic Site-publication root projection
+  8 / 8 GREEN
+  cargo check -p svc-index GREEN
+
+PHASE15A4A2B2
+  Omnigate Post → Site-publication write
+  APPLY GREEN
+  tests NOT RUN
+  cargo check NOT RUN
+```
+
+---
+
+# 28. Known failed attempts that should not be rediscovered
+
+These failures were tooling/patch-shape issues, not product architecture failures.
+
+```text
+15A2 first apply:
+  false-positive source checker
+  rollback complete
+  repaired in V2
+
+15A3A first verification:
+  test incorrectly required literal "initialDraft:"
+  actual JSX shorthand was valid
+  test repaired only
+  runtime remained unchanged
+
+15A4A1 V1:
+  router multiline anchor mismatch
+  rollback complete
+
+15A4A1 V2:
+  same class of format-sensitive router anchor mismatch
+  rollback complete
+
+15A4A1 V3:
+  switched to balanced structural .route(...) edit
+  applied
+  5/5 GREEN
+  svc-index check GREEN
+```
+
+For future router patches, prefer structure-aware edits rather than exact rustfmt-sensitive multiline anchors.
+
+---
+
+# 29. Phase 14/15 live visual acceptance status
+
+The technical implementation is advancing farther than the currently available live network/runtime environment.
+
+Current posture:
+
+```text
+NO_FAKE_ROC=YES
+NO_FAKE_NODE_NETWORK=YES
+NO_ECONOMIC_BYPASS=YES
+```
+
+Phase 14 live visual acceptance was deferred until a real enough node/ROC runtime is available.
+
+The same rule should apply to Phase 15 if Forum visual acceptance reaches the same runtime dependency.
+
+The project decision was to continue as far as possible through the build plan with real source/model/backend tests, then return to runtime bugs and visual acceptance once the network/economic runtime can support truthful testing.
+
+Do not convert a deferred live acceptance into a fake GREEN.
+
+---
+
+# 30. Phase 16 immediately after Forum
+
+The formal next phase after Forum is **FINAL_BETA Phase 16 — Site Product Acceptance**. It must prove the complete safe Site lifecycle:
+
+```text
+choose template
+→ choose site name
+→ structured settings
+→ preview
+→ publish root/manifest
+→ resolve named site
+→ create content
+→ update site
+→ visit site
+→ comment/reply
+→ paid visit where configured
+→ receipt
+```
+
+Phase 16 also calls for shared manifest/parser cleanup, gateway tests, restart/recreate tests, paid-Site tests, template migration/update tests, malicious-input testing, and sandbox testing. 
+
+Formal Phase 16 targets include:
+
+```text
+BLOG_END_TO_END=GREEN
+
+IMAGEBOARD_END_TO_END=GREEN
+
+FORUM_END_TO_END=GREEN
+
+CUSTOM_CODE_NORMAL_MODE=NO
+
+NAMED_SITE_RESOLUTION=GREEN
+
+PAID_SITE_RECEIPT=GREEN
+```
+
+This is where the current deferred visual/runtime behavior becomes much more important.
+
+---
+
+# 31. Remaining FINAL_BETA roadmap after Phase 16
+
+The build plan continues through Phase 26.
+
+## Phase 17 — economic product stabilization
+
+Focus:
+
+```text
+ROC/wallet UX
+
+receipt list/detail
+
+pending/confirmed/failed state
+
+explicit spend confirmation
+
+cancel behavior
+
+idempotent retry
+
+paid Site/content
+
+stale/offline labels
+
+receipt-source labels
+
+confirmed ROC refresh
+
+no cache-only unlock
+
+repeatable E2E runner
+```
+
+Required principles:
+
+```text
+SILENT_SPEND=NO
+FAILED_PAYMENT_UNLOCK=NO
+CANCELLED_PAYMENT_MUTATION=NO
+RECEIPT_BACKEND_DERIVED=YES
+CONFIRMED_ROC_BACKEND_DERIVED=YES
+```
+
+
+
+## Phase 18 — QuickChain beta activation foundation
+
+Lock the private QuickChain foundation:
+
+```text
+canonical bytes
+
+golden vectors
+
+deterministic roots
+
+replay rebuild
+
+tamper rejection
+
+idempotency
+
+economic ownership
+```
+
+CrabLink must not duplicate QuickChain authority. 
+
+## Phase 19 — QuickChain multi-node / committee / finality
+
+Prove:
+
+```text
+multiple Service Nodes
+
+User Node verification
+
+operation batching
+
+checkpoint production
+
+quorum/finality
+
+replay rejection
+
+member failure
+
+restart/recovery
+
+challenge path
+
+archive/DA fallback
+
+soak
+
+chaos
+```
+
+CrabLink may display finality evidence, but may not decide finality. 
+
+## Phase 20 — ROX Anchor private-testnet completion
+
+Required:
+
+```text
+invalid proof drills
+
+replay drills
+
+halt
+
+recovery
+
+authority separation
+
+key rotation
+
+upgrade authority
+
+RustyOnions dry-run handoff
+
+RPC readback
+
+receipt reconciliation
+```
+
+Still explicitly:
+
+```text
+PUBLIC_MAINNET=NO
+PUBLIC_BRIDGE=NO
+PRODUCTION_MINT_BURN=NO
+```
+
+
+
+## Phase 21 — full desktop decentralized beta demonstration
+
+One controlled system run covering:
+
+```text
+private RustyOnions network
+
+multiple Service Nodes
+
+User Node verifier
+
+clean CrabLink Desktop
+
+Passport
+
+username/profile
+
+local following
+
+post/image/article
+
+profile timeline
+
+Home feed
+
+Blog
+
+Imageboard
+
+Forum
+
+named Site resolution
+
+paid flow
+
+receipt
+
+ROC display
+
+QuickChain evidence
+
+ROX private-testnet path
+
+failure/halt drill
+
+restart/reconciliation
+```
+
+
+
+## Phase 22 — security, moderation, privacy, abuse
+
+Includes:
+
+```text
+Tauri allowlist
+
+capability audit
+
+origin/URL audit
+
+secret scan
+
+log redaction
+
+sandbox malicious corpus
+
+fuzzing
+
+bounded bodies
+
+decompression protection
+
+replay tests
+
+privilege separation
+
+block/mute/report/tombstone
+
+rate limits
+
+thread-spam controls
+
+Site operator/global moderation
+
+privacy boundary
+
+redacted diagnostics
+```
+
+
+
+## Phase 23 — UX, accessibility, performance
+
+Required before inviting real users:
+
+```text
+clean navigation
+
+good empty states
+
+clear onboarding
+
+clear offline/paid/Passport states
+
+keyboard support
+
+focus order
+
+screen-reader labels
+
+contrast
+
+font scaling
+
+reduced motion
+
+launch performance
+
+Home/profile/Site render performance
+
+long-session leak review
+```
+
+
+
+## Phase 24 — desktop packaging/signing/update/recovery
+
+Primary beta artifact remains macOS.
+
+Includes:
+
+```text
+release config
+
+signing
+
+notarization decision
+
+app-data path
+
+migration
+
+uninstall/reinstall behavior
+
+Passport preservation
+
+backup/export guidance
+
+crash-safe update
+
+diagnostics
+
+version/release notes
+```
+
+
+
+## Phase 25 — private beta operations
+
+Includes:
+
+```text
+invite list
+
+beta environment identity
+
+node operators
+
+issue intake
+
+privacy notice
+
+content policy
+
+moderation response
+
+emergency halt
+
+Passport support boundary
+
+release/update/rollback process
+
+known issue list
+
+network-health review
+```
+
+
+
+## Phase 26 — final honest beta acceptance
+
+Final automation includes frontend/Tauri/Passport/social/feed/template/Site/payment/QuickChain/ROX/security/package gates.
+
+Final manual acceptance includes:
+
+```text
+clean user
+
+returning user
+
+wrong/cancelled PIN
+
+recovery
+
+follow/unfollow
+
+feed refresh
+
+post publish
+
+three Site types
+
+paid content
+
+offline/degraded states
+
+QuickChain degraded
+
+ROX halted
+
+restart
+
+upgrade
+
+uninstall/reinstall behavior
+```
+
+The intended release label is explicitly a **CrabLink Desktop decentralized private beta**, with QuickChain as a private-network beta and ROX as a private Solana-testnet demonstration—not a public mainnet blockchain/bridge launch. 
+
+---
+
+# 32. Codebundle posture
+
+No codebundle was regenerated for the latest A4 work.
+
+Therefore:
+
+```text
+CURRENT_CODEBUNDLE_FULLY_REFLECTS_LATEST_PHASE15A4=NO
+```
+
+Do not use the existing codebundle as definitive proof of the newest RustyOnions Site-publication or Omnigate changes.
+
+Preferred timing:
+
+```text
+regenerate at:
+  Phase 15 closeout
+  major milestone
+  explicit session wrap-up when needed
+```
+
+not after each small patch.
+
+---
+
+# 33. Broader project state outside immediate Phase 15
+
+The wider project remains:
+
+```text
+RustyOnions:
+  backend / substrate / value plane
+
+CrabLink:
+  Tauri-first desktop product/client
+  crab:// links
+  B3 assets
+  Passports
+  internal ROC paid access
+  creator profiles
+  receipts
+  Sites/templates
+
+ROX Anchor:
+  Rust + Anchor controlled ROC↔ROX private-testnet path
+```
+
+Passport-native desktop work is substantially advanced.
+
+Android TV work is parked at its previously recorded device-acceptance point.
+
+Desktop remains the reference implementation and must be made coherent before resuming the other platform products.
+
+This choice avoids multiplying UI, identity, Site, and economic bugs across multiple clients while the reference product is still changing.
+
+---
+
+# 34. One-sentence technical handoff
+
+```text
+Resume FINAL_BETA Phase 15 at A4A2B2 by running the existing Omnigate text_asset_publish integration suite and then cargo check -p omnigate; fix only the first failure if either is red, and once both are green continue by tracing the existing public read/proxy path for the new generic /v1/index/site-publications projection, build Forum thread reads from Post roots tagged forum + forum-category:<category>, keep replies in the existing Comment relation system, keep sticky/locked state reviewed-policy-only, keep creatorDisplay display-only, and do not wire the creator-publication PUT until the caller can cryptographically prove control of the claimed Passport.
+```
+
+---
+
+# 35. Final end-of-session truth record
+
+```text
+DATE_LOCAL=2026-08-12
+
+ACTIVE_BUILDPLAN=FINAL_BETA.md
+
+ACTIVE_PHASE=FINAL_BETA_PHASE15_FORUM_TEMPLATE
+
+PHASE14_IMAGEBOARD_TECHNICAL_CLOSEOUT=GREEN
+PHASE14_LIVE_VISUAL_ACCEPTANCE=DEFERRED
+
+PHASE15A1_FORUM_CORE_MODEL=GREEN
+PHASE15A1_TESTS=13_OF_13_GREEN
+
+PHASE15A2_FORUM_TEMPLATE_REGISTRATION=GREEN
+PHASE15A2_TESTS=40_OF_40_GREEN
+
+PHASE15A3A_FORUM_PRODUCT_HANDOFF=GREEN
+PHASE15A3A_TESTS=12_OF_12_GREEN
+POSTPAGE_JSX_PARSE=GREEN
+COMMENTPAGE_JSX_PARSE=GREEN
+
+PHASE15A3B_POST_SUCCESS_HANDOFF=GREEN
+PHASE15A3B_TESTS=6_OF_6_GREEN
+POSTPUBLISHFLOW_JSX_PARSE=GREEN
+
+PHASE15A4A1_CREATOR_PUBLICATION_PUT=GREEN
+PHASE15A4A1_TESTS=5_OF_5_GREEN
+SVC_INDEX_CHECK_AFTER_A4A1=GREEN
+
+PHASE15A4A2A_PASSPORT_SUBJECT_PROFILE_LOOKUP=GREEN
+PHASE15A4A2A_TESTS=5_OF_5_GREEN
+SVC_PASSPORT_CHECK=GREEN
+
+PHASE15A4A2A2_DOTTED_USERNAME_COMPATIBILITY=GREEN
+SVC_INDEX_PUBLICATION_TESTS=9_OF_9_GREEN
+CRABLINK_PUBLICATION_TESTS=13_OF_13_GREEN
+
+CREATOR_PUBLICATION_PUT_IMPLEMENTED=YES
+CREATOR_PUBLICATION_PUT_WIRED_FROM_OMNIGATE=NO
+REASON=NO_SUFFICIENT_CALLER_TO_PASSPORT_AUTHORSHIP_PROOF
+
+PASSPORT_SUBJECT_PROFILE_LOOKUP_IMPLEMENTED=YES
+PASSPORT_SUBJECT_PROFILE_LOOKUP_IS_PUBLISHER_CONTROL_PROOF=NO
+
+CREATOR_DISPLAY_CLASSIFICATION=DISPLAY_ONLY
+
+PUBLICATION_RELATION_MODEL=COMMENT_ONLY
+PUBLICATION_RELATION_MODEL_CHANGED=NO
+
+PHASE15A4A2B1_SITE_PUBLICATION_ROOT_MODEL=GREEN
+PHASE15A4A2B1_TESTS=8_OF_8_GREEN
+SVC_INDEX_CHECK_AFTER_A4A2B1=GREEN
+
+SITE_PUBLICATION_SCHEMA=crablink.site-publication.v1
+SITE_PUBLICATION_PAGE_SCHEMA=crablink.site-publication-page.v1
+
+SITE_PUBLICATION_ROOT_KINDS=post,image,article
+COMMENT_ROOT_KIND=FORBIDDEN
+
+SITE_PUBLICATION_MAX_TAGS=32
+SITE_PUBLICATION_PAGE_DEFAULT=20
+SITE_PUBLICATION_PAGE_MAX=100
+SITE_PUBLICATION_ORDER=NEWEST_FIRST
+
+FORUM_CATEGORY_DURABLE_TAG=forum-category:<category>
+
+PHASE15A4A2B2_OMNIGATE_POST_SITE_PUBLICATION_WRITE=APPLIED
+PHASE15A4A2B2_TESTED=NO
+PHASE15A4A2B2_CARGO_CHECKED=NO
+
+A4A2B2_ASSET_KIND_WIRED=post
+A4A2B2_COMMENT_WRITE=NO
+A4A2B2_ARTICLE_WRITE=NO
+A4A2B2_IMAGE_WRITE=NO
+
+A4A2B2_CONTENT_UPLOAD_PREREQUISITE=YES
+A4A2B2_MANIFEST_PREREQUISITE=YES
+A4A2B2_ASSET_INDEX_POINTER_PREREQUISITE=YES
+
+A4A2B2_CREATED_AT_SOURCE=IMMUTABLE_CONTENT_ENVELOPE
+
+A4A2B2_FORUM_TAG_HANDOFF=APPLIED
+A4A2B2_FORUM_CATEGORY_HANDOFF=APPLIED
+
+A4A2B2_VERIFIED_CREATOR_USERNAME=NO
+A4A2B2_PROFILE_URL=NO
+A4A2B2_PASSPORT_OWNERSHIP_CLAIM=NO
+
+A4A2B2_SECONDARY_INDEX_FAILURE=TRUTHFUL_WARNING
+
+PAID_STORAGE_FLOW_CHANGED=NO
+WALLET_HOLD_FLOW_CHANGED=NO
+LEDGER_AUTHORITY_CHANGED=NO
+RECEIPT_AUTHORITY_CHANGED=NO
+ENTITLEMENT_AUTHORITY_CHANGED=NO
+MODERATION_AUTHORITY_CHANGED=NO
+QUICKCHAIN_AUTHORITY_CHANGED=NO
+ROX_AUTHORITY_CHANGED=NO
+SOLANA_AUTHORITY_CHANGED=NO
+
+PHASE15_FORMAL_CLOSEOUT=NOT_YET_GREEN
+
+CODEBUNDLE_REGENERATED=NO
+
+NEXT_COMMAND_1=
+cargo test -p omnigate --test text_asset_publish
+
+NEXT_COMMAND_2_IF_GREEN=
+cargo check -p omnigate
+
+NEXT_PRODUCT_WORK_AFTER_A4A2B2_GREEN=
+TRACE_SITE_PUBLICATION_PUBLIC_READ_PATH
+THEN_BUILD_FORUM_PUBLIC_THREAD_PROJECTION
+
+NEXT_MAJOR_BUILDPLAN_PHASE_AFTER_PHASE15=
+FINAL_BETA_PHASE16_SITE_PRODUCT_ACCEPTANCE
+```
+
+The most important thing for the next session is to **resume from verification, not redesign**. The underlying Forum architecture is now substantially defined: Post roots are Site publications, Comment replies remain publication relations, Forum taxonomy travels through bounded tags, reviewed policy owns sticky/locked state, and no unproven Passport value is allowed to silently become verified public authorship.
+
+### END NOTE - AUGUST 12 2026 - 23:40 CST
+
+
+
+### BEGIN NOTE - AUGUST 14 2026 - 11:35 CST
+
+# RustyOnions / CrabLink FINAL_BETA — Comprehensive Carryover Notes
+
+## Session state through 2026-08-14
+
+### Current critical path: FINAL_BETA Phase 19 — QuickChain Multi-Node, Committee, and Finality Proof
+
+These notes are intended to be copied into **both the RustyOnions repo and the CrabLink repo** so the next session can resume directly from the current implementation state without reconstructing context.
+
+---
+
+# 1. Executive status
+
+The desktop FINAL_BETA effort remains the active critical path toward the CrabLink desktop beta.
+
+Phases 16, 17, and 18 are closed GREEN. Phase 19 is active.
+
+The most important accomplishment of this session is that QuickChain has moved beyond isolated unit-test quorum behavior into a **real multi-process cryptographic quorum proof**:
+
+```text
+PHASE19_LIVE_MULTI_PROCESS_CRYPTOGRAPHIC_QUORUM=GREEN
+LIVE_SERVICE_NODES=3_GREEN
+LIVE_USER_NODE=1_GREEN
+CANONICAL_TRANSITION_HASH_CONVERGENCE=GREEN
+INDEPENDENT_ED25519_SIGNATURE_VERIFICATION=GREEN
+ONE_OF_THREE_REJECTED=GREEN
+TWO_OF_THREE_QUORUM=GREEN
+MEMBER_LOSS_QUORUM_A_PLUS_C=GREEN
+RESTARTED_MEMBER_SIGNING_IDENTITY_STABILITY=GREEN
+FINALITY=NOT_YET_PROVEN
+```
+
+Three real macronode Service Node processes and one real micronode User Node ran concurrently. All three Service Nodes independently signed the same canonical transition over the real guarded HTTP surface. Their signatures independently verified against distinct Ed25519 identities. One signature failed the canonical 2-of-3 quorum rule, two signatures passed, Service Nodes A+C retained quorum after B was killed, and B restarted with the same deterministic signing identity and produced the same signature for the same transition.
+
+This is a substantial Phase 19 milestone, but **Phase 19 as a whole is not yet GREEN**.
+
+Current broad Phase 19 posture:
+
+```text
+FINAL_BETA_PHASE19_QUICKCHAIN_MULTI_NODE=NOT_YET_GREEN
+
+MULTI_NODE_TOPOLOGY=GREEN
+LIVE_CRYPTOGRAPHIC_QUORUM=GREEN
+
+CHECKPOINTS=NOT_YET_GREEN
+FINALITY=NOT_YET_GREEN
+
+MEMBER_FAILURE_ISOLATION=GREEN
+MEMBER_RESTART_RECOVERY=GREEN
+FAILURE_RECOVERY=BROADER_PROOF_STILL_PENDING
+
+LIVE_REPLAY_DUPLICATE_PROOF=NOT_YET_COMPLETE
+LIVE_CHALLENGE_PATH=NOT_YET_COMPLETE
+LIVE_DA_FALLBACK=NOT_YET_COMPLETE
+
+CHAOS=NOT_RUN_FOR_PHASE19_INTEGRATED_NETWORK
+SOAK=NOT_RUN_FOR_PHASE19_INTEGRATED_NETWORK
+
+CRABLINK_FINALITY_AUTHORITY=NO
+WALLET_AUTHORITY_CHANGED=NO
+LEDGER_AUTHORITY_CHANGED=NO
+```
+
+The latest work has now prepared the protocol boundary required for the next implementation step: **an unsigned deterministic committee checkpoint candidate**.
+
+---
+
+# 2. Latest terminal result — committee checkpoint payload is GREEN
+
+The final work in this session added and verified an additive committee-aware checkpoint hash payload in `ron-proto`.
+
+Apply result:
+
+```text
+FINAL_BETA_PHASE19_COMMITTEE_CHECKPOINT_PAYLOAD=APPLIED
+FROZEN_PHASE0_UNSIGNED_CHECKPOINT_CHANGED=NO
+COMMITTEE_CHECKPOINT_SCHEMA=quickchain.committee-checkpoint-payload.v1
+GLOBAL_DTO_VERSION_CHANGED=NO
+CHECKPOINT_HASH_DOMAIN_CHANGED=NO
+CHECKPOINT_HASH_DOMAIN=quickchain.checkpoint.v1
+DATA_AVAILABILITY_ROOT=REQUIRED
+VALIDATOR_SET_HASH=REQUIRED
+CANONICAL_ENCODING=JSON_V1_REQUIRED
+STATE_ROOT_SCHEME=SORTED_MERKLE_MAP_V1
+RECEIPT_ROOT_SCHEME=LEDGER_SEQUENCE_MERKLE_V1
+VALIDATOR_SIGNATURES_IN_PAYLOAD=NO
+VALIDATOR_SIGNING_ADDED=NO
+QUORUM_ACCEPTANCE_ADDED=NO
+CHECKPOINT_FINALIZATION_ADDED=NO
+FINALITY_ADDED=NO
+RON_LEDGER_CHANGED=NO
+WALLET_MUTATION=NO
+LEDGER_MUTATION=NO
+NEW_DOMAIN_SEPARATOR_ADDED=NO
+FOCUSED_PROTOCOL_TESTS=8_ADDED
+NEXT_ACTION=VERIFY_PHASE19_COMMITTEE_CHECKPOINT_PAYLOAD
+```
+
+Verification was fully GREEN:
+
+```text
+running 8 tests
+...
+test result: ok. 8 passed; 0 failed
+```
+
+The new tests proved:
+
+* valid committee checkpoint payload validates;
+* validator-set commitment is included;
+* data-availability commitment is included;
+* validator signatures are structurally excluded;
+* changing validator set changes canonical bytes and checkpoint hash;
+* changing DA commitment changes canonical bytes and checkpoint hash;
+* checkpoint hash remains deterministic under the existing checkpoint domain;
+* reserved non-JSON encoding rejects;
+* zero checkpoint height rejects.
+
+The existing frozen QuickChain hash-payload suite also remained GREEN:
+
+```text
+running 10 tests
+...
+test result: ok. 10 passed; 0 failed
+```
+
+This proves the existing Phase-0 checkpoint corpus was not broken.
+
+Finally:
+
+```text
+cargo check -p ron-proto
+Finished `dev` profile ...
+```
+
+was GREEN.
+
+Therefore:
+
+```text
+PHASE19_COMMITTEE_CHECKPOINT_PAYLOAD=GREEN
+FROZEN_PHASE0_CHECKPOINT_PAYLOAD_COMPATIBILITY=GREEN
+VALIDATOR_SET_COMMITMENT=GREEN
+DATA_AVAILABILITY_COMMITMENT=GREEN
+CHECKPOINT_HASH_DETERMINISM=GREEN
+CHECKPOINT_SIGNATURES_STRUCTURALLY_EXCLUDED=GREEN
+RON_PROTO_CHECK=GREEN
+```
+
+---
+
+# 3. Exact next action for the next session
+
+Do **not** begin by redesigning Phase 19.
+
+Do **not** add finality signatures first.
+
+Do **not** create another planning document.
+
+The next implementation step should be:
+
+> Build a deterministic **unsigned QuickChain committee checkpoint candidate** in `ron-ledger`, using the newly proven `QuickChainCommitteeCheckpointPayloadV1` and already-reviewed deterministic root artifacts.
+
+The candidate must remain **pre-signature and pre-finality**.
+
+Desired next flow:
+
+```text
+reviewed deterministic roots
+        ↓
+typed receipt-root provenance
+        ↓
+QuickChainCommitteeCheckpointPayloadV1
+        ↓
+canonical JSON
+        ↓
+BLAKE3(
+  "quickchain.checkpoint.v1"
+  || 0x00
+  || canonical_payload
+)
+        ↓
+unsigned deterministic checkpoint candidate hash
+```
+
+Only after multiple nodes independently reproduce the exact same checkpoint candidate should validator signing/finality work begin.
+
+The next patch should probably live in an appropriate `ron-ledger/src/quickchain/...` implementation file rather than `ron-proto`, because `ron-proto` now owns the canonical DTO/validation contract and `ron-ledger` should own production of ledger/checkpoint artifacts.
+
+The candidate should require, at minimum, the reviewed commitments already modeled by the new payload:
+
+```text
+chain_id
+height
+epoch_id
+execution_spec_version
+
+previous_checkpoint_hash
+previous_state_root
+new_state_root
+
+receipt_root
+accounting_snapshot_root
+reward_manifest_root
+data_availability_root
+
+policy_hash
+validator_set_hash
+chain_params_hash
+
+canonical_encoding
+state_root_scheme
+receipt_root_scheme
+
+supply_delta
+conservation
+settlement_mode
+
+started_at_ms
+ended_at_ms
+produced_at_ms
+```
+
+It must not contain validator signatures.
+
+It must not claim quorum acceptance.
+
+It must not call anything “finalized.”
+
+It must not mutate ledger state.
+
+It must not mutate wallets.
+
+---
+
+# 4. Important checkpoint protocol decision made this session
+
+A critical checkpoint-versioning issue was discovered and resolved.
+
+The pre-existing:
+
+```text
+QuickChainUnsignedCheckpointPayloadV1
+```
+
+is a frozen Phase-0/local-root artifact.
+
+It deliberately rejects committee/finality-era commitments such as:
+
+```text
+validator_set_hash
+data_availability_root
+```
+
+It would have been incorrect to mutate that locked V1 payload because doing so could break existing golden vectors and hash contracts.
+
+Instead, an additive payload was created:
+
+```text
+QuickChainCommitteeCheckpointPayloadV1
+schema = quickchain.committee-checkpoint-payload.v1
+```
+
+The old payload remains unchanged.
+
+This new payload requires:
+
+```text
+validator_set_hash
+data_availability_root
+```
+
+but still explicitly contains **no validator signatures**.
+
+It reuses the existing checkpoint hash domain:
+
+```text
+quickchain.checkpoint.v1
+```
+
+No new domain separator was introduced.
+
+This is deliberate.
+
+Future code should not casually merge or replace these two contracts.
+
+---
+
+# 5. Receipt-root provenance work completed before checkpoint assembly
+
+Another important checkpoint safety issue was discovered earlier in the session.
+
+The checkpoint header names its receipt-root scheme as:
+
+```text
+LedgerSequenceMerkleV1
+```
+
+but the general-purpose tree reducer accepts generic sort keys.
+
+Simply accepting any generic `Receipts` root and labeling it `LedgerSequenceMerkleV1` would have overclaimed provenance.
+
+The protocol's canonical receipt ordering was confirmed to be:
+
+```text
+u64_be(ledger_seq_start) || utf8(txid)
+```
+
+and `ron-proto` already owned the canonical helper for that ordering.
+
+Therefore `ron-ledger` received a typed receipt-root producer instead of trusting arbitrary generic receipt roots.
+
+Relevant implementation:
+
+```text
+crates/ron-ledger/src/quickchain/tree_material_projection.rs
+```
+
+Added typed wrapper:
+
+```text
+QuickChainLedgerSequenceReceiptRoot
+```
+
+and producer:
+
+```text
+compute_ledger_sequence_receipt_root(...)
+```
+
+Properties:
+
+* validates each immutable receipt hash payload;
+* rejects cross-chain receipt material;
+* obtains exact sort-key semantics from `ron-proto`;
+* hashes receipt payloads under:
+  `quickchain.receipt.v1`;
+* feeds the existing audited sorted Merkle reducer;
+* does not expose an arbitrary constructor from a generic root;
+* does not perform checkpoint assembly;
+* does not perform validator signing;
+* does not perform finality.
+
+Focused suite:
+
+```text
+cargo test -p ron-ledger \
+  --features quickchain-preflight \
+  --test final_beta_phase19_receipt_root_semantics
+```
+
+Final result:
+
+```text
+running 9 tests
+...
+test result: ok. 9 passed; 0 failed
+```
+
+The tests prove:
+
+1. empty typed receipt root matches existing empty receipts root;
+2. input permutation does not change root;
+3. root matches ledger-sequence-then-txid protocol material;
+4. equal sequence uses txid tie-break deterministically;
+5. cross-chain receipts reject;
+6. invalid receipt payload rejects;
+7. duplicate `(ledger_seq_start, txid)` sort key rejects;
+8. immutable payload change changes root;
+9. typed wrapper preserves receipt provenance.
+
+Therefore:
+
+```text
+PHASE19_LEDGER_SEQUENCE_RECEIPT_ROOT=GREEN
+RECEIPT_ORDERING_PROVEN=GREEN
+RECEIPT_ROOT_PROVENANCE=GREEN
+GENERIC_RECEIPT_ROOT_AS_CHECKPOINT_TRUTH=NO
+```
+
+---
+
+# 6. Static scanner failure and repair
+
+After the typed receipt-root work, the behavioral suite was GREEN but:
+
+```text
+quickchain_pre_root_boundary
+```
+
+failed.
+
+The scanner reported:
+
+```text
+found forbidden token `ring::`
+```
+
+in:
+
+```text
+src/quickchain/tree_material_projection.rs
+```
+
+This was a **false positive**.
+
+Cause:
+
+```rust
+String::with_capacity(...)
+```
+
+lowercased to:
+
+```text
+string::with_capacity
+```
+
+and the scanner naïvely searched for the substring:
+
+```text
+ring::
+```
+
+which appears inside `string::`.
+
+We did **not** weaken the scanner and did **not** add a broad exception.
+
+Instead the local buffer creation was rewritten scanner-safely using a default `String` plus `reserve`.
+
+Apply:
+
+```text
+FINAL_BETA_PHASE19_RECEIPT_ROOT_RING_FALSE_POSITIVE_REPAIR=APPLIED
+FAILURE_CLASS=STATIC_SCANNER_SUBSTRING_FALSE_POSITIVE
+SCANNER_POLICY_CHANGED=NO
+SCANNER_EXCEPTION_ADDED=NO
+RECEIPT_ROOT_ALGORITHM_CHANGED=NO
+```
+
+Boundary rerun:
+
+```text
+running 2 tests
+test phase5_anchor_checkpoint_exception_is_narrow ... ok
+test quickchain_preflight_sources_have_no_runtime_authority_or_root_production ... ok
+
+test result: ok. 2 passed; 0 failed
+```
+
+Then the 9 receipt-root tests were rerun and remained GREEN.
+
+Important lesson for later patches:
+
+> The source-boundary scanners perform substring-based checks after stripping comments/literals. Innocent namespace syntax can trip them. Prefer fixing the local spelling/structure rather than widening scanner exceptions unless the new authority surface is genuinely intentional.
+
+---
+
+# 7. Live multi-process cryptographic quorum — major Phase 19 milestone
+
+The largest integration accomplishment this session was joining the existing real process topology with real cryptographic quorum signing.
+
+Existing test file:
+
+```text
+crates/macronode/tests/phase22_local_two_node_topology.rs
+```
+
+Despite its historical filename, it now includes the current Phase 19 live topology test:
+
+```text
+phase19_live_three_service_one_user_topology_survives_member_loss_and_restart
+```
+
+The test launches:
+
+```text
+Service Node A — real macronode process
+Service Node B — real macronode process
+Service Node C — real macronode process
+User Node      — real micronode process
+```
+
+using dynamically allocated local loopback ports.
+
+Each Service Node uses:
+
+* isolated ports;
+* isolated index database;
+* explicit private-beta quorum identity;
+* distinct deterministic Ed25519 seed;
+* distinct logical key reference;
+* guarded HTTP admin signing route.
+
+The same canonical transition identity is posted to all three Service Nodes.
+
+Live output:
+
+```text
+Phase 19: waiting for Service Node A, Service Node B, Service Node C, and User Node...
+Phase 19: all three independent Service Nodes and the User Node are healthy.
+Phase 19: requesting the same canonical transition signature from all three real Service Nodes...
+Phase 19: three process signatures verified independently; one signature failed quorum and two signatures satisfied canonical 2-of-3 quorum.
+Phase 19: terminating Service Node B to prove one-member failure isolation...
+Phase 19: Service Nodes A and C plus the User Node remained healthy after Service Node B loss, and A+C still satisfied canonical 2-of-3 quorum.
+Phase 19: restarting Service Node B on the same ports and isolated index store...
+Phase 19: restarted Service Node B returned with the same deterministic signing identity and again formed canonical quorum with Service Node A.
+Phase 19 live quorum passed: three real Service Nodes independently signed the same canonical transition; signatures verified against distinct deterministic Ed25519 identities; one signature failed 2-of-3 quorum; two signatures passed; A+C retained quorum after B loss; and restarted B reproduced its deterministic signature without wallet, ledger, or finality authority.
+```
+
+Final:
+
+```text
+test ... ok
+
+test result: ok. 1 passed; 0 failed
+```
+
+Therefore:
+
+```text
+PHASE19_LIVE_SERVICE_NODE_PROCESSES=3_GREEN
+PHASE19_LIVE_USER_NODE_PROCESSES=1_GREEN
+PHASE19_MULTI_PROCESS_TOPOLOGY=GREEN
+
+PHASE19_LIVE_CRYPTOGRAPHIC_QUORUM=GREEN
+
+PHASE19_SAME_TRANSITION_ALL_NODES=GREEN
+PHASE19_TRANSITION_HASH_CONVERGENCE=GREEN
+
+PHASE19_SIGNATURE_A_EXTERNAL_VERIFICATION=GREEN
+PHASE19_SIGNATURE_B_EXTERNAL_VERIFICATION=GREEN
+PHASE19_SIGNATURE_C_EXTERNAL_VERIFICATION=GREEN
+
+PHASE19_ONE_OF_THREE_REJECTED=GREEN
+PHASE19_TWO_OF_THREE_ACCEPTED=GREEN
+
+PHASE19_MEMBER_FAILURE_ISOLATION=GREEN
+PHASE19_A_PLUS_C_QUORUM_AFTER_B_LOSS=GREEN
+
+PHASE19_MEMBER_RESTART=GREEN
+PHASE19_RESTARTED_B_IDENTITY_STABILITY=GREEN
+PHASE19_RESTARTED_B_SIGNATURE_STABILITY=GREEN
+
+PHASE19_WALLET_AUTHORITY_CHANGED=NO
+PHASE19_LEDGER_AUTHORITY_CHANGED=NO
+PHASE19_FINALITY_AUTHORITY_CHANGED=NO
+```
+
+This was the first point where it became accurate to say:
+
+> Live macronode topology and cryptographic quorum are integrated.
+
+It is still **not** accurate to say:
+
+> QuickChain finality is proven.
+
+---
+
+# 8. Canonical transition identity foundation
+
+Before live signing was possible, the session fixed a serious protocol-authority seam.
+
+Previously the reward-loop integration test constructed its transition hash from a **test-local identity struct**.
+
+That meant production macronode signing risked either:
+
+* trusting a caller-supplied transition hash; or
+* duplicating the test-local preimage contract.
+
+Neither was acceptable.
+
+The canonical transition identity was therefore moved into `ron-proto`.
+
+Relevant file:
+
+```text
+crates/ron-proto/src/service_node/epoch_transition.rs
+```
+
+Added:
+
+```text
+RocEpochTransitionIdentityV1
+```
+
+Historical domain strings were intentionally preserved for protocol compatibility:
+
+```text
+ROC_EPOCH_TRANSITION_IDENTITY_DOMAIN
+= rustyonions.phase22.epoch-transition.v1
+
+ROC_EPOCH_TRANSITION_HASH_DOMAIN
+= phase22.epoch-transition.v1
+```
+
+The historical `phase22` naming is now a frozen protocol label, **not** the current project phase number.
+
+Do not rename it casually.
+
+Identity includes immutable transition material such as:
+
+```text
+chain_id
+epoch_id
+
+accounting_snapshot_hash
+reward_plan_hash
+policy_hash
+economics_config_hash
+registry_root
+reward_binding_root
+evidence_root
+
+reward_cap_minor_units
+reward_total_minor_units
+
+allocations
+threshold
+eligibilities
+```
+
+Excluded from identity:
+
+```text
+transition_hash
+signatures
+produced_at
+```
+
+Validation reuses the actual transition expectations and rules:
+
+* schema/domain;
+* chain and epoch;
+* cap;
+* total;
+* non-empty allocations;
+* duplicate allocation rejection;
+* canonical allocation order;
+* checked sum;
+* eligibility membership;
+* threshold validation.
+
+Focused test:
+
+```text
+crates/ron-proto/tests/final_beta_phase19_transition_identity.rs
+```
+
+Final:
+
+```text
+9 passed
+cargo check -p ron-proto = GREEN
+```
+
+---
+
+# 9. Reward-loop migration to shared transition identity
+
+The existing local reward-loop test originally had its own private transition identity struct and local hashing contract.
+
+That was migrated to use:
+
+```text
+RocEpochTransitionIdentityV1
+ROC_EPOCH_TRANSITION_HASH_DOMAIN
+```
+
+Relevant test:
+
+```text
+svc-rewarder/tests/internal_roc_beta_phase22_local_reward_loop.rs
+```
+
+The first migration apply failed because the patch script expected:
+
+```text
+transition_identity.validate()
+```
+
+on one physical source line while formatting produced:
+
+```rust
+transition_identity
+    .validate()
+```
+
+Rollback succeeded.
+
+A formatting-independent v2 patch then applied successfully.
+
+Verification:
+
+```text
+cargo test -p svc-rewarder \
+  --test internal_roc_beta_phase22_local_reward_loop \
+  complete_local_reward_loop_executes_replays_and_challenges_tampering \
+  -- \
+  --nocapture
+
+cargo check -p svc-rewarder
+```
+
+Final reward-loop result remained GREEN.
+
+Preserved behaviors:
+
+```text
+two-of-three signed quorum
+ledger-confirmed receipt
+User Node replay
+tamper challenge
+single-node mint rejection
+```
+
+No economic behavior was changed.
+
+---
+
+# 10. Exact transition-hash contract
+
+The transition identity hash contract currently used by the reward/quorum path is:
+
+```text
+BLAKE3(
+    domain_bytes
+    || 0x00
+    || serde_json::to_vec(identity)
+)
+```
+
+with:
+
+```text
+domain = phase22.epoch-transition.v1
+```
+
+wrapped as:
+
+```text
+b3:<64 lowercase hex>
+```
+
+The macronode signing path recomputes this locally.
+
+The caller does **not** supply the transition hash.
+
+This is an important invariant.
+
+---
+
+# 11. Macronode quorum participant
+
+New implementation:
+
+```text
+crates/macronode/src/services/quorum_participation.rs
+```
+
+Primary type:
+
+```text
+ServiceNodeQuorumParticipant
+```
+
+Configured with:
+
+```text
+chain ID
+Service Node ID
+logical quorum key reference
+concrete ron-kms KeyId
+```
+
+Primary behavior:
+
+```text
+validate_and_sign(...)
+```
+
+Flow:
+
+```text
+canonical identity received
+        ↓
+identity validates
+        ↓
+chain matches configured participant
+        ↓
+participant exists in reviewed eligibility
+        ↓
+eligibility == Eligible
+        ↓
+eligibility logical key matches configured logical key
+        ↓
+transition hash recomputed locally
+        ↓
+ServiceNodeSignatureV1 constructed
+        ↓
+canonical signature message from ron-proto
+        ↓
+Ed25519 signer called
+        ↓
+exactly one Service Node signature returned
+```
+
+No quorum aggregation occurs here.
+
+No checkpoint finalization occurs here.
+
+No wallet/ledger mutation occurs here.
+
+Focused participation suite eventually reached:
+
+```text
+13 passed
+```
+
+---
+
+# 12. Signature reuse test failure and repair
+
+An early signer test failed:
+
+```text
+signature_cannot_be_reused_for_a_different_valid_identity
+```
+
+The production behavior was correct.
+
+The test incorrectly expected:
+
+```rust
+kms.verify(...).is_err()
+```
+
+for a validly encoded but cryptographically mismatching Ed25519 signature.
+
+The verifier actually returns:
+
+```text
+Ok(false)
+```
+
+for that case.
+
+The test was repaired to:
+
+1. assert that changing transition hash changes canonical signature message bytes;
+2. call verifier;
+3. require `false`.
+
+No crypto code was changed.
+
+After repair:
+
+```text
+9/9 quorum-participation tests GREEN
+```
+
+This is a useful reminder: distinguish malformed-verification errors from normal cryptographic mismatch results.
+
+---
+
+# 13. Runtime quorum participant registration
+
+After the local participant was proven, the participant was wired into the process runtime registry.
+
+Relevant:
+
+```text
+crates/macronode/src/types.rs
+crates/macronode/src/services/quorum_participation.rs
+```
+
+Added process-local runtime wrapper:
+
+```text
+QuorumParticipationRuntime
+```
+
+`RuntimeStatus` gained an optional registered participant slot.
+
+Important properties:
+
+```text
+default participant = NONE
+explicit injected signer required
+automatic ephemeral key creation = NO
+second participant registration = rejected
+silent key swap = NO
+unconfigured signing = rejected
+```
+
+The runtime registry does **not** imply quorum has been reached.
+
+The runtime registry does **not** imply finality.
+
+Focused tests took participation suite from 9 to 13 tests.
+
+Result:
+
+```text
+13 passed
+cargo check -p macronode GREEN
+```
+
+---
+
+# 14. Guarded quorum-sign HTTP surface
+
+New handler:
+
+```text
+crates/macronode/src/http_admin/handlers/quorum.rs
+```
+
+Route:
+
+```text
+POST /api/v1/quickchain/quorum/sign
+```
+
+It is protected by the existing macronode admin guard.
+
+Relevant modified files include:
+
+```text
+crates/macronode/src/http_admin/handlers/mod.rs
+crates/macronode/src/http_admin/router.rs
+crates/macronode/src/http_admin/middleware/auth.rs
+```
+
+Request body:
+
+```text
+RocEpochTransitionIdentityV1
+```
+
+There is no caller-supplied transition hash.
+
+Response success contains exactly one:
+
+```text
+ServiceNodeSignatureV1
+```
+
+The response explicitly avoids false authority claims:
+
+```text
+quorumAggregated=false
+quorumFinalized=false
+checkpointFinalized=false
+
+walletMutation=false
+ledgerMutation=false
+payoutExecuted=false
+receiptCreated=false
+confirmedRocReported=false
+paidUnlock=false
+
+finality=false
+crabLinkFinalityAuthority=false
+```
+
+Unconfigured runtime:
+
+```text
+503 Service Unavailable
+```
+
+Invalid canonical identity:
+
+```text
+422 Unprocessable Entity
+```
+
+Focused handler tests:
+
+```text
+3/3 GREEN
+```
+
+Auth regression tests:
+
+```text
+3/3 GREEN
+```
+
+`cargo check -p macronode` GREEN.
+
+---
+
+# 15. KMS deterministic seed/public-key helper
+
+Live process identity required a deterministic key/public-key relationship.
+
+The current memory keystore generates random keys, while the persistent file backend is not ready to be claimed as production-stable KMS.
+
+Therefore `ron-kms` received a narrow additive helper:
+
+```text
+32-byte Ed25519 seed
+        ↓
+32-byte Ed25519 public key
+```
+
+Relevant files:
+
+```text
+crates/ron-kms/src/backends/dalek.rs
+crates/ron-kms/src/backends/fast_ring.rs
+crates/ron-kms/src/backends/mod.rs
+crates/ron-kms/tests/seed_public_key.rs
+```
+
+Both backend implementations were wired through the stable facade.
+
+Tests:
+
+```text
+3/3 GREEN
+```
+
+including RFC 8032 vector coverage.
+
+`cargo check -p ron-kms` GREEN.
+
+No random key-generation behavior changed.
+
+No memory keystore behavior changed.
+
+No file keystore claim was introduced.
+
+No secret-export API was added.
+
+---
+
+# 16. Private-beta macronode quorum bootstrap
+
+New file:
+
+```text
+crates/macronode/src/services/quorum_bootstrap.rs
+```
+
+Runtime hookup:
+
+```text
+crates/macronode/src/cli/run.rs
+crates/macronode/src/services/mod.rs
+```
+
+This bootstrap is **explicitly opt-in**.
+
+Normal macronode startup remains without a quorum participant.
+
+Required envs:
+
+```text
+RON_QUICKCHAIN_PRIVATE_BETA_SIGNING_ENABLED
+
+RON_QUICKCHAIN_PRIVATE_BETA_CHAIN_ID
+
+RON_QUICKCHAIN_PRIVATE_BETA_SERVICE_NODE_ID
+
+RON_QUICKCHAIN_PRIVATE_BETA_KEY_REF
+
+RON_QUICKCHAIN_PRIVATE_BETA_SEED_HEX
+```
+
+The seed must represent exactly 32 bytes / 64 hexadecimal characters.
+
+Bootstrap behavior:
+
+```text
+explicit enable flag
+        ↓
+explicit chain
+        ↓
+explicit Service Node identity
+        ↓
+explicit logical key ref
+        ↓
+explicit seed
+        ↓
+derive deterministic public key
+        ↓
+construct one concrete process-local KeyId
+        ↓
+construct ServiceNodeQuorumParticipant
+        ↓
+construct seed-backed Signer
+        ↓
+register participant into RuntimeStatus
+```
+
+There is no random fallback key.
+
+There is no implicit memory-keystore key generation.
+
+Seed is not logged.
+
+Seed is not returned over HTTP.
+
+The code does **not** claim persistent KMS semantics.
+
+A private-beta public identity log may include:
+
+```text
+chain_id
+service_node_id
+logical_key_ref
+public_key
+```
+
+but not secret seed.
+
+---
+
+# 17. Bootstrap v1 failure and rollback
+
+The first bootstrap patch failed before compilation because its own patch-script structural assertion searched for:
+
+```text
+runtime.quorum_participation_active()
+```
+
+as one contiguous string.
+
+The generated test formatted it as:
+
+```rust
+runtime
+    .quorum_participation_active()
+```
+
+The apply correctly rolled back:
+
+```text
+FINAL_BETA_PHASE19_PRIVATE_BETA_QUORUM_BOOTSTRAP=RED
+SERVICES_MODULE_ROLLED_BACK=YES
+CLI_RUN_ROLLED_BACK=YES
+BOOTSTRAP_MODULE_REMOVED=YES
+```
+
+A later attempted test command therefore legitimately found:
+
+```text
+0 tests
+```
+
+for `quorum_bootstrap::tests::`.
+
+That zero-test run was **not GREEN evidence**.
+
+This was correctly recognized.
+
+V2 changed only the brittle patch assertion.
+
+---
+
+# 18. Bootstrap v2 GREEN
+
+V2 applied:
+
+```text
+FINAL_BETA_PHASE19_PRIVATE_BETA_QUORUM_BOOTSTRAP_V2=APPLIED
+PREVIOUS_FAILURE_CLASS=BRITTLE_FORMATTING_ASSERTION
+DEFAULT_STARTUP_QUORUM_PARTICIPANT=UNCONFIGURED
+EXPLICIT_ENABLE_ENV_REQUIRED=YES
+EXPLICIT_CHAIN_ID_REQUIRED=YES
+EXPLICIT_SERVICE_NODE_ID_REQUIRED=YES
+EXPLICIT_LOGICAL_KEY_REF_REQUIRED=YES
+EXPLICIT_32_BYTE_SEED_REQUIRED=YES
+SEED_LOGGING=NO
+SEED_HTTP_EXPOSURE=NO
+RANDOM_FALLBACK_KEY=NO
+MEMORY_KEYSTORE_BOOTSTRAP=NO
+RON_KMS_SEED_SIGNING_FACADE=USED
+RON_KMS_PUBLIC_KEY_DERIVATION=USED
+WRONG_CONCRETE_KEY_SIGNING=REJECTED
+DUPLICATE_RUNTIME_BOOTSTRAP=REJECTED
+PUBLIC_IDENTITY_DETERMINISTIC_FROM_SEED=YES
+PERSISTENT_KMS_CLAIM=NO
+QUORUM_AGGREGATION_ADDED=NO
+CHECKPOINT_FINALIZATION_ADDED=NO
+WALLET_MUTATION_ADDED=NO
+LEDGER_MUTATION_ADDED=NO
+CRABLINK_FINALITY_AUTHORITY=NO
+STATUS_SERVICE_QUORUM_ENABLED_CHANGED=NO
+```
+
+Focused bootstrap tests:
+
+```text
+7/7 GREEN
+```
+
+Participation regression:
+
+```text
+13/13 GREEN
+```
+
+`cargo check -p macronode` GREEN.
+
+---
+
+# 19. Current macronode status semantics
+
+Do not confuse signing capability with current runtime status flags.
+
+Historically the macronode status reported:
+
+```text
+node_role=service_node
+node_profile=macronode
+content_serving_enabled=true
+service_quorum_enabled=false
+wallet_execution_participant=false
+```
+
+During this session we intentionally did **not** flip:
+
+```text
+service_quorum_enabled
+wallet_execution_participant
+```
+
+The live signing proof shows the private-beta process is capable of one validated Service Node signature, but we have not yet made the generic production status endpoint advertise full runtime quorum/finality participation.
+
+Do not flip those flags merely because signing works.
+
+They should only change when their semantics are explicitly reviewed against the completed runtime model.
+
+---
+
+# 20. Existing Phase 19 foundation from before this session
+
+Before the new live quorum work, the Phase 19 runtime spine was already partly green.
+
+Known earlier components:
+
+### Real local topology
+
+Existing macronode/micronode process test proved a Service + User topology.
+
+### svc-wallet quorum execution
+
+Real cryptographic quorum execution tests already existed.
+
+### micronode epoch replay
+
+User Node replay/challenge tests already existed.
+
+### svc-rewarder local reward loop
+
+Already proved:
+
+```text
+2-of-3 signed quorum
+ledger-confirmed receipt
+User Node replay
+tamper challenge
+single-node mint rejection
+```
+
+### macronode challenge evidence
+
+Existing challenge-evidence suite was green.
+
+### ron-ledger feature-gated tests
+
+Earlier commands accidentally ran zero tests because:
+
+```text
+--features quickchain-preflight
+```
+
+had been omitted.
+
+This was corrected.
+
+Do not repeat the zero-test false-green mistake.
+
+Always include the feature where required.
+
+---
+
+# 21. Phase 18 status — closed GREEN
+
+Phase 18 was the QuickChain deterministic foundation and is closed.
+
+Final posture included:
+
+```text
+FINAL_BETA_PHASE18_QUICKCHAIN_FOUNDATION=GREEN
+CANONICAL_BYTES=LOCKED
+GOLDEN_VECTORS=LOCKED
+OPERATION_IDENTITY=LOCKED
+RECEIPT_IDENTITY=LOCKED
+STATE_IDENTITY=LOCKED
+HOLD_IDENTITY=LOCKED
+EPOCH_IDENTITY=LOCKED
+INDEPENDENT_VECTOR_VERIFICATION=GREEN
+DETERMINISTIC_ROOTS=GREEN
+REPLAY_REBUILD=GREEN
+TAMPER_REJECTION=GREEN
+IDEMPOTENCY=GREEN
+FLOATING_POINT_ECONOMICS=NO
+WALLET_LEDGER_OWNERSHIP=GREEN
+SVC_WALLET_MUTATION_FRONT_DOOR=PRESERVED
+RON_LEDGER_ECONOMIC_TRUTH=PRESERVED
+RON_ACCOUNTING_BALANCE_TRUTH=NO
+CRABLINK_QUICKCHAIN_RULE_DUPLICATION=NO
+```
+
+Major counts:
+
+```text
+ron-proto exhaustive QuickChain preflight: 33
+ron-ledger exhaustive QuickChain preflight: 39
+```
+
+Never duplicate those deterministic rules inside CrabLink.
+
+---
+
+# 22. Phase 17 status — closed GREEN
+
+Phase 17 economic-product stabilization is closed.
+
+Included:
+
+```text
+wallet ROC display
+receipt list/detail
+pending/confirmed/failed
+stale/offline labels
+receipt source labels
+confirmed ROC refresh
+explicit payment confirmation
+payment cancellation
+idempotent retry
+paid access
+cache-only unlock rejection
+backend-derived receipt truth
+backend-derived confirmed ROC truth
+```
+
+Final posture included:
+
+```text
+FINAL_BETA_PHASE17_ECONOMIC_PRODUCT=GREEN
+SILENT_SPEND=NO
+FAILED_PAYMENT_UNLOCK=NO
+CANCELLED_PAYMENT_MUTATION=NO
+IDEMPOTENT_RETRY=GREEN
+RECEIPT_BACKEND_DERIVED=YES
+CONFIRMED_ROC_BACKEND_DERIVED=YES
+CACHE_ONLY_UNLOCK=NO
+```
+
+Runner:
+
+```text
+/Users/mymac/Desktop/crablink/scripts/final_beta_phase17_economic_product_acceptance.sh
+```
+
+---
+
+# 23. Phase 16 status — closed GREEN
+
+Phase 16 consolidated Site product acceptance is closed.
+
+Included:
+
+```text
+Blog
+Imageboard
+Forum
+custom-code quarantine
+scriptless template engine
+template migration
+malicious-input rejection
+sandbox
+gateway Site routes
+shared manifest parser
+named Site resolution
+restart
+recreate
+paid Site receipt
+```
+
+Final:
+
+```text
+FINAL_BETA_PHASE16_SITE_ACCEPTANCE=GREEN
+BLOG_END_TO_END=GREEN
+IMAGEBOARD_END_TO_END=GREEN
+FORUM_END_TO_END=GREEN
+CUSTOM_CODE_NORMAL_MODE=NO
+SCRIPTLESS_TEMPLATE_ENGINE=GREEN
+TEMPLATE_UPDATE_MIGRATION=GREEN
+MALICIOUS_INPUT_REJECTION=GREEN
+SITE_SANDBOX=GREEN
+GATEWAY_SITE_ROUTES=GREEN
+SHARED_SITE_MANIFEST_PARSER=GREEN
+NAMED_SITE_RESOLUTION=GREEN
+NAMED_SITE_RESTART=GREEN
+NAMED_SITE_RECREATE=GREEN
+PAID_SITE_RECEIPT=GREEN
+PAID_SITE_CACHE_ONLY_UNLOCK=NO
+FRONTEND_PRODUCTION_BUILD=GREEN
+```
+
+Runner:
+
+```text
+/Users/mymac/Desktop/crablink/scripts/final_beta_phase16_site_product_acceptance.sh
+```
+
+---
+
+# 24. Content-system authority boundaries remain important
+
+Do not collapse CrabLink content models.
+
+There are separate systems:
+
+### Creator publication
+
+`PublicationSummaryV1`
+
+Purpose:
+
+```text
+creator timelines
+Home
+Explore
+canonical creator identity
+```
+
+Production writer intentionally remains unwired where the request does not prove Passport control.
+
+### Site publication
+
+Schema:
+
+```text
+crablink.site-publication.v1
+```
+
+Purpose:
+
+```text
+named Site
+root publication
+creatorDisplay only
+```
+
+### Publication relation
+
+Schema:
+
+```text
+crablink.publication-relation.v1
+```
+
+Purpose:
+
+```text
+typed parent relationships
+Comment topology
+```
+
+Do not merge these models.
+
+---
+
+# 25. Forum authority remains deliberately limited
+
+Forum technical behavior is strong, but moderation mutation that requires real identity proof remains constrained.
+
+Sticky/lock mutation was intentionally deferred where real Passport request proof was not available.
+
+Never replace that with weak identity headers.
+
+Do not claim formal sticky/lock authority GREEN unless actual proof-backed mutation is implemented.
+
+---
+
+# 26. Site security doctrine remains unchanged
+
+For beta:
+
+```text
+arbitrary custom code = forbidden
+custom JS = forbidden
+normal custom HTML = constrained/quarantined
+scriptless built-in templates = allowed
+sandbox defense in depth = required
+developer mode cannot bypass economic/security truth
+```
+
+Initial launch should remain intentionally simple and secure.
+
+---
+
+# 27. Social graph doctrine remains unchanged
+
+For CrabLink beta:
+
+```text
+FOLLOWING_LIST_OWNER=LOCAL_CRABLINK_APP
+storage=offline/local
+
+PUBLIC_FOLLOWER_COUNT=FORBIDDEN
+PUBLIC_FOLLOWING_COUNT=FORBIDDEN
+PUBLIC_FOLLOWER_LIST=FORBIDDEN
+PUBLIC_FOLLOWING_LIST=FORBIDDEN
+
+SERVER_SOCIAL_GRAPH=NOT_REQUIRED
+NETWORK_FOLLOW_MUTATION=NOT_REQUIRED
+```
+
+Doctrine:
+
+> Public content belongs on the network; personal selection belongs on the user's device.
+
+Do not introduce server follower-count infrastructure during unrelated Phase 19 work.
+
+---
+
+# 28. Passport identity doctrine remains unchanged
+
+Passport remains wallet-like local custody.
+
+Required principles:
+
+```text
+no cloud login
+no backend secret custody
+no account pairing requirement
+no server-custodied Passport secret
+local unlock
+local import/restore
+```
+
+Desktop expectations:
+
+```text
+PIN at startup
+avoid repeated keychain prompts
+export filename = passport.dat
+```
+
+Do not alter these while working on QuickChain checkpoint/finality.
+
+---
+
+# 29. Authority boundaries that MUST remain preserved
+
+The following distinctions are central to the project:
+
+## ron-proto
+
+Owns:
+
+```text
+canonical wire DTOs
+canonical hash payload shapes
+protocol validation
+canonical encoding helpers
+domains
+IDs
+ordering rules
+signature-message bytes
+```
+
+Should not become:
+
+```text
+runtime signer
+wallet
+ledger mutator
+committee coordinator
+finality engine
+```
+
+## ron-ledger
+
+Owns:
+
+```text
+economic truth
+ledger state transitions
+deterministic root production
+receipt ordering/root production
+checkpoint artifacts
+```
+
+Should not silently defer economic truth to CrabLink.
+
+## svc-wallet
+
+Owns wallet-facing mutation front door / wallet semantics.
+
+Do not allow macronode or CrabLink to bypass it.
+
+## ron-accounting
+
+Projection/accounting role only.
+
+It must not become canonical balance authority.
+
+## macronode
+
+Service Node runtime/orchestration.
+
+Now has:
+
+```text
+one validated Service Node quorum signer
+guarded HTTP signer surface
+private-beta explicit signing bootstrap
+```
+
+It still must not unilaterally declare quorum/finality.
+
+## micronode
+
+User Node verifier/replay/challenge role.
+
+## CrabLink
+
+Product/client.
+
+May display network truth.
+
+Must not invent or decide:
+
+```text
+quorum
+checkpoint finality
+ledger truth
+wallet balances
+receipt validity
+ROX authority
+```
+
+---
+
+# 30. Exact Phase 19 acceptance target
+
+The buildplan target remains:
+
+```text
+FINAL_BETA_PHASE19_QUICKCHAIN_MULTI_NODE=GREEN
+MULTI_NODE_TOPOLOGY=GREEN
+CHECKPOINTS=GREEN
+QUORUM=GREEN
+FAILURE_RECOVERY=GREEN
+CHAOS=GREEN
+SOAK=GREEN
+CRABLINK_FINALITY_AUTHORITY=NO
+NEXT_PHASE=FINAL_BETA_PHASE20_ROX_PRIVATE_TESTNET
+```
+
+Current interpretation:
+
+```text
+MULTI_NODE_TOPOLOGY=GREEN
+
+QUORUM=GREEN
+  specifically:
+  live multi-process cryptographic 2-of-3 quorum proven
+
+CHECKPOINTS=NOT_YET_GREEN
+
+FAILURE_RECOVERY=PARTIAL_GREEN
+  proven:
+    member loss
+    surviving quorum
+    same-member restart
+    deterministic identity recovery
+  still broader work:
+    integrated replay/duplicate
+    checkpoint recovery
+    DA fallback recovery
+    chaos recovery
+
+CHAOS=NOT_RUN
+
+SOAK=NOT_RUN
+
+CRABLINK_FINALITY_AUTHORITY=NO
+```
+
+Do not mark:
+
+```text
+FINAL_BETA_PHASE19_QUICKCHAIN_MULTI_NODE=GREEN
+```
+
+yet.
+
+---
+
+# 31. Recommended exact implementation sequence next session
+
+## Step 1 — unsigned deterministic committee checkpoint candidate
+
+Implement in `ron-ledger`.
+
+Candidate should require reviewed/canonical root inputs and construct:
+
+```text
+QuickChainCommitteeCheckpointPayloadV1
+```
+
+Then:
+
+```text
+payload.validate()
+canonical JSON
+BLAKE3(
+  quickchain.checkpoint.v1
+  || 0x00
+  || canonical bytes
+)
+```
+
+Return a candidate artifact containing at minimum:
+
+```text
+payload
+checkpoint_hash
+```
+
+Potentially retain provenance wrappers for typed roots rather than accepting arbitrary `ContentId`s wherever meaningful.
+
+No signatures.
+
+No finality.
+
+### Tests should include
+
+* same inputs → same bytes/hash;
+* reordered caller-side root-material inputs do not change already-canonical roots;
+* receipt root must come from typed ledger-sequence provenance;
+* change state root → candidate hash changes;
+* change receipt root → hash changes;
+* change accounting root → hash changes;
+* change reward root → hash changes;
+* change DA root → hash changes;
+* change validator set → hash changes;
+* change policy/chain params → hash changes;
+* invalid payload rejects before candidate returned;
+* no signatures in candidate;
+* no finality fields/claims.
+
+Run focused ron-ledger tests and source-boundary scanners.
+
+---
+
+## Step 2 — independent candidate reproduction
+
+Once candidate builder is GREEN, prove multiple independent contexts derive the same checkpoint hash.
+
+The ideal progression:
+
+```text
+same reviewed operation batch
+        ↓
+same deterministic state/receipt/etc roots
+        ↓
+same committee checkpoint payload
+        ↓
+same checkpoint hash on multiple nodes
+```
+
+This should be deterministic, not coordinated by sharing the already-computed hash.
+
+---
+
+## Step 3 — validator signature contract
+
+Only after candidate reproduction is green:
+
+Create/reuse canonical validator-signature message bytes for:
+
+```text
+chain
+height
+epoch
+checkpoint hash
+validator identity
+key identity
+algorithm
+```
+
+Avoid caller-supplied alternate checkpoint preimages.
+
+Each validator independently signs the candidate hash.
+
+No validator may finalize alone.
+
+---
+
+## Step 4 — committee validation
+
+Prove:
+
+```text
+validator exists in reviewed validator set
+validator key matches
+signature verifies
+duplicate validator signatures reject
+unknown validator rejects
+wrong chain rejects
+wrong height rejects
+wrong epoch rejects
+wrong checkpoint hash rejects
+threshold calculation deterministic
+1-of-N insufficient
+threshold-of-N accepted
+```
+
+This is distinct from the Service Node epoch-transition quorum already proven.
+
+Do not conflate Service Node reward quorum with checkpoint validator committee unless the canonical architecture explicitly says they are the same set.
+
+---
+
+## Step 5 — checkpoint finality artifact
+
+Only then introduce the actual finality/finalized-checkpoint artifact.
+
+It must bind:
+
+```text
+unsigned candidate
+candidate hash
+validator set
+threshold
+verified unique signatures
+finalization state
+```
+
+It should not allow:
+
+```text
+one process
+one signer
+one HTTP response
+CrabLink
+```
+
+to declare finality.
+
+---
+
+## Step 6 — live multi-process checkpoint/finality
+
+Extend the real multi-node process proof.
+
+Goal:
+
+```text
+multiple Service Nodes reproduce checkpoint candidate
+multiple eligible validators sign it
+one signature insufficient
+required threshold accepted
+member failure still permits threshold if mathematically possible
+restart preserves identity
+wrong candidate rejected
+```
+
+---
+
+## Step 7 — live replay and duplicate rejection
+
+Bring existing deterministic replay protections into the live process context.
+
+Prove at least:
+
+```text
+duplicate operation rejected/idempotent
+replayed transition rejected
+replayed checkpoint signing request does not create contradictory state
+duplicate validator signature does not increase quorum count
+duplicate Service Node signature does not increase quorum count
+```
+
+---
+
+## Step 8 — challenge path
+
+Use the User Node/micronode verifier to challenge:
+
+```text
+wrong root
+wrong signature
+wrong validator set
+tampered checkpoint
+tampered receipt
+tampered transition
+```
+
+No fake challenge success strings.
+
+---
+
+## Step 9 — DA/archive fallback
+
+Existing DA fallback model/tests exist.
+
+Bring them into the integrated Phase 19 proof.
+
+Checkpoint commits:
+
+```text
+data_availability_root
+```
+
+so recovery/fallback must be consistent with that commitment.
+
+---
+
+## Step 10 — reward evidence stays ledger-confirmed
+
+Continue proving that quorum evidence does not itself create ROC.
+
+Required separation:
+
+```text
+evidence
+→ reviewed reward plan
+→ quorum
+→ ledger execution
+→ durable confirmed receipt
+```
+
+Never:
+
+```text
+signature count
+→ direct mint
+```
+
+Single-node mint rejection must remain preserved.
+
+---
+
+## Step 11 — chaos
+
+Run actual Phase 19 integrated chaos after deterministic functionality is stable.
+
+Candidate scenarios:
+
+```text
+kill one Service Node
+restart one Service Node
+temporarily lose User Node
+replay requests
+duplicate requests
+malformed checkpoint
+stale validator set
+wrong signing key
+partial network availability
+DA fallback
+bad signature
+wrong checkpoint candidate
+```
+
+Do not run huge chaos matrices before basic checkpoint/finality is green.
+
+---
+
+## Step 12 — soak
+
+Then run a meaningful multi-node soak.
+
+Observe:
+
+```text
+process health
+deterministic roots
+candidate convergence
+signature uniqueness
+no drift
+no memory runaway
+no stuck restart
+no phantom finality
+no duplicate reward execution
+```
+
+---
+
+## Step 13 — CrabLink display-only integration
+
+Only after network truth exists.
+
+CrabLink may display:
+
+```text
+network ready
+checkpoint observed
+verification result
+challenge result
+degraded state
+```
+
+CrabLink may **not** decide finality.
+
+---
+
+# 32. Phase 20 after Phase 19
+
+Do not jump here yet.
+
+Phase 20 is the ROX private-testnet phase.
+
+Expected later work includes:
+
+```text
+negative proof tests
+invalid proof rejection
+replay rejection
+halt/recovery drills
+authority separation
+key rotation
+upgrade authority
+RustyOnions dry-run handoff
+CrabLink display-only private-testnet status
+reconciliation
+controlled capped testnet
+```
+
+No production bridge.
+
+No mainnet.
+
+No unrestricted mint/burn.
+
+---
+
+# 33. Remaining FINAL_BETA roadmap after Phase 20
+
+Broadly:
+
+```text
+Phase 20 — ROX private testnet
+Phase 21 — full desktop decentralized beta demo
+Phase 22 — security/adversarial acceptance
+Phase 23 — UX/accessibility/performance
+Phase 24 — macOS packaging/signing/update/recovery
+Phase 25 — controlled private beta operations
+Phase 26 — final acceptance/launch
+```
+
+Correct launch language:
+
+```text
+CrabLink Desktop decentralized private beta
+QuickChain private-network beta
+ROX Anchor private Solana testnet demonstration
+```
+
+Do not call it:
+
+```text
+public blockchain
+mainnet
+public bridge
+production ROC↔ROX settlement
+production mint/burn
+staking
+liquidity
+exchange-ready
+```
+
+unless those systems are actually built and explicitly released later.
+
+---
+
+# 34. Workflow rules for next session
+
+Continue using the established QuickChain-style implementation loop:
+
+```text
+inspect exact current source
+→ patch smallest real behavior
+→ run focused test/check
+→ fix first failure
+→ only then expand scope
+```
+
+For terminal patches:
+
+* paste-ready blocks in `~~~~bash`;
+* no git commands unless explicitly requested;
+* no downloads unless requested;
+* zsh-safe;
+* avoid unquoted shell `!`;
+* avoid brittle source assertions tied to physical line wrapping;
+* prefer semantic/token checks independent of rustfmt wrapping;
+* avoid top-level `set -euo pipefail`;
+* do not end terminal blocks with `exit`.
+
+Verification should remain tiered.
+
+For Rust/native Phase 19 work:
+
+```text
+focused cargo test
+focused cargo check
+boundary scanner tests where relevant
+```
+
+Do not repeatedly run the whole workspace after every tiny patch unless integration warrants it.
+
+---
+
+# 35. Important patching lesson from this session
+
+We hit **two patch-script failures caused by formatting-sensitive structural assertions**, not product-code defects.
+
+Examples:
+
+```text
+transition_identity.validate()
+```
+
+versus multiline rustfmt output.
+
+And:
+
+```text
+runtime.quorum_participation_active()
+```
+
+versus multiline rustfmt output.
+
+Going forward:
+
+> Patch scripts should avoid requiring Rust expressions to exist on one exact physical line unless line shape itself is the contract.
+
+Prefer checking independent semantic tokens such as:
+
+```text
+transition_identity
+.validate
+
+quorum_participation_active
+```
+
+or parse/inspect broader function regions.
+
+This will preserve momentum and avoid unnecessary rollback/reapply cycles.
+
+---
+
+# 36. Current files of highest importance for next session
+
+## ron-proto
+
+```text
+crates/ron-proto/src/quickchain/hash_payload.rs
+```
+
+Now contains the additive committee checkpoint payload.
+
+```text
+crates/ron-proto/tests/final_beta_phase19_committee_checkpoint_payload.rs
+```
+
+8/8 GREEN.
+
+```text
+crates/ron-proto/tests/quickchain_hash_payloads.rs
+```
+
+10/10 regression GREEN.
+
+```text
+crates/ron-proto/src/service_node/epoch_transition.rs
+```
+
+Canonical ROC epoch transition identity.
+
+```text
+crates/ron-proto/tests/final_beta_phase19_transition_identity.rs
+```
+
+Canonical transition identity tests.
+
+---
+
+## ron-ledger
+
+```text
+crates/ron-ledger/src/quickchain/tree_material_projection.rs
+```
+
+Contains typed ledger-sequence receipt-root producer.
+
+```text
+crates/ron-ledger/tests/final_beta_phase19_receipt_root_semantics.rs
+```
+
+9/9 GREEN.
+
+```text
+crates/ron-ledger/tests/quickchain_pre_root_boundary.rs
+```
+
+2/2 GREEN after scanner false-positive repair.
+
+```text
+crates/ron-ledger/tests/quickchain_projection_canonical_boundary.rs
+```
+
+Previously 2/2 GREEN.
+
+Next new ron-ledger checkpoint-candidate implementation should be built adjacent to these existing QuickChain modules, after inspecting the exact current module tree.
+
+---
+
+## macronode
+
+```text
+crates/macronode/src/services/quorum_participation.rs
+```
+
+Canonical local Service Node validate/hash/sign behavior.
+
+```text
+crates/macronode/src/services/quorum_bootstrap.rs
+```
+
+Explicit private-beta seed-backed runtime participant bootstrap.
+
+```text
+crates/macronode/src/types.rs
+```
+
+`RuntimeStatus` participant registry.
+
+```text
+crates/macronode/src/http_admin/handlers/quorum.rs
+```
+
+Guarded signing HTTP surface.
+
+```text
+crates/macronode/src/http_admin/router.rs
+crates/macronode/src/http_admin/middleware/auth.rs
+```
+
+Route and auth.
+
+```text
+crates/macronode/src/cli/run.rs
+```
+
+Explicit private-beta participant registration during startup.
+
+```text
+crates/macronode/tests/phase22_local_two_node_topology.rs
+```
+
+Current real Phase 19 3-Service + 1-User live quorum/failure/restart proof.
+
+---
+
+## ron-kms
+
+```text
+crates/ron-kms/src/backends/dalek.rs
+crates/ron-kms/src/backends/fast_ring.rs
+crates/ron-kms/src/backends/mod.rs
+crates/ron-kms/tests/seed_public_key.rs
+```
+
+Stable deterministic seed→public-key helper.
+
+3/3 GREEN.
+
+---
+
+## svc-rewarder
+
+```text
+svc-rewarder/tests/internal_roc_beta_phase22_local_reward_loop.rs
+```
+
+Uses shared canonical transition identity and preserves the existing 2-of-3 reward loop.
+
+---
+
+# 37. Suggested first commands next session
+
+Start by confirming working tree/source state rather than rebuilding everything.
+
+Then, before patching the candidate builder, inspect:
+
+```text
+crates/ron-ledger/src/quickchain/mod.rs
+crates/ron-ledger/src/quickchain/tree_material_projection.rs
+crates/ron-proto/src/quickchain/hash_payload.rs
+```
+
+Also locate current checkpoint/header/root types and any existing candidate/checkpoint builders before adding a new module.
+
+Do not guess names.
+
+After implementing the unsigned candidate, likely focused verification should resemble:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions || return
+
+cargo test -p ron-ledger \
+  --features quickchain-preflight \
+  --test <new_phase19_checkpoint_candidate_test> \
+  -- \
+  --nocapture
+```
+
+then relevant boundary tests:
+
+```bash
+cargo test -p ron-ledger \
+  --features quickchain-preflight \
+  --test quickchain_pre_root_boundary \
+  -- \
+  --nocapture
+```
+
+```bash
+cargo test -p ron-ledger \
+  --features quickchain-preflight \
+  --test quickchain_projection_canonical_boundary \
+  -- \
+  --nocapture
+```
+
+and:
+
+```bash
+cargo check -p ron-ledger \
+  --features quickchain-preflight
+```
+
+Exact test/module names should be based on the actual source inspection at the beginning of the next session.
+
+---
+
+# 38. Final session closeout state
+
+The cleanest summary to carry forward is:
+
+```text
+FINAL_BETA_ACTIVE_PHASE=19
+
+PHASE16_SITE_PRODUCT=GREEN
+PHASE17_ECONOMIC_PRODUCT=GREEN
+PHASE18_QUICKCHAIN_FOUNDATION=GREEN
+
+PHASE19_MULTI_NODE_TOPOLOGY=GREEN
+PHASE19_LIVE_SERVICE_NODES=3_GREEN
+PHASE19_LIVE_USER_NODE=1_GREEN
+
+PHASE19_CANONICAL_TRANSITION_IDENTITY=GREEN
+PHASE19_SERVICE_NODE_LOCAL_SIGNING=GREEN
+PHASE19_RUNTIME_SIGNER_REGISTRATION=GREEN
+PHASE19_GUARDED_SIGN_HTTP=GREEN
+PHASE19_PRIVATE_BETA_SIGNER_BOOTSTRAP=GREEN
+
+PHASE19_LIVE_CRYPTOGRAPHIC_QUORUM=GREEN
+PHASE19_ONE_OF_THREE_REJECTED=GREEN
+PHASE19_TWO_OF_THREE_ACCEPTED=GREEN
+PHASE19_A_PLUS_C_AFTER_B_FAILURE=GREEN
+PHASE19_B_RESTART_IDENTITY_STABILITY=GREEN
+
+PHASE19_TYPED_LEDGER_SEQUENCE_RECEIPT_ROOT=GREEN
+PHASE19_RECEIPT_ROOT_BOUNDARY=GREEN
+
+PHASE19_COMMITTEE_CHECKPOINT_PROTOCOL_PAYLOAD=GREEN
+PHASE19_VALIDATOR_SET_COMMITMENT=GREEN
+PHASE19_DATA_AVAILABILITY_COMMITMENT=GREEN
+PHASE19_CHECKPOINT_HASH_DOMAIN_COMPATIBILITY=GREEN
+
+PHASE19_UNSIGNED_CHECKPOINT_CANDIDATE=NEXT
+PHASE19_MULTI_NODE_CHECKPOINT_REPRODUCTION=AFTER_CANDIDATE
+PHASE19_VALIDATOR_SIGNATURES=AFTER_REPRODUCTION
+PHASE19_CHECKPOINT_FINALITY=NOT_YET
+PHASE19_LIVE_REPLAY_DUPLICATE=REMAINS
+PHASE19_CHALLENGE_INTEGRATION=REMAINS
+PHASE19_DA_FALLBACK_INTEGRATION=REMAINS
+PHASE19_CHAOS=NOT_RUN
+PHASE19_SOAK=NOT_RUN
+
+FINAL_BETA_PHASE19_QUICKCHAIN_MULTI_NODE=NOT_YET_GREEN
+
+WALLET_AUTHORITY_CHANGED=NO
+LEDGER_AUTHORITY_CHANGED=NO
+CRABLINK_FINALITY_AUTHORITY=NO
+PRODUCTION_KMS_CLAIM=NO
+
+NEXT_ACTION=BUILD_UNSIGNED_DETERMINISTIC_COMMITTEE_CHECKPOINT_CANDIDATE_IN_RON_LEDGER
+```
+
+The project has made meaningful progress: Phase 19 no longer consists of a live topology test sitting beside unrelated quorum unit tests. The **real Service Node processes now participate in the actual canonical signing/quorum path**. The next critical task is to apply the same discipline to checkpoint production: deterministic unsigned candidate first, independent reproduction second, validator signatures third, and only then finality.
+
+
+### END NOTE - AUGUST 14 2026 - 11:35 CST
+
+
+### BEGIN NOTE - AUGUST 15 2026 - 02:00 CST
+
+# Cross-Repo Carryover Notes — RustyOnions + CrabLink
+
+**Date:** 2026-08-15
+**Primary active work during this session:** `rox-anchor` / `FINAL_BETA` Phase 20 / `BUILD_PLAN4`
+**Repos these notes are intended for:**
+
+```text
+/Users/mymac/Desktop/RustyOnions
+/Users/mymac/Desktop/crablink
+```
+
+## 1. Critical clarification about this session
+
+**No direct source files were changed in either the RustyOnions repo or the CrabLink repo during this ROX Anchor session.**
+
+All source patches, Cargo checks/tests, Solana RPC activity, program upgrades, Phase 4 initialization work, and the beginning of Phase 5A happened inside:
+
+```text
+/Users/mymac/Desktop/rox-anchor
+```
+
+Therefore these notes must **not** be interpreted as claiming that RustyOnions or CrabLink already contains new Phase 20 integration code from this session.
+
+What **did** change for RustyOnions and CrabLink is important:
+
+* ROX Anchor moved from planning/simulation into real initialized devnet state.
+* The future RustyOnions handoff now has actual external testnet accounts to reconcile against.
+* The future CrabLink private-testnet display surface now has real backend state that can eventually be displayed.
+* The authority boundaries between all three projects were preserved.
+* Phase 20 now has a concrete live chain checkpoint rather than hypothetical addresses.
+* The remaining integration sequence is much clearer.
+
+This distinction is essential for the next session.
+
+---
+
+# 2. Shared FINAL_BETA context
+
+The current umbrella plan remains the CrabLink Desktop `FINAL_BETA` build.
+
+The intended product hierarchy remains:
+
+```text
+CrabLink Desktop = reference product/client
+RustyOnions = durable backend/substrate/economic truth
+QuickChain = private network/finality/evidence layer
+ROX Anchor = controlled private Solana testnet external anchor
+```
+
+The FINAL_BETA invariants explicitly preserve:
+
+* React as display + explicit user intent.
+* Tauri as native privilege.
+* RustyOnions services as durable network truth.
+* `svc-wallet` as approved economic mutation ingress.
+* `ron-ledger` as economic truth.
+* ROX Anchor as a controlled private-testnet external anchor rather than the internal ROC ledger. 
+
+This remains one of the most important cross-repo rules.
+
+---
+
+# 3. Current FINAL_BETA phase
+
+FINAL_BETA Phase 19 QuickChain multi-node work was already completed before this session.
+
+Current active umbrella phase:
+
+```text
+FINAL_BETA_PHASE20_ROX_PRIVATE_TESTNET
+```
+
+Phase 20 requires eventual proof of:
+
+```text
+negative drills
+invalid proof drills
+replay drills
+halt drills
+recovery drills
+authority separation
+key rotation
+upgrade-authority handling
+RustyOnions dry-run handoff
+CrabLink display-only private-testnet status
+receipt reconciliation
+final private-testnet closeout
+```
+
+The controlled ROC → ROX direction remains conceptually:
+
+```text
+internal ROC evidence
+→ proof package
+→ ROX validation
+→ coordinator decision
+→ relayer simulation
+→ explicitly approved capped testnet send
+→ test-only Solana state change
+→ RPC readback
+→ redacted reconciliation
+```
+
+The reverse ROX → ROC direction remains:
+
+```text
+test-only burn/finalization evidence
+→ RPC proof
+→ deterministic review
+→ coordinator decision
+→ dry-run ROC release intent
+→ no direct internal ROC mutation
+```
+
+Those are explicit FINAL_BETA Phase 20 boundaries. 
+
+---
+
+# 4. Major ROX Anchor accomplishment this session
+
+This is the most important new fact both RustyOnions and CrabLink need to know.
+
+## Phase 4 is now actually live GREEN on Solana devnet
+
+We successfully completed exactly one explicitly authorized atomic devnet initialization transaction.
+
+Transaction signature:
+
+```text
+5J8cjGr3idqUff4Mh5FeMSfEDoXpn5QAh6bxyWQrmpT1q4PeFCouRbThH5JN2dtLaHC1kC4QPcMApownmXeimyK5
+```
+
+Final result:
+
+```text
+FINAL_BETA_PHASE20_PHASE4_DEVNET_ATOMIC_INITIALIZATION=GREEN
+
+PROGRAM_CONFIG_INITIALIZED=YES
+TEST_ONLY_ROX_MINT_CREATED=YES
+TEST_ONLY_TOKEN_ACCOUNT_CREATED=YES
+
+INITIAL_ROX_SUPPLY=0
+INITIAL_TOKEN_ACCOUNT_AMOUNT=0
+
+ROX_MINT_PERFORMED=NO
+ROX_BURN_PERFORMED=NO
+REAL_ROC_MUTATION=NO
+PRODUCTION_SETTLEMENT=NO
+MAINNET=NO
+```
+
+The transaction confirmed independently and all three intended accounts were independently read back successfully.
+
+---
+
+# 5. Current live private-devnet identities
+
+These are now actual devnet state, not merely planned IDs.
+
+## ROX Anchor program
+
+```text
+PROGRAM_ID=
+FiUY5M3a8xRHCgCfNzqNe5qATKUa3fk2chHFsJGdEitk
+```
+
+## ProgramData
+
+```text
+PROGRAMDATA=
+4JsBSTEXLKtWusJQJAv1DnaRKfAxGnD958WhHPVz84UD
+```
+
+## Program config account
+
+```text
+PROGRAM_CONFIG=
+4RBTypWtrn7mwV47MJkAHtEBMYnvNhd5wdSMAUsxwFeo
+```
+
+## Test-only ROX SPL mint
+
+```text
+TEST_ONLY_ROX_MINT=
+HfHRJLswuRN3eVsiWnYi7REssDEsxxA8ewU8emhC3XA4
+```
+
+## Workflow payer / ATA
+
+```text
+TEST_ONLY_TOKEN_ACCOUNT=
+A3sBYMUf2N7rpkqiCnE7fKZBdnGR5goH3hFmHJvgvqsJ
+```
+
+## Program-derived mint authority
+
+```text
+MINT_AUTHORITY_PDA=
+C5jTCy4EBY5fKuRMzLv7Lau5Re1SmMXukRXosndk9hJE
+```
+
+## Workflow authority / payer
+
+```text
+WORKFLOW_AUTHORITY=
+6YYJ43KRJF6pB3jUtRQpvhVHZQHaURTSxJdLpipHU3gs
+```
+
+## Halt authority
+
+```text
+HALT_AUTHORITY=
+3aAvoLEAsCCte4gow6rheJQ3F4zeoCuMvERqyFBobGgz
+```
+
+## Recovery authority
+
+```text
+RECOVERY_AUTHORITY=
+74upNee16zSKS2hSuovDaioWVsadFf8Za4CCRwJW5fqe
+```
+
+## Upgrade authority
+
+```text
+UPGRADE_AUTHORITY=
+DLQJ1icSQKu5CGsi7FqJgF9ohsiYuYuRkn23EggRDTdJ
+```
+
+These addresses are useful as **private-devnet integration/test bindings**.
+
+They should not be turned into permanent production/mainnet product constants inside RustyOnions or CrabLink.
+
+---
+
+# 6. Current live private-testnet policy
+
+ROX Anchor config now stores the real private-test policy:
+
+```text
+test_only_mode=true
+
+max_supply_units=1000
+max_amount_units_per_operation=10
+
+mint_decimals=0
+
+mint_supply=0
+payer_ata_amount=0
+
+freeze_authority=none
+
+halted=false
+recovery_required=false
+```
+
+The mint authority is the ROX Anchor PDA from the beginning.
+
+There is no external long-lived mint authority controlling the test-only mint.
+
+---
+
+# 7. Current deployed ROX Anchor binary
+
+Current meaningful program binary SHA-256:
+
+```text
+929f1906d497ed22c8e88c8a73bcaae0181271d9001fa1a98a9f8e3c50c45bf1
+```
+
+Meaningful candidate size:
+
+```text
+392488 bytes
+```
+
+ProgramData capacity:
+
+```text
+398864 bytes
+```
+
+Trailing zero padding:
+
+```text
+6376 bytes
+```
+
+Last deployment slot:
+
+```text
+484017674
+```
+
+The Phase 4 initialization transaction did not change:
+
+* program deployment slot;
+* ProgramData capacity;
+* upgrade authority;
+* executable bytes.
+
+That confirms Phase 4 initialization was state initialization only, not a hidden program upgrade.
+
+---
+
+# 8. Current ROX Anchor stopping point
+
+After Phase 4 became GREEN we began:
+
+```text
+BUILD_PLAN4 Phase 5
+```
+
+specifically:
+
+```text
+Phase 5A — live read-only RPC evidence source collector
+```
+
+Current status:
+
+```text
+PHASE5A_SOURCE_COLLECTOR=IMPLEMENTED
+PHASE5A_JSON_MACRO_COMPILER_ERROR=FIXED
+PHASE5A_CLI_TESTS=GREEN
+PHASE5A_CLI_CHECK=GREEN
+
+LIVE_PHASE5_RPC_SOURCE1_READBACK=NOT_RUN
+PHASE5_CLOSEOUT=NO
+```
+
+A compiler failure from a large `serde_json::json!` macro was fixed by adding:
+
+```rust
+#![recursion_limit = "256"]
+```
+
+to the ROX Anchor CLI crate.
+
+Afterward:
+
+```text
+6 Phase5A CLI tests passed
+cargo check -p rox-anchor-cli = GREEN
+```
+
+We intentionally paused immediately after fixing that error.
+
+---
+
+# 9. Exact ROX Anchor restart sequence
+
+Before actual live Phase 5 Source 1 RPC readback, resume the checks that the original Phase 5A block did not reach.
+
+Start:
+
+```bash
+cd /Users/mymac/Desktop/rox-anchor
+```
+
+First:
+
+```bash
+cargo test \
+  -p rox-anchor-rpc-proof \
+  --test actual_private_testnet_read_only_rpc
+```
+
+Then:
+
+```bash
+cargo clippy \
+  -p rox-anchor-cli \
+  --all-targets \
+  -- \
+  -D warnings
+```
+
+Then:
+
+```bash
+cargo check --workspace
+```
+
+Only if all three are GREEN:
+
+```text
+RUN_PHASE5A_ACTUAL_DEVNET_SOURCE1_READBACK
+```
+
+The first source should deliberately produce:
+
+```text
+state_readback=GREEN
+
+rpc_proof_observation_count=1
+rpc_proof_required_observations=2
+
+rpc_proof_decision=MissingEvidence
+under_quorum_rejected=true
+
+phase5_closeout=false
+```
+
+One RPC source is not enough.
+
+Do **not** fake quorum by querying the same Solana endpoint twice under different names.
+
+---
+
+# 10. No further transaction authorization exists
+
+The one Phase 4 initialization authorization has been consumed.
+
+Current posture:
+
+```text
+FURTHER_TRANSACTION_AUTHORIZATION=NONE
+```
+
+In particular:
+
+```text
+DO_NOT_RUN_PHASE4_EXECUTE_LIVE_AGAIN=YES
+```
+
+Phase 4 config/mint/ATA already exist.
+
+Phase 5 is read-only.
+
+Later capped mint/burn flows are separate authority-changing/economic actions and require their own explicit gate.
+
+---
+
+# RustyOnions Repo Carryover
+
+## 11. Direct RustyOnions repo changes this session
+
+**None.**
+
+No RustyOnions source file write from this session is evidenced.
+
+No RustyOnions Cargo mutation/check from this session is being claimed.
+
+No:
+
+```text
+svc-wallet call
+ron-ledger call
+internal ROC mutation
+real ROC burn
+real ROC release
+```
+
+occurred because of the ROX Anchor initialization.
+
+This is important because Phase 4 was a Solana private-devnet initialization operation only.
+
+---
+
+# 12. RustyOnions economic authority remains unchanged
+
+RustyOnions still owns the internal economic truth.
+
+The durable boundary remains:
+
+```text
+svc-wallet
+→ approved economic mutation ingress
+
+ron-ledger
+→ internal economic truth
+```
+
+ROX Anchor must not bypass this.
+
+FINAL_BETA explicitly defines RustyOnions services as durable truth and `svc-wallet`/`ron-ledger` as the economic authority boundary. 
+
+ROX Anchor having a real devnet mint does **not** make ROX Anchor the internal ROC ledger.
+
+---
+
+# 13. Important new RustyOnions implication
+
+Before this session, the eventual RustyOnions ↔ ROX Anchor handoff could largely be reasoned about as a private-testnet plan.
+
+Now there is real initialized external state:
+
+```text
+program = FiUY...
+config = 4RBT...
+test ROX mint = HfHR...
+payer ATA = A3sB...
+mint PDA = C5jT...
+```
+
+Therefore later RustyOnions integration/reconciliation will be able to compare backend evidence against **actual devnet state**.
+
+That is the substantive cross-repo change.
+
+---
+
+# 14. RustyOnions must not mistake test-only ROX for internal ROC
+
+Keep this distinction explicit:
+
+```text
+ROC
+=
+internal RustyOnions economic unit/truth
+
+ROX
+=
+external Solana representation/test anchor asset
+```
+
+Current devnet ROX mint:
+
+```text
+HfHRJLswuRN3eVsiWnYi7REssDEsxxA8ewU8emhC3XA4
+```
+
+must never become the source of internal ROC truth.
+
+A balance in that mint is not an authoritative RustyOnions ROC balance.
+
+Likewise, a Solana transaction is not an internal ROC ledger mutation.
+
+---
+
+# 15. Future RustyOnions handoff boundary
+
+BUILD_PLAN4 eventually reaches a RustyOnions dry-run handoff phase.
+
+The already-established intended boundary is:
+
+```text
+svc-wallet -> ron-ledger
+```
+
+and not:
+
+```text
+rox-anchor -> ron-ledger directly
+```
+
+Older ROX Anchor handoff work explicitly preserved:
+
+```text
+dry_run_only=true
+
+svc_wallet_mutation=false
+ron_ledger_mutation=false
+
+real_roc_burn=false
+real_roc_release=false
+real_roc_mutation=false
+
+production_bridge_settlement=false
+mainnet_authorized=false
+```
+
+and tested ROC→ROX as shadow burn intent only and ROX→ROC as release intent only. 
+
+Those tests/docs live in ROX Anchor and must **not** be confused with a RustyOnions repo mutation from this session.
+
+---
+
+# 16. RustyOnions future ROC → ROX behavior
+
+The FINAL_BETA-controlled path remains:
+
+```text
+RustyOnions internal ROC evidence
+→ deterministic proof package
+→ ROX proof validation
+→ coordinator decision
+→ relayer simulation
+→ explicitly approved capped private-testnet send
+→ test-only Solana state change
+→ RPC readback
+→ reconciliation
+```
+
+The important distinction is:
+
+```text
+internal ROC evidence
+```
+
+is not itself:
+
+```text
+internal ROC debit
+```
+
+The actual internal economic mutation boundary must remain intentionally separated.
+
+---
+
+# 17. RustyOnions future ROX → ROC behavior
+
+The reverse Phase 20 controlled path remains deliberately weaker:
+
+```text
+test-only burn/finalization evidence
+→ RPC proof
+→ deterministic review
+→ coordinator decision
+→ dry-run ROC release intent
+```
+
+with:
+
+```text
+NO_DIRECT_INTERNAL_ROC_MUTATION
+```
+
+FINAL_BETA explicitly states this. 
+
+Do not turn ROX Anchor confirmation into automatic `ron-ledger` crediting.
+
+---
+
+# 18. RustyOnions receipt/reconciliation requirements
+
+Later Phase 20 reconciliation needs to keep separate:
+
+```text
+internal ROC evidence
+Solana transaction evidence
+ROX Anchor state
+coordinator decision
+relayer receipt
+RPC readback
+RustyOnions receipt / ledger truth
+```
+
+A Solana receipt must not become an internal receipt merely through existence.
+
+Reconciliation should prove linkage without collapsing authority domains.
+
+---
+
+# 19. RustyOnions should not duplicate ROX validation rules
+
+Shared proof rules belong in ROX Anchor's core/proof layers.
+
+RustyOnions should consume verified handoff/evidence contracts rather than duplicate:
+
+* replay rules;
+* cluster binding;
+* program binding;
+* mint binding;
+* token-account binding;
+* operation-ID binding;
+* nonce/idempotency semantics;
+* challenge/halt/recovery acceptance logic.
+
+Avoid divergent state machines between RustyOnions and ROX Anchor.
+
+---
+
+# 20. RustyOnions should not depend on one RPC provider as authority
+
+Current ROX Phase 5 design requires:
+
+```text
+2 distinct RPC observations
+```
+
+for quorum.
+
+The first official Solana devnet endpoint observation must remain:
+
+```text
+MissingEvidence
+```
+
+until a genuinely distinct source agrees.
+
+RustyOnions should therefore not interpret a single RPC provider response as settlement/finality truth when Phase 20 handoff/reconciliation eventually arrives.
+
+---
+
+# 21. RustyOnions current do-not-touch list
+
+Until later BUILD_PLAN4 phases:
+
+```text
+DO_NOT_CALL_SVC_WALLET_FROM_ROX_PHASE5=YES
+DO_NOT_MUTATE_RON_LEDGER_FROM_ROX_PHASE5=YES
+
+DO_NOT_RELEASE_REAL_ROC=YES
+DO_NOT_BURN_REAL_ROC=YES
+
+DO_NOT_TREAT_TEST_ONLY_ROX_AS_INTERNAL_ROC=YES
+
+DO_NOT_RUN_PUBLIC_BRIDGE=YES
+DO_NOT_RUN_MAINNET=YES
+```
+
+---
+
+# 22. RustyOnions existing FINAL_BETA status should remain intact
+
+Do not regress already completed RustyOnions/QuickChain work while Phase 20 proceeds.
+
+Phase 19's private QuickChain network/finality work remains the prerequisite foundation for Phase 20.
+
+CrabLink may display QuickChain status but not determine finality; RustyOnions/QuickChain remains the backend authority. FINAL_BETA preserves this separation. 
+
+---
+
+# 23. RustyOnions next direct repo work
+
+There is **no immediate RustyOnions patch** required at the current Phase 5A stopping point.
+
+The correct sequence is still to finish the ROX Anchor portions in order:
+
+```text
+Phase 5  live RPC evidence
+Phase 6  actual-address simulation
+Phase 7  capped ROC → ROX
+Phase 8  capped ROX → ROC
+Phase 9  reconciliation
+Phase 10 negative drills
+Phase 11 halt/recovery/authority
+Phase 12 RustyOnions handoff
+```
+
+Do not jump ahead and wire real RustyOnions mutation while the preceding ROX evidence phases are incomplete.
+
+---
+
+# CrabLink Repo Carryover
+
+## 24. Direct CrabLink repo changes this session
+
+**None.**
+
+No React/Tauri/TypeScript/Rust source file in:
+
+```text
+/Users/mymac/Desktop/crablink
+```
+
+was modified during this ROX Anchor session.
+
+No:
+
+```text
+npm build
+vite build
+Tauri build
+CrabLink cargo check
+CrabLink UI test
+```
+
+is being claimed for this session.
+
+CrabLink was intentionally left untouched while the backend/private-chain surface became real.
+
+---
+
+# 25. CrabLink role remains display + user intent
+
+CrabLink must remain:
+
+```text
+DISPLAY
++
+EXPLICIT USER INTENT
+```
+
+and not:
+
+```text
+wallet authority
+ledger authority
+finality authority
+bridge authority
+ROX mint authority
+ROX burn authority
+Solana submission authority
+settlement authority
+```
+
+This is consistent with FINAL_BETA's central invariant that React owns display/intent and RustyOnions owns durable network truth. 
+
+---
+
+# 26. Phase 20 CrabLink role
+
+FINAL_BETA Phase 20 explicitly requires:
+
+```text
+Add CrabLink display-only private-testnet status.
+```
+
+That work is **not yet done in the CrabLink repo in this session**. 
+
+Do not mark:
+
+```text
+CRABLINK_PHASE20_ROX_STATUS=GREEN
+```
+
+yet.
+
+That future work belongs later in BUILD_PLAN4 after the core Phase 20 evidence/handoff surfaces mature.
+
+---
+
+# 27. CrabLink private-testnet status must be backend-derived
+
+Future CrabLink ROX status should present only backend/evidence-derived state.
+
+It should not independently infer:
+
+* Solana finality;
+* proof validity;
+* bridge settlement;
+* ROC balance;
+* ROX mint/burn eligibility.
+
+The previous ROX Anchor display-status model explicitly preserves the posture:
+
+```text
+backend-derived
+display-only
+private-testnet-only
+test-only-assets-only
+```
+
+and rejects client authority. 
+
+---
+
+# 28. CrabLink must not gain a Solana submission path
+
+Do not add a CrabLink button or Tauri command that directly submits the ROX Anchor Phase 20 transactions.
+
+Explicitly forbidden future CrabLink claims include:
+
+```text
+solana_submit_command_available=true
+rox_mint_burn_authority=true
+bridge_authority=true
+```
+
+The prior private-testnet display boundary explicitly excludes all of these. 
+
+Actual capped Phase 20 mutation belongs to controlled coordinator/relayer/operator authority paths, not the client.
+
+---
+
+# 29. CrabLink must not unlock paid content from ROX status
+
+A critical boundary:
+
+```text
+ROX private-testnet status
+!=
+paid entitlement
+```
+
+CrabLink must not grant paid content merely because:
+
+* ROX exists;
+* a ROX transaction exists;
+* the private-testnet status says GREEN;
+* a Solana mint balance appears.
+
+The older display-only boundary explicitly says:
+
+```text
+No paid content unlock from private testnet status.
+```
+
+and keeps paid access separate. 
+
+Paid unlock must continue to rely on the established RustyOnions backend receipt/entitlement truth.
+
+---
+
+# 30. CrabLink must not treat ROX status as ROC balance
+
+The test-only ROX mint is not CrabLink's confirmed ROC source.
+
+Do not do:
+
+```text
+Solana ROX balance
+→ display as confirmed ROC
+```
+
+The existing product rule remains:
+
+```text
+confirmed ROC = backend-derived RustyOnions truth
+```
+
+ROX should be labeled separately as private-testnet external anchor/test state.
+
+---
+
+# 31. Recommended future CrabLink status vocabulary
+
+When Phase 13 / Phase 20 display integration is eventually touched, status can safely expose concepts like:
+
+```text
+Private testnet
+Test-only ROX asset
+ROX Anchor reachable
+Proof evidence observed
+RPC evidence pending
+RPC evidence agreed
+RPC evidence disputed
+Under quorum
+Halted
+Recovery required
+Reconciliation pending
+Reconciliation verified
+```
+
+Avoid consumer-facing claims such as:
+
+```text
+Bridge live
+ROX live
+Mainnet live
+Settlement complete
+ROC converted
+Funds transferred
+```
+
+unless the backend authority actually proves exactly that and the phase permits it.
+
+---
+
+# 32. Raw Solana identifiers should not dominate normal CrabLink UX
+
+The current actual devnet identifiers are valuable for diagnostics:
+
+```text
+FiUY...
+4RBT...
+HfHR...
+A3sB...
+C5jT...
+```
+
+but they should normally belong under:
+
+```text
+Advanced
+Developer Tools
+Diagnostics
+Private Testnet Details
+```
+
+rather than normal consumer UI.
+
+FINAL_BETA's later UX phase explicitly calls for no raw hashes in normal mode unless requested. 
+
+---
+
+# 33. CrabLink should not duplicate RPC quorum rules
+
+The new ROX Phase 5 collector uses `rox-anchor-rpc-proof`.
+
+CrabLink should eventually display the resulting decision:
+
+```text
+Agreement
+MissingEvidence
+Disputed
+Rejected
+```
+
+or product-safe labels derived from those states.
+
+It should not independently:
+
+* count RPC providers;
+* decide source uniqueness;
+* decide stale windows;
+* decide commitment adequacy;
+* create its own quorum algorithm.
+
+That would recreate authority inside the client.
+
+---
+
+# 34. Specific Phase 5 implication for CrabLink
+
+Current quorum policy:
+
+```text
+required observations = 2
+```
+
+Expected first provider behavior:
+
+```text
+observation_count=1
+decision=MissingEvidence
+under_quorum_rejected=true
+```
+
+A future CrabLink status surface should represent that as something like:
+
+```text
+verification pending / insufficient independent evidence
+```
+
+not:
+
+```text
+failure
+```
+
+and definitely not:
+
+```text
+verified
+```
+
+until the second distinct source agrees.
+
+---
+
+# 35. CrabLink must preserve QuickChain boundaries too
+
+Phase 19 already defined CrabLink's role:
+
+It may display:
+
+```text
+network ready
+checkpoint observed
+verification result
+challenge result
+degraded state
+```
+
+but it may not decide finality.
+
+That same doctrine should carry directly into Phase 20 ROX status.
+
+The client displays decisions made elsewhere.
+
+It does not manufacture them. 
+
+---
+
+# 36. CrabLink future Phase 13 / BUILD_PLAN4 display status
+
+Older ROX Anchor BUILD_PLAN4 material defined a display-only status contract that specifically excluded:
+
+```text
+client authority
+wallet authority
+ledger authority
+bridge authority
+Solana submission
+ROX mint/burn authority
+paid content unlock
+real ROC burn
+real ROC release
+real ROC mutation
+production settlement
+final settlement
+public ROX mint/burn
+mainnet
+public launch
+public bridge UI
+finality claims
+```
+
+That remains an excellent boundary for eventual CrabLink integration. 
+
+Again: these previous checks lived in ROX Anchor. They are **not evidence of a CrabLink repo mutation from this session**.
+
+---
+
+# 37. CrabLink eventual FINAL_BETA Phase 21 demo dependency
+
+Once Phase 20 closes, FINAL_BETA Phase 21 requires one complete desktop demonstration including:
+
+```text
+1. Start private RustyOnions network.
+2. Start multiple Service Nodes.
+3. Start User Node verifier.
+4. Launch clean CrabLink Desktop.
+...
+19. Produce QuickChain checkpoint/finality evidence.
+20. Display redacted QuickChain status.
+21. Execute capped ROC → ROX private-testnet path.
+22. Execute ROX → ROC dry-run path.
+23. Run revocation/halt/failure drill.
+24. Restart and reconcile.
+```
+
+This sequence is explicitly part of FINAL_BETA. 
+
+Therefore the work we did this session is a prerequisite for that eventual desktop demo.
+
+---
+
+# 38. CrabLink beta classification remains unchanged
+
+Even after successful Phase 4 initialization, the beta is **not**:
+
+```text
+public blockchain live
+public ROX bridge live
+mainnet live
+production mint/burn live
+staking live
+liquidity live
+exchange ready
+```
+
+The intended eventual launch wording remains:
+
+```text
+CrabLink Desktop decentralized private beta
+QuickChain private-network beta
+ROX Anchor private Solana testnet demonstration
+```
+
+FINAL_BETA explicitly distinguishes these. 
+
+---
+
+# 39. Cross-repo authority matrix after this session
+
+| Surface                            | Authority                            |
+| ---------------------------------- | ------------------------------------ |
+| Passport secret custody            | local/native Passport                |
+| User intent                        | CrabLink                             |
+| UI/status display                  | CrabLink                             |
+| Durable backend truth              | RustyOnions                          |
+| Internal ROC mutation ingress      | `svc-wallet`                         |
+| Internal ROC truth                 | `ron-ledger`                         |
+| QuickChain finality/evidence       | QuickChain/backend                   |
+| Deterministic ROX proof validation | `rox-anchor-proof`                   |
+| RPC evidence review                | `rox-anchor-rpc-proof`               |
+| ROX orchestration                  | ROX coordinator                      |
+| Testnet submission                 | controlled ROX relayer/operator path |
+| On-chain ROX state                 | Anchor program                       |
+| ROX mint authority                 | program PDA                          |
+| ROX halt                           | separated halt authority             |
+| ROX recovery                       | separated recovery authority         |
+| Program upgrade                    | separated upgrade authority          |
+| Mainnet authority                  | none / not authorized                |
+
+This matrix should remain stable.
+
+---
+
+# 40. Cross-repo data flow to preserve
+
+The intended future flow should look like:
+
+```text
+CRABLINK
+user intent
+    ↓
+
+RUSTYONIONS
+authorized internal evidence / receipt / economic truth
+    ↓
+
+ROX ANCHOR CORE + PROOF
+deterministic validation
+    ↓
+
+RPC PROOF
+independent external evidence
+    ↓
+
+COORDINATOR
+decision/orchestration
+    ↓
+
+RELAYER
+simulation / separately authorized capped testnet submit
+    ↓
+
+SOLANA DEVNET
+test-only state
+    ↓
+
+RPC READBACK
+    ↓
+
+RECONCILIATION
+    ↓
+
+RUSTYONIONS
+backend truth remains authoritative
+    ↓
+
+CRABLINK
+display only
+```
+
+No layer should bypass the one immediately responsible for its authority.
+
+---
+
+# 41. Cross-repo safety posture after Phase 4
+
+Current known facts:
+
+```text
+ROX_PROGRAM_DEPLOYED=YES
+ROX_CONFIG_INITIALIZED=YES
+TEST_ONLY_ROX_MINT_EXISTS=YES
+TEST_ONLY_ROX_ATA_EXISTS=YES
+
+TEST_ONLY_ROX_SUPPLY=0
+TEST_ONLY_ROX_ATA_AMOUNT=0
+
+PUBLIC_ROX_MINT_BURN=NO
+PRODUCTION_ROX_MINT_BURN=NO
+
+REAL_ROC_MUTATION=NO
+PRODUCTION_SETTLEMENT=NO
+
+MAINNET=NO
+PUBLIC_BRIDGE=NO
+```
+
+RustyOnions and CrabLink must preserve those distinctions in any status/documentation.
+
+---
+
+# 42. Secrets and sensitive local files must stay inside ROX Anchor
+
+Do not copy private operator key material into either RustyOnions or CrabLink.
+
+Sensitive/local files remain under:
+
+```text
+rox-anchor/.rox-anchor-private-pilot/
+```
+
+including:
+
+```text
+rox-anchor-devnet.pilot-payer.json
+rox-anchor-devnet-upgrade.pilot-authority.json
+rox-anchor-devnet-phase4-config.pilot-keypair.json
+rox-anchor-devnet-test-only-rox-mint.pilot-keypair.json
+rox-anchor-devnet-halt.pilot-authority.json
+rox-anchor-devnet-recovery.pilot-authority.json
+```
+
+Never copy these into:
+
+```text
+RustyOnions/
+crablink/
+```
+
+Public addresses may be recorded where necessary.
+
+Private key JSON must not.
+
+---
+
+# 43. Previously exposed temporary seed must never reappear
+
+During earlier ROX program-upgrade work, temporary recovery seed material was printed.
+
+That material is compromised and must never be:
+
+```text
+repeated
+stored
+reused
+copied into RustyOnions
+copied into CrabLink
+put into notes
+put into config
+```
+
+Likewise, ephemeral recovery material from the failed first Phase 4E one-shot deploy was sanitized/deleted and should never be reconstructed.
+
+---
+
+# 44. Current direct work priorities
+
+For clarity, neither RustyOnions nor CrabLink should become active again **immediately** upon resume.
+
+The next active repo remains:
+
+```text
+rox-anchor
+```
+
+Exact immediate sequence:
+
+```text
+1. resume Phase5A RPC-proof regression
+2. run Phase5A Clippy -D warnings
+3. run workspace check
+4. run actual Source 1 devnet readback
+5. prove single source remains MissingEvidence
+6. add genuine Source 2
+7. close Phase 5 only with real agreement
+8. Phase 6 actual-address simulation
+9. later Phase 7/8 capped directions
+10. reconciliation / negative / halt-recovery
+11. RustyOnions handoff
+12. CrabLink display-only status
+```
+
+This ordering avoids pulling client/backend authority into an unfinished testnet proof system.
+
+---
+
+# 45. What RustyOnions repo should record right now
+
+A concise repository status marker could read:
+
+```text
+FINAL_BETA_PHASE20_ACTIVE=YES
+
+ROX_ANCHOR_PHASE4_DEVNET_INITIALIZATION=GREEN
+ROX_ANCHOR_PHASE5A=IN_PROGRESS
+
+RUSTYONIONS_CHANGED_THIS_SESSION=NO
+
+SVC_WALLET_MUTATED_BY_ROX_WORK=NO
+RON_LEDGER_MUTATED_BY_ROX_WORK=NO
+REAL_ROC_MUTATION=NO
+
+FUTURE_ROX_HANDOFF_TARGET=svc-wallet -> ron-ledger
+FUTURE_ROX_HANDOFF_MODE=DRY_RUN_FIRST
+
+ROX_PROGRAM=FiUY5M3a8xRHCgCfNzqNe5qATKUa3fk2chHFsJGdEitk
+ROX_CONFIG=4RBTypWtrn7mwV47MJkAHtEBMYnvNhd5wdSMAUsxwFeo
+ROX_TEST_MINT=HfHRJLswuRN3eVsiWnYi7REssDEsxxA8ewU8emhC3XA4
+
+ROX_TEST_MINT_SUPPLY=0
+ROX_TEST_ATA_AMOUNT=0
+
+RUSTYONIONS_NEXT_DIRECT_WORK=DEFER_UNTIL_BUILD_PLAN4_PHASE12
+```
+
+---
+
+# 46. What CrabLink repo should record right now
+
+A concise CrabLink repository status marker could read:
+
+```text
+FINAL_BETA_PHASE20_ACTIVE=YES
+
+ROX_ANCHOR_PHASE4_DEVNET_INITIALIZATION=GREEN
+ROX_ANCHOR_PHASE5A=IN_PROGRESS
+
+CRABLINK_CHANGED_THIS_SESSION=NO
+
+CRABLINK_ROX_AUTHORITY=NO
+CRABLINK_SOLANA_SUBMISSION_AUTHORITY=NO
+CRABLINK_FINALITY_AUTHORITY=NO
+CRABLINK_WALLET_AUTHORITY=NO
+CRABLINK_LEDGER_AUTHORITY=NO
+CRABLINK_SETTLEMENT_AUTHORITY=NO
+
+ROX_PRIVATE_TESTNET_STATUS_ROLE=DISPLAY_ONLY
+ROX_STATUS_UNLOCKS_PAID_CONTENT=NO
+
+ROX_PROGRAM=FiUY5M3a8xRHCgCfNzqNe5qATKUa3fk2chHFsJGdEitk
+ROX_CONFIG=4RBTypWtrn7mwV47MJkAHtEBMYnvNhd5wdSMAUsxwFeo
+ROX_TEST_MINT=HfHRJLswuRN3eVsiWnYi7REssDEsxxA8ewU8emhC3XA4
+
+ROX_TEST_MINT_SUPPLY=0
+ROX_TEST_ATA_AMOUNT=0
+
+CRABLINK_NEXT_DIRECT_ROX_WORK=BUILD_PLAN4_PHASE13_DISPLAY_ONLY_STATUS
+```
+
+---
+
+# 47. Cohesive three-repo checkpoint
+
+```text
+============================================================
+RUSTYONIONS / CRABLINK / ROX ANCHOR CROSS-REPO CHECKPOINT
+2026-08-15
+============================================================
+
+FINAL_BETA_ACTIVE_PHASE=20
+FINAL_BETA_PHASE20_STATUS=IN_PROGRESS
+
+------------------------------------------------------------
+ROX ANCHOR
+------------------------------------------------------------
+
+ROX_ANCHOR_REPO=/Users/mymac/Desktop/rox-anchor
+
+PROGRAM_ID=FiUY5M3a8xRHCgCfNzqNe5qATKUa3fk2chHFsJGdEitk
+PROGRAMDATA=4JsBSTEXLKtWusJQJAv1DnaRKfAxGnD958WhHPVz84UD
+PROGRAM_SLOT=484017674
+PROGRAM_SHA256=929f1906d497ed22c8e88c8a73bcaae0181271d9001fa1a98a9f8e3c50c45bf1
+
+WORKFLOW_AUTHORITY=6YYJ43KRJF6pB3jUtRQpvhVHZQHaURTSxJdLpipHU3gs
+HALT_AUTHORITY=3aAvoLEAsCCte4gow6rheJQ3F4zeoCuMvERqyFBobGgz
+RECOVERY_AUTHORITY=74upNee16zSKS2hSuovDaioWVsadFf8Za4CCRwJW5fqe
+UPGRADE_AUTHORITY=DLQJ1icSQKu5CGsi7FqJgF9ohsiYuYuRkn23EggRDTdJ
+
+PROGRAM_CONFIG=4RBTypWtrn7mwV47MJkAHtEBMYnvNhd5wdSMAUsxwFeo
+TEST_ONLY_ROX_MINT=HfHRJLswuRN3eVsiWnYi7REssDEsxxA8ewU8emhC3XA4
+TEST_ONLY_ROX_ATA=A3sBYMUf2N7rpkqiCnE7fKZBdnGR5goH3hFmHJvgvqsJ
+MINT_AUTHORITY_PDA=C5jTCy4EBY5fKuRMzLv7Lau5Re1SmMXukRXosndk9hJE
+
+TEST_ONLY_MODE=true
+MAX_SUPPLY_UNITS=1000
+MAX_AMOUNT_UNITS_PER_OPERATION=10
+MINT_DECIMALS=0
+
+CURRENT_MINT_SUPPLY=0
+CURRENT_ATA_AMOUNT=0
+
+PHASE4_DEVNET_ATOMIC_INITIALIZATION=GREEN
+PHASE4_TRANSACTION_SIGNATURE=5J8cjGr3idqUff4Mh5FeMSfEDoXpn5QAh6bxyWQrmpT1q4PeFCouRbThH5JN2dtLaHC1kC4QPcMApownmXeimyK5
+
+PHASE4_EXECUTE_LIVE_MUST_NOT_BE_RERUN=YES
+FURTHER_TRANSACTION_AUTHORIZATION=NONE
+
+CURRENT_BUILD_PLAN4_PHASE=5A
+
+PHASE5A_COLLECTOR=IMPLEMENTED
+PHASE5A_CLI_TESTS=GREEN
+PHASE5A_CLI_CHECK=GREEN
+PHASE5A_LIVE_SOURCE1_READBACK=NOT_RUN
+PHASE5_CLOSEOUT=NO
+
+------------------------------------------------------------
+RUSTYONIONS
+------------------------------------------------------------
+
+RUSTYONIONS_REPO=/Users/mymac/Desktop/RustyOnions
+
+DIRECT_SOURCE_MUTATION_THIS_SESSION=NO
+
+SVC_WALLET_MUTATION_FROM_ROX_SESSION=NO
+RON_LEDGER_MUTATION_FROM_ROX_SESSION=NO
+
+REAL_ROC_BURN=NO
+REAL_ROC_RELEASE=NO
+REAL_ROC_MUTATION=NO
+
+ECONOMIC_MUTATION_INGRESS=svc-wallet
+ECONOMIC_TRUTH=ron-ledger
+
+ROX_ANCHOR_IS_INTERNAL_ROC_LEDGER=NO
+
+FUTURE_HANDOFF_TARGET=svc-wallet -> ron-ledger
+FUTURE_HANDOFF_FIRST_MODE=DRY_RUN_ONLY
+
+NEXT_DIRECT_ROX_INTEGRATION_PHASE=BUILD_PLAN4_PHASE12
+
+------------------------------------------------------------
+CRABLINK
+------------------------------------------------------------
+
+CRABLINK_REPO=/Users/mymac/Desktop/crablink
+
+DIRECT_SOURCE_MUTATION_THIS_SESSION=NO
+
+ROX_STATUS_ROLE=DISPLAY_ONLY
+
+SOLANA_SUBMIT_AUTHORITY=NO
+ROX_MINT_BURN_AUTHORITY=NO
+WALLET_AUTHORITY=NO
+LEDGER_AUTHORITY=NO
+BRIDGE_AUTHORITY=NO
+FINALITY_AUTHORITY=NO
+SETTLEMENT_AUTHORITY=NO
+
+ROX_STATUS_PAID_UNLOCK_AUTHORITY=NO
+
+NEXT_DIRECT_ROX_INTEGRATION_PHASE=BUILD_PLAN4_PHASE13
+
+------------------------------------------------------------
+GLOBAL SAFETY
+------------------------------------------------------------
+
+PUBLIC_MAINNET=NO
+PUBLIC_BRIDGE=NO
+PRODUCTION_MINT_BURN=NO
+STAKING=NO
+LIQUIDITY=NO
+EXCHANGE_FACING=NO
+
+ROX_MINT_PERFORMED=NO
+ROX_BURN_PERFORMED=NO
+REAL_ROC_MUTATION=NO
+PRODUCTION_SETTLEMENT=NO
+
+NEXT_ACTIVE_REPO=rox-anchor
+NEXT_ACTION=RESUME_BUILD_PLAN4_PHASE5A
+============================================================
+```
+
+---
+
+# 48. Restart paragraph to paste into either RustyOnions or CrabLink
+
+**Carryover from the 2026-08-15 ROX Anchor session: no direct RustyOnions or CrabLink source files were changed during this session. ROX Anchor FINAL_BETA Phase 20 made major live progress: the FiUY devnet program is deployed and unchanged at slot 484017674; the Phase 4 program config `4RBTyp...` is now initialized; test-only ROX mint `HfHR...` and payer ATA `A3sB...` exist; mint authority is PDA `C5jT...`; the exact test policy is 1000 total / 10 per operation / decimals 0; mint supply and ATA balance are both zero. The one authorized initialization transaction `5J8cj...imyK5` confirmed and must never be rerun. No ROX was minted/burned and no internal ROC, settlement, mainnet, or public bridge mutation occurred. ROX Anchor has begun BUILD_PLAN4 Phase 5A read-only RPC evidence: the collector is implemented, its six focused tests and CLI check are GREEN after adding recursion limit 256, but actual Source 1 live RPC readback has not yet run. On resume, ROX Anchor remains the active repo: finish the Phase 5A RPC-proof regression, Clippy `-D warnings`, and workspace check, then run Source 1. One RPC provider must remain `MissingEvidence`; quorum requires two genuinely distinct providers. RustyOnions remains internal wallet/ledger truth with future dry-run handoff targeting `svc-wallet -> ron-ledger`; no RustyOnions economic mutation is authorized. CrabLink remains display/user-intent only with no Solana submission, ROX mint/burn, wallet, ledger, bridge, settlement, or finality authority; its direct ROX work remains deferred until the later display-only status phase.**  
+
+These are the notes I would place into **both** the RustyOnions and CrabLink repos, with the repo-specific sections retained so either repository has enough context to reconstruct why ROX Anchor is ahead of its own local integration work.
+
+
+### END NOTE - AUGUST 15 2026 - 02:00 CST

@@ -33,6 +33,9 @@ import {
   stableSiteIdempotencyKey,
   summarizeSiteCreateData,
 } from '../../shared/api/siteClient.js';
+import {
+  reviewSiteDeclarativeEmbeds,
+} from '../../shared/embed/embedRegistry.js';
 import { normalizeSiteName, parseJsonObject } from './siteDraftModel.js';
 import SiteGuidedSetup, { getCurrentCreatorIdentity } from './SiteGuidedSetup.jsx';
 import './SiteLaunchFlow.css';
@@ -70,11 +73,51 @@ export default function SiteLaunchFlow({ app, draftState }) {
   const rootDocumentCid = normalizeSiteCid(storedRootCid || draft.rootDocumentCid);
   const rootHtmlBytes = byteLength(draft.rootHtml || '');
   const rootHtmlFingerprint = sourceFingerprint(draft.rootHtml || '');
+
+  const blogTemplateMode =
+    draft.templateId ===
+    'blog';
+
+  const publishedBlogSiteName =
+    normalizeSiteName(
+      draft.publishedSiteName ||
+      '',
+    );
+
+  const publishedBlogManifestCid =
+    normalizeSiteCid(
+      draft.publishedManifestCid ||
+      '',
+    );
+
+  const siteMutationMode =
+    blogTemplateMode &&
+    publishedBlogSiteName ===
+      siteName &&
+    Boolean(
+      publishedBlogManifestCid,
+    )
+      ? 'update'
+      : 'create';
+
+  const embedReview =
+    useMemo(
+      () =>
+        reviewSiteDeclarativeEmbeds(
+          draft.rootHtml ||
+          '',
+        ),
+      [
+        draft.rootHtml,
+      ],
+    );
+
   const preflight = getPreflight({
     draft,
     creator,
     rootHtmlBytes,
     stats,
+    embedReview,
   });
 
   const prepareRequest = useMemo(() => {
@@ -121,6 +164,10 @@ export default function SiteLaunchFlow({ app, draftState }) {
         owner_wallet_account: creator.walletAccount,
         title: draft.title,
         description: draft.description,
+        template_id: draft.templateId,
+        template_version: draft.templateVersion,
+        renderer_version: draft.rendererVersion,
+        theme_tokens: draft.themeTokens,
         route_map: mergeRootRoute(draft.routeMapJson, rootDocumentCid),
         asset_map: mergeRootAsset(draft.assetMapJson, rootDocumentCid),
         client_idempotency_key: stableSiteIdempotencyKey(
@@ -128,6 +175,10 @@ export default function SiteLaunchFlow({ app, draftState }) {
           siteName,
           rootDocumentCid,
           draft.title,
+          draft.templateId,
+          draft.templateVersion,
+          draft.rendererVersion,
+          JSON.stringify(draft.themeTokens || {}),
           creator.passportSubject,
         ),
       });
@@ -141,6 +192,10 @@ export default function SiteLaunchFlow({ app, draftState }) {
     creator.walletAccount,
     draft.title,
     draft.description,
+    draft.templateId,
+    draft.templateVersion,
+    draft.rendererVersion,
+    draft.themeTokens,
     draft.routeMapJson,
     draft.assetMapJson,
   ]);
@@ -226,7 +281,8 @@ export default function SiteLaunchFlow({ app, draftState }) {
     holdState.status === 'ok' &&
     Boolean(paidProof) &&
     Boolean(draft.rootHtml) &&
-    rootHtmlBytes > 0;
+    rootHtmlBytes > 0 &&
+    embedReview.ok;
 
   const canCreate =
     preflight.ready &&
@@ -559,7 +615,20 @@ export default function SiteLaunchFlow({ app, draftState }) {
     });
 
     try {
-      const response = await siteClient.createSite(createRequest, {
+      const siteMutation =
+        siteMutationMode ===
+        'update'
+          ? siteClient.updateSite.bind(
+              siteClient,
+            )
+          : siteClient.createSite.bind(
+              siteClient,
+            );
+
+      const response =
+        await siteMutation(
+          createRequest,
+          {
         confirmed: true,
         paidProof,
         idempotencyKey: createRequest.client_idempotency_key,
@@ -567,6 +636,53 @@ export default function SiteLaunchFlow({ app, draftState }) {
 
       const data = response?.data || {};
       const summary = summarizeSiteCreateData(data);
+
+      const publishedRevision =
+        siteMutationMode ===
+        'update'
+          ? Math.max(
+              1,
+              Number(
+                draft.publishedRevision ||
+                1,
+              ),
+            ) +
+            1
+          : 1;
+
+      if (
+        blogTemplateMode &&
+        typeof updateDraft ===
+          'function' &&
+        summary.siteName
+      ) {
+        updateDraft(
+          'publishedSiteName',
+          summary.siteName,
+        );
+
+        updateDraft(
+          'publishedManifestCid',
+          summary.manifestCid ||
+            '',
+        );
+
+        updateDraft(
+          'publishedRootDocumentCid',
+          summary.rootDocumentCid ||
+            rootDocumentCid,
+        );
+
+        updateDraft(
+          'publishedRevision',
+          publishedRevision,
+        );
+
+        updateDraft(
+          'publishedTemplateId',
+          'blog',
+        );
+      }
 
       setCreateState({
         status: 'ok',
@@ -579,12 +695,22 @@ export default function SiteLaunchFlow({ app, draftState }) {
       await app?.refreshWallet?.(creator.walletAccount);
 
       app?.notify?.({
-        title: 'Site created',
+        title:
+          siteMutationMode ===
+          'update'
+            ? 'Site updated'
+            : 'Site created',
         message: summary.crabUrl ? `Opening ${summary.crabUrl}` : 'Site create returned without a crab URL.',
         tone: summary.crabUrl ? 'success' : 'warning',
       });
 
-      if (summary.crabUrl && typeof app?.navigate === 'function') {
+      if (
+        blogTemplateMode ===
+          false &&
+        summary.crabUrl &&
+        typeof app?.navigate ===
+          'function'
+      ) {
         window.setTimeout(() => {
           app.navigate(summary.crabUrl);
         }, 900);
@@ -681,6 +807,7 @@ export default function SiteLaunchFlow({ app, draftState }) {
           confirmHold={confirmHold}
           storeRootHtml={storeRootHtml}
           createSite={createSite}
+          siteMutationMode={siteMutationMode}
           openCreatedSite={openCreatedSite}
           clearConfirmation={clearConfirmation}
         />
@@ -773,6 +900,7 @@ function ActiveAction({
   confirmHold,
   storeRootHtml,
   createSite,
+  siteMutationMode,
   openCreatedSite,
   clearConfirmation,
 }) {
@@ -781,7 +909,11 @@ function ActiveAction({
       <div className="site-launch-action-content">
         <div>
           <p className="cl-eyebrow">Launch complete</p>
-          <h3>Named site pointer created</h3>
+          <h3>
+            {siteMutationMode === 'update'
+              ? 'Named site pointer updated'
+              : 'Named site pointer created'}
+          </h3>
           <p>Open the returned site URL to verify named resolution, manifest hydration, root fetch, and sandbox rendering.</p>
         </div>
 
@@ -971,7 +1103,11 @@ function ActiveAction({
     <div className="site-launch-action-content">
       <div>
         <p className="cl-eyebrow">Step 4</p>
-        <h3>Create site pointer</h3>
+        <h3>
+          {siteMutationMode === 'update'
+            ? 'Update site pointer'
+            : 'Create site pointer'}
+        </h3>
         <p>
           Sends <code>POST /sites</code> with the backend root CID and wallet hold proof. This is what makes the named
           <code> crab://</code> URL resolve.
@@ -999,8 +1135,16 @@ function ActiveAction({
 
       {armed && (
         <ExplicitConfirmationPanel
-          title="Ready to create named site"
-          description="Review this final action, then click Create Site Pointer. This writes the named crab:// site pointer through the gateway."
+          title={
+            siteMutationMode === 'update'
+              ? 'Ready to update named site'
+              : 'Ready to create named site'
+          }
+          description={
+            siteMutationMode === 'update'
+              ? 'Review this final action, then click Update Site Pointer. This writes the new manifest pointer through the existing gateway Site path.'
+              : 'Review this final action, then click Create Site Pointer. This writes the named crab:// site pointer through the gateway.'
+          }
           facts={[
             ['Route', '/sites'],
             ['Root CID', rootDocumentCid || 'missing'],
@@ -1017,7 +1161,17 @@ function ActiveAction({
           disabled={!canCreate || createState.status === 'sending'}
           onClick={createSite}
         >
-          {createState.status === 'sending' ? 'Creating…' : armed ? 'Create Site Pointer' : 'Review Site Create'}
+          {createState.status === 'sending'
+            ? siteMutationMode === 'update'
+              ? 'Updating…'
+              : 'Creating…'
+            : armed
+              ? siteMutationMode === 'update'
+                ? 'Update Site Pointer'
+                : 'Create Site Pointer'
+              : siteMutationMode === 'update'
+                ? 'Review Site Update'
+                : 'Review Site Create'}
         </Button>
         {armed && (
           <Button variant="secondary" disabled={createState.status === 'sending'} onClick={clearConfirmation}>
@@ -1128,12 +1282,12 @@ function buildSteps({ activeStep, prepareState, holdState, paidProof, rootStoreS
     {
       key: 'create',
       number: 4,
-      label: 'Create',
+      label: 'Publish',
       status: stepStatus('create', activeStep, createState.status === 'ok', createState.status),
       active: activeStep === 'create',
       badge: stepBadge(createState.status === 'ok', createState.status, canCreate),
       tone: stepTone(createState.status === 'ok', createState.status, canCreate),
-      detail: createState.status === 'ok' ? 'site pointer created' : canCreate ? 'ready to create' : 'needs root + proof',
+      detail: createState.status === 'ok' ? 'site pointer published' : canCreate ? 'ready to publish' : 'needs root + proof',
     },
   ];
 }
@@ -1167,7 +1321,7 @@ function labelForStep(step) {
   if (step === 'prepare') return 'Prepare launch estimate';
   if (step === 'hold') return 'Confirm explicit ROC hold';
   if (step === 'store') return 'Store root HTML bytes';
-  return 'Create named site pointer';
+  return 'Publish named site pointer';
 }
 
 function copyForStep(step, preflight, proofIssue, rootDocumentCid) {
@@ -1186,7 +1340,13 @@ function labelForStateKey(key) {
   return key;
 }
 
-function getPreflight({ draft, creator, rootHtmlBytes, stats }) {
+function getPreflight({
+  draft,
+  creator,
+  rootHtmlBytes,
+  stats,
+  embedReview,
+}) {
   const siteName = normalizeSiteName(draft?.siteName || '');
 
   if (!siteName) {
@@ -1226,6 +1386,23 @@ function getPreflight({ draft, creator, rootHtmlBytes, stats }) {
       ready: false,
       canPrepare: false,
       reason: 'Paste, template, or import root HTML before preparing launch.',
+    };
+  }
+
+  if (
+    embedReview?.ok ===
+    false
+  ) {
+    const firstFinding =
+      embedReview.findings?.[0];
+
+    return {
+      ready: false,
+      canPrepare: false,
+      reason:
+        firstFinding?.tag
+          ? `Declarative embed policy blocked ${firstFinding.tag}: ${firstFinding.code}.`
+          : `Declarative embed policy blocked this root: ${firstFinding?.code || 'invalid_embed'}.`,
     };
   }
 
@@ -1361,14 +1538,14 @@ function MiniFact({ label, value, monospace = false }) {
 function explicitTitleForKind(kind) {
   if (kind === 'hold') return 'Review ROC hold';
   if (kind === 'store') return 'Review root storage';
-  if (kind === 'create') return 'Review site create';
+  if (kind === 'create') return 'Review site publish';
   return 'Review action';
 }
 
 function explicitMessageForKind(kind) {
   if (kind === 'hold') return 'Review the in-page confirmation, then click Send ROC Hold.';
   if (kind === 'store') return 'Review the in-page confirmation, then click Send Root HTML.';
-  if (kind === 'create') return 'Review the in-page confirmation, then click Create Site Pointer.';
+  if (kind === 'create') return 'Review the in-page confirmation, then publish the Site pointer.';
   return 'Review the in-page confirmation, then click the action button again.';
 }
 

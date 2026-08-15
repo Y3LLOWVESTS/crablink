@@ -129,7 +129,7 @@ const PAGE_REQUEST_FIELDS =
   ]);
 
 const USERNAME_PATTERN =
-  /^[a-z0-9][a-z0-9_-]{2,31}$/;
+  /^[a-z0-9][a-z0-9_.-]{2,31}$/;
 
 const PUBLICATION_ID_PATTERN =
   /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;

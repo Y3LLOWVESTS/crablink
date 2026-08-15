@@ -8,6 +8,11 @@
  */
 
 // FINAL_BETA_PHASE7A1_PROFILE_TIMELINE_MODEL_V1
+// FINAL_BETA_PHASE10A5_PROFILE_FEED_OBJECT_PARITY_V1
+
+import {
+  assertPublicationPageV1,
+} from '../../../../../packages/crablink-core/src/publicationSummary.js';
 
 export const PROFILE_TIMELINE_TABS =
   Object.freeze([
@@ -263,82 +268,8 @@ function normalizePage(
     return null;
   }
 
-  const page =
-    requireRecord(
-      value,
-      'profile timeline page',
-    );
-
-  if (
-    page.schema !==
-      'crablink.publication-page.v1'
-  ) {
-    throw new TypeError(
-      'profile timeline requires PublicationPageV1',
-    );
-  }
-
-  if (
-    Array.isArray(
-      page.items,
-    ) === false
-  ) {
-    throw new TypeError(
-      'profile timeline page requires items',
-    );
-  }
-
-  if (
-    page.items.length > 50
-  ) {
-    throw new RangeError(
-      'profile timeline page exceeds 50 items',
-    );
-  }
-
-  if (
-    typeof page.hasMore !==
-      'boolean'
-  ) {
-    throw new TypeError(
-      'profile timeline page requires hasMore',
-    );
-  }
-
-  if (
-    page.nextCursor !== null &&
-    typeof page.nextCursor !==
-      'string'
-  ) {
-    throw new TypeError(
-      'profile timeline nextCursor is invalid',
-    );
-  }
-
-  if (
-    page.hasMore === true &&
-    (
-      typeof page.nextCursor !==
-        'string' ||
-      page.nextCursor.length === 0
-    )
-  ) {
-    throw new TypeError(
-      'profile timeline hasMore requires nextCursor',
-    );
-  }
-
-  for (const item of page.items) {
-    requireRecord(
-      item,
-      'profile timeline publication',
-    );
-  }
-
-  return deepFreeze(
-    cloneJsonValue(
-      page,
-    ),
+  return assertPublicationPageV1(
+    value,
   );
 }
 

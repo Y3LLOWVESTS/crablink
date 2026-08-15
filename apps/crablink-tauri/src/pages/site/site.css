@@ -854,3 +854,74 @@
     flex-direction: column;
   }
 }
+/*
+ * FINAL_BETA_PHASE14A5_IMAGEBOARD_READER_STYLES_V1
+ *
+ * Consumer Imageboard reader uses shared semantic Site/product tokens.
+ * Gateway thumbnail bytes remain display-only and never imply local B3
+ * verification, entitlement, moderation authority, or publication truth.
+ */
+
+.imageboard-reader {
+  min-width: 0;
+}
+
+.imageboard-reader-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1rem;
+  min-width: 0;
+}
+
+.imageboard-reader-thread-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.imageboard-reader-thumbnail {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--cl-border);
+  border-radius: 16px;
+  background: var(--cl-card-muted);
+}
+
+.imageboard-reader-thumbnail img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.imageboard-reader-thumbnail-placeholder {
+  display: grid;
+  gap: 0.35rem;
+  place-items: center;
+  min-height: 100%;
+  padding: 1rem;
+  text-align: center;
+  color: var(--cl-muted);
+}
+
+.imageboard-reader-thumbnail-placeholder strong {
+  color: var(--cl-text);
+}
+
+.imageboard-reader-cid {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--cl-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .imageboard-reader-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

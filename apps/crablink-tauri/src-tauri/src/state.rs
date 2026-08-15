@@ -4,6 +4,8 @@
 //! RO:INVARIANTS — no lock across await; settings/session/jobs/sources are preferences/display, not backend truth.
 //! RO:SECURITY — no private keys, seeds, raw capabilities, ingest secrets, receipts, media bytes, or spend authority.
 
+use crate::local_following_feed_cache_store::LocalFollowingFeedCacheStore;
+use crate::local_following_store::DesktopLocalFollowingStore;
 use crate::media::{
     new_make_export_store, new_video_job_store, new_video_source_store, MakeExportStore,
     VideoJobStore, VideoSourceStore,
@@ -86,6 +88,8 @@ pub struct AppState {
     pub video_jobs: VideoJobStore,
     pub video_sources: VideoSourceStore,
     pub make_exports: MakeExportStore,
+    pub local_following_store: Option<Mutex<DesktopLocalFollowingStore>>,
+    pub local_following_feed_cache_store: Option<Mutex<LocalFollowingFeedCacheStore>>,
     #[cfg(desktop)]
     pub passport_vault_store: DesktopAtomicVaultStore,
     #[cfg(desktop)]
@@ -120,6 +124,56 @@ impl AppState {
     }
 
     #[cfg(desktop)]
+    pub fn with_native_passport_runtime_and_local_following(
+        passport_vault_store: DesktopAtomicVaultStore,
+        passport_platform_sealer: SharedNativePlatformSealer,
+        passport_platform_material_clearer: SharedDesktopPlatformMaterialClearer,
+        local_following_store: DesktopLocalFollowingStore,
+    ) -> Self {
+        let mut state =
+            Self::with_native_passport_runtime(
+                passport_vault_store,
+                passport_platform_sealer,
+                passport_platform_material_clearer,
+            );
+
+        state.local_following_store =
+            Some(
+                Mutex::new(
+                    local_following_store,
+                ),
+            );
+
+        state
+    }
+
+    #[cfg(desktop)]
+    pub fn with_native_passport_runtime_and_local_following_and_feed_cache(
+        passport_vault_store: DesktopAtomicVaultStore,
+        passport_platform_sealer: SharedNativePlatformSealer,
+        passport_platform_material_clearer: SharedDesktopPlatformMaterialClearer,
+        local_following_store: DesktopLocalFollowingStore,
+        local_following_feed_cache_store: LocalFollowingFeedCacheStore,
+    ) -> Self {
+        let mut state =
+            Self::with_native_passport_runtime_and_local_following(
+                passport_vault_store,
+                passport_platform_sealer,
+                passport_platform_material_clearer,
+                local_following_store,
+            );
+
+        state.local_following_feed_cache_store =
+            Some(
+                Mutex::new(
+                    local_following_feed_cache_store,
+                ),
+            );
+
+        state
+    }
+
+    #[cfg(desktop)]
     pub fn with_native_passport_runtime_and_secret_surface(
         passport_vault_store: DesktopAtomicVaultStore,
         passport_platform_sealer: SharedNativePlatformSealer,
@@ -136,6 +190,8 @@ impl AppState {
             video_jobs: new_video_job_store(),
             video_sources: new_video_source_store(),
             make_exports: new_make_export_store(),
+            local_following_store: None,
+            local_following_feed_cache_store: None,
             passport_vault_store,
             passport_platform_sealer,
             passport_platform_material_clearer,
@@ -158,6 +214,8 @@ impl Default for AppState {
             video_jobs: new_video_job_store(),
             video_sources: new_video_source_store(),
             make_exports: new_make_export_store(),
+            local_following_store: None,
+            local_following_feed_cache_store: None,
         }
     }
 }

@@ -1,0 +1,122 @@
+/*
+ * RO:WHAT — Route-owned presentation for transparent CrabLink Explore discovery.
+ * RO:WHY — FINAL_BETA Phase 10 needs a consumer discovery layout distinct from the local following Home feed.
+ * RO:INTERACTS — ExplorePage.jsx and shared product/state components.
+ * RO:INVARIANTS — shared theme tokens only; no page-local theme ownership and no behavioral authority.
+ * RO:TEST — ExplorePage.discovery.source.test.mjs and frontend production build.
+ *
+ * FINAL_BETA_PHASE10A3F_EXPLORE_DISCOVERY_UI_V1
+ */
+
+.explore-page {
+  display: grid;
+  gap: var(--cl-space-6);
+  width: min(1280px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+}
+
+.cl-explore-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cl-space-3);
+  flex-wrap: wrap;
+  padding: var(--cl-space-4);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-surface);
+}
+
+.cl-explore-order {
+  margin: 0;
+  color: var(--cl-muted);
+  font-size: var(--cl-font-size-1);
+}
+
+.cl-explore-sections {
+  display: grid;
+  gap: var(--cl-space-8);
+  min-width: 0;
+}
+
+.cl-explore-section {
+  display: grid;
+  gap: var(--cl-space-4);
+  min-width: 0;
+}
+
+.cl-explore-section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--cl-space-4);
+  padding-bottom: var(--cl-space-3);
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.cl-explore-section-head h2,
+.cl-explore-section-head p {
+  margin-top: 0;
+}
+
+.cl-explore-section-head h2 {
+  margin-bottom: var(--cl-space-1);
+}
+
+.cl-explore-section-head p:last-child {
+  margin-bottom: 0;
+  color: var(--cl-muted);
+}
+
+.cl-explore-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding-inline: var(--cl-space-2);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-pill);
+  background: var(--cl-surface-raised);
+  color: var(--cl-text);
+  font-weight: 700;
+}
+
+.cl-explore-feed-list {
+  display: grid;
+  gap: var(--cl-space-4);
+  min-width: 0;
+}
+
+.cl-explore-card-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(240px, 1fr)
+  );
+  gap: var(--cl-space-4);
+  min-width: 0;
+}
+
+.cl-explore-card-grid > *,
+.cl-explore-feed-list > * {
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .cl-explore-toolbar,
+  .cl-explore-section-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cl-explore-count {
+    align-self: flex-start;
+  }
+
+  .cl-explore-card-grid {
+    grid-template-columns: 1fr;
+  }
+}

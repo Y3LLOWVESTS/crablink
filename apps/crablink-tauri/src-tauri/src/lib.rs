@@ -7,6 +7,8 @@
 mod commands;
 mod confirmed_roc;
 mod media;
+pub mod local_following_store;
+pub mod local_following_feed_cache_store;
 #[cfg(all(test, desktop))]
 mod onboarding_phase11b_command_path_tests;
 #[cfg(desktop)]
@@ -56,7 +58,38 @@ use passport_platform_runtime::{
 #[cfg(desktop)]
 use passport_vault_runtime::initialize_desktop_passport_vault_store;
 #[cfg(desktop)]
+use local_following_feed_cache_store::LocalFollowingFeedCacheStore;
+#[cfg(desktop)]
+use local_following_store::initialize_desktop_local_following_store;
+#[cfg(desktop)]
 use tauri::Manager;
+
+#[doc(hidden)]
+pub mod phase8a4_test_support {
+    pub use crate::commands::local_following::{
+        read_local_following_from_store,
+        write_local_following_to_store,
+        FINAL_BETA_PHASE8A4_LABEL,
+        LOCAL_FOLLOWING_READ_COMMAND,
+        LOCAL_FOLLOWING_READ_FAILED_MESSAGE,
+        LOCAL_FOLLOWING_WRITE_COMMAND,
+        LOCAL_FOLLOWING_WRITE_FAILED_MESSAGE,
+    };
+}
+
+#[doc(hidden)]
+pub mod phase9a8_test_support {
+    pub use crate::commands::local_following_feed_cache::{
+        read_local_following_feed_cache_from_store,
+        write_local_following_feed_cache_to_store,
+        FINAL_BETA_PHASE9A8_LABEL,
+        LOCAL_FOLLOWING_FEED_CACHE_READ_COMMAND,
+        LOCAL_FOLLOWING_FEED_CACHE_READ_FAILED_MESSAGE,
+        LOCAL_FOLLOWING_FEED_CACHE_UNAVAILABLE_MESSAGE,
+        LOCAL_FOLLOWING_FEED_CACHE_WRITE_COMMAND,
+        LOCAL_FOLLOWING_FEED_CACHE_WRITE_FAILED_MESSAGE,
+    };
+}
 
 /// Narrow native test surface for Phase 22 cross-repository integration.
 ///
@@ -122,15 +155,33 @@ pub fn run() {
                 std::io::Error::other("native Passport VaultStore initialization failed")
             })?;
 
+        let initialized_local_following =
+            initialize_desktop_local_following_store(&app_data_directory).map_err(|_| {
+                std::io::Error::other("native local following store initialization failed")
+            })?;
+
+        let local_following_feed_cache_store =
+            LocalFollowingFeedCacheStore::from_app_data_root(
+                app_data_directory.clone(),
+            )
+            .map_err(|_| {
+                std::io::Error::other(
+                    "native local following feed cache store initialization failed",
+                )
+            })?;
+
         let passport_platform_sealer = new_desktop_platform_sealer();
 
         let passport_platform_material_clearer = new_desktop_platform_material_clearer();
 
-        let state = AppState::with_native_passport_runtime(
-            initialized.store,
-            passport_platform_sealer,
-            passport_platform_material_clearer,
-        );
+        let state =
+            AppState::with_native_passport_runtime_and_local_following_and_feed_cache(
+                initialized.store,
+                passport_platform_sealer,
+                passport_platform_material_clearer,
+                initialized_local_following.store,
+                local_following_feed_cache_store,
+            );
 
         if !state.passport_vault_store.root_directory().is_absolute() {
             return Err(
@@ -151,6 +202,10 @@ pub fn run() {
             commands::diagnostics::app_diagnostics,
             commands::settings::read_settings,
             commands::settings::write_settings,
+            commands::local_following::local_following_read,
+            commands::local_following::local_following_write,
+            commands::local_following_feed_cache::local_following_feed_cache_read,
+            commands::local_following_feed_cache::local_following_feed_cache_write,
             commands::health::health_check_gateway,
             commands::health::ready_check_gateway,
             commands::resolve::resolve_crab_url_gateway,
@@ -178,6 +233,7 @@ pub fn run() {
             commands::local_node::local_node_restart,
             commands::assets::upload_image_asset_gateway,
             commands::assets::upload_staged_image_asset_gateway,
+            commands::assets::hash_b3_bytes,
             commands::assets::hash_image_asset_bytes,
             commands::assets::hash_staged_asset_bytes,
             commands::assets::upload_video_asset_gateway,

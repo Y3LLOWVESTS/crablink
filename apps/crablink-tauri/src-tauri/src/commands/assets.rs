@@ -82,6 +82,21 @@ pub struct AssetBytesFetchResponse {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct B3ByteHashRequest {
+    pub body_bytes: Vec<u8>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct B3ByteHashResponse {
+    pub schema: &'static str,
+    pub bytes: usize,
+    pub hash: String,
+    pub cid: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ImageAssetHashRequest {
     pub body_bytes: Vec<u8>,
     pub content_type: Option<String>,
@@ -123,6 +138,52 @@ pub struct StagedAssetHashResponse {
     pub cid: String,
     pub crab_url: String,
     pub staged_handle_redacted: String,
+}
+
+fn hash_b3_bytes_inner(
+    request: B3ByteHashRequest,
+) -> Result<B3ByteHashResponse, String> {
+    if request.body_bytes.is_empty() {
+        return Err(
+            "b3 byte hash requires non-empty bytes".to_string(),
+        );
+    }
+
+    if request.body_bytes.len() > MAX_ASSET_BYTES_FETCH_BYTES {
+        return Err(format!(
+            "b3 byte hash exceeds the {} MiB command bridge limit",
+            MAX_ASSET_BYTES_FETCH_BYTES / (1024 * 1024)
+        ));
+    }
+
+    let hash =
+        blake3::hash(&request.body_bytes)
+            .to_hex()
+            .to_string();
+
+    let cid =
+        format!("b3:{hash}");
+
+    Ok(B3ByteHashResponse {
+        schema:
+            "crablink.tauri.b3-byte-hash-response.v1",
+
+        bytes:
+            request.body_bytes.len(),
+
+        hash,
+
+        cid,
+    })
+}
+
+#[tauri::command]
+pub async fn hash_b3_bytes(
+    request: B3ByteHashRequest,
+) -> Result<B3ByteHashResponse, String> {
+    hash_b3_bytes_inner(
+        request,
+    )
 }
 
 #[tauri::command]
@@ -1166,3 +1227,97 @@ fn redact_error(value: &str) -> String {
         .take(300)
         .collect()
 }
+
+#[cfg(test)]
+mod phase14a6f1_generic_b3_byte_hash_tests {
+    use super::*;
+
+    #[test]
+    fn phase14a6f1_hashes_exact_bytes_into_canonical_b3() {
+        let body_bytes =
+            br#"{"schema":"ron.comment-content.v1","body":"hello"}"#
+                .to_vec();
+
+        let expected_hash =
+            blake3::hash(&body_bytes)
+                .to_hex()
+                .to_string();
+
+        let response =
+            hash_b3_bytes_inner(
+                B3ByteHashRequest {
+                    body_bytes:
+                        body_bytes.clone(),
+                },
+            )
+            .expect(
+                "exact comment bytes should hash",
+            );
+
+        assert_eq!(
+            response.schema,
+            "crablink.tauri.b3-byte-hash-response.v1",
+        );
+
+        assert_eq!(
+            response.bytes,
+            body_bytes.len(),
+        );
+
+        assert_eq!(
+            response.hash,
+            expected_hash,
+        );
+
+        assert_eq!(
+            response.cid,
+            format!("b3:{expected_hash}"),
+        );
+    }
+
+    #[test]
+    fn phase14a6f1_rejects_empty_byte_hash_requests() {
+        let error =
+            hash_b3_bytes_inner(
+                B3ByteHashRequest {
+                    body_bytes:
+                        Vec::new(),
+                },
+            )
+            .expect_err(
+                "empty byte hash requests must fail",
+            );
+
+        assert_eq!(
+            error,
+            "b3 byte hash requires non-empty bytes",
+        );
+    }
+
+    #[test]
+    fn phase14a6f1_rejects_bytes_above_native_fetch_bound() {
+        let body_bytes =
+            vec![
+                0_u8;
+                MAX_ASSET_BYTES_FETCH_BYTES + 1
+            ];
+
+        let error =
+            hash_b3_bytes_inner(
+                B3ByteHashRequest {
+                    body_bytes,
+                },
+            )
+            .expect_err(
+                "oversized byte hash requests must fail",
+            );
+
+        assert!(
+            error.contains(
+                "b3 byte hash exceeds the 12 MiB command bridge limit",
+            ),
+            "unexpected error: {error}",
+        );
+    }
+}
+

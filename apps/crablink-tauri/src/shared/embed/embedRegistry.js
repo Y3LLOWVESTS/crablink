@@ -83,6 +83,266 @@ export const SUPPORTED_EMBEDS = Object.freeze({
   }),
 });
 
+export const SITE_EMBED_POLICY_VERSION =
+  'crablink.site-embed-policy.v1';
+
+export const SITE_EMBED_ALLOWLIST =
+  Object.freeze(
+    Object.values(
+      SUPPORTED_EMBEDS,
+    )
+      .filter(
+        (spec) =>
+          spec.status ===
+          'active',
+      )
+      .map(
+        (spec) =>
+          spec.tag,
+      ),
+  );
+
+export function reviewSiteDeclarativeEmbeds(
+  value,
+) {
+  const html =
+    String(
+      value ?? '',
+    );
+
+  const findings =
+    [];
+
+  const references =
+    [];
+
+  const browserEmbedPattern =
+    /<\s*(iframe|object|embed)\b/gi;
+
+  let browserMatch =
+    browserEmbedPattern.exec(
+      html,
+    );
+
+  while (
+    browserMatch
+  ) {
+    pushSiteEmbedFinding(
+      findings,
+      {
+        code:
+          'browser_embed_forbidden',
+
+        tag:
+          String(
+            browserMatch[1] ||
+            '',
+          ).toLowerCase(),
+
+        src:
+          '',
+      },
+    );
+
+    browserMatch =
+      browserEmbedPattern.exec(
+        html,
+      );
+  }
+
+  const crabTagPattern =
+    /<\s*(crab-[a-z0-9-]+)\b([^>]*)>/gi;
+
+  let match =
+    crabTagPattern.exec(
+      html,
+    );
+
+  while (
+    match
+  ) {
+    const tag =
+      normalizeTag(
+        match[1],
+      );
+
+    const attrs =
+      parseAttributes(
+        match[2] ||
+        '',
+      );
+
+    const src =
+      stringValue(
+        attrs.src,
+        attrs.href,
+        attrs[
+          'data-src'
+        ],
+      );
+
+    const spec =
+      getEmbedSpec(
+        tag,
+      );
+
+    const parsed =
+      parseCrabTypedUrl(
+        src,
+      );
+
+    if (
+      spec ===
+      null
+    ) {
+      pushSiteEmbedFinding(
+        findings,
+        {
+          code:
+            'unsupported_embed',
+
+          tag,
+
+          src,
+        },
+      );
+    } else if (
+      spec.status ===
+      'active'
+    ) {
+      if (
+        parsed ===
+        null ||
+        spec.acceptedKinds.includes(
+          parsed.kind,
+        ) ===
+        false
+      ) {
+        pushSiteEmbedFinding(
+          findings,
+          {
+            code:
+              'invalid_embed_reference',
+
+            tag,
+
+            src,
+          },
+        );
+      } else {
+        references.push(
+          Object.freeze({
+            tag,
+            kind:
+              parsed.kind,
+            crabUrl:
+              parsed.crabUrl,
+            cid:
+              parsed.cid,
+          }),
+        );
+      }
+    } else {
+      pushSiteEmbedFinding(
+        findings,
+        {
+          code:
+            'feature_gated_embed',
+
+          tag,
+
+          src,
+        },
+      );
+    }
+
+    match =
+      crabTagPattern.exec(
+        html,
+      );
+  }
+
+  return Object.freeze({
+    schema:
+      SITE_EMBED_POLICY_VERSION,
+
+    registry_version:
+      EMBED_REGISTRY_VERSION,
+
+    ok:
+      findings.length ===
+      0,
+
+    allowed_tags:
+      SITE_EMBED_ALLOWLIST,
+
+    findings:
+      Object.freeze(
+        findings,
+      ),
+
+    references:
+      Object.freeze(
+        references,
+      ),
+  });
+}
+
+function pushSiteEmbedFinding(
+  findings,
+  finding,
+) {
+  const key =
+    [
+      finding.code,
+      finding.tag,
+      finding.src,
+    ].join(
+      ':',
+    );
+
+  const alreadyPresent =
+    findings.some(
+      (candidate) =>
+        [
+          candidate.code,
+          candidate.tag,
+          candidate.src,
+        ].join(
+          ':',
+        ) ===
+        key,
+    );
+
+  if (
+    alreadyPresent
+  ) {
+    return;
+  }
+
+  findings.push(
+    Object.freeze({
+      code:
+        String(
+          finding.code ||
+          'invalid_embed',
+        ),
+
+      tag:
+        String(
+          finding.tag ||
+          '',
+        ),
+
+      src:
+        String(
+          finding.src ||
+          '',
+        ),
+    }),
+  );
+}
+
 export function initEmbedRegistry() {
   return Object.freeze({
     ok: true,

@@ -9,7 +9,7 @@
  * RO:TEST — npm run build; check-react-lane; manual crab://article route smoke.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import CreatorWorkspaceLayout from '../../shared/components/CreatorWorkspaceLayout.jsx';
 import RouteTruthPanel from '../../shared/components/RouteTruthPanel.jsx';
 import useCreatorDraft from '../../shared/hooks/useCreatorDraft.js';
@@ -21,6 +21,9 @@ import {
   getArticleCompleteness,
   statsForArticleDraft,
 } from './articleDraftModel.js';
+import {
+  consumeBlogArticleIntent,
+} from '../site/blogProductFlow.js';
 import './article.css';
 
 const PRINCIPLES = Object.freeze([
@@ -42,13 +45,41 @@ const PRINCIPLES = Object.freeze([
 ]);
 
 export default function ArticlePage({ app, route }) {
+  const initialDraft =
+    useMemo(
+      () => {
+        const intent =
+          consumeBlogArticleIntent();
+
+        if (
+          intent == null
+        ) {
+          return DEFAULT_ARTICLE_DRAFT;
+        }
+
+        return {
+          ...DEFAULT_ARTICLE_DRAFT,
+
+          siteContextCrabUrl:
+            intent.siteCrabUrl,
+
+          creatorDisplay:
+            intent.creatorDisplay,
+
+          tags:
+            'article, blog',
+        };
+      },
+      [],
+    );
+
   const buildManifest = useCallback(
     (draft) => buildArticleManifestDraft(draft, { app, route }),
     [app, route],
   );
 
   const draftState = useCreatorDraft({
-    initialDraft: DEFAULT_ARTICLE_DRAFT,
+    initialDraft,
     buildManifest,
     buildStats: statsForArticleDraft,
     getCompleteness: getArticleCompleteness,

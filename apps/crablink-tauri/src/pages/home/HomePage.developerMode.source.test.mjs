@@ -132,21 +132,25 @@ test('Phase 5A2 normal Home contains no engineering dashboard copy', () => {
   );
 });
 
-test('Phase 5A2 normal Home is honest about the pending following feed', () => {
-  // FINAL_BETA_PHASE5A2_CONSUMER_COPY_TEST_ALIGNMENT_V1
+test('Phase 9A12 normal Home consumes reviewed local-first following feed truth', () => {
   assert.match(
     source,
-    /No fabricated feed items/,
+    /FINAL_BETA_PHASE9A12_HOME_FEED_CONSUMER_WIRING_V1/,
   );
 
   assert.match(
     source,
-    /Home will become your chronological following feed/i,
+    /refreshLocalFollowingFeed/,
   );
 
   assert.match(
     source,
-    /real followed-profile publication summaries/i,
+    /loadOfflineLocalFollowingFeed/,
+  );
+
+  assert.match(
+    source,
+    /FeedCard/,
   );
 
   assert.match(
@@ -161,18 +165,37 @@ test('Phase 5A2 normal Home is honest about the pending following feed', () => {
 
   assert.match(
     source,
-    /Network derived/,
+    /Public timelines/,
+  );
+
+  assert.match(
+    source,
+    /complete following list/,
   );
 });
 
 test('Phase 5A2 preserves useful consumer routes and the gated engineering dashboard', () => {
+  for (const route of [
+    'profile',
+    'explore',
+    'receipts',
+    'library',
+    'post',
+    'image',
+  ]) {
+    const routePattern =
+      new RegExp(
+        `open\\(\\s*['"]crab:\\/\\/${route}['"]\\s*,?\\s*\\)`,
+      );
+
+    assert.match(
+      source,
+      routePattern,
+      `missing consumer route: crab://${route}`,
+    );
+  }
+
   for (const required of [
-    "open('crab://profile')",
-    "open('crab://explore')",
-    "open('crab://receipts')",
-    "open('crab://library')",
-    "open('crab://post')",
-    "open('crab://image')",
     'title="Engineering Dashboard"',
     '<HomeQuickActions',
     'Manual smoke sequence',

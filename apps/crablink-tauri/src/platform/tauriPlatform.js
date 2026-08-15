@@ -13,6 +13,10 @@ export const ALLOWED_TAURI_COMMANDS = Object.freeze([
   'app_diagnostics',
   'read_settings',
   'write_settings',
+
+  // FINAL_BETA Phase 8 local-only following persistence commands.
+  'local_following_read',
+  'local_following_write',
   'health_check_gateway',
   'ready_check_gateway',
   'resolve_crab_url_gateway',
@@ -26,6 +30,7 @@ export const ALLOWED_TAURI_COMMANDS = Object.freeze([
   'local_node_restart',
   'upload_image_asset_gateway',
   'upload_staged_image_asset_gateway',
+  'hash_b3_bytes',
   'hash_image_asset_bytes',
   'hash_staged_asset_bytes',
   'upload_video_asset_gateway',
@@ -62,7 +67,9 @@ export const ALLOWED_TAURI_COMMANDS = Object.freeze([
   'passport_unlock_root',
   'passport_recovery_ceremony',
   'passport_clear',
-]);
+
+  'local_following_feed_cache_read',
+  'local_following_feed_cache_write',]);
 
 const ALLOWED_TAURI_COMMAND_SET = new Set(ALLOWED_TAURI_COMMANDS);
 

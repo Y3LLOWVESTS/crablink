@@ -54,3 +54,53 @@ export {
 export * from './onboardingContract.js';
 
 export * from './publicationSummary.js';
+
+export {
+  LOCAL_FOLLOWING_SCHEMA,
+  LOCAL_FOLLOWING_MAX_ENTRIES,
+  createEmptyLocalFollowingRecord,
+  normalizeLocalFollowingRecord,
+  normalizeLocalFollowingEntry,
+  normalizePublicProfileRef,
+  normalizeFollowingUsername,
+  findLocalFollowingEntry,
+  isLocallyFollowing,
+  followLocalProfile,
+  unfollowLocalProfile,
+} from './localFollowing.js';
+
+export {
+  LOCAL_FOLLOWING_FEED_DEFAULT_LIMIT,
+  LOCAL_FOLLOWING_FEED_MAX_ITEMS,
+  LOCAL_FOLLOWING_FEED_SCHEMA,
+  composeLocalFollowingFeed,
+} from './localFollowingFeed.js';
+
+export {
+  updateLocalFollowingRefreshMetadata,
+} from './localFollowingRefreshMetadata.js';
+
+export {
+  LOCAL_FOLLOWING_FEED_CACHE_MAX_ITEMS,
+  LOCAL_FOLLOWING_FEED_CACHE_SCHEMA,
+  LOCAL_FOLLOWING_FEED_CACHE_VIEW_SCHEMA,
+  createLocalFollowingFeedCache,
+  normalizeLocalFollowingFeedCache,
+  projectOfflineLocalFollowingFeedCache,
+  updateLocalFollowingFeedCache,
+} from './localFollowingFeedCache.js';
+
+export {
+  EXPLORE_DISCOVERY_AUTHORITY,
+  EXPLORE_DISCOVERY_CATEGORIES,
+  EXPLORE_DISCOVERY_DEFAULT_CREATOR_LIMIT,
+  EXPLORE_DISCOVERY_DEFAULT_PUBLICATION_LIMIT,
+  EXPLORE_DISCOVERY_DEFAULT_SITE_LIMIT,
+  EXPLORE_DISCOVERY_MAX_CREATORS,
+  EXPLORE_DISCOVERY_MAX_PUBLICATIONS,
+  EXPLORE_DISCOVERY_MAX_SITES,
+  EXPLORE_DISCOVERY_SCHEMA,
+  createEmptyExploreDiscovery,
+  normalizeExploreDiscoveryRequest,
+  normalizeExploreDiscoveryV1,
+} from './exploreDiscovery.js';

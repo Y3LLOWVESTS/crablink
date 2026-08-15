@@ -10,6 +10,7 @@
  */
 
 // FINAL_BETA_PHASE7A3_PROFILE_TIMELINE_INTEGRATION_V1
+// FINAL_BETA_PHASE8A7_PUBLIC_PROFILE_LOCAL_FOLLOW_UI_V1
 
 import { useEffect, useMemo, useState } from 'react';
 import Badge from '../../shared/components/Badge.jsx';
@@ -28,6 +29,14 @@ import {
 import {
   createPublicationAdapter,
 } from '../../adapters/publicationAdapter.js';
+import {
+  localFollowingPort,
+} from '../../adapters/localFollowingAdapter.js';
+import {
+  followProfileLocalFollowing,
+  readProfileLocalFollowing,
+  unfollowProfileLocalFollowing,
+} from './profileLocalFollowingController.js';
 import ProfileTimelineSurface from './ProfileTimelineSurface.jsx';
 import {
   createProfileTimelineModel,
@@ -56,6 +65,13 @@ const EMPTY_TIMELINE_STATE = Object.freeze({
   page: null,
   error: null,
   loadingMore: false,
+});
+
+const EMPTY_LOCAL_FOLLOWING_STATE = Object.freeze({
+  status: 'idle',
+  record: null,
+  isFollowing: false,
+  error: null,
 });
 
 export default function ProfilePublicView({ app, route }) {
@@ -123,6 +139,31 @@ export default function ProfilePublicView({ app, route }) {
       ],
     );
 
+  const followingClient =
+    useMemo(
+      () => {
+        const injected =
+          app?.clients
+            ?.localFollowing;
+
+        if (
+          typeof injected
+            ?.readLocalFollowing ===
+              'function' &&
+          typeof injected
+            ?.writeLocalFollowing ===
+              'function'
+        ) {
+          return injected;
+        }
+
+        return localFollowingPort;
+      },
+      [
+        app?.clients,
+      ],
+    );
+
   const [state, setState] = useState(() => {
     const cached = readMatchingCache(username);
 
@@ -155,6 +196,22 @@ export default function ProfilePublicView({ app, route }) {
   ] =
     useState(
       EMPTY_TIMELINE_STATE,
+    );
+
+  const [
+    localFollowingState,
+    setLocalFollowingState,
+  ] =
+    useState(
+      EMPTY_LOCAL_FOLLOWING_STATE,
+    );
+
+  const [
+    localFollowingRefreshTick,
+    setLocalFollowingRefreshTick,
+  ] =
+    useState(
+      0,
     );
 
   useEffect(() => {
@@ -386,6 +443,101 @@ export default function ProfilePublicView({ app, route }) {
     ],
   );
 
+  useEffect(
+    () => {
+      let alive =
+        true;
+
+      async function readLocalFollowing() {
+        if (
+          isOwner === true
+        ) {
+          setLocalFollowingState({
+            ...EMPTY_LOCAL_FOLLOWING_STATE,
+            status:
+              'owner',
+          });
+
+          return;
+        }
+
+        if (
+          username.length === 0
+        ) {
+          setLocalFollowingState(
+            EMPTY_LOCAL_FOLLOWING_STATE,
+          );
+
+          return;
+        }
+
+        setLocalFollowingState(
+          (current) => ({
+            ...current,
+            status:
+              'loading',
+            error:
+              null,
+          }),
+        );
+
+        try {
+          const result =
+            await readProfileLocalFollowing({
+              port:
+                followingClient,
+              username,
+            });
+
+          if (
+            alive === false
+          ) {
+            return;
+          }
+
+          setLocalFollowingState({
+            status:
+              'ready',
+            record:
+              result.record,
+            isFollowing:
+              result.isFollowing,
+            error:
+              null,
+          });
+        } catch (error) {
+          if (
+            alive === false
+          ) {
+            return;
+          }
+
+          setLocalFollowingState(
+            (current) => ({
+              ...current,
+              status:
+                'error',
+              error,
+            }),
+          );
+        }
+      }
+
+      void readLocalFollowing();
+
+      return () => {
+        alive =
+          false;
+      };
+    },
+    [
+      followingClient,
+      isOwner,
+      username,
+      localFollowingRefreshTick,
+    ],
+  );
+
   const timelineModel =
     useMemo(
       () => {
@@ -547,6 +699,119 @@ export default function ProfilePublicView({ app, route }) {
     app?.navigate?.('crab://profile');
   }
 
+  async function followPublicProfileLocally() {
+    if (
+      localFollowingState.status ===
+        'saving'
+    ) {
+      return;
+    }
+
+    setLocalFollowingState(
+      (current) => ({
+        ...current,
+        status:
+          'saving',
+        error:
+          null,
+      }),
+    );
+
+    try {
+      const result =
+        await followProfileLocalFollowing({
+          port:
+            followingClient,
+          username,
+          record:
+            localFollowingState.record,
+          followedAt:
+            new Date()
+              .toISOString(),
+        });
+
+      setLocalFollowingState({
+        status:
+          'ready',
+        record:
+          result.record,
+        isFollowing:
+          result.isFollowing,
+        error:
+          null,
+      });
+    } catch (error) {
+      setLocalFollowingState(
+        (current) => ({
+          ...current,
+          status:
+            'error',
+          error,
+        }),
+      );
+    }
+  }
+
+  async function unfollowPublicProfileLocally() {
+    if (
+      localFollowingState.status ===
+        'saving'
+    ) {
+      return;
+    }
+
+    setLocalFollowingState(
+      (current) => ({
+        ...current,
+        status:
+          'saving',
+        error:
+          null,
+      }),
+    );
+
+    try {
+      const result =
+        await unfollowProfileLocalFollowing({
+          port:
+            followingClient,
+          username,
+          record:
+            localFollowingState.record,
+          updatedAt:
+            new Date()
+              .toISOString(),
+        });
+
+      setLocalFollowingState({
+        status:
+          'ready',
+        record:
+          result.record,
+        isFollowing:
+          result.isFollowing,
+        error:
+          null,
+      });
+    } catch (error) {
+      setLocalFollowingState(
+        (current) => ({
+          ...current,
+          status:
+            'error',
+          error,
+        }),
+      );
+    }
+  }
+
+  function retryLocalFollowing() {
+    setLocalFollowingRefreshTick(
+      (current) =>
+        current + 1,
+    );
+  }
+
   function retry() {
     app?.refreshRoute?.();
   }
@@ -628,6 +893,23 @@ export default function ProfilePublicView({ app, route }) {
                 </div>
 
                 <div className="profile-editor-buttons">
+                  {isOwner === false && (
+                    <ProfileLocalFollowingActions
+                      state={
+                        localFollowingState
+                      }
+                      onFollow={
+                        followPublicProfileLocally
+                      }
+                      onUnfollow={
+                        unfollowPublicProfileLocally
+                      }
+                      onRetry={
+                        retryLocalFollowing
+                      }
+                    />
+                  )}
+
                   <Button variant="secondary" onClick={retry}>
                     Refresh
                   </Button>
@@ -734,9 +1016,10 @@ export default function ProfilePublicView({ app, route }) {
         </div>
 
         <p className="profile-panel-note">
-          This page is read-only. It reads public profile data through the configured svc-gateway route and shares
-          backend-confirmed public profile metadata with the passport drawer. It does not edit the profile, create
-          a passport, publish a profile CID, mutate a wallet, calculate REP/MOD, or expose private alt mappings.
+          Public profile truth remains read-only and comes through the configured svc-gateway route. Follow and
+          Unfollow change only this device's private local following preference. They do not create a public graph
+          edge, follower count, receipt, creator notification, or network confirmation. This view does not edit the
+          profile, create a passport, publish a profile CID, mutate a wallet, calculate REP/MOD, or expose alt mappings.
         </p>
 
         <JsonPreview
@@ -754,6 +1037,88 @@ export default function ProfilePublicView({ app, route }) {
         />
       </Card>
     </section>
+  );
+}
+
+function ProfileLocalFollowingActions({
+  state,
+  onFollow,
+  onUnfollow,
+  onRetry,
+}) {
+  if (
+    state.status === 'idle' ||
+    state.status === 'loading'
+  ) {
+    return (
+      <Button
+        variant="secondary"
+        disabled
+      >
+        Loading follow state
+      </Button>
+    );
+  }
+
+  if (
+    state.status === 'saving'
+  ) {
+    return (
+      <Button
+        variant="secondary"
+        disabled
+      >
+        {state.isFollowing
+          ? 'Saving unfollow'
+          : 'Saving follow'}
+      </Button>
+    );
+  }
+
+  if (
+    state.status === 'error'
+  ) {
+    return (
+      <>
+        <Badge tone="warning">
+          Local follow unavailable
+        </Badge>
+
+        <Button
+          variant="secondary"
+          onClick={onRetry}
+        >
+          Retry follow state
+        </Button>
+      </>
+    );
+  }
+
+  if (
+    state.isFollowing === true
+  ) {
+    return (
+      <>
+        <Badge tone="success">
+          Following locally
+        </Badge>
+
+        <Button
+          variant="secondary"
+          onClick={onUnfollow}
+        >
+          Unfollow
+        </Button>
+      </>
+    );
+  }
+
+  return (
+    <Button
+      onClick={onFollow}
+    >
+      Follow
+    </Button>
   );
 }
 

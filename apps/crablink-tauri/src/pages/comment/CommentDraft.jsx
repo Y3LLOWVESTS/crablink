@@ -167,14 +167,14 @@ export default function CommentDraft({ app, draftState }) {
 
       <div className="comment-form-grid">
         <Field
-          label="Parent post/comment crab URL"
-          help="Required for comment publishing. Use a crab://<64 lowercase hex>.post or crab://<64 lowercase hex>.comment target."
+          label="Parent image/article/post/comment crab URL"
+          help="Required for comment publishing. Use a typed .image, .article, .post, or .comment crab URL."
           required
         >
           <TextInput
             value={draft.parentCrabUrl}
             onChange={(event) => updateDraft('parentCrabUrl', event.target.value)}
-            placeholder="crab://<64 lowercase hex>.post"
+            placeholder="crab://<64 lowercase hex>.article"
             spellCheck={false}
           />
         </Field>

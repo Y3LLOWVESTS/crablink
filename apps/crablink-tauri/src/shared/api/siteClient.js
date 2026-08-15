@@ -16,6 +16,9 @@ import {
   normalizeSiteName,
   parseTypedAssetBody,
 } from '../utils/crabUrl.js';
+import {
+  reviewSiteThemeTokens,
+} from '../../pages/site/siteThemePolicy.js';
 
 const ROOT_ROUTE_KEYS = Object.freeze(['/', 'index', 'index.html', '/index.html']);
 const MAX_IDEMPOTENCY_KEY_BYTES = 64;
@@ -210,6 +213,58 @@ export class SiteClient {
     });
   }
 
+  async updateSite(payload = {}, options = {}) {
+    this.assertGateway('Site update');
+
+    if (
+      options.confirmed ===
+      true
+    ) {
+      // Explicit confirmation was supplied by the caller.
+    } else {
+      throw new SiteMutationError(
+        'Site update requires explicit caller confirmation.',
+        {
+          reason:
+            'confirmation_required',
+
+          retryable:
+            false,
+        },
+      );
+    }
+
+    const request =
+      normalizeSiteCreateRequest(
+        payload,
+      );
+
+    const idempotencyKey =
+      options.idempotencyKey ||
+      stableSiteIdempotencyKey(
+        'site-update',
+        request.site_name,
+        request.root_document_cid,
+        request.template_id ||
+          '',
+        request.template_version ||
+          '',
+      );
+
+    return this.createSite(
+      request,
+      {
+        ...options,
+
+        confirmed:
+          true,
+
+        idempotencyKey,
+      },
+    );
+  }
+
+
   rootDocumentUrl(rootDocumentCid) {
     const cid = normalizeSiteCid(rootDocumentCid);
 
@@ -339,6 +394,71 @@ export function normalizeSiteCreateRequest(payload = {}) {
   const ownerWallet = stringValue(payload.owner_wallet_account, payload.ownerWalletAccount);
   const title = stringValue(payload.title);
   const description = stringValue(payload.description);
+
+  const themeReview =
+    reviewSiteThemeTokens(
+      payload.theme_tokens ??
+        payload.themeTokens,
+      {
+        allowAbsent:
+          true,
+      },
+    );
+
+  const templateId =
+    stringValue(
+      payload.template_id,
+      payload.templateId,
+    );
+
+  const rawTemplateVersion =
+    payload.template_version ??
+    payload.templateVersion;
+
+  const templateVersion =
+    Number(
+      rawTemplateVersion ??
+      0,
+    );
+
+  const rendererVersion =
+    stringValue(
+      payload.renderer_version,
+      payload.rendererVersion,
+    );
+
+  const hasTemplateVersion =
+    rawTemplateVersion === undefined ||
+    rawTemplateVersion === null
+      ? false
+      : true;
+
+  const hasProvenance =
+    Boolean(
+      templateId ||
+      rendererVersion ||
+      hasTemplateVersion,
+    );
+
+  const validTemplateId =
+    /^[a-z0-9][a-z0-9_-]{0,63}$/.test(
+      templateId,
+    );
+
+  const validTemplateVersion =
+    Number.isInteger(
+      templateVersion,
+    ) &&
+    templateVersion >=
+      1 &&
+    templateVersion <=
+      65535;
+
+  const validRendererVersion =
+    /^[a-z0-9][a-z0-9._-]{0,63}$/.test(
+      rendererVersion,
+    );
+
   const routeMap = normalizeCidMap(payload.route_map || payload.routeMap, {
     '/': rootDocumentCid,
   });
@@ -374,6 +494,45 @@ export function normalizeSiteCreateRequest(payload = {}) {
     });
   }
 
+  if (
+    hasProvenance &&
+    (
+      validTemplateId ===
+        false ||
+      validTemplateVersion ===
+        false ||
+      validRendererVersion ===
+        false
+    )
+  ) {
+    throw new SiteMutationError(
+      'Site create template provenance must include bounded template_id, template_version, and renderer_version.',
+      {
+        reason:
+          'invalid_site_template_provenance',
+        retryable:
+          false,
+      },
+    );
+  }
+
+  if (
+    themeReview.accepted ===
+    false
+  ) {
+    throw new SiteMutationError(
+      'Site create theme tokens are outside the reviewed declarative allowlist.',
+      {
+        reason:
+          'invalid_site_theme_tokens',
+        retryable:
+          false,
+        data:
+          themeReview,
+      },
+    );
+  }
+
   return strictSiteCreateBody({
     site_name: siteName,
     root_document_cid: rootDocumentCid,
@@ -381,6 +540,21 @@ export function normalizeSiteCreateRequest(payload = {}) {
     owner_wallet_account: ownerWallet,
     title,
     description,
+    template_id:
+      hasProvenance
+        ? templateId
+        : undefined,
+    template_version:
+      hasProvenance
+        ? templateVersion
+        : undefined,
+    renderer_version:
+      hasProvenance
+        ? rendererVersion
+        : undefined,
+    theme_tokens:
+      themeReview.tokens ||
+      undefined,
     route_map: routeMap,
     asset_map: assetMap,
   });
@@ -628,6 +802,10 @@ function strictSiteCreateBody(value = {}) {
     owner_wallet_account: value.owner_wallet_account,
     title: value.title,
     description: value.description,
+    template_id: value.template_id,
+    template_version: value.template_version,
+    renderer_version: value.renderer_version,
+    theme_tokens: value.theme_tokens,
     route_map: value.route_map,
     asset_map: value.asset_map,
   };

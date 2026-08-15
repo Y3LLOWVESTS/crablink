@@ -12,7 +12,8 @@
     "./crab-url": "./src/crabUrl.js",
     "./route-metadata": "./src/routeMetadata.js",
     "./receipt-display": "./src/receiptDisplay.js",
-    "./publication-summary": "./src/publicationSummary.js"
+    "./publication-summary": "./src/publicationSummary.js",
+    "./local-following": "./src/localFollowing.js"
   },
   "scripts": {
     "test": "node --test src/*.test.mjs",

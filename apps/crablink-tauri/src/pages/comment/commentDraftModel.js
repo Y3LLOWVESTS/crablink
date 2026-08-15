@@ -32,6 +32,13 @@ export const DEFAULT_COMMENT_DRAFT = Object.freeze({
   tags: 'comment, reply',
 });
 
+export const COMMENT_PARENT_ASSET_KINDS = Object.freeze([
+  'image',
+  'article',
+  'post',
+  'comment',
+]);
+
 export const COMMENT_VIEW_OPTIONS = Object.freeze([
   { value: 'builder', label: 'Builder' },
   { value: 'developer', label: 'Developer' },
@@ -87,10 +94,10 @@ export function buildCommentManifestDraft(draft, { app = null, route = null } = 
   });
   const parentConnection = buildReferenceConnectionDraft({
     crabUrl: safeDraft.parentCrabUrl,
-    acceptedAssetKinds: ['post', 'comment'],
+    acceptedAssetKinds: COMMENT_PARENT_ASSET_KINDS,
     required: true,
     relation: 'comment_parent',
-    label: 'parent post/comment',
+    label: 'parent image/article/post/comment',
   });
   const threadConnection = buildReferenceConnectionDraft({
     crabUrl: safeDraft.threadContextCrabUrl,
@@ -194,10 +201,10 @@ export function commentStats(draft) {
   });
   const parentConnection = buildReferenceConnectionDraft({
     crabUrl: draft?.parentCrabUrl,
-    acceptedAssetKinds: ['post', 'comment'],
+    acceptedAssetKinds: COMMENT_PARENT_ASSET_KINDS,
     required: true,
     relation: 'comment_parent',
-    label: 'parent post/comment',
+    label: 'parent image/article/post/comment',
   });
   const threadConnection = buildReferenceConnectionDraft({
     crabUrl: draft?.threadContextCrabUrl,
@@ -240,10 +247,10 @@ export function getCommentCompleteness(draft) {
     })),
     connectionIsSatisfied(buildReferenceConnectionDraft({
       crabUrl: safeDraft.parentCrabUrl,
-      acceptedAssetKinds: ['post', 'comment'],
+      acceptedAssetKinds: COMMENT_PARENT_ASSET_KINDS,
       required: true,
       relation: 'comment_parent',
-      label: 'parent post/comment',
+      label: 'parent image/article/post/comment',
     })),
   ];
 

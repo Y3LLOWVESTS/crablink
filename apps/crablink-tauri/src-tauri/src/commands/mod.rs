@@ -9,6 +9,8 @@ pub mod diagnostics;
 pub mod gateway;
 pub mod health;
 pub mod identity;
+pub mod local_following;
+pub mod local_following_feed_cache;
 pub mod local_node;
 pub mod media;
 pub mod oap_object;

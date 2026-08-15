@@ -36,3 +36,7 @@ export {
 export {
   createPublicationPort,
 } from './contracts/publicationPort.js';
+
+export {
+  createLocalFollowingPort,
+} from './contracts/localFollowingPort.js';

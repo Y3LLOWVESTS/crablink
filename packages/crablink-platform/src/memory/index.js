@@ -22,3 +22,7 @@ export {
 export {
   createMemoryPublicationAdapter,
 } from './publicationMemoryAdapter.js';
+
+export {
+  createMemoryLocalFollowingAdapter,
+} from './localFollowingMemoryAdapter.js';

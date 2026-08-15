@@ -702,3 +702,34 @@ test('Phase 6A1 does not mutate caller-owned publication input', () => {
     input.references,
   );
 });
+
+
+test(
+  'Phase 15A4A2A2 accepts canonical dotted svc-passport usernames',
+  () => {
+    const value =
+      assertPublicationSummaryV1(
+        validSummary({
+          creator: {
+            ...validSummary().creator,
+
+            username:
+              'alice.dev',
+
+            profileUrl:
+              'crab://@alice.dev',
+          },
+        }),
+      );
+
+    assert.equal(
+      value.creator.username,
+      'alice.dev',
+    );
+
+    assert.equal(
+      value.creator.profileUrl,
+      'crab://@alice.dev',
+    );
+  },
+);
