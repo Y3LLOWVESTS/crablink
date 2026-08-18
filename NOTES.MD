@@ -51262,3 +51262,2492 @@ These are the notes I would place into **both** the RustyOnions and CrabLink rep
 
 
 ### END NOTE - AUGUST 15 2026 - 02:00 CST
+
+
+
+
+### BEGIN NOTE - AUGUST 17 2026 - 17:05 CST
+
+# FINAL_BETA Carry-Over Notes — 2026-08-17
+
+These are the notes I would paste into the next session before doing anything else. They capture the current FINAL_BETA position, everything completed in this session, the live CrabNode/Service Node state, the abandoned macOS A/B experiment, the Windows A/B plan, ROX carry-forward requirements, repo state, safety boundaries, and the exact recommended next actions.
+
+---
+
+# 1. Current umbrella priority
+
+The active project is:
+
+```text
+FINAL_BETA.md
+```
+
+Primary objective:
+
+```text
+Finish CrabLink Desktop
+→ prove the complete decentralized/private-beta product
+→ harden/package it
+→ launch the controlled desktop beta
+```
+
+Current platform priority remains:
+
+```text
+CrabLink Desktop = ACTIVE / BETA CRITICAL PATH
+
+macOS   = primary private-beta desktop platform
+Windows = secondary desktop platform
+Linux   = secondary desktop platform
+
+Android TV = parked
+Android    = parked
+iOS        = deferred
+```
+
+FINAL_BETA explicitly makes Desktop the reference product before returning to mobile/TV. 
+
+---
+
+# 2. CRITICAL PHASE-NUMBERING WARNING
+
+There are multiple historical buildplans with overlapping phase numbers.
+
+Do **not** confuse:
+
+```text
+RustyOnions BUILD_PLAN_Z Phase 21
+```
+
+with:
+
+```text
+FINAL_BETA Phase 21
+```
+
+`BUILD_PLAN_Z` is already complete/green/parked through its private-beta readiness work.
+
+The **currently active phase is:**
+
+```text
+FINAL_BETA Phase 21
+— Full Desktop Decentralized Beta Demonstration
+```
+
+ROX Anchor BUILD_PLAN4 is also complete/green/parked.
+
+The next session should remain on **FINAL_BETA Phase 21**, not reopen BUILD_PLAN_Z and not start ROX BUILD_PLAN5.
+
+---
+
+# 3. Current FINAL_BETA status
+
+Current major phase state:
+
+```text
+FINAL_BETA_PHASE19_QUICKCHAIN_MULTI_NODE=GREEN
+FINAL_BETA_PHASE20_ROX_PRIVATE_TESTNET=GREEN
+
+FINAL_BETA_PHASE21_FULL_SYSTEM_DEMO=ACTIVE
+FINAL_BETA_PHASE21_FULL_SYSTEM_DEMO=NOT_YET_GREEN
+```
+
+FINAL_BETA Phase 20 explicitly hands off to Phase 21 after ROX private-testnet completion. 
+
+Within Phase 21 we created useful internal slices:
+
+```text
+Phase 21A — Cross-repo full-system preflight       GREEN
+Phase 21B — Private-network bring-up               GREEN
+Phase 21C — Live desktop/product demonstration     ACTIVE
+```
+
+These A/B/C labels are our implementation subdivisions, not original headings from `FINAL_BETA.md`.
+
+---
+
+# 4. Official FINAL_BETA Phase 21 goal
+
+Goal:
+
+```text
+Prove the entire selected beta vision in one controlled run.
+```
+
+The authoritative Phase 21 sequence includes:
+
+```text
+1.  Start private RustyOnions network.
+2.  Start multiple Service Nodes.
+3.  Start User Node verifier.
+4.  Launch clean CrabLink Desktop.
+5.  Create/restore Passport.
+6.  Claim/confirm username.
+7.  Create profile.
+8.  Follow another profile.
+9.  Publish post/image/article.
+10. Confirm profile timeline.
+11. Confirm follower Home feed.
+12. Create blog.
+13. Create imageboard.
+14. Create forum.
+15. Resolve all sites.
+16. Complete paid content/site flow.
+17. Confirm receipt.
+18. Confirm ROC display.
+19. Produce QuickChain checkpoint/finality evidence.
+20. Display redacted QuickChain status.
+21. Execute capped ROC → ROX private-testnet path.
+22. Execute ROX → ROC dry-run path.
+23. Run revocation/halt/failure drill.
+24. Restart and reconcile.
+```
+
+The beginning and final portion of this sequence are explicitly recorded in the project notes. 
+
+---
+
+# 5. Phase 21 checklist — exact current status
+
+Use this status at the beginning of the next session:
+
+```text
+1. Start private RustyOnions network
+   GREEN
+
+2. Start multiple Service Nodes
+   GREEN
+
+3. Start User Node verifier
+   GREEN
+
+4. Launch clean CrabLink Desktop
+   APP LAUNCH PROVEN
+   FULL CLEAN-USER ACCEPTANCE NOT YET CLOSED
+
+5. Create/restore Passport
+   NOT YET CLOSED IN THIS COMPLETE DEMO
+
+6. Claim/confirm username
+   NOT YET CLOSED IN THIS COMPLETE DEMO
+
+7. Create profile
+   NOT YET CLOSED IN THIS COMPLETE DEMO
+
+8. Follow another profile
+   NOT YET CLOSED
+   MULTI-CLIENT A/B ENVIRONMENT NEEDED
+
+9. Publish post/image/article
+   NOT YET CLOSED
+   CURRENT MAC SESSION HIT WALLET/SESSION PRACTICAL BLOCKER
+
+10. Confirm profile timeline
+    NOT YET CLOSED
+
+11. Confirm follower Home feed
+    NOT YET CLOSED
+
+12. Create blog
+    NOT YET CLOSED IN COMPLETE LIVE DEMO
+
+13. Create imageboard
+    NOT YET CLOSED IN COMPLETE LIVE DEMO
+
+14. Create forum
+    NOT YET CLOSED IN COMPLETE LIVE DEMO
+
+15. Resolve all sites
+    NOT YET CLOSED
+
+16. Complete paid content/site flow
+    NOT YET CLOSED
+
+17. Confirm receipt
+    NOT YET CLOSED
+
+18. Confirm ROC display
+    NOT YET CLOSED
+
+19. Produce QuickChain checkpoint/finality evidence
+    PREREQUISITES GREEN
+    COMPLETE LIVE-DEMO CLOSEOUT NOT YET DONE
+
+20. Display redacted QuickChain status
+    DISPLAY BOUNDARIES GREEN
+    COMPLETE LIVE-DEMO CLOSEOUT NOT YET DONE
+
+21. Execute capped ROC → ROX private-testnet path
+    HISTORICAL BUILD_PLAN4 EVIDENCE EXISTS
+    DO NOT REPLAY OLD OPERATION
+    FRESH PHASE21 EXECUTION ONLY IF FINAL DEMO REQUIRES IT
+
+22. Execute ROX → ROC dry-run path
+    HISTORICAL BUILD_PLAN4 EVIDENCE EXISTS
+    DO NOT REPLAY OLD OPERATION
+
+23. Run revocation/halt/failure drill
+    PREREQUISITES/PRIOR TESTS EXIST
+    NOT YET CLOSED AS PART OF THE ONE COMPLETE DEMO
+
+24. Restart and reconcile
+    NOT YET CLOSED
+```
+
+---
+
+# 6. Phase 21A — CROSS-REPO PREFLIGHT — GREEN
+
+We created:
+
+```text
+apps/crablink-tauri/scripts/
+  final_beta_phase21a_full_system_preflight.sh
+
+apps/crablink-tauri/src/finalBeta/
+  phase21FullSystemPreflight.source.test.mjs
+```
+
+Purpose:
+
+```text
+prove the entire cross-repo implementation spine is ready
+without starting the live demo
+without rerunning ROX transactions
+without starting BUILD_PLAN5
+without inventing success
+```
+
+The first version had a Bash bug from multiline parameter expansion:
+
+```text
+bad substitution
+```
+
+That was repaired by changing the default path expressions to standard one-line Bash expansions.
+
+The shell syntax gate then passed.
+
+The source-boundary test passed:
+
+```text
+4 passed
+0 failed
+```
+
+The full Phase21A runner eventually went completely GREEN.
+
+Final output included:
+
+```text
+FINAL_BETA_PHASE20_ROX_PRIVATE_TESTNET=GREEN
+
+PHASE21A_ROX_PHASE20_EVIDENCE=GREEN
+PHASE21A_CRABLINK_IDENTITY_PREREQS=GREEN
+PHASE21A_CRABLINK_SOCIAL_PREREQS=GREEN
+PHASE21A_CRABLINK_SITE_PREREQS=GREEN
+PHASE21A_CRABLINK_PAID_PREREQS=GREEN
+PHASE21A_CRABLINK_QUICKCHAIN_DISPLAY_PREREQS=GREEN
+PHASE21A_RUSTYONIONS_PAID_PATH=GREEN
+PHASE21A_RUSTYONIONS_QUICKCHAIN_ARTIFACT_PREREQS=GREEN
+PHASE21A_USER_NODE_REPLAY_CHALLENGE_PREREQ=GREEN
+PHASE21A_SERVICE_NODE_COMPILE=GREEN
+PHASE21A_USER_NODE_COMPILE=GREEN
+
+FINAL_BETA_PHASE21A_CROSS_REPO_PREFLIGHT=GREEN
+```
+
+The complete successful preflight output is preserved in the session upload. 
+
+---
+
+# 7. Phase 21A — CrabLink identity/social proof
+
+The Phase21A social + identity section finished:
+
+```text
+34 passed
+0 failed
+```
+
+Covered:
+
+```text
+Phase 7 profile timeline
+Phase 8 local following
+Phase 9 local-first Home feed
+Phase 10 Home/feed product acceptance
+desktop onboarding acceptance
+no React PIN/recovery material
+no baked dev identity
+dev-session quarantine
+no social/economic authority expansion
+```
+
+Important architecture preserved:
+
+```text
+FOLLOWING_LIST_OWNER=LOCAL_CRABLINK_APP
+PUBLIC_FOLLOWER_COUNT=NO
+PUBLIC_FOLLOWING_COUNT=NO
+SERVER_SOCIAL_GRAPH=NO
+```
+
+Normal Home remains:
+
+```text
+local following selection
++
+network-hydrated public content
++
+chronological composition
+```
+
+Explore remains a separate public-discovery product.
+
+---
+
+# 8. Stale onboarding test repaired
+
+Phase21A initially exposed one stale test assertion in:
+
+```text
+apps/crablink-tauri/src/onboarding/
+  onboardingDesktopFinalAcceptance.test.mjs
+```
+
+The runtime implementation had already centralized developer gating through:
+
+```text
+isExplicitDeveloperSurface(...)
+```
+
+but the acceptance test still expected literal duplicated source expressions:
+
+```text
+buildDev === true
+settings?.devMode === true
+```
+
+We correctly repaired the **test**, not production runtime behavior.
+
+Then a regex itself had a typo:
+
+```text
+/\bbuildDev,\b/
+```
+
+The word boundary after the comma could never match.
+
+That was repaired to:
+
+```text
+/\bbuildDev,/
+```
+
+and equivalent `settings` matching.
+
+Final focused result:
+
+```text
+onboardingDesktopFinalAcceptance:
+6 passed
+0 failed
+
+developer surface + Passport drawer gate regressions:
+10 passed
+0 failed
+```
+
+The shared gate remains fail-closed:
+
+```text
+development build=true
+AND
+explicit devMode=true
+```
+
+Both are required.
+
+---
+
+# 9. Phase 21A — site-template prerequisite proof
+
+The site prerequisite batch passed:
+
+```text
+45 passed
+0 failed
+```
+
+Covered real existing product paths for:
+
+```text
+Blog
+Imageboard
+Forum
+Article
+Image
+Post
+Comment
+typed reply relationships
+site context
+scriptless structured templates
+```
+
+Final marker:
+
+```text
+PHASE21A_CRABLINK_SITE_PREREQS=GREEN
+```
+
+This means we have strong automated confidence in those product flows, but Phase21 still requires exercising them together in the controlled live demonstration.
+
+---
+
+# 10. Phase 21A — paid/receipt/ROC product boundaries
+
+All three CrabLink checks passed:
+
+```text
+check:internal-roc-stabilization-paid-ux
+check:internal-roc-phase4-wallet-receipt-ux
+check:internal-roc-phase4-confirmation-failure-ux
+```
+
+Final boundaries:
+
+```text
+PHASE21A_CRABLINK_PAID_PREREQS=GREEN
+
+SILENT_SPEND_ALLOWED=NO
+CACHE_ONLY_UNLOCK_ALLOWED=NO
+FAKE_RECEIPT_ALLOWED=NO
+```
+
+Preserve these.
+
+---
+
+# 11. Phase 21A — QuickChain display boundary
+
+Focused display test:
+
+```text
+7 passed
+0 failed
+```
+
+Also passed:
+
+```text
+check:quickchain-phase5-external-posture-boundary
+```
+
+Final:
+
+```text
+PHASE21A_CRABLINK_QUICKCHAIN_DISPLAY_PREREQS=GREEN
+CRABLINK_FINALITY_AUTHORITY=NO
+```
+
+CrabLink may display backend-derived QuickChain truth.
+
+CrabLink may **not** decide:
+
+```text
+checkpoint validity
+committee authority
+finality
+settlement
+reward truth
+```
+
+---
+
+# 12. Phase 21A — RustyOnions real internal ROC path
+
+Executed:
+
+```text
+svc-wallet:
+internal_roc_beta_paid_content_receipt_path
+```
+
+Result:
+
+```text
+3 passed
+0 failed
+```
+
+Proved:
+
+```text
+unfunded hold rejects
+no creator credit on failure
+no fake receipt
+authority-poison fields rejected
+paid-content hold/capture receipt labels covered
+```
+
+Final markers:
+
+```text
+PHASE21A_RUSTYONIONS_PAID_PATH=GREEN
+ECONOMIC_MUTATION_INGRESS=svc-wallet
+ECONOMIC_TRUTH=ron-ledger
+```
+
+---
+
+# 13. Phase 21A — QuickChain deterministic prerequisites
+
+Successful test groups:
+
+```text
+checkpoint candidate:
+7/7
+
+independent checkpoint reproduction:
+3/3
+
+validator signature contract:
+7/7
+
+finalized checkpoint contract:
+10/10
+
+operation replay/duplicate:
+5/5
+
+DA archive fallback:
+3/3
+```
+
+Final:
+
+```text
+PHASE21A_RUSTYONIONS_QUICKCHAIN_ARTIFACT_PREREQS=GREEN
+```
+
+Important preserved rules:
+
+```text
+canonical bytes deterministic
+candidate hash deterministic
+changed state changes hash
+validator/key/algorithm binding required
+2-of-3 finality required
+1-of-3 rejected
+duplicate validator rejected
+replay rejected
+idempotency identity preserved
+DA root included
+fallback does not create protocol authority
+```
+
+---
+
+# 14. Phase 21A — User Node replay/challenge
+
+Executed:
+
+```text
+micronode:
+internal_roc_beta_phase17_epoch_replay
+```
+
+Result:
+
+```text
+19 passed
+0 failed
+```
+
+Covered:
+
+```text
+epoch replay
+duplicate payout
+cap mismatch
+economics config mismatch
+invalid quorum signer
+real Ed25519 signatures
+tampered signature
+canonical challenge
+challenge queue
+duplicate challenge suppression
+failed transport retry
+no false challenge acceptance
+```
+
+Final:
+
+```text
+PHASE21A_USER_NODE_REPLAY_CHALLENGE_PREREQ=GREEN
+```
+
+---
+
+# 15. Phase 21A — Service/User Node compile gate
+
+Executed:
+
+```text
+cargo check -p macronode -p micronode
+```
+
+Both compiled.
+
+Final:
+
+```text
+PHASE21A_SERVICE_NODE_COMPILE=GREEN
+PHASE21A_USER_NODE_COMPILE=GREEN
+```
+
+`macronode` emitted 16 dead-code warnings around Phase19 checkpoint/committee/signing helpers.
+
+These were **warnings only**, not Phase21A failures.
+
+Do not interrupt Phase21 to clean them unless they become a strict-Clippy gate failure later.
+
+They should be revisited during hardening/strict Clippy.
+
+---
+
+# 16. Phase 21B — real private-network topology — GREEN
+
+Created:
+
+```text
+apps/crablink-tauri/scripts/
+  final_beta_phase21b_private_network_bringup.sh
+
+apps/crablink-tauri/src/finalBeta/
+  phase21PrivateNetworkBringup.source.test.mjs
+```
+
+Source-boundary tests:
+
+```text
+5 passed
+0 failed
+```
+
+The runner deliberately reused the existing real RustyOnions topology test rather than inventing a second fake topology.
+
+It executed:
+
+```text
+phase19_live_three_service_one_user_topology_survives_member_loss_and_restart
+```
+
+Result:
+
+```text
+1 passed
+0 failed
+```
+
+The test proved:
+
+```text
+3 real macronode Service Node processes
+1 real micronode User Node
+
+3 distinct deterministic Ed25519 identities
+
+same canonical transition signed independently
+
+1 signature:
+fails quorum
+
+2 signatures:
+satisfy canonical 2-of-3 quorum
+
+Service Node B killed
+
+A + C remain healthy
+User Node remains healthy
+A + C still satisfy quorum
+
+Service Node B restarted
+
+B returns with same deterministic signing identity
+A + B again form canonical quorum
+```
+
+Final output:
+
+```text
+PHASE21_STEP1_PRIVATE_RUSTYONIONS_NETWORK=GREEN
+PHASE21_STEP2_MULTIPLE_SERVICE_NODES=3_GREEN
+PHASE21_STEP3_USER_NODE_VERIFIER=1_GREEN
+
+PHASE21B_REAL_MACRONODE_PROCESSES=3_GREEN
+PHASE21B_REAL_MICRONODE_PROCESSES=1_GREEN
+PHASE21B_CRYPTOGRAPHIC_QUORUM=GREEN
+PHASE21B_ONE_OF_THREE_REJECTED=GREEN
+PHASE21B_TWO_OF_THREE_ACCEPTED=GREEN
+PHASE21B_MEMBER_FAILURE_ISOLATION=GREEN
+PHASE21B_QUORUM_AFTER_MEMBER_LOSS=GREEN
+PHASE21B_MEMBER_RESTART=GREEN
+PHASE21B_RESTARTED_IDENTITY_STABLE=GREEN
+
+FINAL_BETA_PHASE21B_PRIVATE_NETWORK_BRINGUP=GREEN
+```
+
+The complete terminal proof is preserved here. 
+
+---
+
+# 17. Important distinction: Phase21B topology is not persistent
+
+The multi-process Phase21B integration test:
+
+```text
+starts children
+runs proof
+terminates children
+exits
+```
+
+So those three Service Nodes and the User Node are **not** a persistent network for interactive CrabLink testing after the test exits.
+
+That is why we subsequently started the normal persistent development stack.
+
+---
+
+# 18. Persistent RustyOnions session — GREEN
+
+We started:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+bash scripts/run_dashboard.sh -macro -micro
+```
+
+It successfully brought up:
+
+```text
+macronode / Service Node:
+127.0.0.1:8080
+
+micronode / User Node:
+127.0.0.1:5310
+
+svc-admin API/UI:
+127.0.0.1:5300
+
+svc-admin health/metrics:
+127.0.0.1:5311
+
+svc-admin Vite UI:
+localhost:5173
+```
+
+Additional embedded Service Node surfaces observed:
+
+```text
+svc-gateway    127.0.0.1:8090
+svc-overlay    127.0.0.1:5301
+svc-dht        127.0.0.1:5302
+svc-storage    127.0.0.1:5303
+svc-index      127.0.0.1:5304
+svc-mailbox    127.0.0.1:5305
+```
+
+Important runtime observation:
+
+```text
+svc-overlay:
+"host shell, waiting for real svc-overlay wiring"
+
+svc-mailbox:
+"host shell, waiting for real svc-mailbox wiring"
+```
+
+Do not silently reinterpret those log messages as fully wired implementations. For the standalone CrabNode test, inspect current runbook/current code and test exactly what is intended.
+
+---
+
+# 19. Persistent truth probe — GREEN
+
+Ran:
+
+```bash
+bash scripts/check_two_node_admin_truth.sh
+```
+
+Result:
+
+```text
+✅ two-node admin truth probe passed
+```
+
+Macronode proved:
+
+```text
+profile=macronode
+node_role=service_node
+node_profile=macronode
+content_serving_enabled=true
+service_quorum_enabled=false
+wallet_execution_participant=false
+user_ip_publication=not_applicable_service_node
+```
+
+Micronode proved:
+
+```text
+profile=micronode
+node_role=user_node
+node_profile=micronode
+amnesia_mode=true
+privacy_mode=true
+public_inbound_enabled=false
+content_serving_enabled=false
+service_quorum_enabled=false
+wallet_execution_participant=false
+user_ip_publication=forbidden
+```
+
+Also:
+
+```text
+micronode system summary=reachable
+micronode storage summary=reachable
+micronode metrics=reachable
+
+svc-admin /api/nodes:
+401 anonymous-protected
+EXPECTED
+```
+
+The earlier RustyOnions notes establish this same two-node truth contract as a known green milestone. 
+
+---
+
+# 20. What “CrabNode” means in the current architecture
+
+Do not create a new node architecture.
+
+The Service Node daemon is:
+
+```text
+macronode
+```
+
+The headless operator CLI is:
+
+```text
+crabnode
+```
+
+Current intended posture:
+
+```text
+Service Node daemon = required
+crabnode CLI        = required
+svc-admin UI        = optional
+CrabLink management = optional friendly controller
+```
+
+A Service Node must be capable of operating without:
+
+```text
+desktop GUI
+browser
+Node/Vite
+CrabLink
+public admin UI
+```
+
+The completed RustyOnions private-beta runbook documents:
+
+```text
+Service Node quickstart
+crabnode CLI
+first-run setup
+reward-recipient binding
+Service Node quorum
+moderation
+pruning
+persistence
+policy/denylist
+incident response
+known limitations
+```
+
+The authoritative runbook is:
+
+```text
+docs/internal-roc/PRIVATE_BETA_NODE_RUNBOOK.md
+```
+
+This is specifically recorded as the authoritative private-beta operator guide. 
+
+---
+
+# 21. `crabnode` CLI work is already built
+
+Do **not** start another CLI crate.
+
+The CLI already exists under macronode:
+
+```text
+crates/macronode/src/bin/crabnode.rs
+```
+
+Existing commands from BUILD_PLAN_Z include:
+
+```text
+crabnode status
+
+crabnode admin setup-token
+crabnode admin create-user admin
+
+crabnode rewards show
+crabnode rewards bind @operator
+crabnode rewards rotate @new-operator
+```
+
+Historical focused tests include:
+
+```text
+crabnode_cli
+crabnode_setup_cli
+crabnode_rewards_cli
+crabnode_rewards_live
+```
+
+The RustyOnions notes record those tests as green and describe loopback-first, dry-run-aware, secret-safe behavior. 
+
+---
+
+# 22. NEXT SESSION PRIMARY OBJECTIVE — actual standalone CrabNode
+
+The next session should **not** begin by writing a new CrabNode.
+
+It should begin by using the completed runbook and running the actual headless/private-beta Service Node as an operator would.
+
+Recommended conceptual flow:
+
+```text
+1. Inspect PRIVATE_BETA_NODE_RUNBOOK.md.
+
+2. Inspect current crabnode --help / macronode current CLI.
+
+3. Verify exact current config and ports.
+
+4. Start one standalone headless macronode Service Node
+   without run_dashboard.sh.
+
+5. Use crabnode CLI to inspect:
+   status
+   readiness
+   identity/operator posture
+   reward binding posture
+   metrics
+   relevant operator state
+
+6. Verify content-serving/gateway path.
+
+7. Keep admin UI disabled or loopback-only unless deliberately needed.
+
+8. Then connect CrabLink clients to this node/network.
+```
+
+Do **not** guess flags from old notes if current CLI differs.
+
+Inspect current source/runbook first.
+
+---
+
+# 23. Why the standalone CrabNode test is inside FINAL_BETA
+
+This is not a detour.
+
+FINAL_BETA Phase21 explicitly requires:
+
+```text
+private RustyOnions network
+multiple Service Nodes
+User Node verifier
+complete CrabLink application demonstration
+```
+
+The standalone Service Node work lets us move from:
+
+```text
+developer wrapper proof
+```
+
+toward:
+
+```text
+actual private-beta operator posture
+```
+
+which is directly useful for Phase21 and Phase25.
+
+---
+
+# 24. macOS A/B testing attempt — PARKED
+
+We tried to create a second independent macOS CrabLink app.
+
+The reason was sound:
+
+```text
+Client A:
+Passport A
+local following A
+wallet A
+app state A
+
+Client B:
+Passport B
+local following B
+wallet B
+app state B
+```
+
+We wanted to avoid simply opening the same app bundle twice because the same bundle identifier and Keychain namespace could collide.
+
+The experimental intended identities were:
+
+```text
+CrabLink A:
+com.rustyonions.crablink
+
+CrabLink B:
+com.rustyonions.crablink.ab-b
+```
+
+Keychain namespaces:
+
+```text
+A:
+com.rustyonions.crablink.native-passport.v1
+
+B:
+com.rustyonions.crablink.ab-b.native-passport.v1
+```
+
+---
+
+# 25. IMPORTANT — experimental macOS A/B source modifications may still exist
+
+The A/B patch **was applied** before we abandoned the experiment.
+
+It modified/created:
+
+```text
+apps/crablink-tauri/src-tauri/build.rs
+
+apps/crablink-tauri/src-tauri/src/
+  passport_platform_sealer.rs
+
+apps/crablink-tauri/src-tauri/
+  tauri.macos.ab-b.conf.json
+
+apps/crablink-tauri/src-tauri/tests/
+  phase21_ab_macos_identity_isolation.rs
+
+apps/crablink-tauri/scripts/
+  build_macos_ab_b.sh
+```
+
+The patch:
+
+```text
+added CRABLINK_DESKTOP_AB_VARIANT
+added alternate B Keychain namespace
+added B bundle identifier/config
+added A/B identity tests
+added B macOS build script
+```
+
+**This experiment was NOT fully verified.**
+
+Before Windows work, inspect CrabLink repo status/diff.
+
+Decide whether to:
+
+```text
+A. retain these experimental files as parked work
+
+or
+
+B. remove/revert them before continuing
+```
+
+Do not assume they are a completed feature.
+
+---
+
+# 26. macOS A/B test failure was not a Rust implementation failure
+
+The first focused direct Cargo test failed before reaching the A/B logic because Tauri's build script read the base configuration.
+
+Error:
+
+```text
+The `tauri` dependency features on the `Cargo.toml`
+does not match the allowlist defined under `tauri.conf.json`.
+
+Please run `tauri dev` or `tauri build`
+or remove the `macos-private-api` feature.
+```
+
+This was the known direct-Cargo/Tauri-config mismatch.
+
+The proposed repair was to inject:
+
+```text
+TAURI_CONFIG=<contents of tauri.macos.dev-media.conf.json>
+```
+
+for direct Cargo tests.
+
+That repair command was **not completed**, because we decided the macOS A/B route was too cumbersome.
+
+Therefore:
+
+```text
+AB_MAC_TESTS=NOT_COMPLETED
+CRABLINK_B_APP_BUILD=NOT_COMPLETED
+CRABLINK_B_APP_VERIFIED=NO
+```
+
+Do not report otherwise.
+
+---
+
+# 27. Why macOS A/B was abandoned
+
+Practical observations:
+
+```text
+attempted second session did not provide clean independent operation
+
+launch behavior replaced/restarted the existing CrabLink session
+rather than giving us the useful independent A/B environment
+
+posting was blocked because no usable wallet was loaded
+
+we were spending too much time on local bundle/session mechanics
+instead of testing the product
+```
+
+Decision:
+
+```text
+MACOS_SINGLE_MACHINE_AB=PAUSED
+```
+
+This was an efficiency decision, not a fundamental CrabLink failure.
+
+---
+
+# 28. Better A/B strategy — physical Windows machine
+
+The next session should use the spare Windows PC as the second real client.
+
+This is substantially better because:
+
+```text
+macOS machine
+→ CrabLink Client A
+→ Passport A
+→ wallet/local state A
+
+Windows machine
+→ CrabLink Client B
+→ Passport B
+→ wallet/local state B
+```
+
+The OS boundary naturally gives us independent:
+
+```text
+app data
+native secure storage
+process lifetime
+Passport state
+wallet state
+local following state
+feed cache
+onboarding state
+```
+
+This is much closer to the actual multi-user environment we need to prove.
+
+The Windows machine is the HP EliteDesk 805 G6 Mini with the Ryzen 5 PRO 4650GE that was acquired specifically as an additional CrabLink/testing box.
+
+---
+
+# 29. Windows work is compatible with FINAL_BETA
+
+The official plan calls macOS the primary beta platform, but explicitly includes Windows/Linux validation:
+
+```text
+compile checks
+platform sealer tests
+package configuration checks
+```
+
+and states that beta artifacts should be produced after target hardware/CI acceptance. 
+
+Therefore Windows work now should be classified as:
+
+```text
+FINAL_BETA_PHASE21_MULTI_CLIENT_ENABLEMENT
+```
+
+not:
+
+```text
+FINAL_BETA_PHASE24_WINDOWS_PACKAGING_COMPLETE
+```
+
+We can build/run Windows early because it directly helps the Phase21 full-system demo.
+
+Do **not** mark Phase24 packaging green merely because a development Windows `.exe` runs.
+
+---
+
+# 30. Windows next-session strategy
+
+Do the Windows work natively on the Windows PC.
+
+Do not waste time trying to cross-compile the Windows Tauri app from macOS unless there is a compelling reason.
+
+First inspect the exact current repo/toolchain on Windows.
+
+Recommended progression:
+
+```text
+A. Get the same CrabLink source onto Windows.
+
+B. Confirm:
+   Git/source state
+   Node version
+   npm version
+   Rust stable
+   cargo
+   Visual C++ build environment
+   WebView2/runtime presence
+   current Tauri prerequisites
+
+C. Do not download/install anything automatically.
+   If a prerequisite is missing, identify it first.
+
+D. Inspect current:
+   package.json
+   src-tauri/Cargo.toml
+   tauri.conf.json
+   Windows-specific source/config
+   platform sealer implementation
+
+E. Run the smallest focused compile gates first.
+
+F. Run Windows platform-sealer tests.
+
+G. Build/run Tauri development app.
+
+H. Only after the dev app works, produce the Windows executable/package.
+```
+
+We should follow the project's existing quickchain-style development discipline:
+
+```text
+first failure
+→ patch exact issue
+→ focused rerun
+→ continue
+```
+
+---
+
+# 31. Windows Passport/native storage must be verified
+
+Do not assume macOS Keychain behavior applies to Windows.
+
+Before using the Windows build for real A/B Passport testing, verify:
+
+```text
+Windows platform sealer implementation exists
+Windows native secret storage actually works
+PIN remains native
+recovery material remains native
+React never receives PIN/recovery secrets
+Passport persists across restart correctly
+lock/unlock works
+export/restore works where expected
+```
+
+FINAL_BETA Phase24 explicitly calls for platform-sealer testing on Windows/Linux. 
+
+---
+
+# 32. A/B Phase21 acceptance topology we want
+
+Ideal next-session topology:
+
+```text
+                    RustyOnions private beta
+
+                    +------------------+
+                    |   CrabNode /      |
+                    |   Service Node    |
+                    |   macronode       |
+                    +--------+---------+
+                             |
+                  private network/gateway
+                             |
+             +---------------+---------------+
+             |                               |
+             v                               v
+
+      macOS CrabLink A                Windows CrabLink B
+      Passport A                      Passport B
+      username A                      username B
+      profile A                       profile B
+      wallet A                        wallet B
+      following A                     following B
+```
+
+Then test both directions:
+
+```text
+A follows B
+B follows A
+
+A publishes
+B sees A in Home
+
+B publishes
+A sees B in Home
+
+unfollow
+refresh
+restart
+offline/reconnect
+timeline truth
+```
+
+---
+
+# 33. NETWORK ISSUE TO SOLVE BEFORE WINDOWS CAN SEE MAC HOST
+
+The persistent developer stack currently binds critical surfaces to:
+
+```text
+127.0.0.1
+```
+
+That means the Windows machine cannot simply connect to them across the LAN.
+
+This is important.
+
+Next session must deliberately inspect the current Service Node/gateway configuration and decide how to expose the **intended private beta/client-facing surface** to the Windows PC.
+
+Do **not** indiscriminately replace every:
+
+```text
+127.0.0.1
+```
+
+with:
+
+```text
+0.0.0.0
+```
+
+That could expose admin/control interfaces unnecessarily.
+
+Desired posture is closer to:
+
+```text
+client-facing private-beta/gateway service
+→ reachable by Windows over trusted LAN
+
+admin plane
+→ loopback or otherwise protected
+
+User Node
+→ private/passive
+→ no public inbound
+
+svc-admin
+→ loopback/authenticated unless deliberately required
+```
+
+This network-boundary work should be based on the current CrabNode runbook/config, not guesses.
+
+---
+
+# 34. Possible deployment arrangements for A/B testing
+
+Preferred option:
+
+```text
+Mac:
+  standalone CrabNode/RustyOnions private service
+  CrabLink A
+
+Windows:
+  CrabLink B
+```
+
+Alternative:
+
+```text
+Windows:
+  CrabNode
+  CrabLink B
+
+Mac:
+  CrabLink A
+```
+
+Either is acceptable if both clients reach the same canonical network truth.
+
+Do not accidentally create two isolated local networks and mistake that for successful feed propagation.
+
+---
+
+# 35. Current posting/wallet blocker
+
+While attempting the live CrabLink demo, the user reported that posting was blocked because there was no wallet loaded.
+
+Do **not** bypass this with:
+
+```text
+fake wallet state
+fake balance
+fake receipt
+fake paid success
+cache-only entitlement
+silent dev grant outside reviewed dev mode
+```
+
+Next session, when we reach posting:
+
+```text
+inspect the exact UI/runtime failure
+determine why publication requires wallet state
+determine which intended beta wallet/Passport flow supplies it
+fund/use the proper development/private-beta path if required
+verify backend truth
+```
+
+If posting requires paid storage/hold semantics, exercise the real approved internal ROC path.
+
+If posting should not require a wallet under the intended product contract, then the exact blocking implementation should be fixed rather than papered over.
+
+---
+
+# 36. Manual Phase21 two-user test plan after Windows app works
+
+Use two real identities.
+
+### Client A — macOS
+
+```text
+Passport A
+username A
+profile A
+```
+
+### Client B — Windows
+
+```text
+Passport B
+username B
+profile B
+```
+
+Then prove:
+
+```text
+A can resolve B
+B can resolve A
+
+A follows B
+B follows A
+
+follow state survives client restart
+
+A publishes a Post
+B Home hydrates A Post
+
+B publishes a Post
+A Home hydrates B Post
+
+profile timeline contains publication
+
+Home object and Profile object are canonical equivalents
+
+unfollow removes subsequent Following-feed inclusion
+without deleting public content
+
+Explore remains separate public discovery
+
+offline cache is labeled stale
+and does not invent network truth
+```
+
+This is the cleanest path to finishing Phase21 steps 4–11.
+
+---
+
+# 37. Then continue immediately into site flows
+
+Once social A/B is proven, do not stop.
+
+Continue:
+
+```text
+12. Blog
+13. Imageboard
+14. Forum
+15. Site resolution
+```
+
+The automated prerequisite tests for all three product templates already passed during Phase21A.
+
+The live demo should verify actual user experience and backend propagation, not rebuild the template engine.
+
+---
+
+# 38. Paid flow after sites
+
+Then execute:
+
+```text
+16. paid content/site flow
+17. receipt
+18. confirmed ROC display
+```
+
+Preserve:
+
+```text
+explicit confirmation
+safe retry
+idempotency
+svc-wallet mutation ingress
+ron-ledger economic truth
+backend-confirmed receipt
+backend-confirmed ROC
+no cache-only unlock
+```
+
+---
+
+# 39. QuickChain after product/economic flow
+
+Then:
+
+```text
+19. produce QuickChain checkpoint/finality evidence
+20. display redacted QuickChain status in CrabLink
+```
+
+The deterministic foundations and multi-node quorum have already been proved.
+
+Phase21 needs to show them as part of the integrated beta run.
+
+CrabLink remains display-only for finality. The FINAL_BETA design explicitly says not to duplicate QuickChain authority inside the client. 
+
+---
+
+# 40. ROX Anchor current state — DO NOT REOPEN BUILD_PLAN4
+
+ROX Anchor BUILD_PLAN4 is:
+
+```text
+COMPLETE
+GREEN
+PARKED
+```
+
+Do not start:
+
+```text
+BUILD_PLAN5
+```
+
+unless explicitly authorized.
+
+Current beta classification remains:
+
+```text
+private Solana testnet demonstration
+```
+
+not:
+
+```text
+mainnet
+production bridge
+public mint/burn
+staking
+liquidity
+exchange
+```
+
+FINAL_BETA explicitly identifies those as forbidden beta posture. 
+
+---
+
+# 41. ROX evidence pinned during Phase21A
+
+Phase21A verified the completed ROX evidence by exact SHA256 rather than rerunning historical sends.
+
+Phase14 evidence:
+
+```text
+b9a178f3f31289a167353fe3650555e9379b8a4c689485d0928abaaa451a2409
+```
+
+Phase15 BUILD_PLAN4 closeout:
+
+```text
+94b91d815ffd7043e7bcb0a1467c6d04ea3da0c7444b18f7b858dc40473c1801
+```
+
+Phase21A confirmed:
+
+```text
+ROX_BUILD_PLAN4_STATUS=COMPLETE_GREEN_PARKED
+
+ROX_PHASE7_HISTORICAL_LIVE_RERUN=NO
+ROX_PHASE8_HISTORICAL_LIVE_RERUN=NO
+
+ROX_BUILD_PLAN5_STARTED=NO
+ROX_BUILD_PLAN5_AUTHORIZED=NO
+```
+
+---
+
+# 42. NEVER replay the old ROX live operation identities
+
+Historical Phase7 ROC→ROX operation:
+
+```text
+OPERATION_ID=actual-roc-to-rox-op-0001
+IDEMPOTENCY_KEY=actual-roc-to-rox-idem-0001
+NONCE=actual-roc-to-rox-nonce-0001
+```
+
+Historical Phase8 ROX→ROC operation:
+
+```text
+OPERATION_ID=actual-rox-to-roc-op-0001
+IDEMPOTENCY_KEY=actual-rox-to-roc-idem-0001
+NONCE=actual-rox-to-roc-nonce-0001
+```
+
+These are consumed.
+
+If FINAL_BETA Phase21 ultimately requires a fresh actual testnet transaction:
+
+```text
+fresh operation ID
+fresh idempotency key
+fresh nonce
+fresh evidence
+fresh explicit approval
+```
+
+No blind retry.
+
+---
+
+# 43. Important ROC↔ROX truth
+
+Do not overstate the existing bridge.
+
+What was actually proven historically:
+
+### ROC → ROX
+
+```text
+shadow/dry-run ROC burn intent
++
+real Devnet test-only ROX mint
+```
+
+Not:
+
+```text
+real internal ROC burn
+```
+
+### ROX → ROC
+
+```text
+real Devnet test-only ROX burn
++
+dry-run internal ROC release intent
+```
+
+Not:
+
+```text
+real internal ROC release
+```
+
+Therefore:
+
+```text
+REAL_TEST_ROX_MINT=PROVEN
+REAL_TEST_ROX_BURN=PROVEN
+
+REAL_INTERNAL_ROC_BURN=NOT_PROVEN
+REAL_INTERNAL_ROC_RELEASE=NOT_PROVEN
+```
+
+Do not silently expand Phase21 into production bridge settlement.
+
+---
+
+# 44. New future ROX tokenomics carry-forward requirement
+
+During this session a future ROX design requirement was defined.
+
+When authorized ROX work eventually resumes:
+
+```text
+ROX_AUTOMATIC_BURN_REQUIRED=YES
+
+ROX_BURN_RATE_BPS=33
+ROX_BURN_RATE_PERCENT=0.33
+
+ROX_TO_SOL_BURN=YES
+SOL_TO_ROX_BURN=YES
+
+NORMAL_ROX_TRANSFER_BURN=YES
+APPLICATION_ROX_TRANSFER_BURN=YES
+
+ACTUAL_SUPPLY_REDUCTION_REQUIRED=YES
+AUTOMATED_BURN_PREFERRED=YES
+```
+
+The user specifically wants the burn to be **broad**, not swap-only.
+
+Intended idea:
+
+```text
+every relevant ROX movement
+→ automatically burn 0.33%
+→ actual mint supply falls
+```
+
+---
+
+# 45. ROX burn mechanism still requires technical design
+
+Do **not** assume Token-2022 Transfer Fee automatically burns supply.
+
+Future implementation must verify the correct mechanism.
+
+Required invariant:
+
+```text
+PRE_MINT_SUPPLY
+-
+POST_MINT_SUPPLY
+=
+CALCULATED_BURN
+```
+
+Not:
+
+```text
+tokens withheld in fee account
+=
+burn
+```
+
+Preferred behavior:
+
+```text
+ROX transaction
+→ calculate 33 bps
+→ burn automatically/atomically
+→ perform remaining transfer/swap
+→ actual mint supply reduced
+```
+
+Need future tests for:
+
+```text
+rounding
+dust
+tiny-transfer splitting bypass
+double burn
+AMM vault/internal transfer exemptions
+protocol-internal exemptions
+client bypass
+relayer bypass
+supply accounting
+halt/recovery interaction
+```
+
+A complete stub note was generated in chat, but **no ROX Anchor source implementation was performed**.
+
+This work remains parked until authorized.
+
+---
+
+# 46. Future ROX Explorer hardening reminder
+
+Carry forward for later ROX/security/packaging:
+
+```text
+Solana security.txt currently missing
+
+Explorer currently reports:
+Program Not Verified
+```
+
+Future hardening should consider:
+
+```text
+security.txt
+security contact
+responsible disclosure
+verified build/source attestation
+Explorer metadata
+```
+
+Not a Phase21 blocker.
+
+---
+
+# 47. RustyOnions repo state from this session
+
+User performed:
+
+```text
+cargo clean
+cargo build
+```
+
+A full RustyOnions build completed successfully.
+
+User then committed and pushed:
+
+```text
+commit:
+b4de5141
+
+message:
+"phase 20 final beta build plan in progress"
+```
+
+Push:
+
+```text
+main -> origin/main
+```
+
+That commit included:
+
+```text
+87 files changed
+47916 insertions
+4692 deletions
+```
+
+and a large set of FINAL_BETA/QuickChain/site/index/macronode changes.
+
+This is now an important RustyOnions remote checkpoint.
+
+Do not accidentally assume CrabLink changes from later in this session are included in that RustyOnions commit—they are a different repo.
+
+---
+
+# 48. CrabLink repo state — likely has uncommitted session work
+
+No CrabLink commit/push was observed after this session's Phase21 work.
+
+Likely modified/created files include at minimum:
+
+```text
+apps/crablink-tauri/scripts/
+  final_beta_phase21a_full_system_preflight.sh
+
+apps/crablink-tauri/src/finalBeta/
+  phase21FullSystemPreflight.source.test.mjs
+
+apps/crablink-tauri/scripts/
+  final_beta_phase21b_private_network_bringup.sh
+
+apps/crablink-tauri/src/finalBeta/
+  phase21PrivateNetworkBringup.source.test.mjs
+
+apps/crablink-tauri/src/onboarding/
+  onboardingDesktopFinalAcceptance.test.mjs
+```
+
+Plus the parked experimental macOS A/B files listed earlier.
+
+**First CrabLink action next session should include read-only repo inspection** so we know exactly what is modified before building Windows.
+
+Do not blindly overwrite those files.
+
+---
+
+# 49. Disk-space warning
+
+During the persistent RustyOnions run, storage summary showed roughly:
+
+```text
+~5.9 GB free
+```
+
+The user also ran:
+
+```text
+cargo clean
+```
+
+which removed approximately:
+
+```text
+5.9 GiB
+21371 files
+```
+
+and then rebuilt the workspace.
+
+Full clean builds took approximately:
+
+```text
+11–15+ minutes
+```
+
+Therefore next session:
+
+```text
+DO NOT cargo clean by default
+```
+
+Before large Rust/Tauri builds, inspect free disk space.
+
+Keep build artifacts unless a clean rebuild is actually required.
+
+This matters especially if simultaneously building:
+
+```text
+RustyOnions
+CrabLink Tauri
+Windows artifacts
+```
+
+---
+
+# 50. Working-style rules for the next session
+
+Continue the existing development discipline:
+
+```text
+paste-ready patches
+
+bash <<'BASH'
+...
+BASH
+
+zsh-safe
+
+avoid unquoted !
+
+no git add/commit/push unless explicitly requested
+
+no downloads unless explicitly requested
+
+inspect first failure
+
+patch exact failure
+
+focused tests first
+
+broader gates after focused green
+
+do not fake success
+
+do not create fake wallet/balance/receipt/finality
+
+do not silently broaden authority
+```
+
+---
+
+# 51. Authority matrix — preserve exactly
+
+```text
+React
+  display + explicit user intent
+
+Tauri
+  native privilege
+
+local/native Passport
+  secret custody
+
+svc-passport
+  identity/device/authorization truth
+
+RustyOnions services
+  durable network truth
+
+svc-index
+  reviewed lookup/feed/relationship projection
+  NOT economic truth
+
+svc-wallet
+  approved economic mutation ingress
+
+ron-ledger
+  economic truth
+
+QuickChain
+  evidence/finality system
+  NOT client authority
+
+ROX Anchor
+  controlled external Solana anchor path
+  NOT internal ROC ledger
+```
+
+---
+
+# 52. User Node privacy invariant
+
+Preserve:
+
+```text
+node_role=user_node
+amnesia_mode=true
+privacy_mode=true
+public_inbound_enabled=false
+content_serving_enabled=false
+service_quorum_enabled=false
+wallet_execution_participant=false
+user_ip_publication=forbidden
+```
+
+The User Node is private/passive.
+
+Do not expose the Windows user's residential IP as a public node identity merely to make A/B testing easier.
+
+---
+
+# 53. Service Node invariant
+
+Service Node:
+
+```text
+node_role=service_node
+content_serving_enabled=true
+headless-capable
+CLI-manageable
+CrabLink not required
+browser UI not required
+```
+
+`crabnode` is the operator CLI.
+
+`svc-admin` is optional.
+
+The completed private-beta documentation specifically establishes this headless/CLI-first posture. 
+
+---
+
+# 54. What must NOT happen while continuing Phase21
+
+Do not:
+
+```text
+rebuild Service Node daemon inside Tauri
+
+make CrabLink required for Service Node startup
+
+invent a second wallet implementation
+
+invent a second ledger
+
+make React wallet truth
+
+make React finality truth
+
+derive confirmed ROC from cache
+
+unlock paid content from cache alone
+
+make pending rewards look confirmed
+
+publish User Node residential IP
+
+open unauthenticated admin APIs
+
+start BUILD_PLAN5
+
+deploy mainnet
+
+add production ROX bridge behavior
+
+add staking
+
+add liquidity
+
+add exchange behavior
+```
+
+Historical BUILD_PLAN_Z notes make the same authority warnings for the Service Node/CrabLink relationship. 
+
+---
+
+# 55. Recommended next-session order
+
+## NEXT 1 — repo/state inspection
+
+Mac:
+
+```text
+CrabLink:
+inspect current modified files
+
+RustyOnions:
+confirm source is at expected checkpoint
+
+verify no stale node processes/port collisions
+
+check free disk
+```
+
+Do not mutate anything yet.
+
+---
+
+## NEXT 2 — inspect authoritative CrabNode runbook
+
+Read:
+
+```text
+RustyOnions/docs/internal-roc/
+PRIVATE_BETA_NODE_RUNBOOK.md
+```
+
+Then inspect current:
+
+```text
+crabnode --help
+macronode current CLI/config
+```
+
+Use current code as source of truth, not memory.
+
+---
+
+## NEXT 3 — actual standalone headless CrabNode
+
+Start a real Service Node outside:
+
+```text
+run_dashboard.sh
+```
+
+Prove:
+
+```text
+daemon starts headless
+health green
+ready green
+status truthful
+content service available
+operator CLI works
+admin remains protected
+no wallet authority
+no ledger authority
+```
+
+This is the next meaningful FINAL_BETA integration step.
+
+---
+
+## NEXT 4 — determine safe LAN client exposure
+
+Because Windows is a separate physical machine:
+
+```text
+find Mac/CrabNode LAN endpoint
+identify exact client-facing port
+bind only intended private-beta service
+keep admin plane protected
+```
+
+Do not blanket-expose every loopback listener.
+
+---
+
+## NEXT 5 — Windows CrabLink compile
+
+On Windows:
+
+```text
+inspect toolchains
+
+inspect current Tauri Windows configuration
+
+run frontend build/check
+
+run Tauri Rust check
+
+run Windows platform-sealer focused tests
+
+fix first failure
+
+launch Tauri dev app
+```
+
+Once dev mode is solid:
+
+```text
+build Windows executable/package
+```
+
+Do not call Phase24 complete.
+
+---
+
+## NEXT 6 — Passport B
+
+Windows client:
+
+```text
+create/restore independent Passport B
+unlock
+claim/confirm separate username
+create separate profile
+verify native secure persistence
+restart
+unlock again
+```
+
+Mac remains Passport A.
+
+---
+
+## NEXT 7 — finish Phase21 social A/B
+
+Test:
+
+```text
+A ↔ B profile resolution
+
+A follows B
+
+B publishes
+
+A Home receives B
+
+B follows A
+
+A publishes
+
+B Home receives A
+
+profile timelines
+
+unfollow
+
+refresh
+
+restart
+
+offline/reconnect
+```
+
+Fix the first real failure.
+
+---
+
+## NEXT 8 — resolve wallet/posting issue
+
+When publication is attempted:
+
+```text
+inspect exact wallet requirement
+
+use intended private-beta wallet path
+
+no fake balance
+
+no silent dev bypass
+
+prove receipt/payment behavior where required
+```
+
+---
+
+## NEXT 9 — complete sites and economics
+
+Proceed:
+
+```text
+Blog
+Imageboard
+Forum
+site resolution
+paid content
+receipt
+ROC
+```
+
+---
+
+## NEXT 10 — QuickChain + failure/restart
+
+Proceed:
+
+```text
+checkpoint
+finality evidence
+redacted CrabLink display
+node failure
+degraded state
+recovery
+restart
+reconciliation
+```
+
+---
+
+## NEXT 11 — ROX portion last
+
+Only after integrated desktop/network flow is stable:
+
+```text
+decide whether Phase21 needs fresh capped ROC→ROX send
+
+if YES:
+fresh operation identity
+fresh approval
+fresh evidence
+
+never replay old operations
+```
+
+ROX→ROC remains the controlled dry-run internal ROC-release posture unless explicitly expanded.
+
+---
+
+# 56. What comes after Phase21
+
+Once the full-system demonstration is genuinely GREEN:
+
+```text
+Phase 22
+Security / Moderation / Privacy / Abuse Controls
+
+Phase 23
+UX / Accessibility / Performance
+
+Phase 24
+Desktop Packaging / Signing / Update / Recovery
+
+Phase 25
+Private Beta Operations
+
+Phase 26
+Final Acceptance / Launch Decision
+```
+
+Phase23 covers UX/a11y/performance, and Phase24 covers signed desktop artifacts, migration, Passport-data policy, release configuration, and Windows/Linux platform checks. 
+
+Phase26 eventually reruns both automated and manual gates including follow/unfollow, feed refresh, publishing, sites, paid content, degraded node behavior, QuickChain degradation, ROX halted mode, restart, upgrade, and uninstall/reinstall policy. 
+
+---
+
+# 57. Launch classification must remain honest
+
+Correct eventual wording:
+
+```text
+CrabLink Desktop decentralized private beta
+
+QuickChain private-network beta
+
+ROX Anchor private Solana testnet demonstration
+```
+
+Incorrect:
+
+```text
+public blockchain live
+public ROX bridge live
+mainnet live
+production mint/burn live
+staking live
+liquidity live
+exchange ready
+```
+
+This distinction is explicitly part of FINAL_BETA. 
+
+---
+
+# 58. Exact next-session handoff
+
+Paste this at the very top of the next session:
+
+```text
+We are continuing FINAL_BETA.md.
+
+CURRENT PHASE:
+FINAL_BETA Phase 21 — Full Desktop Decentralized Beta Demonstration.
+
+GREEN:
+Phase21A cross-repo prerequisite preflight.
+Phase21B real three-Service-Node + one-User-Node private topology.
+Persistent macronode/micronode dev stack and two-node admin truth probe.
+ROX BUILD_PLAN4 complete/green/parked.
+
+ACTIVE:
+Phase21C integrated desktop/private-network demonstration.
+
+NEXT OBJECTIVES:
+1. Inspect current CrabLink repo state, especially the parked/unverified macOS A/B experiment.
+2. Read RustyOnions docs/internal-roc/PRIVATE_BETA_NODE_RUNBOOK.md.
+3. Bring up an actual standalone headless CrabNode/macronode using the documented operator path and verify it with the existing crabnode CLI.
+4. Determine the safe private-LAN client-facing endpoint so another physical machine can participate without exposing admin/User-Node surfaces.
+5. Build CrabLink natively on the spare Windows PC.
+6. Use macOS CrabLink as Client A and Windows CrabLink as Client B with independent Passports/wallet/local state.
+7. Finish Phase21 steps 4–11: Passport, username, profile, follow, publish, profile timeline, Following Home feed.
+8. Then complete sites, paid flow, receipt/ROC, QuickChain evidence/display, failure/restart/reconciliation.
+9. Do not replay historical ROX operation IDs. Do not start BUILD_PLAN5.
+
+DO NOT:
+fake wallet/balance/receipt/finality,
+bypass the wallet posting failure,
+expose User Node residential IP,
+make CrabLink node authority,
+cargo clean unnecessarily,
+or broaden public/mainnet/bridge scope.
+
+The first implementation action should be inspection + standalone CrabNode bring-up, then Windows native CrabLink build.
+```
+
+That is the cleanest continuation point. We have already done the hard prerequisite work; the next session should turn that into a **real multi-machine private-beta test environment**, which should make the follow/feed/publication testing dramatically easier than trying to force two independent CrabLink identities onto one Mac.
+
+
+### END NOTE - AUGUST 17 2026 - 17:05 CST

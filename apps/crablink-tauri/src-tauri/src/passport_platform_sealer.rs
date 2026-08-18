@@ -26,6 +26,17 @@ pub const NATIVE_PASSPORT_PHASE15L_LABEL: &str =
 
 pub const PHASE15L_KEYCHAIN_SERVICE: &str = "com.rustyonions.crablink.native-passport.v1";
 
+pub const PHASE21_AB_B_KEYCHAIN_SERVICE: &str =
+    "com.rustyonions.crablink.ab-b.native-passport.v1";
+
+pub fn active_macos_keychain_service() -> &'static str {
+    match option_env!("CRABLINK_DESKTOP_AB_VARIANT") {
+        Some("b") => PHASE21_AB_B_KEYCHAIN_SERVICE,
+        Some("a") | None => PHASE15L_KEYCHAIN_SERVICE,
+        Some(_) => PHASE15L_KEYCHAIN_SERVICE,
+    }
+}
+
 pub const PHASE15L_RECOVERY_ROOT_ACCOUNT: &str = "recovery-root";
 
 pub const PHASE15L_DEVICE_KEY_ACCOUNT: &str = "device-key";
@@ -100,7 +111,7 @@ impl fmt::Debug for MacosKeychainPlatformSealer {
         formatter
             .debug_struct("MacosKeychainPlatformSealer")
             .field("platform_family", &NativePlatformFamily::MacosKeychain)
-            .field("service", &PHASE15L_KEYCHAIN_SERVICE)
+            .field("service", &active_macos_keychain_service())
             .field("backend", &"REDACTED")
             .finish()
     }
@@ -127,7 +138,7 @@ impl NativePlatformSealer for MacosKeychainPlatformSealer {
         )?;
 
         self.backend
-            .set_secret(PHASE15L_KEYCHAIN_SERVICE, account, secret.as_slice())
+            .set_secret(active_macos_keychain_service(), account, secret.as_slice())
             .map_err(|_| backend_failure(NativePlatformStorageOperation::Seal))?;
 
         Ok(sealed)
@@ -156,7 +167,7 @@ impl NativePlatformSealer for MacosKeychainPlatformSealer {
 
         let secret = self
             .backend
-            .get_secret(PHASE15L_KEYCHAIN_SERVICE, account)
+            .get_secret(active_macos_keychain_service(), account)
             .map_err(|_| backend_failure(NativePlatformStorageOperation::Unseal))?;
 
         NativeSecretBytes::new(secret)
@@ -167,10 +178,10 @@ impl DesktopPlatformMaterialClearer for MacosKeychainPlatformSealer {
     fn clear_platform_material(&self) -> DesktopPlatformMaterialClearReview {
         let recovery_root = self
             .backend
-            .delete_secret(PHASE15L_KEYCHAIN_SERVICE, PHASE15L_RECOVERY_ROOT_ACCOUNT);
+            .delete_secret(active_macos_keychain_service(), PHASE15L_RECOVERY_ROOT_ACCOUNT);
         let device_key = self
             .backend
-            .delete_secret(PHASE15L_KEYCHAIN_SERVICE, PHASE15L_DEVICE_KEY_ACCOUNT);
+            .delete_secret(active_macos_keychain_service(), PHASE15L_DEVICE_KEY_ACCOUNT);
 
         DesktopPlatformMaterialClearReview {
             recovery_root: map_delete_result(recovery_root),

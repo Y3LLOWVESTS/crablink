@@ -668,12 +668,22 @@ test(
 
     assert.match(
       drawerGate,
-      /buildDev === true/,
+      /isExplicitDeveloperSurface/,
     );
 
     assert.match(
       drawerGate,
-      /settings\?\.devMode === true/,
+      /return isExplicitDeveloperSurface\(\{/,
+    );
+
+    assert.match(
+      drawerGate,
+      /\bbuildDev,/,
+    );
+
+    assert.match(
+      drawerGate,
+      /\bsettings,/,
     );
 
     assert.match(

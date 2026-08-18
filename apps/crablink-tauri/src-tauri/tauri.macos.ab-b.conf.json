@@ -1,0 +1,8 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "CrabLink B",
+  "identifier": "com.rustyonions.crablink.ab-b",
+  "app": {
+    "macOSPrivateApi": true
+  }
+}
