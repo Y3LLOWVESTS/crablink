@@ -475,3 +475,7 @@ apps/**/src-tauri/gen/android/.gradle
 apps/**/src-tauri/gen/android/.gradle/**
 apps/**/src-tauri/gen/android/local.properties
 # <<< CrabLink TV final Android generated-output overrides <<<
+
+# Tauri application icons are source assets and must be tracked.
+!apps/crablink-tauri/src-tauri/icons/
+!apps/crablink-tauri/src-tauri/icons/**
