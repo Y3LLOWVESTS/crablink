@@ -36,12 +36,14 @@ import {
   subscribeLocalCatalog,
 } from '../../shared/catalog/localCatalog.js';
 import {
+  authorizeNativePassportDevice,
   clearNativePassport,
   confirmNativePassportRoot,
   createNativePassport,
   lockNativePassport,
   readNativePassportStatus,
   unlockNativePassportOperational,
+  verifyNativePassportDevicePossession,
 } from '../../adapters/passportAdapter.js';
 import {
   resetDisposableOnboardingDevelopmentState,
@@ -818,6 +820,36 @@ export default function PassportDrawer({ id, navigation, onClose }) {
           summary="Diagnostics, root confirmation, removal, and acceptance evidence"
         >
           <div className="cl-passport-actions">
+            <button
+              type="button"
+              onClick={() =>
+                runNativePassportCommand(
+                  authorizeNativePassportDevice,
+                  'authorize device',
+                )
+              }
+              disabled={!nativePassportAvailable || nativePassportBusy}
+              title="Creates one fresh root-confirmed authorization for this authenticated desktop device. No PIN, signature, or authorization object is returned to React."
+            >
+              {nativePassportCommand === 'authorize device'
+                ? 'Authorizing…'
+                : 'Authorize this device'}
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                runNativePassportCommand(
+                  verifyNativePassportDevicePossession,
+                  'verify device possession',
+                )
+              }
+              disabled={!nativePassportAvailable || nativePassportBusy}
+              title="Uses the already-unlocked operational DeviceKey to prove possession through the public local CrabNode gateway. No key, signature, PIN, capability, or authority material is returned to React."
+            >
+              {nativePassportCommand === 'verify device possession'
+                ? 'Verifying…'
+                : 'Verify device possession'}
+            </button>
             <button
               type="button"
               onClick={() => runNativePassportCommand(confirmNativePassportRoot, 'root confirm')}

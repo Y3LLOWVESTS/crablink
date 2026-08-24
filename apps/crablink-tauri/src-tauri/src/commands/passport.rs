@@ -1,13 +1,18 @@
-//! RO:WHAT — Implements redacted desktop Native Passport status, lock, and operational-unlock trigger commands.
-//! RO:WHY — Phase 15T connects persistent vault truth and native-only session truth without accepting secrets through WebView IPC.
-//! RO:INTERACTS — passport_operational_command_runtime, AppState, svc-passport status review contracts, and the Tauri handler registry.
-//! RO:INVARIANTS — status exposes NoPassport/Locked/OperationalUnlocked only; unlock has no PIN argument; lock drops only the in-memory operational session; no root unlock or storage mutation.
-//! RO:SECURITY — React receives stable redacted labels only; PIN, VMK, platform factor, vault bytes, root material, device material, and raw capabilities never serialize.
-//! RO:TEST — unit tests in this module plus tests/phase15t_operational_unlock_command_lock_and_status_bridge.rs.
+//! RO:WHAT — Implements redacted desktop Native Passport status, lock, operational unlock, device authorization, DeviceKey possession verification, and local clear commands.
+//! RO:WHY — Tauri mediates native Passport privilege while React remains display/user intent and never receives custody or signed authority material.
+//! RO:INTERACTS — operational/root/device-authorization/device-session runtimes, AppState, svc-passport status contracts, local authorization storage, and the Tauri handler registry.
+//! RO:INVARIANTS — DeviceAuthorization is strictly reverified; possession accepts no caller identity/secret fields and returns only redacted status; clear removes authorization metadata before descriptor/custody cleanup.
+//! RO:SECURITY — PIN, VMK, platform factor, vault bytes, root/device secrets, DeviceAuthorization, proof signatures, and raw capabilities never serialize to React.
+//! RO:TEST — focused Passport command, DeviceAuthorization/DeviceSession boundaries, clear lifecycle, and operational-unlock integration tests.
 
+use crate::passport_device_authorization_command_bridge::PHYSICAL_M1_DEVICE_AUTHORIZATION_COMMAND_BRIDGE_LABEL;
+use crate::passport_device_authorization_persistence_runtime::authorize_or_reuse_persisted_physical_m1_device_authorization;
+use crate::passport_device_session_http_runtime::{
+    prove_physical_m1_device_session, PHYSICAL_M1_DEVICE_SESSION_HTTP_LABEL,
+};
 use crate::{
     passport_clear_command_runtime::{
-        clear_desktop_native_passport_with_platform_material_and_recovery_acknowledgement,
+        clear_desktop_native_passport_with_public_identity_platform_material_and_recovery_acknowledgement,
         DesktopNativePassportClearCommandState, ONBOARDING_PHASE11C2B_PLATFORM_SECRET_CLEAR_LABEL,
     },
     passport_create_command_runtime::{
@@ -21,7 +26,7 @@ use crate::{
     },
     passport_operational_unlock_runtime::DesktopOperationalVaultSessionState,
     passport_root_confirmation_command_runtime::{
-        confirm_desktop_native_passport_root_from_native_surface,
+        confirm_and_finalize_desktop_native_passport_root_from_native_surface,
         DesktopRootConfirmationCommandState, NATIVE_PASSPORT_PHASE15Z_LABEL,
     },
     passport_status_runtime::{inspect_stored_passport_status, StoredPassportStatus},
@@ -365,14 +370,34 @@ pub fn passport_status(
 pub fn passport_clear(
     state: State<'_, AppState>,
 ) -> Result<PassportOperationalCommandDtoV1, PassportStatusProblemV1> {
-    let outcome = clear_desktop_native_passport_with_platform_material_and_recovery_acknowledgement(
-        &state.passport_vault_store,
-        &state.passport_operational_session,
-        &state.passport_pending_recovery_session,
-        &state.passport_pending_operational_session,
-        state.passport_platform_material_clearer.as_ref(),
-        &state.passport_recovery_acknowledgement_store,
-    );
+    if state.passport_device_authorization_store.clear().is_err() {
+        return Ok(PassportOperationalCommandDtoV1 {
+            schema: PASSPORT_CLEAR_DTO_SCHEMA_V1,
+            command_name: PASSPORT_CLEAR_COMMAND,
+            source_phase_label: ONBOARDING_PHASE11C2B_PLATFORM_SECRET_CLEAR_LABEL,
+            state: "unavailable",
+            redacted: true,
+            native_secure_input_requested: false,
+            pin_received_from_webview: false,
+            secret_material_returned: false,
+            session_changed: false,
+            encrypted_vault_mutated: false,
+            platform_material_mutated: false,
+            recovery_root_unsealed: false,
+            wallet_or_ledger_mutated: false,
+        });
+    }
+
+    let outcome =
+        clear_desktop_native_passport_with_public_identity_platform_material_and_recovery_acknowledgement(
+            &state.passport_vault_store,
+            &state.passport_operational_session,
+            &state.passport_pending_recovery_session,
+            &state.passport_pending_operational_session,
+            state.passport_platform_material_clearer.as_ref(),
+            &state.passport_recovery_acknowledgement_store,
+            &state.passport_public_identity_store,
+        );
 
     let state_label = match outcome.state {
         DesktopNativePassportClearCommandState::Cleared => "cleared",
@@ -402,9 +427,11 @@ pub fn passport_clear(
 pub fn passport_unlock_root(
     state: State<'_, AppState>,
 ) -> Result<PassportOperationalCommandDtoV1, PassportStatusProblemV1> {
-    let outcome = confirm_desktop_native_passport_root_from_native_surface(
+    let outcome = confirm_and_finalize_desktop_native_passport_root_from_native_surface(
         &state.passport_vault_store,
         &state.passport_operational_session,
+        state.passport_platform_sealer.as_ref(),
+        &state.passport_public_identity_store,
         state.passport_secret_surface.as_ref(),
     );
 
@@ -415,6 +442,8 @@ pub fn passport_unlock_root(
         }
         DesktopRootConfirmationCommandState::ConfirmationRejected => "confirmation_rejected",
         DesktopRootConfirmationCommandState::Cancelled => "cancelled",
+        DesktopRootConfirmationCommandState::IdentityFinalized => "identity_finalized",
+        DesktopRootConfirmationCommandState::IdentityAvailable => "identity_available",
         DesktopRootConfirmationCommandState::Unavailable => "unavailable",
     };
 
@@ -430,23 +459,24 @@ pub fn passport_unlock_root(
         session_changed: false,
         encrypted_vault_mutated: false,
         platform_material_mutated: false,
-        recovery_root_unsealed: false,
+        recovery_root_unsealed: outcome.recovery_root_unsealed,
         wallet_or_ledger_mutated: false,
     })
 }
 
 /// Begin the native-only Passport recovery ceremony.
 ///
-/// Phase 6A intentionally returns `unavailable` for an existing vault until
-/// svc-passport owns real recovery-root generation and the platform shell owns
-/// an audited display-and-acknowledgement surface.
+/// Fresh creation consumes the pending native-memory RecoveryRoot handoff.
+/// After restart, an existing stored RecoveryRoot is used only inside Tauri:
+/// durable acknowledgement is checked first, and first phrase display requires
+/// native root-PIN authentication. Neither PIN nor phrase crosses WebView.
 #[tauri::command]
 pub fn passport_recovery_ceremony(
     state: State<'_, AppState>,
 ) -> Result<PassportRecoveryCeremonyDtoV1, PassportStatusProblemV1> {
     let runtime =
         crate::passport_recovery_phrase_runtime::
-            run_desktop_recovery_ceremony_once_with_pending_recovery(
+            run_desktop_recovery_ceremony_once_with_pending_or_authenticated_stored_recovery(
                 &state.passport_vault_store,
                 state.passport_platform_sealer
                     .as_ref(),
@@ -485,6 +515,12 @@ pub fn passport_recovery_ceremony(
                             AlreadyAcknowledged =>
                     {
                         "already_acknowledged"
+                    }
+                    crate::passport_recovery_phrase_runtime::
+                        DesktopRecoveryCeremonyOnceState::
+                            Rejected =>
+                    {
+                        "rejected"
                     }
                     crate::passport_recovery_phrase_runtime::
                         DesktopRecoveryCeremonyOnceState::
@@ -651,6 +687,160 @@ pub fn passport_unlock_operational(
         recovery_root_unsealed: false,
         wallet_or_ledger_mutated: false,
     })
+}
+
+/// Public redacted DeviceAuthorization command schema.
+pub const PASSPORT_DEVICE_AUTHORIZATION_DTO_SCHEMA_V1: &str =
+    "crablink.native-passport.device-authorization-command.v1";
+
+/// Stable Tauri command name for fresh desktop device authorization.
+pub const PASSPORT_AUTHORIZE_DEVICE_COMMAND: &str = "passport_authorize_device";
+
+/// Redacted result of one root-confirmed desktop DeviceAuthorization attempt.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PassportDeviceAuthorizationCommandDtoV1 {
+    pub schema: &'static str,
+    pub command_name: &'static str,
+    pub source_phase_label: &'static str,
+    pub state: &'static str,
+    pub redacted: bool,
+    pub native_secure_input_requested: bool,
+    pub pin_received_from_webview: bool,
+    pub secret_material_returned: bool,
+    pub authorization_returned_to_webview: bool,
+    pub signature_returned_to_webview: bool,
+    pub device_class: Option<&'static str>,
+    pub root_key_epoch: Option<u64>,
+    pub scope_count: Option<usize>,
+    pub issued_at_ms: Option<u64>,
+    pub expires_at_ms: Option<u64>,
+    pub authorization_persisted: bool,
+    pub server_registry_mutated: bool,
+    pub capability_issued: bool,
+    pub username_mutated: bool,
+}
+
+/// Create one fresh Physical M1 DeviceAuthorization using only native-owned
+/// Passport/device state and native secure input.
+///
+/// The command accepts no Passport, device, PIN, network, environment, class,
+/// scope, nonce, timing, expiry, or root-key material from the WebView.
+#[tauri::command]
+pub fn passport_authorize_device(
+    state: State<'_, AppState>,
+) -> PassportDeviceAuthorizationCommandDtoV1 {
+    match authorize_or_reuse_persisted_physical_m1_device_authorization(state.inner()) {
+        Ok(outcome) => {
+            let authorization = &outcome.authorization;
+            let device_class = Some(authorization.device_class.as_str());
+
+            let root_key_epoch = Some(authorization.root_key_epoch);
+
+            let scope_count = Some(authorization.authorized_scope_ceiling.as_slice().len());
+
+            let issued_at_ms = Some(authorization.issued_at_ms);
+
+            let expires_at_ms = authorization.expires_at_ms;
+
+            PassportDeviceAuthorizationCommandDtoV1 {
+                schema: PASSPORT_DEVICE_AUTHORIZATION_DTO_SCHEMA_V1,
+                command_name: PASSPORT_AUTHORIZE_DEVICE_COMMAND,
+                source_phase_label: PHYSICAL_M1_DEVICE_AUTHORIZATION_COMMAND_BRIDGE_LABEL,
+                state: "authorized",
+                redacted: true,
+                native_secure_input_requested: outcome.native_secure_input_requested,
+                pin_received_from_webview: false,
+                secret_material_returned: false,
+                authorization_returned_to_webview: false,
+                signature_returned_to_webview: false,
+                device_class,
+                root_key_epoch,
+                scope_count,
+                issued_at_ms,
+                expires_at_ms,
+                authorization_persisted: outcome.authorization_persisted,
+                server_registry_mutated: false,
+                capability_issued: false,
+                username_mutated: false,
+            }
+        }
+
+        Err(error) => {
+            let state_label = error.state_label();
+
+            let native_secure_input_requested = error.native_secure_input_requested();
+
+            PassportDeviceAuthorizationCommandDtoV1 {
+                schema: PASSPORT_DEVICE_AUTHORIZATION_DTO_SCHEMA_V1,
+                command_name: PASSPORT_AUTHORIZE_DEVICE_COMMAND,
+                source_phase_label: PHYSICAL_M1_DEVICE_AUTHORIZATION_COMMAND_BRIDGE_LABEL,
+                state: state_label,
+                redacted: true,
+                native_secure_input_requested,
+                pin_received_from_webview: false,
+                secret_material_returned: false,
+                authorization_returned_to_webview: false,
+                signature_returned_to_webview: false,
+                device_class: None,
+                root_key_epoch: None,
+                scope_count: None,
+                issued_at_ms: None,
+                expires_at_ms: None,
+                authorization_persisted: false,
+                server_registry_mutated: false,
+                capability_issued: false,
+                username_mutated: false,
+            }
+        }
+    }
+}
+
+/// Public redacted DeviceKey-possession command schema.
+pub const PASSPORT_DEVICE_POSSESSION_DTO_SCHEMA_V1: &str =
+    "crablink.native-passport.device-possession-command.v1";
+
+/// Stable zero-user-argument Tauri command for Physical M1 DeviceKey
+/// possession verification.
+pub const PASSPORT_VERIFY_DEVICE_POSSESSION_COMMAND: &str = "passport_verify_device_possession";
+
+/// Prove possession of the already-authorized operational DeviceKey through
+/// the canonical local CrabNode ingress.
+///
+/// Identity, Device ID, scope, gateway, challenge, signature, PIN, root
+/// material, and DeviceKey material are all native-owned. The WebView receives
+/// only a redacted result state.
+#[tauri::command]
+pub async fn passport_verify_device_possession(
+    state: State<'_, AppState>,
+) -> PassportOperationalCommandDtoV1 {
+    let state_label = match prove_physical_m1_device_session(state.inner()).await {
+        Ok(outcome)
+            if outcome.local_device_authorization_verified
+                && outcome.service_challenge_verified
+                && outcome.possession_proven =>
+        {
+            "possession_proven"
+        }
+
+        Ok(_) | Err(_) => "possession_rejected",
+    };
+
+    PassportOperationalCommandDtoV1 {
+        schema: PASSPORT_DEVICE_POSSESSION_DTO_SCHEMA_V1,
+        command_name: PASSPORT_VERIFY_DEVICE_POSSESSION_COMMAND,
+        source_phase_label: PHYSICAL_M1_DEVICE_SESSION_HTTP_LABEL,
+        state: state_label,
+        redacted: true,
+        native_secure_input_requested: false,
+        pin_received_from_webview: false,
+        secret_material_returned: false,
+        session_changed: false,
+        encrypted_vault_mutated: false,
+        platform_material_mutated: false,
+        recovery_root_unsealed: false,
+        wallet_or_ledger_mutated: false,
+    }
 }
 
 #[cfg(test)]

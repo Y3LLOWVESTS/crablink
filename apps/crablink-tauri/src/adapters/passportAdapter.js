@@ -1,7 +1,7 @@
 /**
  * RO:WHAT — React-safe adapter for desktop Native Passport Tauri commands.
  * RO:WHY — Phase 15AB gives UI code a narrow command boundary without raw invoke, PIN arguments, or secret custody.
- * RO:INTERACTS — platform/tauriPlatform.js and Rust commands: passport_status, passport_create, passport_lock, passport_unlock_operational, passport_unlock_root, passport_clear.
+ * RO:INTERACTS — platform/tauriPlatform.js and Rust commands: passport_status, passport_create, passport_lock, passport_unlock_operational, passport_unlock_root, passport_authorize_device, passport_clear.
  * RO:INVARIANTS — fixed command names only; no dynamic command dispatch; no caller-supplied PIN/secret/root material; command DTOs remain redacted display truth.
  * RO:SECURITY — never serializes PINs, VMKs, vault bytes, platform factors, recovery-root material, private keys, seed phrases, raw capabilities, wallet mutation, or ledger mutation.
  * RO:TEST — src/adapters/passportAdapter.test.mjs.
@@ -18,6 +18,9 @@ export const PASSPORT_COMMANDS = Object.freeze({
   lock: 'passport_lock',
   unlockOperational: 'passport_unlock_operational',
   unlockRoot: 'passport_unlock_root',
+  authorizeDevice: 'passport_authorize_device',
+  verifyDevicePossession:
+    'passport_verify_device_possession',
   recoveryCeremony:
     'passport_recovery_ceremony',
   clear: 'passport_clear',
@@ -253,6 +256,16 @@ export async function unlockNativePassportOperational() {
 
 export async function confirmNativePassportRoot() {
   return runPassportCommand(PASSPORT_COMMANDS.unlockRoot);
+}
+
+export async function authorizeNativePassportDevice() {
+  return runPassportCommand(PASSPORT_COMMANDS.authorizeDevice);
+}
+
+export async function verifyNativePassportDevicePossession() {
+  return runPassportCommand(
+    PASSPORT_COMMANDS.verifyDevicePossession,
+  );
 }
 
 export async function beginNativePassportRecoveryCeremony() {

@@ -18,7 +18,9 @@ use crablink_tauri_lib::{
     passport_operational_unlock_runtime::{
         DesktopOperationalVaultSessionState, DesktopOperationalVaultSessionStore,
     },
+    passport_public_identity_store::DesktopPublicPassportDescriptorStore,
     passport_root_confirmation_command_runtime::{
+        confirm_and_finalize_desktop_native_passport_root_from_native_surface,
         confirm_desktop_native_passport_root_from_native_surface,
         desktop_root_confirmation_command_posture, DesktopRootConfirmationCommandState,
         NATIVE_PASSPORT_PHASE15Z_LABEL,
@@ -528,4 +530,136 @@ fn phase15z_posture_and_live_command_surface_are_redacted() {
             "live command surface contains forbidden literal {forbidden_literal}",
         );
     }
+}
+
+fn physical_m1_public_identity_store(
+    label: &str,
+) -> (std::path::PathBuf, DesktopPublicPassportDescriptorStore) {
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock")
+        .as_nanos();
+
+    let path = std::env::temp_dir().join(format!(
+        "crablink-{label}-{}-{timestamp}",
+        std::process::id(),
+    ));
+
+    std::fs::create_dir_all(&path).expect("create identity test root");
+
+    let store = DesktopPublicPassportDescriptorStore::new(path.clone()).expect("identity store");
+
+    (path, store)
+}
+
+#[test]
+fn physical_m1_live_root_confirmation_finalizes_once_then_avoids_repeat_prompt_and_unseal() {
+    let (store, sealer, session) = create_vault_and_unlock_operational_session();
+
+    let (public_root, public_store) = physical_m1_public_identity_store("live-root-finalize");
+
+    let before = sealer.unsealed_compartments();
+
+    let surface = ScriptedNativeSecretSurface::root_secret(CREATE_PIN);
+
+    let finalized = confirm_and_finalize_desktop_native_passport_root_from_native_surface(
+        &store,
+        &session,
+        &sealer,
+        &public_store,
+        &surface,
+    );
+
+    assert_eq!(
+        finalized.state,
+        DesktopRootConfirmationCommandState::IdentityFinalized,
+    );
+
+    assert!(finalized.native_secure_input_requested,);
+
+    assert!(finalized.recovery_root_unsealed,);
+
+    assert!(finalized.public_descriptor_written,);
+
+    assert_eq!(surface.root_calls(), 1,);
+
+    let after_first = sealer.unsealed_compartments();
+
+    assert_eq!(after_first.len(), before.len() + 1,);
+
+    assert_eq!(
+        after_first.last(),
+        Some(&NativeSecureCompartment::RecoveryRoot,),
+    );
+
+    assert!(public_store.load().expect("descriptor").is_some(),);
+
+    let repeat_surface = ScriptedNativeSecretSurface::root_secret(ROOT_CONFIRMATION_PIN);
+
+    let repeated = confirm_and_finalize_desktop_native_passport_root_from_native_surface(
+        &store,
+        &session,
+        &sealer,
+        &public_store,
+        &repeat_surface,
+    );
+
+    assert_eq!(
+        repeated.state,
+        DesktopRootConfirmationCommandState::IdentityAvailable,
+    );
+
+    assert!(!repeated.native_secure_input_requested,);
+
+    assert!(!repeated.recovery_root_unsealed,);
+
+    assert!(!repeated.public_descriptor_written,);
+
+    assert_eq!(repeat_surface.root_calls(), 0,);
+
+    assert_eq!(sealer.unsealed_compartments(), after_first,);
+
+    std::fs::remove_dir_all(public_root).expect("cleanup");
+}
+
+#[test]
+fn physical_m1_live_root_confirmation_wrong_pin_rejects_without_descriptor_write() {
+    let (store, sealer, session) = create_vault_and_unlock_operational_session();
+
+    let (public_root, public_store) = physical_m1_public_identity_store("live-root-wrong");
+
+    let before = sealer.unsealed_compartments();
+
+    let surface = ScriptedNativeSecretSurface::root_secret(ROOT_CONFIRMATION_PIN);
+
+    let outcome = confirm_and_finalize_desktop_native_passport_root_from_native_surface(
+        &store,
+        &session,
+        &sealer,
+        &public_store,
+        &surface,
+    );
+
+    assert_eq!(
+        outcome.state,
+        DesktopRootConfirmationCommandState::ConfirmationRejected,
+    );
+
+    assert!(outcome.native_secure_input_requested,);
+
+    assert!(outcome.recovery_root_unsealed,);
+
+    assert!(!outcome.public_descriptor_written,);
+
+    assert_eq!(surface.root_calls(), 1,);
+
+    assert_eq!(public_store.load().expect("descriptor"), None,);
+
+    let after = sealer.unsealed_compartments();
+
+    assert_eq!(after.len(), before.len() + 1,);
+
+    assert_eq!(after.last(), Some(&NativeSecureCompartment::RecoveryRoot,),);
+
+    std::fs::remove_dir_all(public_root).expect("cleanup");
 }

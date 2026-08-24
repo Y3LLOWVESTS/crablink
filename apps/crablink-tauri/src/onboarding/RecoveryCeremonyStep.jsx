@@ -2,7 +2,7 @@
  * RO:WHAT — React controller for the native-only Passport recovery ceremony.
  * RO:WHY — App Integration; Concerns: DX/SEC/RES; onboarding must block until native code truthfully confirms display and acknowledgement.
  * RO:INTERACTS — passportAdapter.js, onboardingRecoveryCeremony.js, onboardingModel.js, onboardingStorage.js, and OnboardingRouteGate.jsx.
- * RO:INVARIANTS — React triggers the no-argument command and receives redacted flags only; current unavailable runtime never advances.
+ * RO:INVARIANTS — React triggers the no-argument command and receives redacted flags only; only reviewed current or durable native acknowledgement advances.
  * RO:METRICS — none.
  * RO:CONFIG — development shell bypass is supplied by the route gate.
  * RO:SECURITY — no secret input, recovery material state, clipboard action, logging, local secret storage, root export, wallet mutation, or ledger mutation.

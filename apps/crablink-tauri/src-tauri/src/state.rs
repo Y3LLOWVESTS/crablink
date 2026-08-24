@@ -93,6 +93,12 @@ pub struct AppState {
     #[cfg(desktop)]
     pub passport_vault_store: DesktopAtomicVaultStore,
     #[cfg(desktop)]
+    pub passport_public_identity_store:
+        crate::passport_public_identity_store::DesktopPublicPassportDescriptorStore,
+    #[cfg(desktop)]
+    pub passport_device_authorization_store:
+        crate::passport_device_authorization_store::DesktopDeviceAuthorizationStore,
+    #[cfg(desktop)]
     pub passport_recovery_acknowledgement_store: DesktopRecoveryAcknowledgementStore,
     #[cfg(desktop)]
     pub passport_platform_sealer: SharedNativePlatformSealer,
@@ -130,19 +136,13 @@ impl AppState {
         passport_platform_material_clearer: SharedDesktopPlatformMaterialClearer,
         local_following_store: DesktopLocalFollowingStore,
     ) -> Self {
-        let mut state =
-            Self::with_native_passport_runtime(
-                passport_vault_store,
-                passport_platform_sealer,
-                passport_platform_material_clearer,
-            );
+        let mut state = Self::with_native_passport_runtime(
+            passport_vault_store,
+            passport_platform_sealer,
+            passport_platform_material_clearer,
+        );
 
-        state.local_following_store =
-            Some(
-                Mutex::new(
-                    local_following_store,
-                ),
-            );
+        state.local_following_store = Some(Mutex::new(local_following_store));
 
         state
     }
@@ -155,20 +155,14 @@ impl AppState {
         local_following_store: DesktopLocalFollowingStore,
         local_following_feed_cache_store: LocalFollowingFeedCacheStore,
     ) -> Self {
-        let mut state =
-            Self::with_native_passport_runtime_and_local_following(
-                passport_vault_store,
-                passport_platform_sealer,
-                passport_platform_material_clearer,
-                local_following_store,
-            );
+        let mut state = Self::with_native_passport_runtime_and_local_following(
+            passport_vault_store,
+            passport_platform_sealer,
+            passport_platform_material_clearer,
+            local_following_store,
+        );
 
-        state.local_following_feed_cache_store =
-            Some(
-                Mutex::new(
-                    local_following_feed_cache_store,
-                ),
-            );
+        state.local_following_feed_cache_store = Some(Mutex::new(local_following_feed_cache_store));
 
         state
     }
@@ -180,6 +174,18 @@ impl AppState {
         passport_platform_material_clearer: SharedDesktopPlatformMaterialClearer,
         passport_secret_surface: SharedDesktopNativeSecretSurface,
     ) -> Self {
+        let passport_public_identity_store =
+            crate::passport_public_identity_store::DesktopPublicPassportDescriptorStore::new(
+                passport_vault_store.root_directory().to_path_buf(),
+            )
+            .expect("DesktopAtomicVaultStore owns a validated absolute Native Passport root");
+
+        let passport_device_authorization_store =
+            crate::passport_device_authorization_store::DesktopDeviceAuthorizationStore::new(
+                passport_vault_store.root_directory().to_path_buf(),
+            )
+            .expect("DesktopAtomicVaultStore owns a validated absolute Native Passport root");
+
         let passport_recovery_acknowledgement_store =
             DesktopRecoveryAcknowledgementStore::new(passport_vault_store.root_directory());
 
@@ -193,6 +199,8 @@ impl AppState {
             local_following_store: None,
             local_following_feed_cache_store: None,
             passport_vault_store,
+            passport_public_identity_store,
+            passport_device_authorization_store,
             passport_platform_sealer,
             passport_platform_material_clearer,
             passport_operational_session: DesktopOperationalVaultSessionStore::default(),

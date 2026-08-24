@@ -1,12 +1,12 @@
 /**
- * RO:WHAT — Desktop onboarding step that hands local Passport creation to the accepted native Phase 15 adapter.
- * RO:WHY — App Integration; Concerns: DX/SEC/RES; onboarding needs a real local Passport without moving secure PIN entry into the WebView.
+ * RO:WHAT — Desktop onboarding step that either resumes verified existing Native Passport custody or creates a new Passport through the native adapter.
+ * RO:WHY — Onboarding must not become stuck or attempt duplicate custody creation when localStorage and native Passport state diverge.
  * RO:INTERACTS — passportAdapter.js, onboardingPassportCreate.js, onboardingModel.js, onboardingStorage.js, OnboardingRouteGate.jsx.
- * RO:INVARIANTS — createNativePassport is called with no arguments; only created_locked advances; cancel/unavailable/error stay redacted and retryable only when safe.
+ * RO:INVARIANTS — read-only native status is checked before creation; create runs only after confirmed no_passport; existing custody advances only from verified locked/unlocked native status; failures remain redacted.
  * RO:METRICS — none.
  * RO:CONFIG — development shell bypass is supplied by the outer route gate.
  * RO:SECURITY — no PIN input, password input, secret prop, recovery material, root, private key, VMK, capability, wallet, or ledger authority.
- * RO:TEST — passportCreateStep.test.mjs and the existing Phase 15 Passport acceptance tests.
+ * RO:TEST — passportCreateStep.test.mjs, physicalM1ExistingPassportOnboardingReconciliation.test.mjs, and the existing Phase 15 Passport acceptance tests.
  */
 
 import {
@@ -16,10 +16,13 @@ import {
 
 import {
   createNativePassport,
+  readNativePassportStatus,
 } from '../adapters/passportAdapter.js';
 
 import {
   ONBOARDING_STATES,
+  PASSPORT_STATES,
+  recordExistingPassportForOnboarding,
   recordPassportCreatedLocked,
   requestPassportCreate,
 } from './onboardingModel.js';
@@ -31,7 +34,9 @@ import {
 import {
   ONBOARDING_PASSPORT_CREATE_CODES,
   ONBOARDING_PASSPORT_CREATE_STATUS,
+  createExistingPassportConfirmedOutcome,
   createRedactedPassportCreateFailure,
+  reviewOnboardingNativePassportPresence,
   reviewOnboardingPassportCreateError,
   reviewOnboardingPassportCreateResult,
 } from './onboardingPassportCreate.js';
@@ -67,23 +72,14 @@ export default function PassportCreateStep({
       ONBOARDING_STATES
         .PASSPORT_CREATED_LOCKED
     ) {
-      setCreateUi({
-        status: CREATE_UI_STATUS.SUCCESS,
-        outcome:
-          reviewOnboardingPassportCreateResult({
-            state: 'created_locked',
-            redacted: true,
-            nativeSecureInputRequested: true,
-            pinReceivedFromWebview: false,
-            secretMaterialReturned: false,
-            encryptedVaultMutated: true,
-            platformMaterialMutated: true,
-            recoveryRootUnsealed: false,
-            walletOrLedgerMutated: false,
-          }),
-      });
+      setCreateUi(
+        initialCreateUi(onboardingState),
+      );
     }
-  }, [onboardingState.state]);
+  }, [
+    onboardingState.passportState,
+    onboardingState.state,
+  ]);
 
   const publishState =
     async (nextState) => {
@@ -100,6 +96,37 @@ export default function PassportCreateStep({
       }
 
       return persisted;
+    };
+
+  const reconcileExistingPassport =
+    async (
+      requestedState,
+      presence,
+    ) => {
+      const existingState =
+        recordExistingPassportForOnboarding(
+          requestedState,
+          {
+            operationalUnlocked:
+              presence
+                .operationalUnlocked,
+          },
+        );
+
+      await publishState(
+        existingState,
+      );
+
+      setCreateUi({
+        status:
+          CREATE_UI_STATUS.SUCCESS,
+        outcome:
+          createExistingPassportConfirmedOutcome({
+            operationalUnlocked:
+              presence
+                .operationalUnlocked,
+          }),
+      });
     };
 
   const createPassport =
@@ -148,6 +175,38 @@ export default function PassportCreateStep({
           );
         }
 
+        const initialPresence =
+          reviewOnboardingNativePassportPresence(
+            await readNativePassportStatus(),
+          );
+
+        if (
+          initialPresence.existing
+        ) {
+          await reconcileExistingPassport(
+            requestedState,
+            initialPresence,
+          );
+
+          return;
+        }
+
+        if (
+          !initialPresence.safeToCreate
+        ) {
+          setCreateUi({
+            status:
+              CREATE_UI_STATUS.FAILURE,
+            outcome:
+              createRedactedPassportCreateFailure(
+                ONBOARDING_PASSPORT_CREATE_CODES
+                  .UNAVAILABLE,
+              ),
+          });
+
+          return;
+        }
+
         const commandResult =
           await createNativePassport();
 
@@ -155,6 +214,28 @@ export default function PassportCreateStep({
           reviewOnboardingPassportCreateResult(
             commandResult,
           );
+
+        if (
+          outcome.code ===
+          ONBOARDING_PASSPORT_CREATE_CODES
+            .ALREADY_EXISTS
+        ) {
+          const postCreatePresence =
+            reviewOnboardingNativePassportPresence(
+              await readNativePassportStatus(),
+            );
+
+          if (
+            postCreatePresence.existing
+          ) {
+            await reconcileExistingPassport(
+              requestedState,
+              postCreatePresence,
+            );
+
+            return;
+          }
+        }
 
         if (
           outcome.status !==
@@ -198,6 +279,11 @@ export default function PassportCreateStep({
     onboardingState.state ===
     ONBOARDING_STATES
       .PASSPORT_CREATED_LOCKED;
+
+  const existingConfirmed =
+    createUi.outcome?.status ===
+    ONBOARDING_PASSPORT_CREATE_STATUS
+      .EXISTING_CONFIRMED;
 
   return (
     <main
@@ -316,7 +402,9 @@ export default function PassportCreateStep({
             role="status"
           >
             <strong>
-              Local Passport created and locked
+              {existingConfirmed
+                ? 'Existing local Passport confirmed'
+                : 'Local Passport created and locked'}
             </strong>
 
             <p>{createUi.outcome.message}</p>
@@ -386,6 +474,40 @@ function initialCreateUi(
     ONBOARDING_STATES
       .PASSPORT_CREATED_LOCKED
   ) {
+    const operationalUnlocked =
+      onboardingState.passportState ===
+      PASSPORT_STATES
+        .OPERATIONAL_UNLOCKED;
+
+    const existingPassport =
+      onboardingState.passportState ===
+        PASSPORT_STATES.STORED_LOCKED ||
+      operationalUnlocked;
+
+    if (existingPassport) {
+      return {
+        status: CREATE_UI_STATUS.SUCCESS,
+        outcome:
+          createExistingPassportConfirmedOutcome({
+            operationalUnlocked,
+          }),
+      };
+    }
+
+    if (
+      onboardingState.passportState !==
+      PASSPORT_STATES.CREATED_LOCKED
+    ) {
+      return {
+        status: CREATE_UI_STATUS.FAILURE,
+        outcome:
+          createRedactedPassportCreateFailure(
+            ONBOARDING_PASSPORT_CREATE_CODES
+              .INVALID_RESPONSE,
+          ),
+      };
+    }
+
     return {
       status: CREATE_UI_STATUS.SUCCESS,
       outcome:

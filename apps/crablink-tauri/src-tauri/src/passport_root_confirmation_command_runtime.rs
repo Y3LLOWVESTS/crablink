@@ -1,13 +1,17 @@
-//! RO:WHAT — Adds the desktop root-confirmation command bridge without exposing or unlocking root material.
-//! RO:WHY — Phase 15Z makes the expected root-capable command surface explicit while refusing fake root success until canonical root operation behavior exists.
-//! RO:INTERACTS — NativeVaultStore, DesktopOperationalVaultSessionStore, DesktopNativeSecretSurfacePort, commands/passport.rs, and the Tauri handler registry.
-//! RO:INVARIANTS — a stored vault and operational-unlocked session are required before native root confirmation is requested; confirmation remains redacted and unavailable rather than claiming root unlock.
-//! RO:SECURITY — no recovery-root factor unseal, no root VMK unlock, no root material return, no capability issuance, no username mutation, and no wallet/ledger mutation.
-//! RO:TEST — tests/phase15z_desktop_root_confirmation_command_bridge.rs.
+//! RO:WHAT — Preserves the legacy desktop root-confirmation bridge and implements authenticated public Passport identity finalization for the live command path.
+//! RO:WHY — Physical M1 must turn a native root-PIN confirmation into durable canonical public identity without creating a persistent root-unlocked session or exposing root material.
+//! RO:INTERACTS — NativeVaultStore, NativePlatformSealer, operational session state, native secret surface, identity finalization runtime, public descriptor store, commands/passport.rs, and the Tauri handler registry.
+//! RO:INVARIANTS — a stored vault and operational-unlocked session are required; an existing descriptor returns without another root prompt or RecoveryRoot unseal; first finalization authenticates the root PIN and persists the canonical descriptor; the legacy Phase15Z bridge still refuses fake root success.
+//! RO:SECURITY — first finalization may transiently unseal RecoveryRoot to authenticate and derive public identity; the verified root VMK is immediately discarded by svc-passport; no root secret or persistent root session is returned, no PIN crosses the WebView boundary, and no capability, username, wallet, or ledger mutation is added.
+//! RO:TEST — tests/phase15z_desktop_root_confirmation_command_bridge.rs and tests/physical_m1_authenticated_identity_finalization_runtime.rs.
 
-use svc_passport::native::{load_native_encrypted_vault, NativeVaultStore};
+use svc_passport::native::{load_native_encrypted_vault, NativePlatformSealer, NativeVaultStore};
 
 use crate::{
+    passport_identity_finalization_runtime::{
+        finalize_stored_desktop_passport_identity_with_root_pin,
+        DesktopPassportIdentityFinalizationError,
+    },
     passport_operational_command_runtime::{
         DesktopNativeSecretSurfaceError, DesktopNativeSecretSurfaceOutcome,
         DesktopNativeSecretSurfacePort,
@@ -15,6 +19,7 @@ use crate::{
     passport_operational_unlock_runtime::{
         DesktopOperationalVaultSessionState, DesktopOperationalVaultSessionStore,
     },
+    passport_public_identity_store::DesktopPublicPassportDescriptorStore,
 };
 
 pub const NATIVE_PASSPORT_PHASE15Z_LABEL: &str =
@@ -26,6 +31,8 @@ pub enum DesktopRootConfirmationCommandState {
     OperationalUnlockRequired,
     ConfirmationRejected,
     Cancelled,
+    IdentityFinalized,
+    IdentityAvailable,
     Unavailable,
 }
 
@@ -33,6 +40,8 @@ pub enum DesktopRootConfirmationCommandState {
 pub struct DesktopRootConfirmationCommandOutcome {
     pub state: DesktopRootConfirmationCommandState,
     pub native_secure_input_requested: bool,
+    pub recovery_root_unsealed: bool,
+    pub public_descriptor_written: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -123,6 +132,129 @@ where
     }
 }
 
+/// Authenticate the native root confirmation and finalize the canonical
+/// restart-safe public Passport descriptor.
+///
+/// Once a descriptor exists, this path returns it as available without
+/// prompting for the root PIN or unsealing RecoveryRoot again.
+pub fn confirm_and_finalize_desktop_native_passport_root_from_native_surface<V, S, P>(
+    store: &V,
+    session_store: &DesktopOperationalVaultSessionStore,
+    sealer: &S,
+    public_store: &DesktopPublicPassportDescriptorStore,
+    secret_surface: &P,
+) -> DesktopRootConfirmationCommandOutcome
+where
+    V: NativeVaultStore + ?Sized,
+    S: NativePlatformSealer + ?Sized,
+    P: DesktopNativeSecretSurfacePort + ?Sized,
+{
+    match load_native_encrypted_vault(store) {
+        Ok(Some(_)) => {}
+        Ok(None) => {
+            return root_outcome(DesktopRootConfirmationCommandState::NoPassport, false);
+        }
+        Err(_) => {
+            return root_outcome(DesktopRootConfirmationCommandState::Unavailable, false);
+        }
+    }
+
+    match session_store.state() {
+        Ok(DesktopOperationalVaultSessionState::OperationalUnlocked) => {}
+        Ok(DesktopOperationalVaultSessionState::Locked)
+        | Ok(DesktopOperationalVaultSessionState::Unlocking) => {
+            return root_outcome(
+                DesktopRootConfirmationCommandState::OperationalUnlockRequired,
+                false,
+            );
+        }
+        Err(_) => {
+            return root_outcome(DesktopRootConfirmationCommandState::Unavailable, false);
+        }
+    }
+
+    match public_store.load() {
+        Ok(Some(_)) => {
+            return root_identity_outcome(
+                DesktopRootConfirmationCommandState::IdentityAvailable,
+                false,
+                false,
+                false,
+            );
+        }
+        Ok(None) => {}
+        Err(_) => {
+            return root_outcome(DesktopRootConfirmationCommandState::Unavailable, false);
+        }
+    }
+
+    match secret_surface.request_root_confirmation_pin() {
+        Ok(DesktopNativeSecretSurfaceOutcome::Secret(pin)) => {
+            match finalize_stored_desktop_passport_identity_with_root_pin(
+                store,
+                sealer,
+                public_store,
+                pin.as_slice(),
+            ) {
+                Ok(finalized) => {
+                    let state = if finalized.public_descriptor_written {
+                        DesktopRootConfirmationCommandState::IdentityFinalized
+                    } else {
+                        DesktopRootConfirmationCommandState::IdentityAvailable
+                    };
+
+                    root_identity_outcome(
+                        state,
+                        true,
+                        finalized.recovery_root_unsealed,
+                        finalized.public_descriptor_written,
+                    )
+                }
+                Err(error) => {
+                    let root_was_unsealed = matches!(
+                            error,
+                            DesktopPassportIdentityFinalizationError::
+                                RootPinRejected
+                                | DesktopPassportIdentityFinalizationError::
+                                    RootPinVerificationFailed
+                                | DesktopPassportIdentityFinalizationError::
+                                    IdentityDerivationFailed
+                                | DesktopPassportIdentityFinalizationError::
+                                    PublicDescriptorPersistFailed
+                        );
+
+                    if error == DesktopPassportIdentityFinalizationError::RootPinRejected {
+                        root_identity_outcome(
+                            DesktopRootConfirmationCommandState::ConfirmationRejected,
+                            true,
+                            root_was_unsealed,
+                            false,
+                        )
+                    } else {
+                        root_identity_outcome(
+                            DesktopRootConfirmationCommandState::Unavailable,
+                            true,
+                            root_was_unsealed,
+                            false,
+                        )
+                    }
+                }
+            }
+        }
+        Ok(DesktopNativeSecretSurfaceOutcome::Rejected) => root_outcome(
+            DesktopRootConfirmationCommandState::ConfirmationRejected,
+            true,
+        ),
+        Ok(DesktopNativeSecretSurfaceOutcome::Cancelled) => {
+            root_outcome(DesktopRootConfirmationCommandState::Cancelled, true)
+        }
+        Ok(DesktopNativeSecretSurfaceOutcome::Unavailable)
+        | Err(DesktopNativeSecretSurfaceError::Unavailable) => {
+            root_outcome(DesktopRootConfirmationCommandState::Unavailable, true)
+        }
+    }
+}
+
 fn root_outcome(
     state: DesktopRootConfirmationCommandState,
     native_secure_input_requested: bool,
@@ -130,6 +262,22 @@ fn root_outcome(
     DesktopRootConfirmationCommandOutcome {
         state,
         native_secure_input_requested,
+        recovery_root_unsealed: false,
+        public_descriptor_written: false,
+    }
+}
+
+fn root_identity_outcome(
+    state: DesktopRootConfirmationCommandState,
+    native_secure_input_requested: bool,
+    recovery_root_unsealed: bool,
+    public_descriptor_written: bool,
+) -> DesktopRootConfirmationCommandOutcome {
+    DesktopRootConfirmationCommandOutcome {
+        state,
+        native_secure_input_requested,
+        recovery_root_unsealed,
+        public_descriptor_written,
     }
 }
 

@@ -26,6 +26,8 @@ urlencoding = "2"
 blake3 = "1"
 getrandom = "0.3"
 crablink-native-core = { path = "../../../crates/crablink-native-core" }
+ron-auth = { path = "../../../../RustyOnions/crates/ron-auth" }
+ron-proto = { path = "../../../../RustyOnions/crates/ron-proto" }
 svc-passport = { path = "../../../../RustyOnions/crates/svc-passport", default-features = false, features = ["native-passport"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]

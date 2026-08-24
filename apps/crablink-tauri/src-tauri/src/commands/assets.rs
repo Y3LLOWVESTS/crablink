@@ -140,13 +140,9 @@ pub struct StagedAssetHashResponse {
     pub staged_handle_redacted: String,
 }
 
-fn hash_b3_bytes_inner(
-    request: B3ByteHashRequest,
-) -> Result<B3ByteHashResponse, String> {
+fn hash_b3_bytes_inner(request: B3ByteHashRequest) -> Result<B3ByteHashResponse, String> {
     if request.body_bytes.is_empty() {
-        return Err(
-            "b3 byte hash requires non-empty bytes".to_string(),
-        );
+        return Err("b3 byte hash requires non-empty bytes".to_string());
     }
 
     if request.body_bytes.len() > MAX_ASSET_BYTES_FETCH_BYTES {
@@ -156,20 +152,14 @@ fn hash_b3_bytes_inner(
         ));
     }
 
-    let hash =
-        blake3::hash(&request.body_bytes)
-            .to_hex()
-            .to_string();
+    let hash = blake3::hash(&request.body_bytes).to_hex().to_string();
 
-    let cid =
-        format!("b3:{hash}");
+    let cid = format!("b3:{hash}");
 
     Ok(B3ByteHashResponse {
-        schema:
-            "crablink.tauri.b3-byte-hash-response.v1",
+        schema: "crablink.tauri.b3-byte-hash-response.v1",
 
-        bytes:
-            request.body_bytes.len(),
+        bytes: request.body_bytes.len(),
 
         hash,
 
@@ -178,12 +168,8 @@ fn hash_b3_bytes_inner(
 }
 
 #[tauri::command]
-pub async fn hash_b3_bytes(
-    request: B3ByteHashRequest,
-) -> Result<B3ByteHashResponse, String> {
-    hash_b3_bytes_inner(
-        request,
-    )
+pub async fn hash_b3_bytes(request: B3ByteHashRequest) -> Result<B3ByteHashResponse, String> {
+    hash_b3_bytes_inner(request)
 }
 
 #[tauri::command]
@@ -1234,90 +1220,44 @@ mod phase14a6f1_generic_b3_byte_hash_tests {
 
     #[test]
     fn phase14a6f1_hashes_exact_bytes_into_canonical_b3() {
-        let body_bytes =
-            br#"{"schema":"ron.comment-content.v1","body":"hello"}"#
-                .to_vec();
+        let body_bytes = br#"{"schema":"ron.comment-content.v1","body":"hello"}"#.to_vec();
 
-        let expected_hash =
-            blake3::hash(&body_bytes)
-                .to_hex()
-                .to_string();
+        let expected_hash = blake3::hash(&body_bytes).to_hex().to_string();
 
-        let response =
-            hash_b3_bytes_inner(
-                B3ByteHashRequest {
-                    body_bytes:
-                        body_bytes.clone(),
-                },
-            )
-            .expect(
-                "exact comment bytes should hash",
-            );
+        let response = hash_b3_bytes_inner(B3ByteHashRequest {
+            body_bytes: body_bytes.clone(),
+        })
+        .expect("exact comment bytes should hash");
 
-        assert_eq!(
-            response.schema,
-            "crablink.tauri.b3-byte-hash-response.v1",
-        );
+        assert_eq!(response.schema, "crablink.tauri.b3-byte-hash-response.v1",);
 
-        assert_eq!(
-            response.bytes,
-            body_bytes.len(),
-        );
+        assert_eq!(response.bytes, body_bytes.len(),);
 
-        assert_eq!(
-            response.hash,
-            expected_hash,
-        );
+        assert_eq!(response.hash, expected_hash,);
 
-        assert_eq!(
-            response.cid,
-            format!("b3:{expected_hash}"),
-        );
+        assert_eq!(response.cid, format!("b3:{expected_hash}"),);
     }
 
     #[test]
     fn phase14a6f1_rejects_empty_byte_hash_requests() {
-        let error =
-            hash_b3_bytes_inner(
-                B3ByteHashRequest {
-                    body_bytes:
-                        Vec::new(),
-                },
-            )
-            .expect_err(
-                "empty byte hash requests must fail",
-            );
+        let error = hash_b3_bytes_inner(B3ByteHashRequest {
+            body_bytes: Vec::new(),
+        })
+        .expect_err("empty byte hash requests must fail");
 
-        assert_eq!(
-            error,
-            "b3 byte hash requires non-empty bytes",
-        );
+        assert_eq!(error, "b3 byte hash requires non-empty bytes",);
     }
 
     #[test]
     fn phase14a6f1_rejects_bytes_above_native_fetch_bound() {
-        let body_bytes =
-            vec![
-                0_u8;
-                MAX_ASSET_BYTES_FETCH_BYTES + 1
-            ];
+        let body_bytes = vec![0_u8; MAX_ASSET_BYTES_FETCH_BYTES + 1];
 
-        let error =
-            hash_b3_bytes_inner(
-                B3ByteHashRequest {
-                    body_bytes,
-                },
-            )
-            .expect_err(
-                "oversized byte hash requests must fail",
-            );
+        let error = hash_b3_bytes_inner(B3ByteHashRequest { body_bytes })
+            .expect_err("oversized byte hash requests must fail");
 
         assert!(
-            error.contains(
-                "b3 byte hash exceeds the 12 MiB command bridge limit",
-            ),
+            error.contains("b3 byte hash exceeds the 12 MiB command bridge limit",),
             "unexpected error: {error}",
         );
     }
 }
-

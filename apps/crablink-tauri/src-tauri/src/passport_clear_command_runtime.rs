@@ -1,9 +1,9 @@
-//! RO:WHAT — Removes the desktop Native Passport encrypted vault and drops native-only operational session material.
-//! RO:WHY — Phase 15AA adds explicit local Passport clear/reset behavior without exposing secrets or pretending to mutate backend identity, wallet, ledger, capabilities, or usernames.
-//! RO:INTERACTS — NativeVaultStore removal contract, DesktopOperationalVaultSessionStore, commands/passport.rs, and passport_status.
-//! RO:INVARIANTS — clear locks/drops operational session material before storage removal; removal touches only the encrypted vault store; NotFound maps to NoPassport; failures are redacted.
-//! RO:SECURITY — no PIN, VMK, platform factor, recovery-root material, vault bytes, capability material, wallet, or ledger state is returned or created.
-//! RO:TEST — tests/phase15aa_desktop_clear_command_bridge.rs.
+//! RO:WHAT — Implements local desktop Native Passport clear/reset, including native sessions, platform material, encrypted vault, recovery acknowledgement, and the restart-safe public identity descriptor.
+//! RO:WHY — Phase 15AA owns explicit local custody reset while Physical M1 extends that lifecycle so successful vault removal cannot leave an orphaned public identity descriptor.
+//! RO:INTERACTS — NativeVaultStore removal, operational and pending session stores, DesktopPlatformMaterialClearer, DesktopPublicPassportDescriptorStore, recovery acknowledgement storage, commands/passport.rs, and passport_status.
+//! RO:INVARIANTS — the descriptor-aware live wrapper clears public identity metadata before destructive custody cleanup; descriptor cleanup failure prevents custody mutation; if a later custody step fails the encrypted vault remains and the same descriptor can be deterministically regenerated; NotFound maps to NoPassport and failures remain redacted.
+//! RO:SECURITY — clear accepts no PIN and returns no VMK, platform factor, recovery material, vault bytes, capabilities, username authority, wallet state, or ledger state; descriptor deletion is public-metadata cleanup only.
+//! RO:TEST — tests/phase15aa_desktop_clear_command_bridge.rs, tests/onboarding_phase11c2b_fail_closed_clear_ordering.rs, and tests/physical_m1_authenticated_identity_finalization_runtime.rs.
 
 use svc_passport::native::{
     remove_native_encrypted_vault, NativeVaultRemovalOutcome, NativeVaultStore,
@@ -14,6 +14,7 @@ use crate::{
     passport_pending_operational_runtime::DesktopPendingOperationalSessionStore,
     passport_pending_recovery_runtime::DesktopPendingRecoverySessionStore,
     passport_platform_material_clear_runtime::DesktopPlatformMaterialClearer,
+    passport_public_identity_store::DesktopPublicPassportDescriptorStore,
     passport_recovery_acknowledgement_store::DesktopRecoveryAcknowledgementStorePort,
 };
 
@@ -287,6 +288,52 @@ where
         encrypted_vault_removed,
         recovery_acknowledgement_cleared,
     }
+}
+
+/// Complete local Passport clear including its durable public descriptor.
+///
+/// Public metadata is removed before destructive custody cleanup. If public
+/// descriptor cleanup fails, platform material and the encrypted vault remain
+/// untouched by this wrapper.
+pub fn clear_desktop_native_passport_with_public_identity_platform_material_and_recovery_acknowledgement<
+    V,
+    A,
+    P,
+>(
+    store: &V,
+    session_store: &DesktopOperationalVaultSessionStore,
+    pending_recovery_store: &DesktopPendingRecoverySessionStore,
+    pending_operational_store: &DesktopPendingOperationalSessionStore,
+    platform_material_clearer: &P,
+    acknowledgement_store: &A,
+    public_identity_store: &DesktopPublicPassportDescriptorStore,
+) -> DesktopNativePassportCompleteClearOutcome
+where
+    V: NativeVaultStore + ?Sized,
+    A: DesktopRecoveryAcknowledgementStorePort + ?Sized,
+    P: DesktopPlatformMaterialClearer + ?Sized,
+{
+    if public_identity_store.clear().is_err() {
+        return DesktopNativePassportCompleteClearOutcome {
+            state: DesktopNativePassportClearCommandState::Unavailable,
+            operational_session_dropped: false,
+            pending_recovery_session_dropped: false,
+            pending_operational_session_dropped: false,
+            platform_material_clear_completed: false,
+            platform_material_mutated: false,
+            encrypted_vault_removed: false,
+            recovery_acknowledgement_cleared: false,
+        };
+    }
+
+    clear_desktop_native_passport_with_platform_material_and_recovery_acknowledgement(
+        store,
+        session_store,
+        pending_recovery_store,
+        pending_operational_store,
+        platform_material_clearer,
+        acknowledgement_store,
+    )
 }
 
 #[cfg(test)]

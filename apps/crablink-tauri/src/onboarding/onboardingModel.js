@@ -54,6 +54,7 @@ export const USERNAME_AVAILABILITY =
 export const PASSPORT_STATES = Object.freeze({
   NO_PASSPORT: 'no_passport',
   CREATED_LOCKED: 'created_locked',
+  STORED_LOCKED: 'stored_locked',
   OPERATIONAL_UNLOCKED: 'operational_unlocked',
   UNAVAILABLE: 'unavailable',
 });
@@ -161,6 +162,7 @@ export function isProfileSetupComplete(
 export function isPassportCreated(value) {
   return (
     value === PASSPORT_STATES.CREATED_LOCKED ||
+    value === PASSPORT_STATES.STORED_LOCKED ||
     value ===
       PASSPORT_STATES.OPERATIONAL_UNLOCKED
   );
@@ -588,6 +590,45 @@ export function recordPassportCreatedLocked(
     now,
   );
 }
+
+/// Reconcile onboarding with native custody that already existed before this
+/// onboarding create attempt.
+///
+/// `PASSPORT_CREATED_LOCKED` remains the route-stage label for the next
+/// recovery step; `passportState` records that this vault was discovered
+/// rather than newly created.
+export function recordExistingPassportForOnboarding(
+  state,
+  {
+    operationalUnlocked = false,
+    now,
+  } = {},
+) {
+  requireState(
+    state,
+    [
+      ONBOARDING_STATES
+        .PASSPORT_CREATE_REQUESTED,
+    ],
+    'record existing native Passport',
+  );
+
+  return transition(
+    state,
+    {
+      state:
+        ONBOARDING_STATES
+          .PASSPORT_CREATED_LOCKED,
+      passportState:
+        operationalUnlocked
+          ? PASSPORT_STATES
+              .OPERATIONAL_UNLOCKED
+          : PASSPORT_STATES.STORED_LOCKED,
+    },
+    now,
+  );
+}
+
 
 export function requireRecoveryPhrase(
   state,

@@ -1,8 +1,8 @@
 /**
- * RO:WHAT — Reviews the redacted desktop recovery-ceremony DTO consumed by onboarding.
- * RO:WHY — App Integration; Concerns: DX/SEC/RES; React must advance only after a real native display and acknowledgement.
+ * RO:WHAT — Reviews current or durably acknowledged desktop Native Passport recovery-ceremony truth consumed by onboarding.
+ * RO:WHY — Onboarding must accept a real new native acknowledgement and also resume safely when native storage proves the ceremony was already acknowledged.
  * RO:INTERACTS — passportAdapter.js, RecoveryCeremonyStep.jsx, and the fixed Tauri recovery command.
- * RO:INVARIANTS — success requires shown=true and acknowledged=true; unsafe fields or fake success fail closed.
+ * RO:INVARIANTS — new acknowledgement requires a current native display; persisted acknowledgement requires the strict already_acknowledged redacted posture and never claims a repeat display.
  * RO:METRICS — none.
  * RO:CONFIG — none.
  * RO:SECURITY — returns flags and a bounded redacted fingerprint only; never recovery material, roots, keys, vault bytes, capabilities, wallet state, or ledger state.
@@ -21,6 +21,8 @@ export const ONBOARDING_RECOVERY_CEREMONY_STATUS =
 export const ONBOARDING_RECOVERY_CEREMONY_CODES =
   Object.freeze({
     ACKNOWLEDGED: 'acknowledged',
+    ALREADY_ACKNOWLEDGED:
+      'already_acknowledged',
     CANCELLED: 'cancelled',
     REJECTED: 'rejected',
     NO_PASSPORT: 'no_passport',
@@ -48,6 +50,44 @@ export function reviewOnboardingRecoveryCeremonyDto(
     value.secretMaterialReturned !== true &&
     value.recoveryRootExported !== true &&
     value.walletOrLedgerMutated !== true;
+
+  const persistedAcknowledgement =
+    state ===
+      ONBOARDING_RECOVERY_CEREMONY_CODES
+        .ALREADY_ACKNOWLEDGED &&
+    value.shown === false &&
+    value.acknowledged === true &&
+    value.redacted === true &&
+    value.recoveryFingerprint ===
+      'REDACTED' &&
+    value.nativeSecureSurfaceRequested ===
+      false &&
+    value.wordsReturnedToWebview ===
+      false &&
+    value.secretMaterialReturned ===
+      false &&
+    value.recoveryRootExported ===
+      false &&
+    value.walletOrLedgerMutated ===
+      false;
+
+  if (persistedAcknowledgement) {
+    return freezeOutcome({
+      status:
+        ONBOARDING_RECOVERY_CEREMONY_STATUS
+          .ACKNOWLEDGED,
+      code:
+        ONBOARDING_RECOVERY_CEREMONY_CODES
+          .ALREADY_ACKNOWLEDGED,
+      message:
+        'The native recovery acknowledgement was already stored for this Passport.',
+      retryable: false,
+      shown: false,
+      acknowledged: true,
+      nativeSecureSurfaceRequested: false,
+      fingerprint: 'REDACTED',
+    });
+  }
 
   if (
     state ===
@@ -184,7 +224,7 @@ function failureMessage(code) {
 
     case ONBOARDING_RECOVERY_CEREMONY_CODES
       .REJECTED:
-      return 'The native recovery acknowledgement was rejected.';
+      return 'The native recovery authentication or acknowledgement was rejected.';
 
     case ONBOARDING_RECOVERY_CEREMONY_CODES
       .NO_PASSPORT:

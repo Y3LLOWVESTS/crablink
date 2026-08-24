@@ -2,7 +2,7 @@
  * RO:WHAT — Focused Phase 6A tests for the redacted recovery ceremony contract and fail-closed native bridge.
  * RO:WHY — Proves React cannot receive recovery material and current native runtime cannot claim fake acknowledgement.
  * RO:INTERACTS — onboardingRecoveryCeremony.js, RecoveryCeremonyStep.jsx, passportAdapter.js, tauriPlatform.js, passport.rs, lib.rs, and onboarding storage/model files.
- * RO:INVARIANTS — only shown+acknowledged native truth may advance; current command remains unavailable.
+ * RO:INVARIANTS — only current shown+acknowledged or strict durably acknowledged native truth may advance; rejected and unavailable results remain blocked.
  * RO:TEST — node --test recoveryCeremony.test.mjs.
  */
 

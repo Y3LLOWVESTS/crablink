@@ -1,8 +1,8 @@
 /**
- * RO:WHAT — Focused Phase 5 tests for desktop Native Passport creation from onboarding.
- * RO:WHY — Proves no-argument native create handoff, created-locked acceptance, redacted failures, and absence of React secret input.
+ * RO:WHAT — Focused tests for desktop Native Passport creation and verified existing-custody resume from onboarding.
+ * RO:WHY — Proves create is limited to confirmed absence, verified existing custody may resume, failures stay redacted, and React has no secret input.
  * RO:INTERACTS — PassportCreateStep.jsx, onboardingPassportCreate.js, passportAdapter.js, passport.rs, and OnboardingRouteGate.jsx.
- * RO:INVARIANTS — only created_locked advances; React never receives or supplies PIN/secret/root material.
+ * RO:INVARIANTS — fresh creation advances only from created_locked; verified existing locked/unlocked custody may resume without creation; React never receives or supplies PIN/secret/root material.
  * RO:TEST — node --test passportCreateStep.test.mjs.
  */
 

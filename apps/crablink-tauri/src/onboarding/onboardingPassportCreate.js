@@ -1,12 +1,12 @@
 /**
- * RO:WHAT — Pure redacted review of the desktop Native Passport create result used by onboarding.
- * RO:WHY — App Integration; Concerns: DX/SEC/RES; onboarding must advance only from the accepted Phase 15 created-and-locked result.
- * RO:INTERACTS — passportAdapter.js and PassportCreateStep.jsx.
- * RO:INVARIANTS — only created_locked with native secure input and locked-vault mutation succeeds; all other outcomes become bounded redacted failures.
+ * RO:WHAT — Pure redacted review of Native Passport creation and pre-create native custody presence used by onboarding.
+ * RO:WHY — Onboarding must create only when native status confirms absence and must safely resume when a real local Passport already exists.
+ * RO:INTERACTS — passportAdapter.js, PassportCreateStep.jsx, and onboardingModel.js.
+ * RO:INVARIANTS — fresh creation succeeds only from created_locked; existing custody requires read-only native status proof; malformed or unavailable status never authorizes creation or reconciliation.
  * RO:METRICS — none.
  * RO:CONFIG — none.
  * RO:SECURITY — raw native errors, PINs, secrets, vault material, roots, keys, capabilities, wallet state, and ledger state are never returned.
- * RO:TEST — passportCreateStep.test.mjs.
+ * RO:TEST — passportCreateStep.test.mjs and physicalM1ExistingPassportOnboardingReconciliation.test.mjs.
  */
 
 export const ONBOARDING_PASSPORT_CREATE_SCHEMA =
@@ -15,12 +15,14 @@ export const ONBOARDING_PASSPORT_CREATE_SCHEMA =
 export const ONBOARDING_PASSPORT_CREATE_STATUS =
   Object.freeze({
     CREATED_LOCKED: 'created_locked',
+    EXISTING_CONFIRMED: 'existing_confirmed',
     FAILURE: 'failure',
   });
 
 export const ONBOARDING_PASSPORT_CREATE_CODES =
   Object.freeze({
     CREATED_LOCKED: 'created_locked',
+    EXISTING_CONFIRMED: 'existing_confirmed',
     CANCELLED: 'cancelled',
     UNAVAILABLE: 'unavailable',
     CREATE_REJECTED: 'create_rejected',
@@ -29,6 +31,146 @@ export const ONBOARDING_PASSPORT_CREATE_CODES =
     CREATE_FAILED: 'create_failed',
     INTERRUPTED: 'interrupted',
   });
+
+export const ONBOARDING_NATIVE_PASSPORT_PRESENCE =
+  Object.freeze({
+    ABSENT: 'absent',
+    STORED_LOCKED: 'stored_locked',
+    OPERATIONAL_UNLOCKED:
+      'operational_unlocked',
+    UNAVAILABLE: 'unavailable',
+  });
+
+export function reviewOnboardingNativePassportPresence(
+  statusDto,
+) {
+  const value =
+    statusDto &&
+    typeof statusDto === 'object' &&
+    !Array.isArray(statusDto)
+      ? statusDto
+      : {};
+
+  const normalizedState =
+    normalizeCommandState(
+      value.state,
+    );
+
+  const runtimeReadyMatchesState =
+    (normalizedState ===
+      'no_passport' &&
+      value.nativeRuntimeReady ===
+        false) ||
+    ((normalizedState ===
+      'locked' ||
+      normalizedState ===
+        'stored_locked') &&
+      value.nativeRuntimeReady ===
+        false) ||
+    (normalizedState ===
+      'operational_unlocked' &&
+      value.nativeRuntimeReady ===
+        true);
+
+  const safeReadOnlyStatus =
+    runtimeReadyMatchesState &&
+    value.redacted === true &&
+    value.readOnly === true &&
+    value.unlockPerformed === false &&
+    value.platformSealerAccessed === false &&
+    value.runtimeIoPerformed === false &&
+    value.storageMutated === false &&
+    value.walletOrLedgerMutated === false;
+
+  if (!safeReadOnlyStatus) {
+    return freezePresence({
+      state:
+        ONBOARDING_NATIVE_PASSPORT_PRESENCE
+          .UNAVAILABLE,
+      existing: false,
+      safeToCreate: false,
+      operationalUnlocked: false,
+    });
+  }
+
+  switch (normalizedState) {
+    case 'no_passport':
+      return freezePresence({
+        state:
+          ONBOARDING_NATIVE_PASSPORT_PRESENCE
+            .ABSENT,
+        existing: false,
+        safeToCreate: true,
+        operationalUnlocked: false,
+      });
+
+    case 'locked':
+    case 'stored_locked':
+      return freezePresence({
+        state:
+          ONBOARDING_NATIVE_PASSPORT_PRESENCE
+            .STORED_LOCKED,
+        existing: true,
+        safeToCreate: false,
+        operationalUnlocked: false,
+      });
+
+    case 'operational_unlocked':
+      return freezePresence({
+        state:
+          ONBOARDING_NATIVE_PASSPORT_PRESENCE
+            .OPERATIONAL_UNLOCKED,
+        existing: true,
+        safeToCreate: false,
+        operationalUnlocked: true,
+      });
+
+    default:
+      return freezePresence({
+        state:
+          ONBOARDING_NATIVE_PASSPORT_PRESENCE
+            .UNAVAILABLE,
+        existing: false,
+        safeToCreate: false,
+        operationalUnlocked: false,
+      });
+  }
+}
+
+export function createExistingPassportConfirmedOutcome({
+  operationalUnlocked = false,
+} = {}) {
+  return freezeOutcome({
+    status:
+      ONBOARDING_PASSPORT_CREATE_STATUS
+        .EXISTING_CONFIRMED,
+    code:
+      ONBOARDING_PASSPORT_CREATE_CODES
+        .EXISTING_CONFIRMED,
+    message:
+      operationalUnlocked
+        ? 'An existing local Native Passport was confirmed and is already operationally unlocked.'
+        : 'An existing local Native Passport was confirmed without creating a second Passport.',
+    retryable: false,
+    nativeSecureInputRequested: false,
+  });
+}
+
+function freezePresence({
+  state,
+  existing,
+  safeToCreate,
+  operationalUnlocked,
+}) {
+  return Object.freeze({
+    state,
+    existing: existing === true,
+    safeToCreate:
+      safeToCreate === true,
+    operationalUnlocked:
+      operationalUnlocked === true,
+  });
+}
 
 export function reviewOnboardingPassportCreateResult(
   commandDto,

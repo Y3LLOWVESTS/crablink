@@ -704,6 +704,8 @@ dependencies = [
  "crablink-native-core",
  "getrandom 0.3.4",
  "reqwest 0.12.28",
+ "ron-auth",
+ "ron-proto",
  "secret-service",
  "security-framework",
  "security-framework-sys",
@@ -1057,6 +1059,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115531babc129696a58c64a4fef0a8bf9e9698629fb97e9e40767d235cfbcd53"
 dependencies = [
  "pkcs8",
+ "serde",
  "signature",
 ]
 
@@ -3557,6 +3560,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "ron-auth"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "blake3",
+ "ed25519-dalek",
+ "ipnet",
+ "ron-proto",
+ "serde",
+ "serde_bytes",
+ "serde_cbor",
+ "smallvec",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "ron-kernel"
 version = "0.1.0"
 dependencies = [
@@ -3638,6 +3657,7 @@ dependencies = [
 name = "ron-proto"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "bytes",
  "serde",
  "serde_bytes",
@@ -4251,14 +4271,18 @@ dependencies = [
  "base64 0.22.1",
  "blake3",
  "chacha20poly1305",
+ "ed25519-dalek",
  "hkdf",
+ "hmac",
  "http",
  "hyper",
  "hyper-util",
  "once_cell",
  "parking_lot",
  "prometheus",
+ "ron-auth",
  "ron-kernel",
+ "ron-kms",
  "ron-naming",
  "ron-policy",
  "ron-proto",

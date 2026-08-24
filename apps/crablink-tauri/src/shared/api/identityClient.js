@@ -217,8 +217,17 @@ export function normalizeProfileClaimRequest(payload = {}, gateway = {}) {
     payload.passportSubject,
     gateway.passportSubject,
     gateway.passport_subject,
-    DEFAULT_PASSPORT_SUBJECT,
   );
+  if (
+    !passportSubject ||
+    passportSubject === DEFAULT_PASSPORT_SUBJECT
+  ) {
+    throw makeIdentityError(
+      'Public profile claim requires a real Native Passport identity.',
+      'missing_passport_subject',
+    );
+  }
+
   const requestedUsername = normalizeHandle(
     stringValue(
       payload.requested_username,

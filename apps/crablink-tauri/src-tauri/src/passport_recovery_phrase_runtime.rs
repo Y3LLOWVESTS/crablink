@@ -1,12 +1,12 @@
-//! RO:WHAT — Loads the stored desktop Passport vault, unseals only its recovery-root factor, derives the canonical recovery phrase, and hands it directly to the native recovery surface.
-//! RO:WHY — Onboarding Phase 6 requires a real native recovery ceremony without placing phrase words, entropy, root material, or platform factors in React/WebView custody.
-//! RO:INTERACTS — svc-passport platform-bound vault codec, NativeVaultStore, NativePlatformSealer, recovery mnemonic derivation, and DesktopNativeSecretSurfacePort.
-//! RO:INVARIANTS — absent vault does not request the surface; only RecoveryRoot is unsealed; phrase material remains inside the zeroizing svc-passport callback; the returned outcome contains only state, booleans, and an optional redacted fingerprint.
-//! RO:SECURITY — no Tauri command, serialization, logging, clipboard use, storage write, root export, PIN handling, capability issuance, username mutation, wallet mutation, or ledger mutation.
-//! RO:TEST — focused unit tests below; public command and durable one-time acknowledgement wiring remain later work.
+//! RO:WHAT — Runs one-time desktop recovery from immediate native memory or a PIN-authenticated stored RecoveryRoot after restart.
+//! RO:WHY — Physical M1 must let an existing Passport owner record the real recovery phrase after an interrupted onboarding flow without recreating custody or exposing secrets to React.
+//! RO:INTERACTS — svc-passport vault crypto and recovery derivation, NativeVaultStore, NativePlatformSealer, DesktopNativeSecretSurfacePort, pending recovery memory, and durable recovery acknowledgement.
+//! RO:INVARIANTS — fresh-create recovery keeps the pending-memory fast path with no platform unseal; restart recovery checks durable acknowledgement first and requires verified root-PIN authority before first phrase display; only RecoveryRoot may be unsealed.
+//! RO:SECURITY — PIN and phrase remain native-only; no PIN or phrase crosses WebView; RecoveryRoot is transient, verified root VMK is discarded by svc-passport, and no root export, capability, username, wallet, or ledger authority is added.
+//! RO:TEST — focused unit tests below, Phase 11B command-path tests, public command wiring, and recoveryCeremony.test.mjs.
 
 use svc_passport::native::{
-    decode_native_platform_bound_vault, derive_native_recovery_mnemonic_indices,
+    decode_native_platform_bound_vault_versioned, derive_native_recovery_mnemonic_indices,
     load_native_encrypted_vault, unseal_native_secret, with_native_recovery_mnemonic_phrase,
     NativePlatformSealer, NativeSecureCompartment, NativeVaultStore,
 };
@@ -61,8 +61,10 @@ where
         return Ok(no_passport_outcome());
     };
 
-    let platform_bound_vault = decode_native_platform_bound_vault(&encrypted_vault)
+    let versioned_vault = decode_native_platform_bound_vault_versioned(&encrypted_vault)
         .map_err(|_| DesktopRecoveryPhraseRuntimeError::VaultDecodeFailed)?;
+
+    let platform_bound_vault = versioned_vault.base_v1();
 
     let recovery_factor = unseal_native_secret(
         sealer,
@@ -128,6 +130,7 @@ pub enum DesktopRecoveryCeremonyOnceState {
     NoPassport,
     Acknowledged,
     AlreadyAcknowledged,
+    Rejected,
     Cancelled,
     Unavailable,
 }
@@ -175,9 +178,11 @@ where
         return Ok(no_passport_ceremony_once_outcome());
     };
 
-    let platform_bound_vault =
-        svc_passport::native::decode_native_platform_bound_vault(&encrypted_vault)
+    let versioned_vault =
+        svc_passport::native::decode_native_platform_bound_vault_versioned(&encrypted_vault)
             .map_err(|_| DesktopRecoveryCeremonyOnceError::VaultDecodeFailed)?;
+
+    let platform_bound_vault = versioned_vault.base_v1();
 
     let recovery_factor = svc_passport::native::unseal_native_secret(
         sealer,
@@ -210,19 +215,6 @@ where
         .has_pending_recovery_factor()
         .map_err(|_| DesktopRecoveryCeremonyOnceError::PendingRecoverySessionFailed)?;
 
-    #[cfg(debug_assertions)]
-    {
-        eprintln!("RECOVERY_PROCESS_ID={}", std::process::id());
-        eprintln!(
-            "RECOVERY_PENDING_PRESENT={}",
-            if _pending_present_at_start {
-                "YES"
-            } else {
-                "NO"
-            },
-        );
-    }
-
     let Some(encrypted_vault) = svc_passport::native::load_native_encrypted_vault(store)
         .map_err(|_| DesktopRecoveryCeremonyOnceError::VaultLoadFailed)?
     else {
@@ -230,16 +222,10 @@ where
             .clear_pending_recovery_factor()
             .map_err(|_| DesktopRecoveryCeremonyOnceError::PendingRecoverySessionFailed)?;
 
-        #[cfg(debug_assertions)]
-        {
-            eprintln!("RECOVERY_PENDING_USED=NO");
-            eprintln!("RECOVERY_PLATFORM_UNSEAL_ATTEMPTED=NO");
-        }
-
         return Ok(no_passport_ceremony_once_outcome());
     };
 
-    svc_passport::native::decode_native_platform_bound_vault(&encrypted_vault)
+    svc_passport::native::decode_native_platform_bound_vault_versioned(&encrypted_vault)
         .map_err(|_| DesktopRecoveryCeremonyOnceError::VaultDecodeFailed)?;
 
     let pending_factor = pending_recovery_session
@@ -247,12 +233,6 @@ where
         .map_err(|_| DesktopRecoveryCeremonyOnceError::PendingRecoverySessionFailed)?;
 
     if let Some(recovery_factor) = pending_factor {
-        #[cfg(debug_assertions)]
-        {
-            eprintln!("RECOVERY_PENDING_USED=YES");
-            eprintln!("RECOVERY_PLATFORM_UNSEAL_ATTEMPTED=NO");
-        }
-
         let outcome = run_desktop_recovery_ceremony_for_factor(
             &recovery_factor,
             surface,
@@ -287,13 +267,6 @@ where
             }
         }
     } else {
-        #[cfg(debug_assertions)]
-        {
-            eprintln!("RECOVERY_PENDING_USED=NO");
-            eprintln!("RECOVERY_PLATFORM_UNSEAL_ATTEMPTED=NO");
-            eprintln!("RECOVERY_INTERRUPTED_HANDOFF=YES");
-        }
-
         Ok(DesktopRecoveryCeremonyOnceOutcome {
             state: DesktopRecoveryCeremonyOnceState::Unavailable,
             shown: false,
@@ -303,6 +276,189 @@ where
             acknowledgement_marker_written: false,
             repeat_display_rejected: false,
         })
+    }
+}
+
+pub fn run_desktop_recovery_ceremony_once_with_pending_or_authenticated_stored_recovery<
+    S,
+    V,
+    P,
+    A,
+>(
+    store: &V,
+    sealer: &S,
+    surface: &P,
+    acknowledgement_store: &A,
+    pending_recovery_session:
+        &crate::passport_pending_recovery_runtime::
+            DesktopPendingRecoverySessionStore,
+) -> Result<DesktopRecoveryCeremonyOnceOutcome, DesktopRecoveryCeremonyOnceError>
+where
+    S: svc_passport::native::NativePlatformSealer + ?Sized,
+    V: svc_passport::native::NativeVaultStore + ?Sized,
+    P: crate::passport_operational_command_runtime::DesktopNativeSecretSurfacePort + ?Sized,
+    A: crate::passport_recovery_acknowledgement_store::DesktopRecoveryAcknowledgementStorePort
+        + ?Sized,
+{
+    let pending_present = pending_recovery_session
+        .has_pending_recovery_factor()
+        .map_err(|_| DesktopRecoveryCeremonyOnceError::PendingRecoverySessionFailed)?;
+
+    if pending_present {
+        return run_desktop_recovery_ceremony_once_with_pending_recovery(
+            store,
+            sealer,
+            surface,
+            acknowledgement_store,
+            pending_recovery_session,
+        );
+    }
+
+    let Some(encrypted_vault) = svc_passport::native::load_native_encrypted_vault(store)
+        .map_err(|_| DesktopRecoveryCeremonyOnceError::VaultLoadFailed)?
+    else {
+        return Ok(no_passport_ceremony_once_outcome());
+    };
+
+    let versioned_vault =
+        svc_passport::native::decode_native_platform_bound_vault_versioned(&encrypted_vault)
+            .map_err(|_| DesktopRecoveryCeremonyOnceError::VaultDecodeFailed)?;
+
+    let platform_bound_vault = versioned_vault.base_v1();
+
+    let recovery_factor = svc_passport::native::unseal_native_secret(
+        sealer,
+        platform_bound_vault.platform_family(),
+        svc_passport::native::NativeSecureCompartment::RecoveryRoot,
+        platform_bound_vault.recovery_root_factor(),
+    )
+    .map_err(|_| DesktopRecoveryCeremonyOnceError::RecoveryFactorUnsealFailed)?;
+
+    if recovery_acknowledgement_already_present(&recovery_factor, acknowledgement_store)? {
+        return Ok(DesktopRecoveryCeremonyOnceOutcome {
+            state: DesktopRecoveryCeremonyOnceState::AlreadyAcknowledged,
+            shown: false,
+            acknowledged: true,
+            recovery_fingerprint_present: true,
+            native_secure_surface_requested: false,
+            acknowledgement_marker_written: false,
+            repeat_display_rejected: true,
+        });
+    }
+
+    let root_pin =
+        match surface
+            .request_root_confirmation_pin()
+        {
+            Ok(
+                crate::passport_operational_command_runtime::
+                    DesktopNativeSecretSurfaceOutcome::
+                        Secret(pin),
+            ) => pin,
+
+            Ok(
+                crate::passport_operational_command_runtime::
+                    DesktopNativeSecretSurfaceOutcome::
+                        Rejected,
+            ) => {
+                return Ok(
+                    restart_recovery_input_outcome(
+                        DesktopRecoveryCeremonyOnceState::
+                            Rejected,
+                    ),
+                );
+            }
+
+            Ok(
+                crate::passport_operational_command_runtime::
+                    DesktopNativeSecretSurfaceOutcome::
+                        Cancelled,
+            ) => {
+                return Ok(
+                    restart_recovery_input_outcome(
+                        DesktopRecoveryCeremonyOnceState::
+                            Cancelled,
+                    ),
+                );
+            }
+
+            Ok(
+                crate::passport_operational_command_runtime::
+                    DesktopNativeSecretSurfaceOutcome::
+                        Unavailable,
+            )
+            | Err(_) => {
+                return Ok(
+                    restart_recovery_input_outcome(
+                        DesktopRecoveryCeremonyOnceState::
+                            Unavailable,
+                    ),
+                );
+            }
+        };
+
+    match svc_passport::native::verify_native_recovery_root_pin(
+        platform_bound_vault.wrapped_keys().recovery_root(),
+        root_pin.as_slice(),
+        &recovery_factor,
+    ) {
+        Ok(()) => {}
+
+        Err(svc_passport::native::NativeVaultCryptoError::AuthenticationFailed)
+        | Err(svc_passport::native::NativeVaultCryptoError::InvalidPinLength { .. }) => {
+            return Ok(restart_recovery_input_outcome(
+                DesktopRecoveryCeremonyOnceState::Rejected,
+            ));
+        }
+
+        Err(_) => {
+            return Ok(restart_recovery_input_outcome(
+                DesktopRecoveryCeremonyOnceState::Unavailable,
+            ));
+        }
+    }
+
+    match run_desktop_recovery_ceremony_for_factor(&recovery_factor, surface, acknowledgement_store)
+    {
+        Ok(outcome) => Ok(outcome),
+
+        Err(_) => Ok(restart_recovery_input_outcome(
+            DesktopRecoveryCeremonyOnceState::Unavailable,
+        )),
+    }
+}
+
+fn recovery_acknowledgement_already_present<A>(
+    recovery_factor: &svc_passport::native::NativeSecretBytes,
+    acknowledgement_store: &A,
+) -> Result<bool, DesktopRecoveryCeremonyOnceError>
+where
+    A: crate::passport_recovery_acknowledgement_store::DesktopRecoveryAcknowledgementStorePort
+        + ?Sized,
+{
+    let indices = svc_passport::native::derive_native_recovery_mnemonic_indices(recovery_factor)
+        .map_err(|_| DesktopRecoveryCeremonyOnceError::MnemonicIndexDerivationFailed)?;
+
+    let result = svc_passport::native::with_native_recovery_mnemonic_phrase(
+        &indices,
+        |_phrase, fingerprint| acknowledgement_store.is_recovery_acknowledged(fingerprint),
+    )
+    .map_err(|_| DesktopRecoveryCeremonyOnceError::MnemonicWordMappingFailed)?;
+
+    result.map_err(|_| DesktopRecoveryCeremonyOnceError::AcknowledgementReadFailed)
+}
+
+fn restart_recovery_input_outcome(
+    state: DesktopRecoveryCeremonyOnceState,
+) -> DesktopRecoveryCeremonyOnceOutcome {
+    DesktopRecoveryCeremonyOnceOutcome {
+        state,
+        shown: false,
+        acknowledged: false,
+        recovery_fingerprint_present: false,
+        native_secure_surface_requested: true,
+        acknowledgement_marker_written: false,
+        repeat_display_rejected: false,
     }
 }
 
@@ -740,6 +896,54 @@ mod tests {
             *self.fingerprint.lock().expect("fingerprint lock") = Some(fingerprint.to_owned());
 
             Ok(self.outcome)
+        }
+    }
+
+    struct AuthenticatedStoredRecoverySurface {
+        pin: Vec<u8>,
+        phrase_outcome: DesktopNativeRecoveryPhraseOutcome,
+        pin_calls: AtomicUsize,
+        phrase_calls: AtomicUsize,
+    }
+
+    impl AuthenticatedStoredRecoverySurface {
+        fn new(pin: &[u8], phrase_outcome: DesktopNativeRecoveryPhraseOutcome) -> Self {
+            Self {
+                pin: pin.to_vec(),
+                phrase_outcome,
+                pin_calls: AtomicUsize::new(0),
+                phrase_calls: AtomicUsize::new(0),
+            }
+        }
+
+        fn pin_calls(&self) -> usize {
+            self.pin_calls.load(Ordering::SeqCst)
+        }
+
+        fn phrase_calls(&self) -> usize {
+            self.phrase_calls.load(Ordering::SeqCst)
+        }
+    }
+
+    impl DesktopNativeSecretSurfacePort for AuthenticatedStoredRecoverySurface {
+        fn request_operational_pin(
+            &self,
+        ) -> Result<DesktopNativeSecretSurfaceOutcome, DesktopNativeSecretSurfaceError> {
+            self.pin_calls.fetch_add(1, Ordering::SeqCst);
+
+            Ok(DesktopNativeSecretSurfaceOutcome::Secret(
+                NativeSecretBytes::new(self.pin.clone()).expect("bounded stored recovery PIN"),
+            ))
+        }
+
+        fn show_recovery_phrase(
+            &self,
+            _phrase: &str,
+            _fingerprint: &str,
+        ) -> Result<DesktopNativeRecoveryPhraseOutcome, DesktopNativeSecretSurfaceError> {
+            self.phrase_calls.fetch_add(1, Ordering::SeqCst);
+
+            Ok(self.phrase_outcome)
         }
     }
 
@@ -1394,6 +1598,176 @@ mod tests {
         println!("ROOT_EXPORT=NO");
 
         println!("WALLET_OR_LEDGER_MUTATION=NO");
+    }
+
+    #[test]
+    fn physical_m1_restart_recovery_authenticates_stored_root_before_phrase_and_resumes_ack() {
+        let (store, sealer) = populated_vault();
+
+        let pending = DesktopPendingRecoverySessionStore::default();
+
+        let surface = AuthenticatedStoredRecoverySurface::new(
+            TEST_PIN,
+            DesktopNativeRecoveryPhraseOutcome::Acknowledged,
+        );
+
+        let acknowledgement_store = MemoryRecoveryAcknowledgementStore::available();
+
+        let first =
+            run_desktop_recovery_ceremony_once_with_pending_or_authenticated_stored_recovery(
+                &store,
+                &sealer,
+                &surface,
+                &acknowledgement_store,
+                &pending,
+            )
+            .expect("authenticated stored recovery");
+
+        assert_eq!(first.state, DesktopRecoveryCeremonyOnceState::Acknowledged,);
+
+        assert!(first.shown);
+        assert!(first.acknowledged);
+
+        assert_eq!(surface.pin_calls(), 1);
+        assert_eq!(surface.phrase_calls(), 1);
+
+        assert_eq!(acknowledgement_store.write_calls(), 1,);
+
+        let second =
+            run_desktop_recovery_ceremony_once_with_pending_or_authenticated_stored_recovery(
+                &store,
+                &sealer,
+                &surface,
+                &acknowledgement_store,
+                &pending,
+            )
+            .expect("durably acknowledged stored recovery");
+
+        assert_eq!(
+            second.state,
+            DesktopRecoveryCeremonyOnceState::AlreadyAcknowledged,
+        );
+
+        assert!(!second.shown);
+        assert!(second.acknowledged);
+
+        assert!(!second.native_secure_surface_requested,);
+
+        assert!(second.repeat_display_rejected);
+
+        assert_eq!(
+            surface.pin_calls(),
+            1,
+            "durable acknowledgement must avoid another root PIN prompt",
+        );
+
+        assert_eq!(
+            surface.phrase_calls(),
+            1,
+            "durable acknowledgement must avoid repeat phrase display",
+        );
+
+        assert_eq!(acknowledgement_store.write_calls(), 1,);
+
+        assert_eq!(
+            sealer.unsealed_compartments(),
+            vec![
+                NativeSecureCompartment::RecoveryRoot,
+                NativeSecureCompartment::RecoveryRoot,
+            ],
+        );
+    }
+
+    #[test]
+    fn physical_m1_restart_recovery_rejects_wrong_root_pin_without_phrase() {
+        let (store, sealer) = populated_vault();
+
+        let pending = DesktopPendingRecoverySessionStore::default();
+
+        let surface = AuthenticatedStoredRecoverySurface::new(
+            b"phase6b2b2-wrong-pin",
+            DesktopNativeRecoveryPhraseOutcome::Acknowledged,
+        );
+
+        let acknowledgement_store = MemoryRecoveryAcknowledgementStore::available();
+
+        let outcome =
+            run_desktop_recovery_ceremony_once_with_pending_or_authenticated_stored_recovery(
+                &store,
+                &sealer,
+                &surface,
+                &acknowledgement_store,
+                &pending,
+            )
+            .expect("wrong root PIN must fail closed");
+
+        assert_eq!(outcome.state, DesktopRecoveryCeremonyOnceState::Rejected,);
+
+        assert!(!outcome.shown);
+        assert!(!outcome.acknowledged);
+
+        assert!(outcome.native_secure_surface_requested,);
+
+        assert_eq!(surface.pin_calls(), 1);
+        assert_eq!(surface.phrase_calls(), 0);
+
+        assert_eq!(acknowledgement_store.write_calls(), 0,);
+
+        assert_eq!(
+            sealer.unsealed_compartments(),
+            vec![NativeSecureCompartment::RecoveryRoot,],
+        );
+    }
+
+    #[test]
+    fn physical_m1_restart_recovery_preserves_pending_memory_fast_path_without_pin_or_unseal() {
+        let random = DeterministicRandomSource::new();
+
+        let store = MemoryVaultStore::default();
+
+        let sealer = MemoryPlatformSealer::new(NativePlatformFamily::MacosKeychain);
+
+        let pending = DesktopPendingRecoverySessionStore::default();
+
+        create_desktop_native_passport_vault_with_random_and_recovery_handoff(
+            &random,
+            &store,
+            &sealer,
+            TEST_PIN,
+            |recovery_factor| {
+                pending.stage_recovery_factor(recovery_factor).map_err(|_| {
+                    DesktopNativePassportVaultCreateError::PendingRecoverySessionFailure
+                })
+            },
+        )
+        .expect("create vault with pending recovery");
+
+        let surface =
+            RecordingRecoverySurface::new(DesktopNativeRecoveryPhraseOutcome::Acknowledged);
+
+        let acknowledgement_store = MemoryRecoveryAcknowledgementStore::available();
+
+        let outcome =
+            run_desktop_recovery_ceremony_once_with_pending_or_authenticated_stored_recovery(
+                &store,
+                &sealer,
+                &surface,
+                &acknowledgement_store,
+                &pending,
+            )
+            .expect("pending-memory recovery");
+
+        assert_eq!(
+            outcome.state,
+            DesktopRecoveryCeremonyOnceState::Acknowledged,
+        );
+
+        assert_eq!(surface.calls(), 1);
+
+        assert!(
+            sealer.unsealed_compartments().is_empty(),
+            "fresh-create recovery must preserve the no-platform-unseal fast path",
+        );
     }
 
     #[test]

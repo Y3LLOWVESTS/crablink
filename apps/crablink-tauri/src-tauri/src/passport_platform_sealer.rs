@@ -26,8 +26,7 @@ pub const NATIVE_PASSPORT_PHASE15L_LABEL: &str =
 
 pub const PHASE15L_KEYCHAIN_SERVICE: &str = "com.rustyonions.crablink.native-passport.v1";
 
-pub const PHASE21_AB_B_KEYCHAIN_SERVICE: &str =
-    "com.rustyonions.crablink.ab-b.native-passport.v1";
+pub const PHASE21_AB_B_KEYCHAIN_SERVICE: &str = "com.rustyonions.crablink.ab-b.native-passport.v1";
 
 pub fn active_macos_keychain_service() -> &'static str {
     match option_env!("CRABLINK_DESKTOP_AB_VARIANT") {
@@ -176,9 +175,10 @@ impl NativePlatformSealer for MacosKeychainPlatformSealer {
 
 impl DesktopPlatformMaterialClearer for MacosKeychainPlatformSealer {
     fn clear_platform_material(&self) -> DesktopPlatformMaterialClearReview {
-        let recovery_root = self
-            .backend
-            .delete_secret(active_macos_keychain_service(), PHASE15L_RECOVERY_ROOT_ACCOUNT);
+        let recovery_root = self.backend.delete_secret(
+            active_macos_keychain_service(),
+            PHASE15L_RECOVERY_ROOT_ACCOUNT,
+        );
         let device_key = self
             .backend
             .delete_secret(active_macos_keychain_service(), PHASE15L_DEVICE_KEY_ACCOUNT);

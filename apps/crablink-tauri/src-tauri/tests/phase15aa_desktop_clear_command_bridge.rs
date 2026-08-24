@@ -362,13 +362,14 @@ fn phase15aa_posture_and_live_command_surface_are_redacted() {
         .expect("bounded passport_clear function");
 
     for required in [
-        "clear_desktop_native_passport_with_platform_material_and_recovery_acknowledgement",
+        "clear_desktop_native_passport_with_public_identity_platform_material_and_recovery_acknowledgement",
         "&state.passport_vault_store",
         "&state.passport_operational_session",
         "&state.passport_pending_recovery_session",
         "&state.passport_pending_operational_session",
         "passport_platform_material_clearer",
         "passport_recovery_acknowledgement_store",
+        "passport_public_identity_store",
         "schema: PASSPORT_CLEAR_DTO_SCHEMA_V1",
         "command_name: PASSPORT_CLEAR_COMMAND",
         "ONBOARDING_PHASE11C2B_PLATFORM_SECRET_CLEAR_LABEL",

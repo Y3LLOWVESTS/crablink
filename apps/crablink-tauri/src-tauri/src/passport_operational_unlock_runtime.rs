@@ -1,16 +1,17 @@
 //! RO:WHAT — Loads a stored platform-bound Native Passport vault, unseals only its operational factor, unlocks its operational VMK, and retains that VMK in native-only session custody.
 //! RO:WHY — Phase 15S establishes the real locked-to-operational-unlocked transition before exposing a bounded Tauri command.
-//! RO:INTERACTS — NativeVaultStore, NativePlatformSealer, Phase 15R platform-bound vault envelope, Phase 15Q operational unlock, and AppState.
-//! RO:INVARIANTS — only the device/operational factor is unsealed; recovery-root material remains sealed; one unlock attempt may run at a time; failed attempts restore Locked state; lock drops the zeroizing VMK.
-//! RO:SECURITY — no PIN persistence, root unlock, secret serialization, frontend secret return, capability issuance, signing, wallet mutation, ledger mutation, or logging.
-//! RO:TEST — tests/phase15s_operational_unseal_and_locked_vault_unlock_runtime.rs.
+//! RO:INTERACTS — NativeVaultStore, NativePlatformSealer, versioned V1/V2 platform-bound vault decoding, Phase 15Q operational unlock, AppState, and the crate-private Physical M1 V1-to-V2 migration bridge.
+//! RO:INVARIANTS — only the device/operational factor is unsealed; recovery-root material remains sealed; one unlock attempt may run at a time; failed attempts restore Locked state; lock drops the zeroizing VMK; migration and DeviceSession signing may borrow the VMK only through purpose-specific crate-private synchronous closures.
+//! RO:SECURITY — no PIN persistence, root unlock, VMK export, secret serialization, frontend secret return, capability issuance, generic signing, wallet mutation, ledger mutation, or logging.
+//! RO:TEST — tests/phase15s_operational_unseal_and_locked_vault_unlock_runtime.rs plus physical_m1_device_session_signing_boundary.rs.
 
 use std::{fmt, sync::Mutex};
 
 use svc_passport::native::{
-    decode_native_platform_bound_vault, load_native_encrypted_vault, unlock_native_operational_vmk,
-    unseal_native_secret, NativePlatformFamily, NativePlatformSealer, NativeSecretBytes,
-    NativeSecureCompartment, NativeVaultStore, PHASE6B_MAX_PIN_LENGTH, PHASE6B_MIN_PIN_LENGTH,
+    decode_native_platform_bound_vault_versioned, load_native_encrypted_vault,
+    unlock_native_operational_vmk, unseal_native_secret, NativePlatformFamily,
+    NativePlatformSealer, NativeSecretBytes, NativeSecureCompartment, NativeVaultStore,
+    PHASE6B_MAX_PIN_LENGTH, PHASE6B_MIN_PIN_LENGTH,
 };
 
 pub const NATIVE_PASSPORT_PHASE15S_LABEL: &str =
@@ -170,6 +171,59 @@ impl DesktopOperationalVaultSessionStore {
         })
     }
 
+    /// Borrow the operational VMK only for the crate-owned synchronous
+    /// V1-to-V2 migration path.
+    ///
+    /// This deliberately does not return, clone, serialize, or otherwise
+    /// export the VMK. The supplied operation completes while the session
+    /// mutex is held, and this API accepts no async boundary.
+    pub(crate) fn with_operational_vmk_for_vault_migration<T>(
+        &self,
+        operation: impl FnOnce(&NativeSecretBytes) -> T,
+    ) -> Result<T, DesktopOperationalUnlockError> {
+        let slot = self
+            .slot
+            .lock()
+            .map_err(|_| DesktopOperationalUnlockError::SessionUnavailable)?;
+
+        let session = match &*slot {
+            DesktopOperationalVaultSessionSlot::OperationalUnlocked(session) => session,
+            DesktopOperationalVaultSessionSlot::Locked
+            | DesktopOperationalVaultSessionSlot::Unlocking => {
+                return Err(DesktopOperationalUnlockError::SessionUnavailable);
+            }
+        };
+
+        Ok(operation(&session.operational_vmk))
+    }
+
+    /// Borrow the operational VMK only for crate-owned synchronous
+    /// DeviceSession proof signing.
+    ///
+    /// The VMK cannot be returned, cloned, serialized, or carried across an
+    /// async boundary. The entire V2 payload authentication/decryption and
+    /// purpose-specific DeviceKey signing operation completes while native
+    /// session custody remains held.
+    pub(crate) fn with_operational_vmk_for_device_session_signing<T>(
+        &self,
+        operation: impl FnOnce(&NativeSecretBytes) -> T,
+    ) -> Result<T, DesktopOperationalUnlockError> {
+        let slot = self
+            .slot
+            .lock()
+            .map_err(|_| DesktopOperationalUnlockError::SessionUnavailable)?;
+
+        let session = match &*slot {
+            DesktopOperationalVaultSessionSlot::OperationalUnlocked(session) => session,
+            DesktopOperationalVaultSessionSlot::Locked
+            | DesktopOperationalVaultSessionSlot::Unlocking => {
+                return Err(DesktopOperationalUnlockError::SessionUnavailable);
+            }
+        };
+
+        Ok(operation(&session.operational_vmk))
+    }
+
     pub fn lock(&self) -> Result<bool, DesktopOperationalUnlockError> {
         let mut slot = self
             .slot
@@ -323,8 +377,10 @@ where
         .map_err(|_| DesktopOperationalUnlockError::VaultLoadFailed)?
         .ok_or(DesktopOperationalUnlockError::NoStoredVault)?;
 
-    let platform_bound_vault = decode_native_platform_bound_vault(&encrypted_vault)
+    let versioned_vault = decode_native_platform_bound_vault_versioned(&encrypted_vault)
         .map_err(|_| DesktopOperationalUnlockError::VaultDecodeFailed)?;
+
+    let platform_bound_vault = versioned_vault.base_v1();
 
     let platform_family = platform_bound_vault.platform_family();
 
@@ -351,8 +407,10 @@ where
         .map_err(|_| DesktopOperationalUnlockError::VaultLoadFailed)?
         .ok_or(DesktopOperationalUnlockError::NoStoredVault)?;
 
-    let platform_bound_vault = decode_native_platform_bound_vault(&encrypted_vault)
+    let versioned_vault = decode_native_platform_bound_vault_versioned(&encrypted_vault)
         .map_err(|_| DesktopOperationalUnlockError::VaultDecodeFailed)?;
+
+    let platform_bound_vault = versioned_vault.base_v1();
 
     let platform_family = platform_bound_vault.platform_family();
 

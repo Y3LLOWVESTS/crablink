@@ -53751,3 +53751,15117 @@ That is the cleanest continuation point. We have already done the hard prerequis
 
 
 ### END NOTE - AUGUST 17 2026 - 17:05 CST
+
+
+
+
+### BEGIN NOTE - AUGUST 18 2026 - 01:30 CST
+
+Below is the carry-over note set I would use as the **primary handoff for the next session**. It incorporates the fresh 2026-08-18 source review, the new `CRABNODE_BUILDPLAN.md`, the Mac/Windows build work, the physical Client A/B state, and the remaining FINAL_BETA work.
+
+The fresh RustyOnions bundle confirms the real implementation surfaces already exist across `macronode`, `crabnode`, Omnigate, DHT, storage, index, evidence, quorum, moderation, and the separate User Node; we are productizing and connecting them rather than inventing a new architecture.  The current FINAL_BETA authority remains Phase 21's complete live demonstration followed by Phases 22–26.   The established gateway/profile ownership chain is `CrabLink → svc-gateway → omnigate → svc-passport`, with `svc-passport` owning username/profile claim truth. 
+
+---
+
+# CARRY-OVER NOTES — CrabNode Buildplan → FINAL_BETA Completion
+
+**Date:** August 18, 2026
+**Primary active repository:** `/Users/mymac/Desktop/RustyOnions`
+**Product integration repository:** `/Users/mymac/Desktop/crablink`
+**External anchor repository:** `/Users/mymac/Desktop/rox-anchor`
+
+## 0. Executive handoff
+
+We have reached a major project transition.
+
+The immediate work is no longer:
+
+```text
+build CrabLink for Windows
+debug Tauri packaging
+simulate a second client
+use a username development bypass
+manually start disconnected backend pieces
+```
+
+Those preparatory tasks have done their job.
+
+The project is now entering:
+
+```text
+CRABNODE_BUILDPLAN.md
+```
+
+with the purpose of turning the substantial existing RustyOnions Service Node implementation into the coherent public product:
+
+```text
+CrabNode
+```
+
+The active high-level sequence is now:
+
+```text
+Finish CrabNode
+→ use the real CrabNode as the backend for physical Mac + Windows CrabLink
+→ complete FINAL_BETA Phase 21
+→ complete remaining FINAL_BETA security/UX/packaging/operations gates
+→ controlled live desktop beta
+```
+
+Do not treat this as a new architecture project.
+
+The overwhelming conclusion from the fresh source review is:
+
+```text
+THE HARD PRIMITIVES MOSTLY EXIST.
+
+THE CURRENT JOB IS:
+integration
+productization
+lifecycle
+durability
+network composition
+real peer behavior
+physical proof
+hardening
+```
+
+---
+
+# 1. New active CrabNode doctrine
+
+The public semantics are now:
+
+```text
+CrabNode
+= the complete public RustyOnions Service Node product
+
+crabnode
+= the public executable / operator interface
+
+macronode
+= internal Service Node host/composition implementation
+
+svc-* / ron-* crates
+= canonical owners of actual behavior
+
+svc-admin
+= optional operator UI
+
+CrabLink
+= optional client and friendly CrabNode controller
+
+micronode
+= separate private CrabLink User Node / verifier
+```
+
+A normal operator should only need to understand:
+
+```text
+I am running a CrabNode.
+```
+
+They should not need to understand:
+
+```text
+macronode
+svc-gateway
+omnigate
+svc-index
+svc-storage
+svc-dht
+svc-overlay
+svc-mailbox
+```
+
+any more than a normal browser user needs to understand every internal browser engine component.
+
+The eventual product promise is:
+
+```text
+install CrabNode
+crabnode init
+crabnode start
+crabnode status
+
+done
+```
+
+Internally, the required RustyOnions services may be composed however is architecturally correct.
+
+---
+
+# 2. Public node taxonomy remains only two node products
+
+Continue preserving:
+
+```text
+1. CrabLink User Node
+2. CrabNode / CrabLink Service Node
+```
+
+Do not recreate:
+
+```text
+Economic Node
+```
+
+as a third public node type.
+
+Economic work remains distributed:
+
+```text
+User Node:
+  private verifier
+  replay auditor
+  challenge/fraud detector
+  useful verification evidence producer
+
+CrabNode:
+  public content/service provider
+  availability/delivery/repair evidence producer
+  quorum participant
+  service-node transition participant
+```
+
+Core doctrine:
+
+```text
+Users verify privately.
+CrabNodes serve safely.
+No node mints alone.
+ROC pays only through ledger-confirmed evidence.
+```
+
+BUILD_PLAN_Z established this two-node direction even though its historical phase accounting no longer accurately describes all behavior now present in source. 
+
+---
+
+# 3. Repository baselines
+
+## 3.1 RustyOnions
+
+Fresh codebundle reviewed:
+
+```text
+CODEBUNDLE_RS(20260818-053100).md
+bundle Git = 51108bc8
+2417 Rust files
+```
+
+That hash represents the source at codebundle generation.
+
+Since then, the user reports adding:
+
+```text
+CRABNODE_BUILDPLAN.md
+new comprehensive CrabNode review text to RustyOnions notes
+```
+
+Therefore **do not assume the live RustyOnions working tree is still exactly `51108bc8` or clean**.
+
+First next-session action must verify:
+
+```bash
+git status --short
+git rev-parse --short HEAD
+```
+
+Do not discard the new CrabNode docs.
+
+No RustyOnions runtime/code patch was made as part of the Windows CrabLink packaging work in this session.
+
+---
+
+## 3.2 CrabLink
+
+Fresh reviewed bundle:
+
+```text
+CODEBUNDLE_TAURI_APP(20260818-053114).md
+```
+
+Final public CrabLink commit from this session:
+
+```text
+2079231 Fix cross-platform Tauri build configuration
+```
+
+Pushed successfully:
+
+```text
+origin/main = 2079231
+HEAD        = 2079231
+```
+
+The fresh CrabLink codebundle identifies `2079231` as clean and contains the native node/operator, Passport, local following, publication, receipt, QuickChain and desktop platform surfaces. 
+
+---
+
+## 3.3 ROX Anchor
+
+Fresh reviewed bundle:
+
+```text
+CODEBUNDLE(20260818-053049).md
+bundle Git = e82bcf1
+```
+
+ROX Anchor is **not** the current implementation target.
+
+Keep parked until the integrated FINAL_BETA flow specifically reaches the fresh ROC ↔ ROX demonstration.
+
+Do not begin BUILD_PLAN5.
+
+Do not expand CrabNode startup into a Solana/ROX dependency.
+
+The ROX bundle itself explicitly preserves the non-authorization boundary around production external settlement. 
+
+---
+
+# 4. CRABNODE_BUILDPLAN status
+
+New plan:
+
+```text
+CRABNODE_BUILDPLAN.md
+version 0.1.0
+date 2026-08-18
+primary repo RustyOnions
+```
+
+The user has added it to the RustyOnions repo.
+
+Treat this as the active implementation plan for finishing the Service Node product.
+
+It intentionally uses:
+
+```text
+CN-0 through CN-19
+```
+
+rather than reusing BUILD_PLAN_Z or FINAL_BETA phase numbers.
+
+This avoids the project's existing phase-number collisions.
+
+---
+
+# 5. Source-authority rule for the next session
+
+When old documents and current implementation appear to disagree, use:
+
+```text
+1. Fresh current repository source.
+2. Fresh terminal/runtime evidence.
+3. Focused tests adjacent to the behavior.
+4. CRABNODE_BUILDPLAN for implementation sequence.
+5. FINAL_BETA for umbrella product acceptance.
+6. Current BUILD_PLAN_Z for underlying node doctrine.
+7. Current crate IDBs/buildplans.
+8. 12_PILLARS / SIX_CONCERNS / HARDENING / INTEROP / SCALING.
+9. Historical ALLNOTES and older docs.
+```
+
+Never force the source to conform to a stale status sentence merely because the sentence is older.
+
+Do not throw away useful old architectural doctrine either.
+
+Differentiate:
+
+```text
+target architecture
+current implementation
+historical implementation
+```
+
+---
+
+# 6. Important documentation drift already identified
+
+Do **not** mass-rewrite documentation while implementing CN-0.
+
+The new buildplan contains a drift ledger for later correction.
+
+Known areas:
+
+```text
+D1
+Public product naming:
+CrabNode vs macronode/crabnode terminology.
+
+D2
+BUILD_PLAN_Z phase counter no longer represents all current source reality.
+
+D3
+Older macronode documentation sometimes overstates service wiring.
+
+D4
+Historical crabnode command lists contain commands not yet implemented.
+
+D5
+Embedded MVP gateway vs full svc-gateway ownership is ambiguous.
+
+D6
+"confirmed username" requires distinction between local/private-beta acceptance
+and eventual network-global state.
+
+D7
+Some old DHT documentation describes more mature global behavior than current runtime proves.
+
+D8
+Mailbox integration is sometimes overstated.
+
+D9
+Persistence eligibility/operator intent is not equivalent to durable bytes written.
+
+D10
+Economic consensus must not become generic username/site database authority.
+
+D11
+Historical Tor/Arti transport posture requires later reconciliation.
+
+D12
+CrabLink manages/observes CrabNodes optionally;
+CrabLink is not the Service Node daemon.
+```
+
+Finish the corresponding implementation behavior first.
+
+Then surgically fix documentation.
+
+---
+
+# 7. Critical current CrabNode source reality
+
+The project is **not** starting from a shell-only node.
+
+Large real portions already exist.
+
+The fresh RustyOnions tree contains current Service Node code for:
+
+```text
+macronode runtime
+crabnode operator executable
+moderation
+pruning
+persistence policy
+storage
+index
+DHT
+provider behavior
+delivery evidence
+range-repair evidence
+policy evidence
+challenge evidence
+checkpoint validation
+validator signing
+quorum
+economic status
+lifecycle status
+reward binding
+admin/status/readiness
+```
+
+The fresh Rust bundle contains dedicated current tests for these surfaces. 
+
+Do not reimplement them under new names.
+
+---
+
+# 8. Existing `crabnode` CLI
+
+Current executable:
+
+```text
+crates/macronode/src/bin/crabnode.rs
+```
+
+It already contains substantial real operator behavior.
+
+Existing current/reviewed command families include:
+
+```text
+status
+ready
+version
+
+policy:
+  status
+  block
+  unblock
+  allow
+  remove-allow
+  quarantine
+  release-quarantine
+
+prune
+
+persistence:
+  register
+  status
+  pending
+  submit
+  approve
+  reject
+  pin
+  unpin
+
+admin:
+  enable-web
+  disable-web
+  setup-token
+  create-user
+
+rewards:
+  show
+  bind
+  rotate
+```
+
+Existing protections include:
+
+```text
+loopback-first admin access
+explicit non-loopback opt-in
+no fake success
+admin secret/token from protected environment rather than printed into CLI arguments
+bounded inputs
+dry-run support where appropriate
+```
+
+The completed moderation/prune work already integrates canonical policy, storage, DHT and index state rather than merely printing pretend success. 
+
+---
+
+# 9. What `crabnode` still lacks as a product
+
+The main missing operator-product surface is lifecycle.
+
+The public executable should eventually support:
+
+```text
+crabnode init
+crabnode run
+crabnode start
+crabnode stop
+crabnode restart
+
+crabnode status
+crabnode ready
+
+crabnode doctor
+crabnode logs
+
+crabnode config show
+crabnode config validate
+```
+
+This is CN-1.
+
+Do not create:
+
+```text
+new CLI crate
+new launcher crate
+second Service Node binary family
+```
+
+Extend the existing `crabnode` product surface.
+
+---
+
+# 10. Macronode current role
+
+`macronode` remains useful.
+
+Do not rename the crate merely for semantic purity.
+
+Correct relationship:
+
+```text
+crabnode
+  public operator surface
+        │
+        ▼
+macronode
+  internal CrabNode host/composition
+        │
+        ├─ svc-gateway
+        ├─ omnigate
+        ├─ svc-storage
+        ├─ svc-index
+        ├─ svc-dht
+        ├─ svc-overlay
+        └─ other required canonical services
+```
+
+The public product name can be CrabNode even if internal Rust identifiers continue to say macronode.
+
+---
+
+# 11. Current macronode composition
+
+Current `spawn` composition includes:
+
+```text
+svc-gateway
+svc-index
+svc-overlay
+svc-storage
+svc-mailbox
+svc-dht
+```
+
+Important distinction from the fresh review:
+
+```text
+storage:
+  materially real
+
+index:
+  materially real
+
+DHT:
+  materially real local/canonical runtime with extensive provider behavior
+
+gateway:
+  real listener
+  BUT macronode wrapper is not the complete CrabLink product gateway
+
+overlay wrapper:
+  still incomplete relative to the real standalone overlay
+
+mailbox wrapper:
+  still incomplete / host-shell posture
+```
+
+Do not confuse:
+
+```text
+worker spawned
+```
+
+with:
+
+```text
+complete service functionality
+```
+
+and do not confuse:
+
+```text
+port bound
+```
+
+with:
+
+```text
+healthy downstream service
+```
+
+---
+
+# 12. Current supervisor deficiency
+
+A significant CrabNode product gap is real supervision.
+
+Current behavior is still too close to:
+
+```text
+spawn tasks
+let them run
+process lifetime owns them
+```
+
+The buildplan identified that real restart/backoff/degraded-state behavior must still be finished.
+
+CN-6 must provide:
+
+```text
+service lifecycle states
+health transitions
+bounded restart budget
+exponential/bounded backoff
+crash-loop protection
+truthful readiness degradation
+graceful shutdown ordering
+diagnosable failure
+```
+
+Never report:
+
+```text
+ready=true
+```
+
+merely because a task was scheduled.
+
+---
+
+# 13. Full product gateway is a major immediate integration gap
+
+This distinction is critical.
+
+The macronode embedded gateway is not currently the entire CrabLink product ingress.
+
+The canonical standalone:
+
+```text
+svc-gateway
+```
+
+already has a large real route surface.
+
+And:
+
+```text
+omnigate
+```
+
+already contains the large product/BFF/orchestration route surface for:
+
+```text
+identity
+profiles
+objects
+assets
+creator publications
+site publications
+sites
+paid content
+wallet
+streams
+text assets
+content views
+publication relations
+explore
+DHT
+index
+mailbox
+```
+
+The current source tree verifies that these route families and focused tests exist. 
+
+Therefore:
+
+```text
+DO NOT COPY OMNIGATE OR GATEWAY ROUTES INTO MACRONODE.
+```
+
+CN-3 should compose/reuse the canonical implementation.
+
+---
+
+# 14. Canonical client/backend chain
+
+Preserve:
+
+```text
+CrabLink
+   │
+   ▼
+svc-gateway
+   │
+   ▼
+Omnigate
+   │
+   ├── svc-passport
+   ├── svc-storage
+   ├── svc-index
+   ├── DHT
+   ├── wallet/economic services when enabled
+   └── other canonical services
+```
+
+The profile route chain already exists:
+
+```text
+CrabLink
+→ svc-gateway
+→ omnigate
+→ svc-passport
+```
+
+with `svc-passport` owning username/profile claim truth. 
+
+Do not change CrabLink to call internal services directly merely to unblock the beta.
+
+---
+
+# 15. Current username/profile blocker
+
+The current `svc-passport` username claim implementation is real in validation and conflict behavior but its claim store is still:
+
+```text
+in-memory
+process-local
+```
+
+Current behavior includes:
+
+```text
+username normalization
+duplicate detection
+one username per Passport subject
+same-subject idempotent repeat
+public profile generation
+confirmed status inside that process
+```
+
+But restart durability/global network consensus are not implied.
+
+This is a major reason CN-4 exists.
+
+CN-4 should add **durable local service-owned state first**.
+
+Do not jump directly to a giant global namespace-consensus system merely to get the current beta moving.
+
+---
+
+# 16. Current physical client state
+
+We now have two real independent desktop clients.
+
+## Client A — macOS
+
+Target username:
+
+```text
+@testmac
+```
+
+Current screenshot state:
+
+```text
+FIRST-RUN SETUP
+Pick your username
+
+syntax valid
+availability check could not be completed
+```
+
+Mac application:
+
+```text
+renders
+accepts user input
+first-run screen works
+release bundle builds
+```
+
+---
+
+## Client B — Windows 11
+
+Target username:
+
+```text
+@testpc
+```
+
+Current screenshot state:
+
+```text
+FIRST-RUN SETUP
+Pick your username
+
+syntax valid
+availability check could not be completed
+```
+
+Windows application:
+
+```text
+renders
+accepts user input
+first-run screen works
+native Tauri runtime works
+```
+
+The fact that both independently reach the same truthful unavailable-backend state is useful.
+
+This is now a **network/backend blocker**, not a reason to weaken the onboarding client.
+
+---
+
+# 17. Do not use the username development bypass
+
+Earlier development stages intentionally allowed a dev-only onboarding bypass.
+
+Do not use it now.
+
+Current product objective:
+
+```text
+@testmac
+@testpc
+```
+
+should proceed through:
+
+```text
+real CrabNode
+→ real gateway
+→ real Omnigate
+→ real svc-passport
+```
+
+No release-mode fake availability.
+
+No browser-local ownership.
+
+No "pretend available" response.
+
+---
+
+# 18. Mac CrabLink build milestone — GREEN
+
+This session proved the Mac release path after repairing the Tauri cross-platform configuration.
+
+Public source change:
+
+```text
+apps/crablink-tauri/package.json
+apps/crablink-tauri/src-tauri/tauri.conf.json
+```
+
+Changes:
+
+```text
+check:rust:mac-media
+  no longer injects obsolete partial TAURI_CONFIG
+
+base tauri.conf:
+  macOSPrivateApi = true
+
+bundle.icon:
+  explicit PNG
+  explicit ICNS
+  explicit ICO
+```
+
+Mac verification:
+
+```text
+npm audit = 0 vulnerabilities
+Vite production build = GREEN
+cargo check = GREEN
+check:rust:mac-media = GREEN
+tauri release build = GREEN
+
+CrabLink.app = BUILT
+CrabLink_0.1.0_x64.dmg = BUILT
+Cargo.toml content mutation = NO
+```
+
+---
+
+# 19. Windows CrabLink build milestone — GREEN / CLOSED
+
+Windows compilation/packaging portability can now be considered closed.
+
+Fresh public Windows checkout pulled:
+
+```text
+2079231
+```
+
+Pre-build worktree:
+
+```text
+clean
+```
+
+Final public Windows run:
+
+```text
+npm.cmd audit
+found 0 vulnerabilities
+
+npm.cmd run tauri:build
+WINDOWS_FINAL_PUBLIC_BUILD_EXIT=0
+```
+
+Artifacts:
+
+```text
+crablink-tauri.exe
+
+CrabLink_0.1.0_x64_en-US.msi
+
+CrabLink_0.1.0_x64-setup.exe
+```
+
+The previously observed:
+
+```text
+M Cargo.toml
+```
+
+had an empty content diff and was a Windows/Git metadata/line-ending artifact, not a semantic Cargo mutation.
+
+Restore clears it.
+
+Do not reopen this work unless an actual regression appears.
+
+---
+
+# 20. Windows Tauri defects fixed this session
+
+There were three meaningful portability issues.
+
+## 20.1 Tauri icon source portability
+
+Initial public source did not make Windows `icon.ico` reliably available because `.gitignore` pattern:
+
+```text
+Icon?
+```
+
+matched `icons` on case-insensitive Windows.
+
+Fix was committed earlier:
+
+```text
+e79144b Track Tauri platform icons for Windows builds
+```
+
+Complete Tauri icon resources are now tracked.
+
+---
+
+## 20.2 Bundle icon declaration
+
+Windows release executable compiled, but WiX failed:
+
+```text
+Couldn't find a .ico icon
+```
+
+Fix:
+
+```json
+"bundle": {
+  "active": true,
+  "targets": "all",
+  "icon": [
+    "icons/32x32.png",
+    "icons/128x128.png",
+    "icons/128x128@2x.png",
+    "icons/icon.icns",
+    "icons/icon.ico"
+  ]
+}
+```
+
+This resulted in real:
+
+```text
+MSI = GREEN
+NSIS = GREEN
+```
+
+---
+
+## 20.3 Tauri macOS private API config mismatch
+
+Global Cargo feature was:
+
+```toml
+tauri = { version = "2", features = ["macos-private-api"] }
+```
+
+but the base config did not declare the matching Tauri config state.
+
+Tauri would rewrite Cargo features on Windows.
+
+Final fix:
+
+```json
+"app": {
+  "macOSPrivateApi": true
+}
+```
+
+along with removal of stale partial-config injection from the Mac Rust-check helper.
+
+Commit:
+
+```text
+2079231 Fix cross-platform Tauri build configuration
+```
+
+Public Mac and Windows builds now both work.
+
+---
+
+# 21. Windows native Passport/platform foundation already proven
+
+Earlier focused Windows native tests were green:
+
+```text
+Windows atomic app-data store
+Windows DPAPI platform sealer
+runtime platform-sealer selection / AppState wiring
+```
+
+Total:
+
+```text
+11/11 focused tests GREEN
+```
+
+Therefore do not assume Windows Passport support is only a frontend mock.
+
+The immediate block is the network identity backend.
+
+---
+
+# 22. FINAL_BETA current umbrella status
+
+Current authoritative major status:
+
+```text
+FINAL_BETA Phase 19 — QuickChain multi-node
+GREEN
+
+FINAL_BETA Phase 20 — ROX private testnet
+GREEN
+
+FINAL_BETA Phase 21 — Full Desktop Decentralized Beta Demonstration
+ACTIVE / NOT CLOSED
+```
+
+The Phase 21 sequence remains the authoritative integrated demo. 
+
+---
+
+# 23. FINAL_BETA Phase 21 required demonstration
+
+The authoritative sequence is:
+
+```text
+1. Start private RustyOnions network.
+2. Start multiple Service Nodes.
+3. Start User Node verifier.
+4. Launch clean CrabLink Desktop.
+5. Create/restore Passport.
+6. Claim/confirm username.
+7. Create profile.
+8. Follow another profile.
+9. Publish post/image/article.
+10. Confirm profile timeline.
+11. Confirm follower Home feed.
+12. Create blog.
+13. Create imageboard.
+14. Create forum.
+15. Resolve all sites.
+16. Complete paid content/site flow.
+17. Confirm receipt.
+18. Confirm ROC display.
+19. Produce QuickChain checkpoint/finality evidence.
+20. Display redacted QuickChain status.
+21. Execute capped ROC → ROX private-testnet path.
+22. Execute ROX → ROC dry-run path.
+23. Run revocation/halt/failure drill.
+24. Restart and reconcile.
+```
+
+Do not skip items simply because component tests exist.
+
+This phase is intentionally an integrated controlled demonstration.
+
+---
+
+# 24. Updated Phase 21 reality after this session
+
+## Historical/private-network prerequisites
+
+Previous evidence already established:
+
+```text
+private RustyOnions network
+multiple Service Nodes
+User Node verifier
+multi-node/quorum work
+```
+
+These remain valuable regression evidence.
+
+But the new CrabNode plan is intended to turn those developer compositions into the actual public CrabNode product.
+
+Do not use historical developer topology as proof that:
+
+```text
+crabnode start
+```
+
+already brings up a finished product.
+
+---
+
+## Desktop launch
+
+Now considerably stronger:
+
+```text
+Mac native release build = GREEN
+Windows native release build = GREEN
+
+Mac app launches = GREEN
+Windows app launches = GREEN
+```
+
+This is real physical multi-platform proof.
+
+---
+
+## Physical A/B onboarding
+
+Current:
+
+```text
+Client A Mac:
+@testmac
+availability backend unavailable
+
+Client B Windows:
+@testpc
+availability backend unavailable
+```
+
+Therefore:
+
+```text
+Phase21 identity flow = BLOCKED ON REAL CRABNODE PRODUCT BACKEND
+```
+
+That is the correct place to continue.
+
+---
+
+# 25. Phase 21 items still needing fresh integrated closure
+
+Treat these as pending in the new physical A/B run unless new evidence proves otherwise:
+
+```text
+Passport create/restore
+username claim/confirmation
+profile creation
+
+follow A↔B
+publication
+profile timeline
+following Home feed
+
+blog
+imageboard
+forum
+site resolution
+
+paid content/site
+receipt
+confirmed ROC
+
+fresh integrated QuickChain evidence/display
+
+fresh approved capped ROC→ROX operation
+fresh ROX→ROC dry-run
+
+integrated revocation/halt/failure drill
+restart/reconcile
+```
+
+Historical green component evidence should reduce the work.
+
+It does not eliminate integrated acceptance.
+
+---
+
+# 26. Never replay historical ROX operation identities
+
+When Phase 21 reaches the ROX demonstration again, create fresh:
+
+```text
+operation_id
+idempotency_key
+nonce
+evidence
+authorization
+```
+
+Do not reuse old successful transaction identity.
+
+ROX replay rejection is a feature.
+
+Do not weaken it for convenience.
+
+---
+
+# 27. FINAL_BETA phases after Phase 21
+
+After the full demonstration is green, remaining umbrella phases include:
+
+```text
+Phase 22
+Security, Moderation, Privacy, Abuse Controls
+
+Phase 23
+UX, Accessibility, Performance
+
+Phase 24
+Desktop Packaging, Signing, Update, Recovery
+
+Phase 25
+Private Beta Operations
+
+Phase 26
+Final Acceptance / Launch Decision
+```
+
+Phase 23 and later acceptance requirements are explicitly still part of FINAL_BETA. 
+
+---
+
+# 28. Do not duplicate CrabNode and FINAL_BETA work
+
+The best efficient posture is:
+
+```text
+CRABNODE_BUILDPLAN
+= implementation authority for the Service Node product
+
+FINAL_BETA
+= umbrella product acceptance authority
+```
+
+When a CrabNode phase produces evidence that exactly satisfies a FINAL_BETA gate, reuse the evidence.
+
+Do not run two separate implementations.
+
+Examples:
+
+```text
+CN-16 physical multi-machine proof
+feeds directly into FINAL_BETA Phase21.
+
+CN-14 moderation behavior
+feeds into FINAL_BETA Phase22.
+
+CN-19 chaos/security
+feeds into FINAL_BETA Phase22/23/26.
+
+CN-18 packaging/upgrades
+feeds into FINAL_BETA Phase24.
+
+CN-17 WAN/operator networking
+feeds into FINAL_BETA Phase25 private-node operations.
+```
+
+Reuse proof.
+
+Do not reuse labels dishonestly.
+
+---
+
+# 29. CRABNODE buildplan roadmap
+
+## CN-0 — Fresh Baseline and Runtime Truth Inventory
+
+Goal:
+
+```text
+freeze current source truth before modifying CrabNode behavior
+```
+
+Start with:
+
+```bash
+cargo check --workspace
+```
+
+Then inspect/check:
+
+```text
+macronode
+svc-gateway
+omnigate
+svc-storage
+svc-index
+svc-dht
+svc-overlay
+svc-passport
+```
+
+Inventory:
+
+```text
+binds
+ports
+dependencies
+router builders
+standalone binaries
+shutdown surfaces
+gateway chain
+admin/status schema
+```
+
+No docs rewrite.
+
+Exit:
+
+```text
+workspace green
+runtime map known
+port collisions known
+canonical owners known
+```
+
+---
+
+# 30. CN-1 — Public `crabnode` Lifecycle
+
+Implement:
+
+```text
+init
+run
+start
+stop
+restart
+status
+ready
+doctor
+logs
+config show
+config validate
+```
+
+Requirements:
+
+```text
+idempotent init
+foreground run
+safe PID/process identity
+stale PID safety
+bounded shutdown
+cross-platform structure
+no shell eval
+no secret dump
+no dashboard requirement
+```
+
+Do this in the existing executable.
+
+---
+
+# 31. CN-2 — Canonical CrabNode Profile and Port Ownership
+
+Resolve one canonical topology.
+
+Current conventions needing reconciliation include:
+
+```text
+macronode admin         127.0.0.1:8080
+full client gateway     :8090
+Omnigate                :9090
+
+overlay                 :5301
+DHT                     :5302
+storage                 :5303
+index                   :5304
+mailbox                 :5305
+```
+
+Do not allow two different gateway implementations to own the same logical ingress.
+
+Preferred:
+
+```text
+one real full gateway owns client ingress
+MVP ping-only gateway retired/disabled/replaced in full CrabNode profile
+```
+
+Admin must remain loopback by default.
+
+---
+
+# 32. CN-3 — Full Product Ingress
+
+Compose:
+
+```text
+svc-gateway
+omnigate
+```
+
+under the CrabNode runtime.
+
+Do not clone route logic.
+
+Readiness must distinguish:
+
+```text
+operator_core
+product_ingress
+content_store
+identity
+discovery
+peer_transport
+messaging
+economic_participation
+```
+
+State classes:
+
+```text
+ready
+degraded
+disabled
+failed/not ready
+```
+
+Do not report optional disabled functionality as failed.
+
+Do not report crashed required functionality as ready.
+
+---
+
+# 33. CN-4 — Durable Local Username/Profile State
+
+This is the **immediate FINAL_BETA unblock**.
+
+Replace current process-local claim store with durable service-owned state.
+
+Requirements:
+
+```text
+atomic
+versioned
+restart-safe
+corruption fails safely
+same-subject idempotency
+one subject -> one main username
+one username -> one subject
+```
+
+Do not couple storage design to eventual global consensus.
+
+Target live acceptance:
+
+```text
+A checks @testmac
+→ available
+
+A claims @testmac
+→ accepted
+
+B checks @testmac
+→ unavailable
+
+restart CrabNode
+
+B checks @testmac
+→ still unavailable
+
+profile lookup
+→ same owner
+```
+
+Then:
+
+```text
+@testpc
+```
+
+can be independently claimed.
+
+No dev bypass.
+
+---
+
+# 34. Milestone M1 — immediate Phase21 unblock
+
+M1:
+
+```text
+CN-0
+CN-1 enough lifecycle for real standalone run
+CN-2 canonical profile
+CN-3 full ingress
+CN-4 durable identity/profile
+```
+
+Outcome:
+
+```text
+one real standalone CrabNode
+Mac CrabLink connected
+Windows CrabLink connected
+username/profile works
+restart durability works
+```
+
+This is the first major target.
+
+Do not expand into DHT redesign before reaching it.
+
+---
+
+# 35. CN-5 — Complete one-node CrabLink backend
+
+Before decentralizing content, prove one CrabNode is actually a complete product backend.
+
+Through the real public gateway prove:
+
+```text
+B3 write/upload
+B3 read/head
+B3 verification
+range behavior where supported
+index write/read
+post publication
+image publication
+article publication
+profile timeline
+site manifest
+blog
+imageboard
+forum
+paid path through existing wallet/ledger authority
+```
+
+No product shortcuts.
+
+---
+
+# 36. CN-6 — Real supervision
+
+Finish:
+
+```text
+restart/backoff
+service lifecycle
+degraded readiness
+crash-loop handling
+shutdown ordering
+operator diagnosis
+```
+
+Milestone M2 after CN-5/CN-6:
+
+```text
+coherent standalone headless CrabNode
+```
+
+even before multi-provider swarm behavior.
+
+---
+
+# 37. CN-7 — Durable node identity and signed descriptor
+
+Create/preserve:
+
+```text
+stable service_node_id
+node key
+signed service descriptor
+advertised service endpoints
+capability posture
+version
+expiry/rotation
+```
+
+Restart must preserve identity.
+
+Node descriptor must not expose:
+
+```text
+admin URL
+admin token
+user residential IP
+private keys
+```
+
+---
+
+# 38. CN-8 — Real overlay transport
+
+Wire canonical `svc-overlay`.
+
+Requirements include:
+
+```text
+real peer handshake
+OAP framing
+bounded queues
+timeouts
+backpressure
+authentic peer identity binding
+safe disconnect/reconnect
+no direct user-user default exposure
+```
+
+The macronode wrapper must stop merely being a host shell before claiming full peer networking.
+
+---
+
+# 39. CN-9 — Networked provider discovery
+
+Move provider knowledge beyond one node's local memory.
+
+Need:
+
+```text
+signed/bound provider records
+TTL
+expiration
+republish
+withdrawal
+remote lookup
+multiple providers
+bounded provider sets
+invalid record rejection
+```
+
+Do not call a local provider cache a decentralized DHT.
+
+---
+
+# 40. CN-10 — Alternate-provider fetch
+
+Target behavior:
+
+```text
+client/node requests b3:X
+local miss
+provider discovery
+select provider
+fetch bytes
+verify BLAKE3
+accept only if digest matches
+alternate provider on failure/corruption
+```
+
+The B3 hash is the truth.
+
+Provider advertisement is not the truth.
+
+---
+
+# 41. CN-11 — Replication and repair
+
+This is where the torrent/swarm intuition becomes real.
+
+Example:
+
+```text
+A has X
+B discovers A
+B fetches X
+B verifies X
+B stores X under policy
+B advertises X
+
+A goes offline
+B continues serving X
+```
+
+Initial strategy should be simple:
+
+```text
+small replication factor
+bounded repair queue
+TTL-based provider health
+no giant global optimization
+```
+
+---
+
+# 42. CN-12 — Real durable CAS
+
+Current persistence policy and catalogs must become actual durable bytes.
+
+Preserve distinction:
+
+```text
+verified_persistent
+or
+pinned_by_operator
+```
+
+means:
+
+```text
+eligible/intended
+```
+
+until a durable backend successfully writes bytes.
+
+After successful durable commit:
+
+```text
+durableBytesWritten=true
+```
+
+must mean something real.
+
+Atomicity/crash consistency required.
+
+---
+
+# 43. Milestone M3 — real decentralized content swarm
+
+CN-7 through CN-12 produce:
+
+```text
+stable node identity
+real peer transport
+provider discovery
+remote fetch
+B3 verification
+replication
+repair
+real durable CAS
+```
+
+At this point the **immutable content plane** is genuinely swarm-like.
+
+---
+
+# 44. Four-plane architecture
+
+Do not treat the whole RustyOnions system like one giant BitTorrent network.
+
+The better model is:
+
+```text
+                  CRABNODE NETWORK
+
+1. IMMUTABLE CONTENT PLANE
+   b3 objects
+   providers
+   DHT
+   fetch
+   verify
+   cache
+   replication
+   repair
+
+2. MUTABLE PUBLIC STATE PLANE
+   usernames
+   profiles
+   site pointers
+   tombstones
+   signed descriptors
+   deterministic transitions
+
+3. ECONOMIC / EVIDENCE PLANE
+   delivery evidence
+   repair evidence
+   accounting
+   reward planning
+   quorum
+   wallet
+   ledger
+   ROC
+
+4. OPERATOR CONTROL PLANE
+   crabnode CLI
+   policy
+   prune
+   persistence
+   admin
+   status
+   logs
+```
+
+These planes interact.
+
+They are not the same authority.
+
+---
+
+# 45. Torrent-like content behavior
+
+The useful BitTorrent analogy applies to immutable content.
+
+Correct:
+
+```text
+Who has b3:X?
+Fetch it.
+Verify it.
+Cache/persist if policy permits.
+Advertise myself as a provider.
+Repair missing replication when necessary.
+```
+
+Unlike ordinary torrenting, CrabNode adds:
+
+```text
+policy
+moderation
+tombstones
+operator blocks
+amnesia-first storage
+signed provider identity
+service evidence
+economic rewards
+quorum
+```
+
+It is best described as:
+
+```text
+policy-aware content-addressed swarm distribution
+```
+
+---
+
+# 46. DHT is not username consensus
+
+Never implement:
+
+```text
+first DHT record seen for @alice wins
+```
+
+DHT timing is not a safe uniqueness authority.
+
+Mutable identity requires signed deterministic transitions and eventual network convergence.
+
+---
+
+# 47. CN-13 — distributed mutable namespace/state
+
+Eventually add network agreement for:
+
+```text
+@username ownership
+profile pointer updates
+site namespace ownership
+site manifest pointer changes
+node descriptors
+possibly selected tombstone/policy state
+```
+
+Requirements:
+
+```text
+signed proposal
+operation ID
+nonce
+replay resistance
+deterministic conflict rule
+version/sequence
+durability
+cross-node convergence
+challenge/review where appropriate
+```
+
+Do not use:
+
+```text
+ron-ledger
+```
+
+as a generic database simply because it already has deterministic/quorum mechanisms.
+
+Economic truth stays economic.
+
+Namespace truth stays its own state domain.
+
+---
+
+# 48. CN-14 — swarm moderation and prune semantics
+
+Rules:
+
+```text
+local operator block:
+  local refusal only
+
+global signed deny:
+  accepted policy propagated to compliant nodes
+
+owner tombstone:
+  affects compliant resolution/serving;
+  cannot magically erase all existing immutable bytes everywhere
+
+quarantine:
+  not served while unresolved
+
+local prune:
+  removes local bytes
+  removes own provider state
+  does not delete remote copies
+```
+
+Repair must consult policy before refetching.
+
+A prune command must not lead to immediate automatic reacquisition of the same blocked content.
+
+---
+
+# 49. Milestone M4 — decentralized mutable public state
+
+After CN-13/14:
+
+```text
+independent CrabNodes can converge on mutable public identity/pointer state
+while retaining local moderation autonomy.
+```
+
+---
+
+# 50. CN-15 — real service evidence → ROC
+
+Do not rebuild the economic pipeline.
+
+Reuse:
+
+```text
+delivery evidence
+availability evidence
+repair evidence
+policy evidence
+challenge evidence
+accounting
+reward planning
+reward binding
+quorum/checkpoint
+svc-wallet
+ron-ledger
+User Node verification
+```
+
+Real evidence should derive from real operations:
+
+```text
+verified remote delivery
+availability proof/challenge
+completed repair
+valid policy refusal
+independent verification
+```
+
+Reject:
+
+```text
+self-fetch farming
+replay
+duplicate idempotency key
+invalid hash
+unverified byte counts
+service evidence choosing its own payout address
+```
+
+Correct payout path:
+
+```text
+service_node_id
+→ evidence
+→ accounting/reward planning
+→ policy
+→ quorum
+→ signed reward recipient binding
+→ svc-wallet
+→ ron-ledger
+→ confirmed receipt/balance
+```
+
+One CrabNode cannot pay itself.
+
+The internal ROC doctrine independently preserves wallet/ledger as economic truth and classifies service observations as evidence before payout. 
+
+---
+
+# 51. Milestone M5 — economic closure
+
+After CN-15:
+
+```text
+real decentralized useful service
+can produce replay-resistant reward-eligible evidence
+without unilateral mint/payment authority.
+```
+
+---
+
+# 52. CN-16 — physical multi-machine acceptance
+
+This directly overlaps FINAL_BETA Phase21.
+
+## Stage A
+
+```text
+Mac:
+  CrabNode A
+  CrabLink Client A (@testmac)
+
+Windows:
+  CrabLink Client B (@testpc)
+```
+
+Prove:
+
+```text
+Windows → Mac CrabNode product gateway
+Passport
+username
+profile
+follow
+feed
+publication
+site routes
+paid flow where configured
+```
+
+---
+
+## Stage B
+
+Add:
+
+```text
+Windows CrabNode B
+```
+
+Prove:
+
+```text
+different stable node identities
+real peer handshake
+real provider advertisement
+real remote provider lookup
+A-only object fetched via B/network
+B verifies BLAKE3
+B caches/replicates according to policy
+A stops
+B can serve replicated object
+A restarts
+provider state reconciles
+```
+
+---
+
+## Stage C
+
+Later add Linux:
+
+```text
+CrabNode C
+```
+
+Use for:
+
+```text
+three-node churn
+cross-platform identity preservation
+repair behavior
+quorum regression
+```
+
+No shared-memory/test injection may count as physical acceptance.
+
+---
+
+# 53. Milestone M6 — controlled private beta
+
+At M6, if overlapping FINAL_BETA security and product gates are green:
+
+```text
+a controlled invite-only beta becomes reasonable.
+```
+
+This is the important private-beta CrabNode milestone.
+
+---
+
+# 54. CN-17 — WAN/public operator networking
+
+Do not overbuild NAT traversal initially.
+
+First public-operator model can be:
+
+```text
+public VPS
+or
+explicit port forwarding
+
+signed endpoint descriptor
+authenticated peer transport
+bootstrap seed list
+```
+
+Later:
+
+```text
+UPnP/NAT-PMP
+relay fallback
+advanced traversal
+```
+
+only if needed.
+
+Preserve:
+
+```text
+CrabNode Service Node public address may be advertised.
+
+User Node residential address may not.
+```
+
+Admin never becomes peer endpoint.
+
+---
+
+# 55. CN-18 — install/package/upgrade/OS service
+
+Eventually a CrabNode release must not require:
+
+```text
+Rust
+Cargo
+Node.js
+Vite
+CrabLink
+browser
+source checkout
+```
+
+Targets:
+
+```text
+Linux first-class headless
+macOS
+Windows
+ARM/Raspberry Pi after proof
+```
+
+OS service wrappers:
+
+```text
+systemd
+launchd
+Windows Service
+```
+
+must invoke the same underlying lifecycle.
+
+No second implementation.
+
+---
+
+# 56. CN-19 — chaos/security/soak
+
+Required failure classes include:
+
+```text
+peer churn
+bootstrap outage
+stale DHT
+poisoned provider record
+provider timeout
+provider corruption
+disk full
+partial write
+read-only filesystem
+child crash loop
+network partition
+namespace conflict
+namespace replay
+expired node descriptor
+reward replay
+quorum member loss
+policy expiry
+restart during repair
+restart during persistence commit
+```
+
+Security:
+
+```text
+malformed OAP
+oversize frames
+path traversal
+CID mismatch
+provider spoof
+descriptor forgery
+admin brute force
+remote-admin misconfiguration
+secret/log leakage
+capability replay
+unbounded state
+Sybil churn
+self-reward farming
+```
+
+Soak:
+
+```text
+1 hour
+8 hours
+24 hours
+```
+
+with no uncontrolled:
+
+```text
+memory growth
+FD growth
+task growth
+queue growth
+```
+
+---
+
+# 57. Milestone M7 — anyone can run a CrabNode
+
+Final CrabNode public-operator target:
+
+```text
+installable
+headless
+single public CLI
+network discoverable
+B3 verified
+policy aware
+repair capable
+restart safe
+upgrade safe
+economically bounded
+chaos tested
+```
+
+One-line doctrine:
+
+```text
+CrabNodes discover and serve immutable verified content like a policy-aware swarm,
+converge on mutable public state through signed deterministic transitions,
+and earn ROC only through independently verifiable service evidence and
+quorum-confirmed economic truth.
+```
+
+---
+
+# 58. Authority invariants — never violate these to move faster
+
+## React
+
+Owns:
+
+```text
+display
+explicit user intent
+local feed composition
+```
+
+Does not own:
+
+```text
+network truth
+Passport secrets
+wallet mutation
+ledger mutation
+finality
+```
+
+---
+
+## Tauri
+
+Owns:
+
+```text
+native privilege
+secure local storage
+platform secure APIs
+bounded native operations
+```
+
+Does not become backend truth.
+
+---
+
+## svc-passport
+
+Owns:
+
+```text
+Passport identity
+device authorization
+username/profile claim service state
+capability/proof truth
+```
+
+Does not own ROC ledger balances.
+
+---
+
+## ron-naming
+
+Owns:
+
+```text
+canonical parsing/normalization
+```
+
+Do not duplicate naming grammar across nodes.
+
+---
+
+## svc-gateway
+
+Owns client-facing ingress/proxy/admission.
+
+Does not own economic truth.
+
+---
+
+## Omnigate
+
+Owns BFF/orchestration/hydration.
+
+Does not own ledger truth.
+
+---
+
+## svc-storage
+
+Owns:
+
+```text
+content/object storage behavior
+```
+
+Does not prove payment.
+
+---
+
+## svc-index
+
+Owns:
+
+```text
+lookup/index/projections
+```
+
+Does not prove payment or settlement.
+
+---
+
+## svc-dht
+
+Owns decentralized provider/discovery behavior.
+
+Does not become:
+
+```text
+username authority
+economic authority
+```
+
+---
+
+## svc-wallet
+
+Owns:
+
+```text
+approved economic mutation ingress
+```
+
+---
+
+## ron-ledger
+
+Owns:
+
+```text
+durable ROC economic truth
+receipts
+balances
+```
+
+Do not turn it into generic mutable-network-state storage.
+
+---
+
+## QuickChain
+
+Owns deterministic verification/checkpoint/finality surfaces where designed.
+
+Does not make client/UI/cache authoritative.
+
+---
+
+## ROX Anchor
+
+External private-testnet anchor path only.
+
+Not CrabNode core runtime.
+
+---
+
+# 59. Security and privacy invariants
+
+Always preserve:
+
+```text
+Admin loopback-only by default.
+No public admin exposure by accident.
+No User Node residential IP publication.
+No direct user-user TCP by default.
+Capabilities only / no ambient authority.
+Unvetted content amnesia-first.
+B3 verified before trusted/useful service acceptance.
+Unknown fields fail closed where strict DTO/config applies.
+Queues/buffers/provider tables bounded.
+No locks held across await on hot paths.
+No unbounded restart storms.
+No raw secrets in logs.
+No secrets passed as CLI args where avoidable.
+```
+
+---
+
+# 60. Moderation/persistence invariants
+
+Operators must control their own hosted content.
+
+Storage states include concepts such as:
+
+```text
+ephemeral_unvetted
+pending_review
+verified_persistent
+operator_blocked
+global_denied
+owner_tombstoned
+quarantined
+pinned_by_operator
+```
+
+Important:
+
+```text
+verified_persistent
+```
+
+does **not** automatically mean bytes are already durable.
+
+Do not fake persistence.
+
+A local operator's block/prune decision must not falsely claim global deletion.
+
+---
+
+# 61. Local following remains local
+
+Do not regress the social design while building nodes.
+
+The following list remains:
+
+```text
+owned by local CrabLink app
+offline/local device state
+```
+
+Forbidden:
+
+```text
+public follower count
+public following count
+public follower list
+public following list
+server-custodied following list
+```
+
+Network:
+
+```text
+public content
+creator timelines
+delivery
+publication
+```
+
+Local device:
+
+```text
+who I follow
+my feed-selection preferences
+```
+
+Do not build a server social graph just because the node work touches index/DHT.
+
+---
+
+# 62. Current publication/wallet caution
+
+A previous integrated posting attempt reached a wallet/session blocker.
+
+Do not bypass it with:
+
+```text
+fake balance
+fake receipt
+fake wallet
+fake paid-success result
+```
+
+When we return to publication:
+
+1. inspect the exact current product contract;
+2. determine whether publication is intentionally wallet-gated;
+3. if yes, use the intended private-beta wallet path;
+4. if no, repair the incorrect gate.
+
+Never invent economic truth.
+
+---
+
+# 63. QuickChain posture
+
+FINAL_BETA Phase19 is green.
+
+Do not rebuild QuickChain while finishing CrabNode.
+
+Reuse its existing:
+
+```text
+deterministic roots
+replay
+committee
+validator
+checkpoint
+DA fallback
+challenge
+finality
+```
+
+where needed.
+
+The separate QUICKCHAIN buildplan preserves the order:
+
+```text
+determinism
+→ roots
+→ validators
+→ committee
+→ later anchoring
+```
+
+and keeps wallet/ledger authority separate. 
+
+---
+
+# 64. ROX Anchor posture
+
+Current:
+
+```text
+FINAL_BETA Phase20 GREEN
+private testnet
+```
+
+Do not broaden to:
+
+```text
+mainnet
+public bridge
+production mint/burn
+staking
+liquidity
+exchange-facing behavior
+```
+
+Carry-over hardening item:
+
+```text
+Solana Explorer currently reports:
+"Program has no security.txt"
+```
+
+Add Solana `security.txt`/contact metadata before public production launch.
+
+Also inspect other Explorer-visible deployment metadata before public production.
+
+Future tokenomics item:
+
+```text
+ROX ↔ SOL swaps:
+target burn = 33 bps / 0.33%
+```
+
+Before implementation, verify:
+
+```text
+correct Token-2022 mechanism
+swap-only scope
+not all ROX transfers
+```
+
+Do not mix this into CrabNode.
+
+---
+
+# 65. Native Passport posture
+
+Do not reopen the old Passport Native Buildplan as the current main task.
+
+The physical desktop application now contains significant real native Passport runtime/platform work beyond the older early contract-only phases.
+
+Mac and Windows native platform paths have already received substantial testing.
+
+Current blocker:
+
+```text
+network username/profile backend
+```
+
+not:
+
+```text
+invent another Passport architecture.
+```
+
+Passport remains wallet-like local custody:
+
+```text
+no cloud login
+no server secret custody
+no server password recovery
+PIN local
+recovery local
+device authority cryptographic
+```
+
+---
+
+# 66. Development workflow for the next session
+
+Use the established efficient QuickChain-style cadence.
+
+For every slice:
+
+```text
+1. Read exact CN phase.
+2. Inspect exact current source.
+3. Find smallest real behavior.
+4. Add behavior + focused test.
+5. Run focused test.
+6. Fix first failure.
+7. Run focused crate check.
+8. Run strict Clippy where phase warrants it.
+9. Run broader/workspace gate only at milestone.
+10. Move forward only when behavior is green.
+```
+
+Do not:
+
+```text
+write five phases worth of scaffolding
+then compile at the end
+```
+
+---
+
+# 67. Speed strategy
+
+We want to go as fast as safely possible.
+
+Batch:
+
+```text
+adjacent low-risk pure/config/parser behavior
+```
+
+when they share invariants.
+
+Keep isolated:
+
+```text
+authority changes
+network exposure
+durability
+wallet/ledger
+quorum
+cryptographic identity
+live peer networking
+economic mutation
+```
+
+Prefer:
+
+```text
+focused test
+→ focused crate check
+→ integration check
+```
+
+over a full workspace test after every two-line patch.
+
+Use:
+
+```text
+cargo check --workspace
+```
+
+at CN-0 and meaningful milestone closures.
+
+Do not run:
+
+```text
+cargo clean
+```
+
+unless actual evidence requires it.
+
+---
+
+# 68. Terminal/patch safety
+
+Mac shell:
+
+```text
+zsh
+```
+
+Avoid shell snippets containing problematic unquoted:
+
+```text
+!
+```
+
+Do not rely on disabling history expansion.
+
+Prefer:
+
+```text
+safe Bash blocks
+Python blocks
+quoted heredocs
+```
+
+Patches should remain:
+
+```text
+plain-text
+human readable
+paste ready
+```
+
+No:
+
+```text
+base64 blobs
+gzip blobs
+encoded patches
+opaque scripts
+```
+
+No `exit` at the end of patch scripts.
+
+No downloads unless explicitly requested.
+
+No git add/commit/push unless explicitly requested.
+
+---
+
+# 69. Windows-specific workflow reminders
+
+PowerShell execution policy remains intentionally restricted.
+
+Use:
+
+```powershell
+npm.cmd
+npx.cmd
+```
+
+rather than PowerShell `.ps1` shims.
+
+Do not loosen machine security policy just to run npm.
+
+Windows source tree:
+
+```text
+C:\Users\mypc2\dev\RustyOnions
+C:\Users\mypc2\dev\crablink
+```
+
+CrabLink currently depends on sibling RustyOnions via relative path.
+
+Keep sibling layout.
+
+---
+
+# 70. Physical hardware topology for next work
+
+Current best initial topology:
+
+```text
+Mac:
+  CrabNode A
+  CrabLink Client A
+  @testmac
+
+Windows:
+  CrabLink Client B
+  @testpc
+```
+
+After single-node product path works:
+
+```text
+Mac:
+  CrabNode A
+
+Windows:
+  CrabNode B
+  CrabLink Client B as needed
+```
+
+Later:
+
+```text
+Linux:
+  CrabNode C
+```
+
+The user's Windows HP EliteDesk is now fully useful as a real cross-platform test host rather than merely a build machine.
+
+---
+
+# 71. Do not expose these surfaces to LAN by accident
+
+Keep:
+
+```text
+macronode admin
+svc-admin
+User Node admin
+internal diagnostics
+```
+
+loopback-only unless a phase explicitly changes exposure.
+
+Client-facing CrabNode gateway may be deliberately LAN/public.
+
+These are not the same surface.
+
+Never bind:
+
+```text
+admin = 0.0.0.0
+```
+
+merely because Client B needs to reach the public product gateway.
+
+---
+
+# 72. Current likely port model — inspect before trusting
+
+Historical/current conventions include:
+
+```text
+8080  macronode admin
+8090  product gateway
+9090  Omnigate
+
+5300  optional svc-admin
+5301  overlay
+5302  DHT
+5303  storage
+5304  index
+5305  mailbox
+```
+
+CN-0/CN-2 must inspect source/config and freeze one collision-free authoritative map.
+
+Do not assume this list is final until the source confirms it.
+
+---
+
+# 73. First session must not start by opening network ports
+
+Before any new LAN/public exposure:
+
+```text
+compile
+inspect profile
+inspect port ownership
+establish canonical gateway
+verify admin isolation
+```
+
+Then expose only the product ingress required for physical Client B.
+
+This avoids accidental operator/admin exposure.
+
+---
+
+# 74. Exact first next-session commands
+
+Start on the Mac.
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+printf '%s\n' \
+  "=== CRABNODE BUILDPLAN SESSION START ==="
+
+printf '\n%s\n' \
+  "=== REPOSITORY STATE ==="
+
+git status --short
+git rev-parse --short HEAD
+
+printf '\n%s\n' \
+  "=== CRABNODE BUILDPLAN PRESENCE ==="
+
+test -f CRABNODE_BUILDPLAN.md && echo "CRABNODE_BUILDPLAN=PRESENT" || echo "CRABNODE_BUILDPLAN=MISSING"
+
+grep -n \
+  -e 'CN-0' \
+  -e 'CN-1' \
+  -e 'CN-2' \
+  -e 'CN-3' \
+  -e 'CN-4' \
+  CRABNODE_BUILDPLAN.md \
+  | head -40
+
+printf '\n%s\n' \
+  "=== CN-0 WORKSPACE BASELINE ==="
+
+cargo check --workspace
+```
+
+If the workspace check fails:
+
+```text
+STOP EXPANDING SCOPE.
+```
+
+Inspect the first failure.
+
+Patch only that failure.
+
+Run the focused failing crate check.
+
+Then return to:
+
+```text
+cargo check --workspace
+```
+
+---
+
+# 75. If workspace is green
+
+Do not immediately patch.
+
+Continue CN-0 current-source inspection.
+
+Recommended next narrow commands:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+cargo check -p macronode
+cargo check -p svc-gateway
+cargo check -p omnigate
+cargo check -p svc-storage
+cargo check -p svc-index
+cargo check -p svc-dht
+cargo check -p svc-overlay
+cargo check -p svc-passport
+
+printf '\n%s\n' \
+  "=== CURRENT CRABNODE HELP ==="
+
+cargo run -q -p macronode --bin crabnode -- --help
+
+printf '\n%s\n' \
+  "=== CURRENT MACRONODE HELP ==="
+
+cargo run -q -p macronode --bin macronode -- --help
+```
+
+Then inspect:
+
+```text
+crates/macronode/src/bin/crabnode.rs
+crates/macronode/src/services/spawn.rs
+crates/macronode/src/services/ports.rs
+crates/macronode/src/services/svc_gateway.rs
+crates/macronode/src/services/svc_overlay.rs
+crates/macronode/src/services/svc_dht.rs
+crates/macronode/src/services/svc_storage.rs
+crates/macronode/src/services/svc_index.rs
+
+crates/svc-gateway/src/
+crates/omnigate/src/
+
+crates/svc-passport/src/profile.rs
+```
+
+Do not guess command flags from old notes.
+
+---
+
+# 76. CN-0 expected output
+
+By the end of CN-0 we need a concise current truth table:
+
+```text
+SERVICE
+  implementation owner
+  embedded/child/standalone
+  current bind
+  desired CrabNode bind
+  required/optional
+  readiness signal
+  shutdown mechanism
+  data persistence
+  known gap
+```
+
+Example categories:
+
+```text
+admin
+product gateway
+Omnigate
+Passport
+storage
+index
+DHT
+overlay
+mailbox
+economic connectivity
+quorum
+```
+
+That table should drive CN-1/2/3.
+
+---
+
+# 77. The first actual implementation patch should probably be CN-1
+
+After CN-0 is green and mapped:
+
+```text
+make crabnode own lifecycle
+```
+
+Do not begin:
+
+```text
+DHT global swarm
+distributed username consensus
+new database crate
+WAN NAT traversal
+```
+
+before we can cleanly run one standalone CrabNode.
+
+---
+
+# 78. Immediate success definition for the next session
+
+The first major success target is not:
+
+```text
+complete global decentralization
+```
+
+It is:
+
+```text
+crabnode run/start works
+one canonical CrabNode profile works
+full gateway + Omnigate works
+username/profile state is durable
+```
+
+Then both physical clients can advance:
+
+```text
+@testmac
+@testpc
+```
+
+through the real network.
+
+That will be an enormous project milestone.
+
+---
+
+# 79. After M1 — use the physical clients immediately
+
+Once CN-4 is green:
+
+Do not wait until CN-19 before touching CrabLink again.
+
+Use:
+
+```text
+Mac @testmac
+Windows @testpc
+```
+
+as real acceptance clients.
+
+This gives live feedback while continuing CrabNode.
+
+Test:
+
+```text
+availability
+claim
+restart
+profile lookup
+independent identity
+```
+
+Then move into CN-5 publication/feed/site paths.
+
+---
+
+# 80. Do not build throwaway beta-only backend shortcuts
+
+Every fix for FINAL_BETA should point toward the final CrabNode architecture.
+
+Avoid:
+
+```text
+special "beta username server"
+temporary Node.js backend
+frontend fake state
+one-off local proxy scripts
+hard-coded @testmac / @testpc
+mock provider network
+```
+
+The private beta should exercise the real future architecture, only at small scale.
+
+---
+
+# 81. Existing green evidence should be protected
+
+Do not regress:
+
+```text
+moderation
+signed global policy
+local policy
+exact B3 prune
+provider withdrawal/cache invalidation
+persistence state
+reward binding
+service evidence DTOs
+quorum/checkpoint behavior
+User Node privacy
+QuickChain
+paid-content authority boundaries
+Passport secret boundaries
+```
+
+Add focused regression tests when touching their integration surfaces.
+
+---
+
+# 82. Do not recreate crate ownership
+
+Core RustyOnions invariant:
+
+```text
+fixed canonical crates own behavior
+```
+
+Avoid creating:
+
+```text
+crabnode-storage
+crabnode-dht
+crabnode-identity
+crabnode-wallet
+crabnode-consensus
+```
+
+merely because CrabNode needs those capabilities.
+
+CrabNode composes canonical crates.
+
+It does not duplicate them.
+
+---
+
+# 83. No fake readiness
+
+This deserves special emphasis.
+
+Never produce:
+
+```text
+CrabNode ready
+```
+
+because:
+
+```text
+process exists
+port opened
+task scheduled
+```
+
+A capability may only be ready if its real required dependencies are ready.
+
+Preferred status model:
+
+```text
+operator_core=ready
+product_ingress=ready
+content_store=ready
+identity=ready
+discovery=disabled
+peer_transport=disabled
+messaging=disabled
+economic_participation=disabled
+```
+
+during earlier phases.
+
+That is superior to falsely claiming:
+
+```text
+everything ready
+```
+
+---
+
+# 84. No fake decentralization
+
+Likewise:
+
+```text
+three structs in one process
+```
+
+is not three CrabNodes.
+
+```text
+test-injected provider record
+```
+
+is not DHT discovery.
+
+```text
+shared filesystem
+```
+
+is not replication.
+
+```text
+DHT timing
+```
+
+is not username consensus.
+
+```text
+local cache
+```
+
+is not network finality.
+
+Use truthful labels at every phase.
+
+---
+
+# 85. No premature global-scale engineering
+
+For the first real swarm:
+
+```text
+2 nodes
+then 3 nodes
+```
+
+is enough.
+
+Initial content strategy can use:
+
+```text
+small RF
+TTL
+republish
+alternate provider retry
+simple repair
+```
+
+Do not begin with:
+
+```text
+erasure coding
+complex geographic balancing
+large global routing optimization
+massive NAT traversal framework
+```
+
+Measure first.
+
+---
+
+# 86. Current end-state mental model
+
+The project is moving toward:
+
+```text
+Creator publishes content
+        │
+        ▼
+canonical B3 object
+        │
+        ▼
+CrabNode A stores/serves
+        │
+        ├─ provider advertisement
+        ▼
+network discovery
+        │
+        ├─────────────┐
+        ▼             ▼
+CrabNode B        CrabNode C
+ fetch              fetch
+ verify B3          verify B3
+ policy             policy
+ store/cache        store/cache
+ advertise          advertise
+
+        mutable identity/site state
+              │
+              ▼
+      signed deterministic state
+              │
+              ▼
+       network convergence
+
+        real useful service
+              │
+              ▼
+          evidence
+              │
+              ▼
+         accounting
+              │
+              ▼
+         reward plan
+              │
+              ▼
+           quorum
+              │
+              ▼
+        svc-wallet
+              │
+              ▼
+         ron-ledger
+              │
+              ▼
+      confirmed ROC receipt
+```
+
+That is the architecture to keep in mind.
+
+---
+
+# 87. FINAL_BETA launch classification must remain honest
+
+Correct eventual language:
+
+```text
+CrabLink Desktop decentralized private beta
+
+QuickChain private-network beta
+
+ROX Anchor private Solana testnet demonstration
+```
+
+Do not claim:
+
+```text
+public blockchain live
+public ROX bridge
+mainnet
+production mint/burn
+staking
+liquidity
+exchange readiness
+```
+
+The current FINAL_BETA source explicitly preserves these boundaries. 
+
+---
+
+# 88. Important carry-over hardening items
+
+Keep these visible but do not derail CN-0:
+
+```text
+ROX:
+  add Solana security.txt/contact metadata later
+
+ROX:
+  inspect Explorer-visible deployment metadata before production
+
+ROX/SOL:
+  future 33 bps swap burn mechanism needs proper Token-2022 review
+
+CrabLink:
+  two nonblocking Rust warnings remain on Windows:
+    unused File import
+    dead validate_native_recovery_phrase_display function
+
+Desktop release:
+  future signing/notarization still pending FINAL_BETA Phase24
+
+Linux:
+  physical/USB testing still pending
+
+CrabNode:
+  docs semantic cleanup pending after implementation truth stabilizes
+```
+
+None is the first CN-0 task.
+
+---
+
+# 89. Session efficiency rules
+
+Because the next session is likely to be large, keep explicit checkpoints.
+
+At each CN phase print/use a concise summary:
+
+```text
+CN_PHASE=
+PATCH_APPLIED=
+FOCUSED_TEST=
+FOCUSED_CHECK=
+WORKSPACE_CHECK=
+AUTHORITY_CHANGED=
+NETWORK_EXPOSURE_CHANGED=
+DURABILITY_CHANGED=
+ECONOMIC_MUTATION_CHANGED=
+NEXT_ACTION=
+```
+
+This keeps context manageable.
+
+Do not generate a new full codebundle after every five-line patch.
+
+Generate fresh bundles at:
+
+```text
+meaningful milestone
+major carry-over boundary
+source context becoming stale
+```
+
+not after every micro-change.
+
+---
+
+# 90. When to stop a session
+
+Stop and write carry-over notes when:
+
+```text
+a phase reaches a clean milestone
+a significant first failure needs deeper work
+context becomes too large
+physical manual acceptance is needed
+an authority/design decision emerges
+```
+
+Do not leave:
+
+```text
+half-understood broad mutations
+```
+
+at session end.
+
+Prefer:
+
+```text
+small green phase boundary
+```
+
+or:
+
+```text
+precisely documented red first failure
+```
+
+---
+
+# 91. Exact next-session opening message
+
+Paste this at the beginning of the next session:
+
+```text
+We are continuing RustyOnions / CrabLink using the new
+CRABNODE_BUILDPLAN.md as the active Service Node implementation plan,
+with FINAL_BETA.md remaining the umbrella desktop/private-beta
+acceptance plan.
+
+CURRENT PRODUCT SEMANTICS:
+CrabNode = complete public Service Node product.
+crabnode = public executable/operator interface.
+macronode = internal CrabNode host/composition.
+svc-admin = optional local operator UI.
+CrabLink = optional client/controller, not the daemon.
+micronode = separate private User Node verifier.
+
+CURRENT PHYSICAL CLIENTS:
+Mac CrabLink = Client A = @testmac.
+Windows CrabLink = Client B = @testpc.
+Both native builds are GREEN and both currently stop truthfully at
+username availability because the real CrabNode product backend is not
+running.
+
+CRABLINK PUBLIC HEAD:
+2079231
+Mac .app/.dmg build GREEN.
+Windows EXE/MSI/NSIS build GREEN.
+npm audit 0.
+Do not reopen Windows packaging unless a real regression appears.
+
+RUSTYONIONS:
+Fresh reviewed source bundle was Git 51108bc8.
+CRABNODE_BUILDPLAN.md and new CrabNode notes have since been added
+locally; inspect git status and current HEAD before touching anything.
+
+ROX:
+Parked.
+FINAL_BETA Phase20 green.
+Do not start ROX BUILD_PLAN5 or reuse historical operation IDs.
+
+ACTIVE WORK:
+CRABNODE CN-0.
+
+FIRST ACTION:
+1. cd /Users/mymac/Desktop/RustyOnions
+2. git status --short
+3. git rev-parse --short HEAD
+4. verify CRABNODE_BUILDPLAN.md exists
+5. cargo check --workspace
+6. if RED, fix only the first failure
+7. if GREEN, perform CN-0 current source/runtime inventory
+8. then proceed CN-1 → CN-2 → CN-3 → CN-4
+
+FIRST MAJOR MILESTONE:
+real standalone CrabNode
+→ full svc-gateway + Omnigate
+→ durable local username/profile
+→ @testmac and @testpc pass real availability/claim
+→ no dev bypass
+
+DO NOT:
+create a new node architecture,
+create a new CLI crate,
+duplicate svc-gateway/Omnigate routes,
+make DHT username authority,
+make ron-ledger a generic namespace database,
+fake readiness,
+fake B3,
+fake wallet/balance/receipt/finality,
+expose admin/User Node surfaces to LAN,
+publish user residential IPs,
+use cargo clean unnecessarily,
+or broaden ROX/mainnet scope.
+
+Use focused behavior patches with matching tests.
+Fix the first failure before expanding scope.
+Go as fast as safely possible.
+```
+
+---
+
+# 92. Final handoff summary
+
+The next session should enter with this mental model:
+
+```text
+WE HAVE:
+  Mac CrabLink
+  Windows CrabLink
+  working native builds
+  real Passport/native platform foundations
+  real gateway/Omnigate implementations
+  real storage/index/DHT primitives
+  real moderation/prune/persistence machinery
+  real service-evidence/quorum foundations
+  real User Node verifier foundations
+  green QuickChain
+  green ROX private-testnet proof
+
+WE NEED:
+  one coherent CrabNode lifecycle
+  one canonical CrabNode runtime profile
+  full product ingress under CrabNode
+  durable username/profile state
+  real physical Client A/B proof
+  real peer transport/provider discovery
+  replication/repair
+  durable CAS
+  mutable-state convergence
+  real service evidence from real serving
+  physical multi-node proof
+  packaging/WAN/chaos hardening
+  remaining FINAL_BETA acceptance
+
+FIRST TARGET:
+  @testmac and @testpc
+  through a real CrabNode
+  with no development bypass.
+
+END TARGET:
+  anyone can run a CrabNode,
+  content survives individual-node loss,
+  mutable state converges deterministically,
+  useful service is independently verifiable,
+  ROC remains quorum/wallet/ledger truthful,
+  and CrabLink completes its controlled desktop private beta.
+```
+
+This is the point where the project shifts from a collection of very capable components into the **actual decentralized network product**.
+
+
+### END NOTE - AUGUST 18 2026 - 01:30 CST
+
+
+### BEGIN NOTE - AUGUST 19 2026 - 13:30 CST
+
+
+Below is the carry-over note set I would use as the **primary handoff for the next session**. It incorporates the latest CrabNode/FINAL_BETA state, all Physical M1 Passport work, the real signed-Mac test, the onboarding/native-state mismatch we discovered, and the reconciliation patch that just went **5/5 GREEN**.
+
+The overall product order remains CrabNode → complete the physical desktop integration → reuse that evidence to close FINAL_BETA Phase 21 → Phases 22–26. The CrabNode buildplan defines CN-0 through CN-4 as the immediate Phase21-unblock milestone and CN-5 onward as the path toward the finished public Service Node.  FINAL_BETA Phase 21 remains the integrated full-desktop demonstration; Phase 22 follows only after that demonstration is genuinely green. 
+
+---
+
+# RustyOnions / CrabNode / CrabLink — Comprehensive Carry-Over Notes
+
+**Date:** August 19, 2026
+**Active project:** RustyOnions / CrabLink / CrabNode / ROX Anchor
+**Primary immediate repos:**
+
+```text
+RustyOnions:
+/Users/mymac/Desktop/RustyOnions
+
+CrabLink:
+/Users/mymac/Desktop/crablink
+
+ROX Anchor:
+/Users/mymac/Desktop/rox-anchor
+```
+
+## 0. IMPORTANT TEMPORARY SESSION CONSTRAINT FOR AUGUST 19
+
+For most of the next working session/day:
+
+```text
+AVAILABLE MACHINE:
+Mac laptop only
+
+WINDOWS MACHINE:
+not physically available
+
+WINDOWS PHYSICAL TESTING:
+DEFER UNTIL USER RETURNS HOME LATER
+
+DO NOT:
+block Mac-side progress waiting for Windows
+invent/simulate Windows physical evidence
+call @testpc physically accepted without the real PC
+redo already-green Windows packaging work unnecessarily
+```
+
+Use the Mac to complete as much of the Passport/identity/device-auth/CrabNode integration path as possible.
+
+Once the user is home and the Windows PC is physically available, resume the real Client B / `@testpc` portion.
+
+---
+
+# 1. EXECUTIVE STATUS
+
+Current critical path:
+
+```text
+CRABNODE CN-0 → CN-4:
+IMPLEMENTED / GREEN
+
+PHYSICAL M1:
+ACTIVE
+
+Mac local Passport identity:
+implementation substantially GREEN
+real signed-app acceptance not yet complete
+
+Windows physical Client B:
+DEFERRED UNTIL USER RETURNS HOME
+
+FINAL_BETA Phase 21:
+ACTIVE / NOT GREEN
+
+FINAL_BETA Phases 22–26:
+PENDING
+
+ROX BUILD_PLAN4:
+GREEN / PARKED
+```
+
+The immediate problem is **not** CrabNode backend durability anymore.
+
+The immediate problem is getting the existing real Mac Native Passport through the complete current CrabLink product path without development bypasses.
+
+The most recent live test found a real integration mismatch:
+
+```text
+native Passport vault:
+EXISTS
+
+WebView onboarding model:
+said no_passport
+
+onboarding:
+attempted create
+
+native create:
+correctly refused second Passport
+
+result:
+already_exists
+```
+
+That exposed a missing onboarding reconciliation path.
+
+We implemented that reconciliation and the new focused suite is:
+
+```text
+PHYSICAL_M1_EXISTING_PASSPORT_RECONCILIATION=APPLIED
+
+tests:
+5
+
+passed:
+5
+
+failed:
+0
+```
+
+That is the exact current stopping point.
+
+---
+
+# 2. SOURCE-OF-TRUTH ORDER
+
+Continue to follow:
+
+```text
+1. live repo source
+2. fresh terminal/runtime evidence
+3. CRABNODE_BUILDPLAN.md
+4. FINAL_BETA.md
+5. BUILD_PLAN_Z / crate-specific plans
+6. architecture blueprints
+7. NOTES / ALLNOTES / combined docs as context
+```
+
+Do not let old carry-over prose override fresh source or terminal evidence.
+
+The current CrabNode plan explicitly separates the immediate Phase21 unblock from later decentralization milestones. CN-0 through CN-4 are M1; CN-5/6 form the coherent standalone product; CN-7 through CN-12 decentralize content; CN-13/14 converge mutable state; CN-15 closes service evidence; CN-16 is physical multi-platform proof; CN-17 through CN-19 cover WAN, packaging, security/chaos/soak. 
+
+---
+
+# 3. CRITICAL PRODUCT / AUTHORITY BOUNDARIES
+
+Preserve these throughout all next work.
+
+```text
+RustyOnions
+= backend/value plane
+
+CrabLink
+= client/product UX
+
+CrabNode
+= complete public Service Node
+
+crabnode
+= public operator executable
+
+macronode
+= internal Service Node composition/host
+
+svc-admin
+= optional local operator UI
+
+micronode
+= separate private passive User Node verifier
+
+ROX Anchor
+= external Rust/Solana/Anchor ROC↔ROX system
+```
+
+Authority:
+
+```text
+React
+= display + user intent only
+
+Tauri
+= native privilege
+
+RustyOnions services
+= durable network truth
+
+svc-passport
+= Passport/device/identity truth
+
+svc-wallet
+= economic mutation ingress
+
+ron-ledger
+= ROC balance/receipt truth
+
+svc-index
+= reviewed projections, never balance truth
+```
+
+Never move Passport secrets into React.
+
+Never treat a public Passport ID as authentication by itself.
+
+Never let CrabLink become finality, balance, username, or wallet authority.
+
+FINAL_BETA itself repeats the same model: Desktop is the reference product; React owns intent, Tauri native privilege, RustyOnions durable truth, `svc-passport` identity truth, `svc-wallet` mutation ingress, and `ron-ledger` economic truth. 
+
+---
+
+# 4. SOCIAL GRAPH RULE REMAINS LOCKED
+
+Do not regress this later during Phase21 A/B testing.
+
+```text
+following list:
+LOCAL DEVICE STATE
+
+public follower count:
+NO
+
+public following count:
+NO
+
+public follower list:
+NO
+
+public following list:
+NO
+
+required server-side social graph:
+NO
+```
+
+Network public content remains public.
+
+Personal follow selection remains local CrabLink state.
+
+No need to build expensive permanent follower-list infrastructure.
+
+---
+
+# 5. CRABNODE CN-0 THROUGH CN-4 — CURRENT STATE
+
+The immediate CrabNode M1 outcome in the buildplan is:
+
+```text
+Mac can run one real standalone CrabNode.
+Mac and Windows CrabLink can use the real backend.
+Username/profile survives restart.
+No developer dashboard is required.
+```
+
+That is exactly what CN-0 through CN-4 are intended to unblock. 
+
+## CN-0
+
+Inventory/product-boundary work complete.
+
+Canonical product model established:
+
+```text
+CrabNode
+= public Service Node product
+
+crabnode
+= operator executable
+
+macronode
+= composition host
+
+svc-admin
+= optional local UI
+
+micronode
+= separate User Node
+```
+
+Do not create another node architecture or CLI crate.
+
+---
+
+# 6. CN-1 — STANDALONE LIFECYCLE
+
+Implemented/proven:
+
+```text
+crabnode init
+config
+state layout
+node identity
+repeat init
+identity preservation
+
+foreground run
+supervisor composition
+headless operation
+strict config
+unknown-field rejection
+
+admin loopback only
+admin UI not required
+```
+
+Existing node identity is durable.
+
+Do not delete or recreate it.
+
+---
+
+# 7. CANONICAL CRABNODE HOME / NODE ID
+
+Current Mac operator home:
+
+```text
+/Users/mymac/Library/Application Support/CrabNode
+```
+
+Existing persistent node ID:
+
+```text
+13c726e5ea7a423191529fadee9612910128a9e4597a4edabebb42c43068be7d
+```
+
+Facts:
+
+```text
+NODE_ID_LENGTH=64
+NODE_ID_SECRET=NO
+REPEAT_INIT_PRESERVES_IDENTITY=YES
+```
+
+Do **not** delete/reinitialize this home unless fresh evidence makes that necessary.
+
+---
+
+# 8. CANONICAL CRABNODE PORT MAP
+
+Current canonical profile:
+
+```text
+127.0.0.1:8080
+admin
+
+:8090
+full CrabLink/client svc-gateway ingress
+
+:9090
+Omnigate
+
+:5300
+optional svc-admin
+
+:5301
+overlay
+
+:5302
+DHT
+
+:5303
+storage
+
+:5304
+index
+
+:5305
+mailbox
+
+:5307
+Passport/profile service path in current composition
+```
+
+The buildplan specifically requires one real full product gateway to own the client ingress port and not allow both an MVP ping gateway and the canonical gateway to claim the same port. 
+
+---
+
+# 9. CN-3 — FULL PRODUCT INGRESS
+
+Current intended chain:
+
+```text
+CrabLink
+→ svc-gateway :8090
+→ Omnigate :9090
+→ canonical backend services
+```
+
+No duplicated routes inside macronode.
+
+No ping-only backend.
+
+Readiness must be truthful:
+
+```text
+listener bound
+!= service healthy
+
+worker started
+!= service ready
+```
+
+The buildplan explicitly requires real public-gateway identity lookup, object/index reads, safe product routes, full gateway/Omnigate, and truthful readiness. 
+
+CN-3 implementation/evidence was green before Physical M1 work began.
+
+---
+
+# 10. CN-4 — DURABLE USERNAME / PROFILE STATE
+
+CN-4 implementation is complete/green.
+
+Service ownership:
+
+```text
+svc-passport
+```
+
+not:
+
+```text
+DHT
+ron-ledger
+CrabLink
+```
+
+Important persistence behavior implemented:
+
+```text
+durable username/profile generations
+persist before RAM publication
+immutable generations
+no-clobber publication
+bounded snapshots
+bounded bytes
+bounded claims
+strict corruption handling
+restart persistence
+```
+
+Current limits used:
+
+```text
+max snapshots:
+32
+
+max durable bytes:
+32 MiB
+
+max claims:
+50,000
+```
+
+Semantics:
+
+```text
+same subject + same username:
+idempotent
+
+one subject:
+one main username
+
+username:
+one owning subject
+```
+
+This is still **local single-CrabNode durable truth**, not global mutable-state consensus.
+
+Global independent-node convergence remains later CN-13 work.
+
+---
+
+# 11. CURRENT CRABNODE MILESTONE CLASSIFICATION
+
+Use this wording:
+
+```text
+CRABNODE_M1_BACKEND_IMPLEMENTATION=GREEN
+
+PHYSICAL_CLIENT_ACCEPTANCE=PENDING
+```
+
+Do not call the whole CrabNode plan complete.
+
+After the physical identity/client path is proven, continue:
+
+```text
+CN-5
+full product path
+
+CN-6
+supervision
+
+CN-7
+node identity/descriptor
+
+CN-8
+overlay
+
+CN-9
+DHT/provider discovery
+
+CN-10
+remote fetch
+
+CN-11
+replication/repair
+
+CN-12
+durable CAS
+
+CN-13
+mutable namespace/state convergence
+
+CN-14
+distributed moderation/pruning
+
+CN-15
+service evidence → ROC pipeline
+
+CN-16
+physical Mac/Windows/Linux
+
+CN-17
+WAN
+
+CN-18
+packaging
+
+CN-19
+chaos/security/soak
+```
+
+The official milestone map is recorded in the CrabNode buildplan. 
+
+---
+
+# 12. PHYSICAL CLIENT IDENTITIES
+
+Current intended clients:
+
+```text
+Mac Client A
+username target:
+@testmac
+
+Windows Client B
+username target:
+@testpc
+```
+
+Important:
+
+```text
+@testmac IS NOT YET CLAIMED
+
+@testpc IS NOT YET CLAIMED
+```
+
+`@testmac` currently exists only as a **username draft/local onboarding intent**.
+
+Do not call it owned.
+
+Do not call it verified.
+
+Do not call it a Passport handle yet.
+
+---
+
+# 13. EARLIER REAL @testmac BACKEND ATTEMPT
+
+We previously attempted real profile publication through:
+
+```text
+CrabLink
+→ svc-gateway
+→ Omnigate
+→ svc-passport
+```
+
+Result:
+
+```text
+write denied by Omnigate policy
+```
+
+That was correct.
+
+Reason:
+
+```text
+no server-verifiable Passport/device authentication yet
+```
+
+A subsequent GET returned profile not found.
+
+Therefore:
+
+```text
+@testmac remains unclaimed
+
+no partial durable CN-4 claim occurred
+```
+
+Never weaken Omnigate write policy simply to get the demo green.
+
+---
+
+# 14. IMPORTANT CRABLINK DEV-SUBJECT GUARD
+
+An unsafe latent fallback was found in:
+
+```text
+apps/crablink-tauri/src/shared/api/identityClient.js
+```
+
+It could fall back to:
+
+```text
+passport:main:dev
+```
+
+for profile claim.
+
+That was repaired.
+
+Current guard:
+
+```text
+missing subject:
+reject
+
+explicit dev subject:
+reject
+```
+
+Focused guard tests:
+
+```text
+3/3 GREEN
+```
+
+Vite build was also green.
+
+This prevents React/dev identity from masquerading as real Passport authority.
+
+---
+
+# 15. WHY PHYSICAL M1 EXPANDED INTO PASSPORT CRYPTO WORK
+
+The current stored desktop Passport originally had real secure vault material but did **not** yet have a canonical public Passport identity wired into the live product path.
+
+Existing vault already contained:
+
+```text
+RecoveryRoot factor
+Operational factor
+wrapped root VMK
+wrapped operational VMK
+platform-sealed factors
+```
+
+But the operational session only held:
+
+```text
+platform family
+operational VMK
+```
+
+No canonical Passport ID/root public key/device authorization was being surfaced.
+
+Existing status intentionally reported identifier absent/redacted.
+
+So Physical M1 needed to derive the real Passport identity from the existing durable RecoveryRoot rather than creating a new Passport.
+
+---
+
+# 16. CANONICAL NATIVE PASSPORT IDENTITY MODEL
+
+Locked derivation model:
+
+```text
+stored RecoveryRoot factor
+→ canonical BIP39 entropy/mnemonic
+→ BIP39 seed
+→ versioned HKDF-SHA256
+→ Ed25519 root signing key
+→ Ed25519 root public key
+→ domain-separated BLAKE3 Passport ID
+```
+
+Canonical Passport ID:
+
+```text
+passport:v1:main:ed25519:b3:<64 lowercase hex>
+```
+
+Future device ID:
+
+```text
+device:v1:ed25519:b3:<64 lowercase hex>
+```
+
+This is deterministic.
+
+Do not derive identity from:
+
+```text
+VMK
+username
+PIN
+random replacement phrase
+WebView state
+```
+
+---
+
+# 17. LOCKED PHASE0 TEST VECTOR
+
+Canonical Phase0C vector used during implementation:
+
+```text
+BIP39 phrase:
+standard 12-word all-abandon / final about vector
+
+passphrase:
+empty
+
+seed:
+5eb00bbddcf069084889a8ab9155568165f5c453ccb85e70811aaed6f6da5fc19a5ac40b389cd370d086206dec8aa6c43daea6690f20ad3d8d48b2d2ce9e38e4
+```
+
+HKDF:
+
+```text
+salt:
+rustyonions.native-passport.root-seed.v1
+
+info:
+rustyonions.native-passport.root-signing-key.v1
+```
+
+Derived signing seed:
+
+```text
+6494f88bac1634fb4db0aaaecc6841f4dc21e4e744e2cb58378fcda7cf3d2dca
+```
+
+Root public key:
+
+```text
+3d7f7a7cf1ca3e1af8e812d2ac349b13770d152c3f26b72560ee6870b9dec909
+```
+
+Phase0D Passport ID transcript:
+
+```text
+rustyonions.native-passport.passport-id.v1|main|ed25519|<root-pub>
+```
+
+Expected Passport ID digest:
+
+```text
+acc2761e...b7df
+```
+
+---
+
+# 18. RUSTYONIONS `svc-passport` — PASSPORT ID PRIMITIVE
+
+Added:
+
+```text
+crates/svc-passport/src/native/passport_id.rs
+```
+
+Behavior:
+
+```text
+validated Ed25519 root public key
+→ Phase0D transcript
+→ BLAKE3
+→ canonical PassportIdV1
+```
+
+Focused tests:
+
+```text
+3/3 GREEN
+```
+
+Authority:
+
+```text
+svc-passport native crypto
+```
+
+No Tauri/React authority involved.
+
+---
+
+# 19. ROOT IDENTITY DERIVATION PRIMITIVE
+
+Added:
+
+```text
+root_identity.rs
+```
+
+Behavior:
+
+```text
+requires exactly 64-byte BIP39 seed
+→ exact Phase0C HKDF
+→ Ed25519 signing key
+→ verifying key
+→ validated lowerhex root pub
+→ Passport ID
+```
+
+Returns only public descriptor:
+
+```text
+RootPassportDescriptorV1 {
+  passport_id,
+  root_public_key,
+  optional_handle: None
+}
+```
+
+Focused tests:
+
+```text
+4/4 GREEN
+```
+
+Native `svc-passport` check:
+
+```text
+GREEN
+```
+
+---
+
+# 20. RECOVERY FACTOR → IDENTITY COMPOSITION
+
+Added native recovery identity composition.
+
+BIP39 behavior:
+
+```text
+PBKDF2-HMAC-SHA512
+2048 rounds
+salt prefix "mnemonic"
+empty BIP39 passphrase
+```
+
+Important:
+
+```text
+PIN IS NOT BIP39 PASSPHRASE
+
+username IS NOT BIP39 PASSPHRASE
+```
+
+Focused tests:
+
+```text
+4/4 GREEN
+```
+
+Including:
+
+```text
+zero factor
+max factor
+determinism
+malformed input
+```
+
+---
+
+# 21. STORED PASSPORT PUBLIC IDENTITY RUNTIME
+
+CrabLink added:
+
+```text
+passport_public_identity_runtime.rs
+```
+
+Behavior:
+
+```text
+load encrypted vault
+decode
+unseal RecoveryRoot
+derive canonical public identity
+return public descriptor
+```
+
+No:
+
+```text
+Tauri command
+writes
+username mutation
+wallet mutation
+root VMK return
+phrase return
+```
+
+Focused tests:
+
+```text
+4/4 GREEN
+```
+
+---
+
+# 22. PUBLIC PASSPORT DESCRIPTOR SIDECAR
+
+Added:
+
+```text
+passport_public_identity_store.rs
+```
+
+Canonical sidecar:
+
+```text
+passport.public-identity.json
+```
+
+Schema:
+
+```text
+crablink.native-passport.public-descriptor.v1
+```
+
+Version:
+
+```text
+1
+```
+
+Fields are only public identity metadata:
+
+```text
+schema
+version
+passport_id
+root_public_key
+```
+
+Maximum size:
+
+```text
+4096 bytes
+```
+
+Security/validation:
+
+```text
+unknown fields rejected
+schema/version strict
+Passport ID parsed canonically
+root pub parsed canonically
+Passport ID ↔ root pub binding re-derived and verified
+symlinks rejected
+non-files rejected
+bounded read
+write once
+same value idempotent
+conflicting identity rejected
+```
+
+Publication pattern:
+
+```text
+temporary create_new
+0600 Unix
+write
+sync
+hard-link publish
+parent sync
+temporary cleanup
+```
+
+---
+
+# 23. PUBLIC DESCRIPTOR CLEAR SUPPORT
+
+Later added:
+
+```text
+DesktopPublicPassportDescriptorStore::clear()
+```
+
+Behavior:
+
+```text
+remove descriptor
+remove stale temporary publication file
+missing root is idempotent
+second clear is idempotent
+no root unseal
+no vault mutation
+no Tauri mutation
+```
+
+Focused public identity store suite:
+
+```text
+5 tests
+5 passed
+```
+
+Tests include:
+
+```text
+malformed identity binding fails closed
+
+roundtrip across reconstruction
+
+same identity idempotent /
+conflict rejected
+
+descriptor clear removes sidecar
+and is idempotent
+
+schema/version/unknown-field
+corruption fails closed
+```
+
+---
+
+# 24. PUBLIC DESCRIPTOR QUALITY CAVEATS
+
+Still keep these in mind for later hardening:
+
+```text
+hard_link publication portability:
+Windows physical proof pending
+
+fixed temp name:
+not fully multi-process robust
+
+Windows directory fsync:
+not equivalent to Unix path
+
+descriptor:
+public cache, NOT identity authority
+
+RecoveryRoot derivation:
+canonical identity authority
+```
+
+The sidecar can always be rederived from the real Passport if custody remains intact.
+
+---
+
+# 25. ROOT PIN VERIFICATION PRIMITIVE
+
+Added in:
+
+```text
+svc-passport
+native/vault_crypto.rs
+```
+
+Function:
+
+```text
+verify_native_recovery_root_pin(...)
+```
+
+Behavior:
+
+```text
+requires RecoveryRoot envelope
+validates PIN/factor
+decrypts wrapped root VMK using existing authenticated primitive
+holds VMK only in NativeSecretBytes
+drops it immediately
+returns no VMK
+creates no root session
+```
+
+Focused tests:
+
+```text
+4/4 GREEN
+```
+
+Covered:
+
+```text
+correct root PIN
+
+wrong PIN → AuthenticationFailed
+
+DeviceKey envelope rejected
+
+invalid PIN length rejected
+```
+
+`svc-passport` native check:
+
+```text
+GREEN
+```
+
+---
+
+# 26. AUTHENTICATED IDENTITY FINALIZATION RUNTIME
+
+Added:
+
+```text
+finalize_stored_desktop_passport_identity_with_root_pin
+```
+
+Behavior:
+
+```text
+no vault + no descriptor:
+NoPassport
+
+descriptor without vault:
+orphan error
+
+descriptor + vault:
+return existing descriptor
+NO root access
+NO PIN verification
+
+first finalization:
+decode vault
+unseal RecoveryRoot once
+verify root PIN
+derive identity from same factor
+persist immutable public descriptor
+```
+
+Wrong PIN:
+
+```text
+RootPinRejected
+descriptor NOT written
+```
+
+No root session.
+
+No root VMK return.
+
+Original focused tests were:
+
+```text
+4/4 GREEN
+```
+
+---
+
+# 27. LIVE APPSTATE PUBLIC IDENTITY STORE
+
+Physical M1 V3 wired:
+
+```text
+passport_public_identity_store
+```
+
+into desktop AppState using the same Native Passport root directory as the vault.
+
+Current AppState therefore owns:
+
+```text
+passport_vault_store
+passport_public_identity_store
+passport_recovery_acknowledgement_store
+passport_platform_sealer
+passport_platform_material_clearer
+passport_operational_session
+pending recovery session
+pending operational session
+native secret surface
+```
+
+---
+
+# 28. LIVE ROOT CONFIRMATION / IDENTITY FINALIZATION
+
+The live Tauri root command now routes through authenticated identity finalization.
+
+New states:
+
+```text
+IdentityFinalized
+IdentityAvailable
+```
+
+Behavior:
+
+### First finalization
+
+```text
+vault exists
+operational session unlocked
+descriptor absent
+→ request native root PIN
+→ RecoveryRoot unseal
+→ verify root PIN
+→ derive canonical identity
+→ persist public descriptor
+→ identity_finalized
+```
+
+### Repeat
+
+```text
+vault exists
+descriptor exists
+→ identity_available
+→ NO root prompt
+→ NO RecoveryRoot unseal
+```
+
+### Wrong PIN
+
+```text
+confirmation_rejected
+descriptor write = NO
+```
+
+No root session is ever created.
+
+---
+
+# 29. LIVE ROOT AUTHORITY FOCUSED TESTS
+
+Existing Phase15Z legacy tests were retained.
+
+Current suite:
+
+```text
+6 tests
+6 passed
+```
+
+Original Phase15Z regressions:
+
+```text
+4/4 GREEN
+```
+
+New Physical M1 authority tests:
+
+```text
+correct PIN:
+finalizes once
+
+repeat:
+no second prompt
+no second root unseal
+
+wrong PIN:
+rejects
+no descriptor
+```
+
+This is strong synthetic evidence.
+
+---
+
+# 30. PASSPORT CLEAR LIFECYCLE INTEGRATION
+
+The live `passport_clear` now uses the descriptor-aware wrapper:
+
+```text
+clear_desktop_native_passport_with_public_identity_platform_material_and_recovery_acknowledgement
+```
+
+That wrapper first removes public descriptor metadata, then delegates to the original canonical complete custody clear.
+
+Important architectural fact:
+
+```text
+canonical custody-clear behavior
+was NOT duplicated
+```
+
+The original clear function remains the owner of:
+
+```text
+session drops
+pending-session drops
+platform-material clear
+vault removal
+recovery acknowledgement removal
+```
+
+---
+
+# 31. PHASE15AA REGRESSION
+
+Initial Phase15AA rerun:
+
+```text
+3 passed
+1 failed
+```
+
+Only failure:
+
+```text
+stale source assertion
+```
+
+It still required the old helper name directly in `commands/passport.rs`.
+
+Runtime behavior itself remained green.
+
+We repaired **only the stale source assertion** to require the descriptor-aware live wrapper and public identity store.
+
+Rerun:
+
+```text
+4 tests
+4 passed
+```
+
+---
+
+# 32. PARTIAL CLEAR / REFINALIZATION PROOF
+
+One important lifecycle edge was then tested.
+
+Scenario:
+
+```text
+identity finalized
+descriptor exists
+
+clear starts
+descriptor is removed
+
+later custody/platform clear fails
+
+encrypted vault remains
+
+descriptor absent
+
+authenticated finalization reruns
+
+same deterministic identity recreated
+
+clear retry succeeds
+
+vault absent
+descriptor absent
+```
+
+Added to:
+
+```text
+physical_m1_authenticated_identity_finalization_runtime.rs
+```
+
+Current authenticated finalization suite:
+
+```text
+5 tests
+5 passed
+```
+
+Including:
+
+```text
+invalid PIN length rejects
+
+wrong PIN rejects
+
+existing descriptor avoids root access
+
+correct PIN finalizes with exactly one root unseal
+
+partial-clear failure can re-finalize
+identical identity and retry clear
+```
+
+This closes the descriptor-first partial-clear concern with direct evidence.
+
+---
+
+# 33. RO HEADER / COMMENT DRIFT REPAIRED
+
+After live authority behavior changed, headers in:
+
+```text
+passport_root_confirmation_command_runtime.rs
+
+passport_clear_command_runtime.rs
+```
+
+still described the old behavior.
+
+We repaired comments only.
+
+Result:
+
+```text
+ROOT_RUNTIME_HEADER=CURRENT
+CLEAR_RUNTIME_HEADER=CURRENT
+
+RUNTIME_BEHAVIOR_MUTATED=NO
+AUTHORITY_MUTATED=NO
+
+git diff --check:
+GREEN
+```
+
+---
+
+# 34. TAURI CRATE CHECK
+
+After the Physical M1 runtime work:
+
+```bash
+CARGO_NET_OFFLINE=true \
+CARGO_INCREMENTAL=0 \
+cargo check \
+  --manifest-path apps/crablink-tauri/src-tauri/Cargo.toml
+```
+
+Result:
+
+```text
+GREEN
+
+Finished dev profile in 15.77s
+```
+
+---
+
+# 35. PHYSICAL M1 GREEN TEST SUMMARY
+
+Current directly observed focused gates:
+
+```text
+Public Passport ID primitive
+3/3 GREEN
+
+Root identity derivation
+4/4 GREEN
+
+Recovery → identity
+4/4 GREEN
+
+Stored public identity runtime
+4/4 GREEN
+
+Public identity store
+5/5 GREEN
+
+RecoveryRoot PIN verification
+4/4 GREEN
+
+Live Phase15Z root bridge
+6/6 GREEN
+
+Phase15AA clear bridge
+4/4 GREEN
+
+Authenticated identity finalization
+5/5 GREEN
+
+Existing Passport onboarding reconciliation
+5/5 GREEN
+
+Tauri crate check
+GREEN
+```
+
+Do not collapse these into a claim that the complete live Passport product path is green yet.
+
+---
+
+# 36. REAL MAC NATIVE PASSPORT STATE
+
+Live preflight found exactly one existing Native Passport vault.
+
+Path:
+
+```text
+/Users/mymac/Library/Application Support/com.rustyonions.crablink/native-passport/passport.vault.bin
+```
+
+Passport root:
+
+```text
+/Users/mymac/Library/Application Support/com.rustyonions.crablink/native-passport
+```
+
+At preflight:
+
+```text
+vault matches:
+1
+
+vault:
+present
+
+public descriptor:
+absent
+```
+
+This is the Passport we must preserve.
+
+**DO NOT CLEAR IT.**
+
+**DO NOT RECREATE IT.**
+
+**DO NOT GENERATE A REPLACEMENT PASSPORT.**
+
+---
+
+# 37. REAL MAC SIGNING PREFLIGHT
+
+Found local signing identity:
+
+```text
+CrabLink Local Development Code Signing
+```
+
+Preflight:
+
+```text
+CRABLINK_LOCAL_SIGNING_IDENTITY=PRESENT
+```
+
+---
+
+# 38. REAL SIGNED CRABLINK BUILD
+
+Built the normal stable CrabLink bundle, not A/B.
+
+Explicitly unset:
+
+```text
+VITE_CRABLINK_SIGNED_ONBOARDING_ACCEPTANCE
+
+CRABLINK_DESKTOP_AB_VARIANT
+```
+
+Therefore:
+
+```text
+signed onboarding bypass:
+NO
+
+A/B variant:
+NO
+```
+
+Build:
+
+```text
+release profile:
+GREEN
+
+Vite:
+GREEN
+```
+
+Release Rust build took roughly:
+
+```text
+6m 42s
+```
+
+Bundle:
+
+```text
+/Users/mymac/Desktop/crablink/apps/crablink-tauri/src-tauri/target/release/bundle/macos/CrabLink.app
+```
+
+Identifier:
+
+```text
+com.rustyonions.crablink
+```
+
+Signing authority:
+
+```text
+CrabLink Local Development Code Signing
+```
+
+`codesign --verify --deep --strict`:
+
+```text
+GREEN
+```
+
+Designated requirement:
+
+```text
+satisfied
+```
+
+Notarization:
+
+```text
+SKIPPED
+```
+
+because no Apple notarization credentials were configured.
+
+That is expected for this local acceptance build and is **not** Phase24 production packaging completion.
+
+---
+
+# 39. FIRST REAL SIGNED APP LAUNCH
+
+Exact signed bundle launched.
+
+Pre-launch:
+
+```text
+public descriptor:
+ABSENT
+```
+
+Launch proof:
+
+```text
+PHYSICAL_M1_FIRST_LIVE_LAUNCH=GREEN
+```
+
+No username/wallet/ledger mutation occurred during this launch gate.
+
+---
+
+# 40. REAL LIVE FAILURE FOUND BEFORE ROOT FINALIZATION
+
+The app did **not** reach root identity finalization.
+
+Instead onboarding displayed:
+
+```text
+Username draft:
+@testmac
+
+Passport state:
+no_passport
+
+Create status:
+failure
+```
+
+Visible native error:
+
+```text
+Passport creation was not completed
+
+A local Native Passport already exists.
+Onboarding did not create a second Passport.
+
+Failure code:
+already_exists
+```
+
+This is important.
+
+Native custody behaved correctly.
+
+It refused duplicate Passport creation.
+
+The bug was that persisted/WebView onboarding state did not reconcile with durable Native Passport truth.
+
+---
+
+# 41. POST-FAILURE DISK STATE
+
+After the app exited:
+
+```text
+PUBLIC_DESCRIPTOR_STATE=ABSENT
+
+ENCRYPTED_VAULT_STATE=PRESENT_REGULAR
+
+SIGNED_CRABLINK_PROCESS=NOT_RUNNING
+```
+
+Therefore:
+
+```text
+existing Passport preserved
+
+no descriptor created
+
+no identity finalization completed
+
+no duplicate Passport created
+```
+
+This is a clean recoverable state.
+
+---
+
+# 42. IMPORTANT DIAGNOSIS
+
+The first live Physical M1 run **did not disprove** the authenticated root identity runtime.
+
+We never reached it.
+
+The integration failure occurred earlier:
+
+```text
+incomplete onboarding local state
+→ PassportCreateStep
+
+PassportCreateStep
+→ createNativePassport
+
+native vault
+→ already exists
+
+onboarding
+→ treated already_exists as terminal failure
+```
+
+So the missing functionality was:
+
+```text
+existing Native Passport onboarding reconciliation
+```
+
+---
+
+# 43. EXISTING ONBOARDING BEHAVIOR BEFORE FIX
+
+`PassportCreateStep.jsx` originally:
+
+```text
+only created_locked advances
+```
+
+`already_exists`:
+
+```text
+failure
+not retryable
+```
+
+`onboardingModel.js` Passport states were:
+
+```text
+no_passport
+created_locked
+operational_unlocked
+unavailable
+```
+
+There was no distinct:
+
+```text
+stored_locked
+```
+
+state.
+
+---
+
+# 44. EXISTING NATIVE STATUS SURFACE
+
+Already available:
+
+```javascript
+readNativePassportStatus()
+```
+
+Native status can truthfully expose:
+
+```text
+no_passport
+
+locked / stored_locked
+
+operational_unlocked
+```
+
+with redacted/read-only posture.
+
+So no new native authority was needed to solve onboarding reconciliation.
+
+---
+
+# 45. EXISTING DURABLE RECOVERY ACKNOWLEDGEMENT
+
+A separate native durable recovery acknowledgement store already exists.
+
+The adapter already recognizes:
+
+```text
+already_acknowledged
+```
+
+and projects safe fields such as:
+
+```text
+persistedAcknowledgement
+
+alreadyAcknowledged
+
+repeatDisplayRejected
+
+wordsReturnedToWebview=false
+
+secretMaterialReturned=false
+```
+
+Therefore an old real Passport can resume without falsely claiming the recovery phrase was newly displayed.
+
+---
+
+# 46. NEW ONBOARDING RECONCILIATION PATCH
+
+Just applied in the final action of this session.
+
+Result:
+
+```text
+PHYSICAL_M1_EXISTING_PASSPORT_RECONCILIATION=APPLIED
+```
+
+Changes:
+
+```text
+NATIVE_STATUS_BEFORE_CREATE=REQUIRED
+
+CREATE_ONLY_AFTER_NO_PASSPORT=YES
+
+EXISTING_LOCKED_PASSPORT=RESUMABLE
+
+EXISTING_OPERATIONAL_PASSPORT=RESUMABLE
+
+DUPLICATE_CREATE_REQUIRED=NO
+
+ALREADY_EXISTS_RACE=RECHECK_NATIVE_STATUS
+
+STORED_LOCKED_DISTINCT_FROM_CREATED_LOCKED=YES
+
+PERSISTED_RECOVERY_ACK=RESUMABLE
+
+REPEAT_RECOVERY_DISPLAY_CLAIMED=NO
+
+LOCALSTORAGE_AUTHORITY=NO
+
+USERNAME_OWNERSHIP_CLAIM=NO
+```
+
+No Passport was cleared.
+
+No wallet/ledger mutation.
+
+---
+
+# 47. NEW `STORED_LOCKED` ONBOARDING STATE
+
+Added:
+
+```javascript
+PASSPORT_STATES.STORED_LOCKED
+```
+
+Meaning:
+
+```text
+real native Passport exists
+
+it was DISCOVERED by onboarding
+
+it was NOT freshly created during this onboarding attempt
+```
+
+`isPassportCreated()` now accepts:
+
+```text
+CREATED_LOCKED
+
+STORED_LOCKED
+
+OPERATIONAL_UNLOCKED
+```
+
+This keeps route progression possible without lying about creation provenance.
+
+---
+
+# 48. NEW MODEL TRANSITION
+
+Added:
+
+```javascript
+recordExistingPassportForOnboarding(...)
+```
+
+Requirements:
+
+```text
+current state:
+PASSPORT_CREATE_REQUESTED
+
+native status:
+must prove existing custody
+```
+
+Result route stage:
+
+```text
+PASSPORT_CREATED_LOCKED
+```
+
+but Passport state is:
+
+```text
+STORED_LOCKED
+```
+
+or:
+
+```text
+OPERATIONAL_UNLOCKED
+```
+
+depending on real native status.
+
+This distinction is deliberate.
+
+---
+
+# 49. PRE-CREATE NATIVE STATUS REVIEW
+
+`PassportCreateStep` now first calls:
+
+```javascript
+readNativePassportStatus()
+```
+
+and reviews it.
+
+Rules:
+
+### `no_passport`
+
+```text
+safeToCreate=true
+```
+
+Only then may native creation be attempted.
+
+### `locked` / `stored_locked`
+
+```text
+existing=true
+create=false
+resume=true
+```
+
+### `operational_unlocked`
+
+```text
+existing=true
+create=false
+resume=true
+```
+
+### malformed/unsafe/unknown
+
+```text
+safeToCreate=false
+existing=false
+fail closed
+```
+
+This means WebView localStorage no longer decides whether native custody exists.
+
+---
+
+# 50. ALREADY_EXISTS RACE HANDLING
+
+Even after a pre-create `no_passport`, a race is still possible.
+
+Example:
+
+```text
+status:
+no_passport
+
+another process/state transition creates vault
+
+create:
+already_exists
+```
+
+New behavior:
+
+```text
+already_exists
+→ re-read native status
+
+if native status now proves a real vault:
+reconcile
+
+otherwise:
+retain failure
+```
+
+No duplicate create attempt.
+
+---
+
+# 51. DURABLE RECOVERY ACK RESUME
+
+`onboardingRecoveryCeremony.js` now accepts two truthful success forms.
+
+### New/current ceremony
+
+Requires:
+
+```text
+state=acknowledged
+shown=true
+acknowledged=true
+native secure surface requested=true
+```
+
+### Previously durable acknowledgement
+
+Requires strict:
+
+```text
+state=already_acknowledged
+
+shown=false
+
+acknowledged=true
+
+redacted=true
+
+recoveryFingerprint=REDACTED
+
+nativeSecureSurfaceRequested=false
+
+wordsReturnedToWebview=false
+
+secretMaterialReturned=false
+
+recoveryRootExported=false
+
+walletOrLedgerMutated=false
+```
+
+This allows resume without claiming that a recovery phrase was redisplayed.
+
+---
+
+# 52. NEW ONBOARDING RECONCILIATION TEST
+
+Added:
+
+```text
+apps/crablink-tauri/src/onboarding/
+physicalM1ExistingPassportOnboardingReconciliation.test.mjs
+```
+
+New test count:
+
+```text
+5
+```
+
+Terminal result:
+
+```text
+5 passed
+0 failed
+```
+
+Tests:
+
+```text
+1.
+native presence permits creation only
+after safe no_passport truth
+
+2.
+unsafe/unknown native status cannot
+authorize creation or reconciliation
+
+3.
+existing locked Passport resumes
+recovery route without claiming
+fresh creation
+
+4.
+durable already_acknowledged truth
+resumes without repeat display
+
+5.
+PassportCreateStep reads native status
+before create and rechecks native
+status after already_exists
+```
+
+This is the **latest green terminal evidence** and the session stopping point.
+
+---
+
+# 53. IMPORTANT: REGRESSION TESTS HAVE NOT YET BEEN RUN AFTER THIS LAST PATCH
+
+Do **not** claim this integration patch is completely closed yet.
+
+The new focused test is green.
+
+But we have **not yet** rerun the adjacent existing suites after the final reconciliation changes.
+
+Next session must do that first.
+
+---
+
+# 54. EXACT FIRST ACTION FOR NEXT SESSION — MAC ONLY
+
+Start in:
+
+```bash
+cd /Users/mymac/Desktop/crablink
+```
+
+First run the directly adjacent regression suites.
+
+Recommended first gate:
+
+```bash
+node --test \
+  apps/crablink-tauri/src/onboarding/passportCreateStep.test.mjs \
+  apps/crablink-tauri/src/onboarding/recoveryCeremony.test.mjs \
+  apps/crablink-tauri/src/onboarding/onboardingModel.test.mjs
+```
+
+Fix only the first real failure if red.
+
+Do not immediately broaden scope.
+
+If green, next run:
+
+```bash
+node --test \
+  apps/crablink-tauri/src/onboarding/onboardingDesktopFinalAcceptance.test.mjs \
+  apps/crablink-tauri/src/onboarding/startupPassportUnlockGate.test.mjs
+```
+
+Again fix first failure only.
+
+---
+
+# 55. AFTER JS REGRESSIONS — FRONTEND BUILD
+
+If those focused suites are green:
+
+```bash
+cd /Users/mymac/Desktop/crablink/apps/crablink-tauri
+
+npm run build
+```
+
+Need:
+
+```text
+GREEN
+```
+
+No signed runtime yet if this is red.
+
+---
+
+# 56. TAURI RUST DOES NOT NEED REDESIGN FOR THIS PATCH
+
+The final reconciliation patch changed JavaScript/React onboarding behavior.
+
+The Tauri crate had already passed:
+
+```text
+cargo check:
+GREEN
+```
+
+If no Rust files change during regression repair, do not reflexively rebuild all Rust tests.
+
+A release signed build will compile the Rust portion again anyway before live acceptance.
+
+---
+
+# 57. NEXT LIVE SIGNED MAC ACCEPTANCE
+
+Once focused regressions + Vite build are green, rebuild the exact normal signed app again because the previous bundle predates the reconciliation patch.
+
+Use:
+
+```text
+normal CrabLink.app
+
+identifier:
+com.rustyonions.crablink
+
+signing identity:
+CrabLink Local Development Code Signing
+
+VITE_CRABLINK_SIGNED_ONBOARDING_ACCEPTANCE:
+UNSET
+
+CRABLINK_DESKTOP_AB_VARIANT:
+UNSET
+```
+
+Do not launch the old pre-reconciliation `.app` and mistake it for current code.
+
+---
+
+# 58. LIVE ACCEPTANCE EXPECTED PATH AFTER REBUILD
+
+Expected clean behavior:
+
+```text
+launch
+
+onboarding sees old local WebView state
+
+PassportCreateStep reads native status BEFORE create
+
+native status proves stored existing Passport
+
+NO create prompt
+
+NO duplicate create attempt
+
+onboarding records STORED_LOCKED
+
+recovery step begins
+```
+
+At recovery step:
+
+```text
+if native durable acknowledgement exists:
+already_acknowledged
+→ advance without redisplay
+
+if acknowledgement absent:
+perform real native recovery ceremony
+```
+
+Never fake acknowledgement.
+
+---
+
+# 59. PIN SETUP / OPERATIONAL UNLOCK AFTER RECONCILIATION
+
+Be careful here.
+
+Existing Passport already has its actual PIN/custody.
+
+Onboarding's “PIN setup” history may be stale.
+
+The product must not pretend it is establishing a new PIN if native custody already has one.
+
+Use the existing native operational unlock behavior.
+
+If the next live pass exposes another stale onboarding transition around PIN setup, inspect it rather than forcing localStorage flags.
+
+This is likely the next integration boundary after recovery reconciliation.
+
+---
+
+# 60. REAL ROOT IDENTITY FINALIZATION — STILL PENDING
+
+Once onboarding allows access to the normal product/Passport drawer:
+
+```text
+unlock operationally
+through native PIN surface
+
+open Passport drawer
+
+Advanced Passport controls
+
+Confirm root action
+```
+
+First successful root action should result in:
+
+```text
+state:
+identity_finalized
+
+native secure input requested:
+true
+
+recovery root unsealed:
+true
+
+secret material returned:
+false
+
+PIN received from WebView:
+false
+```
+
+Public descriptor should then appear:
+
+```text
+passport.public-identity.json
+```
+
+---
+
+# 61. DESCRIPTOR LIVE VALIDATION AFTER FIRST FINALIZATION
+
+Validate:
+
+```text
+regular file
+not symlink
+
+mode:
+0600
+
+size:
+<= 4096
+
+schema:
+crablink.native-passport.public-descriptor.v1
+
+version:
+1
+
+Passport ID:
+passport:v1:main:ed25519:b3:<64 lowerhex>
+
+root_public_key:
+64 lowerhex
+```
+
+Only public fields should exist.
+
+Never print/export:
+
+```text
+PIN
+RecoveryRoot factor
+phrase
+seed
+root private key
+VMK
+device private key
+```
+
+---
+
+# 62. RESTART PROOF AFTER FIRST FINALIZATION
+
+Record descriptor:
+
+```text
+SHA256
+mtime
+inode
+Passport ID
+```
+
+Quit app.
+
+Relaunch exact signed bundle.
+
+Operational unlock as required.
+
+Press **Confirm root action** again.
+
+Required:
+
+```text
+state:
+identity_available
+
+new root PIN prompt:
+NO
+
+RecoveryRoot unseal:
+NO
+
+descriptor rewrite:
+NO
+
+Passport ID:
+unchanged
+```
+
+This is the real restart-safe local Passport identity proof.
+
+---
+
+# 63. IMPORTANT SERVER AUTHORITY GAP AFTER LOCAL IDENTITY
+
+Do not proceed directly from:
+
+```text
+canonical Passport ID exists
+```
+
+to:
+
+```text
+backend username write allowed
+```
+
+A Passport ID is public identity, **not authentication**.
+
+The remaining server-auth design must include real device authority.
+
+---
+
+# 64. DEVICE / SERVER AUTH — NEXT AUTHORITY SLICE
+
+After the local Passport identity proof, build/complete:
+
+```text
+device key generation
+
+device private key local/native storage
+
+device public key
+
+canonical Device ID
+
+DeviceAuthorizationV1
+
+root signature over device authorization
+
+bounded capabilities
+
+request signing
+
+challenge / nonce / replay protection
+```
+
+Omnigate / backend must verify:
+
+```text
+request signature
+
+device authorization
+
+root binding
+
+Passport ID binding
+
+capability
+
+freshness/replay state
+```
+
+Only then does the server obtain:
+
+```text
+authenticated Passport subject
+```
+
+---
+
+# 65. SERVER USERNAME / PROFILE CLAIM AFTER DEVICE AUTH
+
+Only after real server-verifiable device auth:
+
+```text
+authenticate Mac Passport
+→ bind canonical Passport ID
+→ claim @testmac
+→ persist profile
+→ GET profile
+→ restart backend
+→ GET profile again
+```
+
+Then we can truthfully mark:
+
+```text
+@testmac claimed
+```
+
+Until then:
+
+```text
+@testmac = draft only
+```
+
+---
+
+# 66. CURRENT OMNIGATE WRITE POLICY
+
+Default denial of unauthenticated profile writes must remain.
+
+Do not introduce:
+
+```text
+allow all
+dev subject exception
+localhost write bypass
+canonical-looking Passport ID trust
+```
+
+The earlier access-denied result was correct.
+
+---
+
+# 67. WINDOWS CLIENT — DEFER UNTIL USER IS HOME
+
+During the next daytime Mac-only session:
+
+```text
+DO NOT spend time requiring the Windows PC
+```
+
+Continue Mac-side work.
+
+When user gets home:
+
+```text
+resume physical Windows Client B
+```
+
+Existing public Windows build/packaging was already proven green earlier.
+
+Project notes record the Windows `.exe`, MSI, and NSIS packaging as green and say not to reopen the packaging work without a real regression. 
+
+---
+
+# 68. WINDOWS ENVIRONMENT ALREADY ESTABLISHED
+
+Existing Windows machine:
+
+```text
+HP EliteDesk 805 G6 Mini
+Ryzen 5 PRO 4650GE
+Windows 11 Pro
+```
+
+Toolchain previously installed/verified:
+
+```text
+Git for Windows
+
+winget
+
+Visual Studio Build Tools 2022
+
+MSVC C++ toolset
+
+rustup
+
+stable-x86_64-pc-windows-msvc
+```
+
+Public CrabLink Windows build previously succeeded.
+
+Do not redo basic environment setup unless it changed.
+
+---
+
+# 69. WINDOWS CLIENT TARGET
+
+Later physical Client B:
+
+```text
+username:
+@testpc
+```
+
+Need independent:
+
+```text
+Passport
+native local storage
+wallet/local state
+profile
+```
+
+Do not clone Mac Passport/local app data.
+
+---
+
+# 70. PHYSICAL A/B SOCIAL ACCEPTANCE AFTER BOTH CLIENTS
+
+Once both identities are genuinely server-authenticated:
+
+```text
+Mac A resolves Windows B
+
+Windows B resolves Mac A
+
+A follows B locally
+
+B publishes
+
+A Home receives B
+
+B follows A locally
+
+A publishes
+
+B Home receives A
+
+profile timelines
+
+unfollow
+
+refresh
+
+restart
+
+offline/reconnect
+```
+
+Server does not need follower lists.
+
+Each client's own local following set drives selection.
+
+The older project notes describe this exact A/B target. 
+
+---
+
+# 71. PUBLICATION / WALLET PATH
+
+Previous integrated demo attempts encountered wallet/session requirements.
+
+When publication is reached:
+
+```text
+inspect exact intended private-beta wallet path
+
+do not fake ROC
+
+do not seed fake balances
+
+do not bypass confirmation
+
+do not create fake receipts
+
+do not let cache unlock paid content
+```
+
+Authority remains:
+
+```text
+svc-wallet
+→ ron-ledger
+```
+
+---
+
+# 72. FINAL_BETA CURRENT MAJOR PHASE STATUS
+
+Locked major state:
+
+```text
+Phase 19
+QuickChain multi-node
+GREEN
+
+Phase 20
+ROX private testnet
+GREEN
+
+Phase 21
+Full Desktop Decentralized Beta Demonstration
+ACTIVE / NOT GREEN
+```
+
+Phase 21's official goal is one controlled full run including Passport, username/profile, follow/feed, publishing, sites, paid flow, receipts/ROC, QuickChain evidence, ROX testnet evidence, failure/halt drills, and restart reconciliation. 
+
+---
+
+# 73. PHASE21 A/B/C INTERNAL SUBDIVISIONS
+
+These are project implementation labels, not official original FINAL_BETA headings:
+
+```text
+Phase21A
+cross-repo preflight
+GREEN
+
+Phase21B
+private network bring-up
+GREEN
+
+Phase21C
+integrated desktop/product demonstration
+ACTIVE
+```
+
+Do not confuse these with CrabNode CN numbering.
+
+---
+
+# 74. PHASE21 OFFICIAL CHECKLIST — CURRENT PRACTICAL POSITION
+
+Official demonstration sequence is 24 steps. 
+
+Current broad classification:
+
+```text
+1 private RustyOnions network
+prior evidence GREEN
+
+2 multiple Service Nodes
+prior evidence GREEN
+
+3 User Node verifier
+prior evidence GREEN
+
+4 launch clean CrabLink
+launch proven;
+clean coherent acceptance still active
+
+5 create/restore Passport
+real existing Mac Passport present;
+reconciliation actively being closed
+
+6 claim/confirm username
+NOT GREEN
+
+7 create profile
+NOT GREEN
+
+8 follow another profile
+waiting for authenticated A/B
+
+9 publish
+not closed
+
+10 profile timeline
+not closed
+
+11 follower Home feed
+not closed
+
+12 blog
+not closed in integrated demo
+
+13 imageboard
+not closed in integrated demo
+
+14 forum
+not closed in integrated demo
+
+15 resolve sites
+not closed in integrated demo
+
+16 paid content/site flow
+not closed
+
+17 receipt
+not closed
+
+18 ROC display
+not closed
+
+19 QuickChain evidence
+historical implementation green;
+integrated demo evidence still required
+
+20 redacted QuickChain display
+integrated acceptance pending
+
+21 ROC → ROX testnet
+historical Phase20 evidence exists;
+fresh rerun only if integration needs it
+
+22 ROX → ROC dry-run
+historical green
+
+23 failure/halt/revocation
+integrated demo pending
+
+24 restart/reconcile
+pending
+```
+
+---
+
+# 75. FINAL_BETA PHASE22 AND BEYOND
+
+After Phase21 genuinely closes:
+
+```text
+Phase22
+Security / Moderation / Privacy / Abuse Controls
+
+Phase23
+UX / Accessibility / Performance
+
+Phase24
+Desktop Packaging / Signing / Update / Recovery
+
+Phase25
+Private Beta Operations
+
+Phase26
+Final Acceptance / Launch
+```
+
+Phase22 includes command/capability audits, secret/log redaction, parser/body/replay protections, block/mute/unfollow/report/tombstone/rate-limit handling, and other realistic abuse controls. 
+
+Phase23/24 cover usability/performance and beta packaging; macOS is the primary beta platform and Windows/Linux require target acceptance before artifacts are considered finished. 
+
+---
+
+# 76. ROX ANCHOR STATUS
+
+Keep ROX parked unless the integrated desktop flow requires fresh evidence.
+
+Current classification:
+
+```text
+BUILD_PLAN4:
+GREEN / COMPLETE / PARKED
+
+FINAL_BETA Phase20:
+GREEN
+
+public mainnet:
+NO
+
+public bridge:
+NO
+
+production mint/burn:
+NO
+```
+
+FINAL_BETA explicitly requires ROX to remain a private-testnet controlled path and hands off from Phase20 to Phase21. 
+
+Do not start:
+
+```text
+ROX BUILD_PLAN5
+```
+
+unless explicitly authorized.
+
+---
+
+# 77. ROX FUTURE HARDENING REMINDERS
+
+Before public ROX production later:
+
+```text
+add Solana security.txt/contact metadata
+
+review Explorer-visible deployment metadata
+```
+
+Tokenomics future preference:
+
+```text
+ROX ↔ SOL swap:
+33 bps burn
+
+general ROX transfer:
+DO NOT assume burn
+```
+
+Before implementing, verify intended Token-2022 mechanism and swap-only applicability.
+
+No need to touch this during current Physical M1 work.
+
+---
+
+# 78. CURRENT CODEBUNDLE STATUS
+
+Fresh CrabLink bundle generated earlier this session:
+
+```text
+CODEBUNDLE_TAURI_APP
+generated 2026-08-19T06:40:32Z
+Git 2079231 dirty
+```
+
+It contains the Passport identity/finalization runtime work through that time.
+
+**However, it predates the final existing-Passport onboarding reconciliation patch.**
+
+Therefore next session:
+
+```text
+LIVE REPO SOURCE OVERRIDES BUNDLE
+```
+
+Do not assume the bundle contains:
+
+```text
+STORED_LOCKED
+recordExistingPassportForOnboarding
+pre-create native status reconciliation
+already_acknowledged onboarding resume
+final 5-test reconciliation file
+```
+
+Regenerate the CrabLink bundle after the reconciliation changes are stabilized and adjacent regressions are green.
+
+---
+
+# 79. RUSTYONIONS CODEBUNDLE STATUS
+
+Existing attached RustyOnions codebundles are useful references, but many Passport native changes occurred after earlier snapshots.
+
+For exact `svc-passport` Physical M1 state:
+
+```text
+live /Users/mymac/Desktop/RustyOnions source
+is authoritative
+```
+
+Regenerate a fresh RustyOnions bundle at a useful milestone rather than every tiny patch.
+
+---
+
+# 80. FILES MEANINGFULLY ADDED / CHANGED DURING PHYSICAL M1
+
+RustyOnions side includes at least:
+
+```text
+crates/svc-passport/src/native/passport_id.rs
+
+crates/svc-passport/src/native/root_identity.rs
+
+crates/svc-passport/src/native/recovery_identity.rs
+
+crates/svc-passport/src/native/vault_crypto.rs
+
+native module exports / Cargo feature dependency wiring
+
+focused Physical M1 tests
+```
+
+CrabLink side includes at least:
+
+```text
+passport_public_identity_runtime.rs
+
+passport_public_identity_store.rs
+
+passport_identity_finalization_runtime.rs
+
+passport_root_confirmation_command_runtime.rs
+
+passport_clear_command_runtime.rs
+
+state.rs
+
+commands/passport.rs
+
+physical_m1_public_identity_store.rs
+
+physical_m1_identity_finalization_runtime.rs
+
+physical_m1_authenticated_identity_finalization_runtime.rs
+
+physical_m1_stored_passport_public_identity_runtime.rs
+
+phase15z_desktop_root_confirmation_command_bridge.rs
+
+phase15aa_desktop_clear_command_bridge.rs
+```
+
+Latest onboarding reconciliation changed:
+
+```text
+onboardingModel.js
+
+onboardingPassportCreate.js
+
+PassportCreateStep.jsx
+
+onboardingRecoveryCeremony.js
+```
+
+and added:
+
+```text
+physicalM1ExistingPassportOnboardingReconciliation.test.mjs
+```
+
+---
+
+# 81. CODE QUALITY / COMMENTS RULE
+
+Every new or materially rewritten code file needs applicable RO header fields:
+
+```text
+RO:WHAT
+RO:WHY
+RO:INTERACTS
+RO:INVARIANTS
+
+and where applicable:
+RO:METRICS
+RO:CONFIG
+RO:SECURITY
+RO:TEST
+```
+
+Comments explain:
+
+```text
+behavior
+authority
+invariants
+failure handling
+tests
+```
+
+Do not leave stale “future unavailable” claims after a path becomes real.
+
+---
+
+# 82. TESTING CADENCE
+
+Continue:
+
+```text
+inspect
+→ smallest real patch
+→ focused test
+→ fix first failure
+→ adjacent regression
+→ broader gate when warranted
+```
+
+Do not throw broad workspace tests at every UI patch.
+
+Authority/durability/network/crypto changes remain isolated.
+
+---
+
+# 83. CARGO / DISK DISCIPLINE
+
+Do not run:
+
+```bash
+cargo clean
+```
+
+without strong evidence.
+
+A prior clean removed useful target state and consumed rebuild time.
+
+Prefer:
+
+```bash
+CARGO_NET_OFFLINE=true
+CARGO_INCREMENTAL=0
+```
+
+for focused gates when appropriate.
+
+Workspace check at milestones, not reflexively after every tiny patch.
+
+---
+
+# 84. SHELL / ZSH RULES
+
+Interactive zsh environment has:
+
+```text
+interactivecomments off
+```
+
+Therefore top-level pasted lines beginning with:
+
+```bash
+#
+```
+
+can cause:
+
+```text
+zsh: command not found: #
+```
+
+Avoid top-level shell comment lines in paste-ready commands.
+
+Also:
+
+```text
+never use zsh variable name:
+status
+```
+
+It is reserved/read-only.
+
+Avoid unquoted `!`.
+
+Commands should remain paste-ready and readable.
+
+---
+
+# 85. GIT RULE
+
+Do not:
+
+```text
+git add
+git commit
+git push
+```
+
+unless explicitly requested.
+
+Read-only:
+
+```text
+git status
+git diff
+git diff --check
+git rev-parse
+```
+
+are fine.
+
+---
+
+# 86. DO NOT FAKE SUCCESS
+
+Forbidden:
+
+```text
+fake balances
+
+fake receipts
+
+fake ownership
+
+fake Passport authentication
+
+fake B3
+
+fake provider discovery
+
+fake quorum
+
+fake finality
+
+fake settlement
+
+fake username authority
+
+fake profile write success
+
+fake recovery acknowledgement
+
+fake Windows physical proof
+```
+
+If a real product path blocks, inspect/fix that real path.
+
+The `already_exists` onboarding failure is a good example of exactly the kind of integration failure we should surface rather than bypass.
+
+---
+
+# 87. ADMIN / NETWORK SECURITY
+
+Keep:
+
+```text
+CrabNode admin:
+loopback only by default
+```
+
+Do not expose admin or User Node surfaces to LAN merely to connect CrabLink.
+
+For physical Windows later, expose only the intended client-facing gateway ingress.
+
+Do not publish residential User Node IPs.
+
+---
+
+# 88. B3 / CONTENT TRUTH
+
+Always:
+
+```text
+verify B3 content before acceptance/serving
+```
+
+Never use:
+
+```text
+DHT/provider record
+```
+
+as content truth.
+
+DHT is discovery, not integrity or username consensus.
+
+---
+
+# 89. OAP/1 LIMITS
+
+Preserve:
+
+```text
+max frame:
+1 MiB
+
+stream chunks:
+~64 KiB where applicable
+```
+
+Strict DTOs reject unknown fields where defined.
+
+Queues/state remain bounded.
+
+No lock held across `.await`.
+
+---
+
+# 90. THE MOST IMPORTANT NEXT-SESSION DECISION TREE
+
+Start Mac-only.
+
+```text
+A.
+run new adjacent JS regressions
+
+if RED:
+fix first failure only
+
+if GREEN:
+continue
+
+B.
+run Vite build
+
+if RED:
+fix first failure
+
+if GREEN:
+continue
+
+C.
+rebuild normal signed CrabLink.app
+
+D.
+launch with existing Passport vault
+
+E.
+prove existing-Passport reconciliation
+
+if onboarding still attempts create:
+inspect reconciliation runtime
+
+if it correctly resumes:
+continue
+
+F.
+prove recovery acknowledgement path
+
+G.
+prove existing PIN/operational-unlock path
+
+H.
+reach Passport drawer
+
+I.
+run real root identity finalization
+
+J.
+validate descriptor
+
+K.
+restart
+
+L.
+prove identity_available without second root prompt
+
+M.
+begin real device/server-auth authority slice
+
+N.
+authenticate @testmac through real CrabNode
+
+O.
+claim/read/restart-read @testmac
+
+P.
+continue Mac-only work until Windows is physically available
+```
+
+---
+
+# 91. WHEN WINDOWS BECOMES AVAILABLE LATER
+
+Then resume:
+
+```text
+bring Windows CrabLink current source/build
+
+do not redo packaging unless regression
+
+create/restore independent Passport B
+
+complete same canonical Passport/device-auth model
+
+claim @testpc through same CrabNode
+
+prove profile
+
+restart
+
+then run A/B follow/feed/publication tests
+```
+
+No simulated Windows proof beforehand.
+
+---
+
+# 92. WHAT NOT TO DO AT NEXT SESSION START
+
+Do **not** start by:
+
+```text
+cargo clean
+
+recreating Mac Passport
+
+clearing Mac app data
+
+manually setting onboarding complete
+
+manually setting recoveryPhraseAcknowledged=true
+
+enabling VITE_CRABLINK_SIGNED_ONBOARDING_ACCEPTANCE
+
+using passport:main:dev
+
+weakening Omnigate policy
+
+claiming @testmac manually with curl using an unauthenticated subject
+
+starting ROX work
+
+starting TV/Android/iOS work
+
+waiting idle for Windows
+```
+
+The Mac has enough meaningful work remaining.
+
+---
+
+# 93. CURRENT ON-DISK MAC PASSPORT IS VALUABLE TEST STATE
+
+Preserve:
+
+```text
+/Users/mymac/Library/Application Support/com.rustyonions.crablink/native-passport/passport.vault.bin
+```
+
+It is now especially useful because it reproduces the real-world case:
+
+```text
+native custody survives
+while WebView onboarding state is stale/incomplete
+```
+
+That is exactly the restart/reinstall/migration kind of case Phase24 and final beta must eventually handle well.
+
+Do not erase this evidence source.
+
+---
+
+# 94. EXPECTED NEXT PRODUCT BUG CLASS
+
+After existing Passport reconciliation works, likely integration edge areas are:
+
+```text
+recovery acknowledgement state reconciliation
+
+PIN setup vs already-established PIN
+
+operational unlock route transition
+
+onboarding completion state
+
+public identity descriptor creation
+
+device authorization
+
+server request authentication
+```
+
+Do not assume those are bugs until observed.
+
+Fix first observed failure only.
+
+---
+
+# 95. FINAL_BETA PHASE24 RELEVANCE OF THIS WORK
+
+This Physical M1 work is not throwaway.
+
+The exact state mismatch we found directly informs later Phase24 requirements:
+
+```text
+Passport preservation rules
+
+upgrade migration
+
+uninstall/reinstall behavior
+
+app-data-path review
+
+recovery behavior
+```
+
+Phase24 explicitly requires Passport data policy and upgrade/recovery behavior before desktop packaging is considered green. 
+
+So the onboarding reconciliation fix is also valuable future packaging/migration hardening.
+
+---
+
+# 96. LAUNCH CLASSIFICATION MUST REMAIN HONEST
+
+Eventual correct language:
+
+```text
+CrabLink Desktop decentralized private beta
+
+QuickChain private-network beta
+
+ROX Anchor private Solana testnet demonstration
+```
+
+Do not claim:
+
+```text
+mainnet live
+
+public bridge live
+
+production ROX mint/burn
+
+staking
+
+liquidity
+
+exchange-ready
+```
+
+The FINAL_BETA plan explicitly keeps public mainnet bridge/mint/burn behavior outside the beta. 
+
+---
+
+# 97. CURRENT STOPPING MARKERS
+
+Use this block as the machine-readable state summary:
+
+```text
+CRABNODE_CN0=GREEN
+CRABNODE_CN1=GREEN
+CRABNODE_CN2=GREEN
+CRABNODE_CN3=GREEN
+CRABNODE_CN4=GREEN
+
+CRABNODE_M1_BACKEND_IMPLEMENTATION=GREEN
+CRABNODE_M1_PHYSICAL_CLIENT_ACCEPTANCE=PENDING
+
+PHYSICAL_M1_NATIVE_PASSPORT_ID=GREEN
+PHYSICAL_M1_ROOT_IDENTITY_DERIVATION=GREEN
+PHYSICAL_M1_RECOVERY_IDENTITY=GREEN
+PHYSICAL_M1_ROOT_PIN_VERIFICATION=GREEN
+
+PHYSICAL_M1_PUBLIC_IDENTITY_RUNTIME=GREEN
+PHYSICAL_M1_PUBLIC_IDENTITY_STORE=GREEN
+PHYSICAL_M1_PUBLIC_DESCRIPTOR_CLEAR=GREEN
+PHYSICAL_M1_AUTHENTICATED_FINALIZATION=GREEN
+PHYSICAL_M1_LIVE_ROOT_AUTHORITY_TESTS=GREEN
+PHYSICAL_M1_CLEAR_REGRESSION=GREEN
+PHYSICAL_M1_PARTIAL_CLEAR_RETRY=GREEN
+
+PHYSICAL_M1_TAURI_CHECK=GREEN
+
+PHYSICAL_M1_REAL_MAC_VAULT=PRESENT
+PHYSICAL_M1_REAL_MAC_PUBLIC_DESCRIPTOR=ABSENT
+PHYSICAL_M1_SIGNED_APP_BUILD=GREEN
+
+PHYSICAL_M1_FIRST_REAL_SIGNED_LAUNCH=GREEN
+PHYSICAL_M1_FIRST_REAL_ROOT_FINALIZATION=NOT_REACHED
+
+FIRST_REAL_RUNTIME_BLOCKER=
+STALE_ONBOARDING_NATIVE_PASSPORT_STATE
+
+PHYSICAL_M1_EXISTING_PASSPORT_RECONCILIATION=APPLIED
+PHYSICAL_M1_EXISTING_PASSPORT_RECONCILIATION_TEST=5_OF_5_GREEN
+
+ADJACENT_ONBOARDING_REGRESSIONS_AFTER_RECONCILIATION=NOT_RUN
+POST_RECONCILIATION_VITE_BUILD=NOT_RUN
+POST_RECONCILIATION_SIGNED_APP_BUILD=NOT_RUN
+POST_RECONCILIATION_LIVE_ACCEPTANCE=NOT_RUN
+
+TESTMAC_CLAIMED=NO
+TESTPC_CLAIMED=NO
+
+WINDOWS_PHYSICAL_WORK=DEFER_UNTIL_USER_RETURNS_HOME
+
+FINAL_BETA_PHASE21=ACTIVE_NOT_GREEN
+FINAL_BETA_PHASE22_26=PENDING
+
+ROX_BUILD_PLAN4=GREEN_PARKED
+ROX_BUILD_PLAN5=NOT_AUTHORIZED
+```
+
+---
+
+# 98. EXACT SHORT HANDOFF TO PASTE AT THE TOP OF NEXT SESSION
+
+```text
+We are continuing RustyOnions / CrabNode / CrabLink with CRABNODE_BUILDPLAN.md and FINAL_BETA.md as the active plans.
+
+CN-0 through CN-4 are implemented/green, so the immediate work is the physical M1 client/Passport integration needed to turn that backend into real FINAL_BETA Phase21 evidence.
+
+Current Mac state:
+- Existing real Native Passport vault is preserved at:
+  ~/Library/Application Support/com.rustyonions.crablink/native-passport/passport.vault.bin
+- Do NOT clear/recreate it.
+- public Passport descriptor is still absent.
+- normal signed CrabLink.app built and codesign verified with identifier com.rustyonions.crablink and no signed-onboarding bypass.
+- first real signed launch exposed a product bug before root finalization: onboarding local state said no_passport while the native vault existed, so PassportCreateStep attempted create and native correctly returned already_exists.
+- no duplicate Passport was created and the existing vault remains intact.
+
+We just implemented real existing-Passport onboarding reconciliation:
+- pre-create readNativePassportStatus required
+- create only after verified no_passport
+- existing locked/unlocked Passport resumes without duplicate create
+- STORED_LOCKED distinguishes discovered custody from newly created custody
+- already_exists race rechecks native status
+- durable already_acknowledged recovery truth can resume without falsely claiming a repeat phrase display
+- localStorage is not custody authority
+- @testmac remains only a draft
+- no wallet/ledger mutation
+
+Latest focused test:
+physicalM1ExistingPassportOnboardingReconciliation.test.mjs
+5 passed / 0 failed.
+
+FIRST NEXT ACTION:
+run adjacent existing onboarding regressions:
+node --test \
+  apps/crablink-tauri/src/onboarding/passportCreateStep.test.mjs \
+  apps/crablink-tauri/src/onboarding/recoveryCeremony.test.mjs \
+  apps/crablink-tauri/src/onboarding/onboardingModel.test.mjs
+
+Fix only the first failure if red.
+
+If green:
+run onboardingDesktopFinalAcceptance + startupPassportUnlockGate,
+then npm run build,
+then rebuild the normal signed CrabLink.app because the old bundle predates the reconciliation patch.
+
+Next real Mac acceptance:
+launch signed app,
+prove it resumes the existing Passport instead of attempting create,
+prove recovery acknowledgement,
+prove existing PIN/operational unlock,
+reach Passport drawer,
+run Confirm root action,
+require identity_finalized,
+validate passport.public-identity.json,
+restart,
+require identity_available with no second root prompt/unseal/rewrite.
+
+After local Passport identity is proven, do NOT immediately claim @testmac.
+Canonical Passport ID is not server authentication.
+Next authority slice is real device key + DeviceAuthorizationV1 + root signature + request signing/challenge/replay verification in Omnigate/backend.
+Only after that should @testmac be claimed through the real CrabNode.
+
+TEMPORARY MACHINE CONSTRAINT:
+User will be away from home most of August 19 and has only the Mac laptop.
+Continue all productive Mac-side work.
+Defer physical Windows/@testpc work until the user returns home later.
+Do not fabricate or simulate Windows physical evidence.
+
+When Windows is available:
+resume independent Passport B/@testpc,
+then run real A/B profile/follow/feed/publication/restart testing.
+
+Do not cargo clean.
+Do not git add/commit/push unless explicitly requested.
+Use live repo + fresh terminal evidence over bundles.
+Fix first failure only.
+No dev Passport subject.
+No Omnigate auth bypass.
+No fake balances/receipts/B3/finality/username ownership.
+ROX remains parked unless fresh integration evidence becomes necessary.
+TV/mobile remain parked until desktop beta gates permit them.
+```
+
+That is the continuation point I would use. The key accomplishment of this session is that we moved from synthetic Passport identity primitives all the way into a **real signed-app integration test**, found a genuine stale-onboarding/native-custody bug instead of bypassing it, and now have the targeted reconciliation fix at **5/5 GREEN**. The next session should begin with regression verification, then immediately return to the real signed Mac flow.
+
+
+
+### END NOTE - AUGUST 19 2026 - 13:30 CST
+
+
+
+### BEGIN NOTE - AUGUST 20 2026 - 11:05 CST
+
+# Carry-over notes — Physical M1 DeviceAuthorization / CrabNode integration
+
+**Session end: 2026-08-20**
+
+I reviewed the latest terminal evidence, the fresh `svc-passport` bundle, the RustyOnions Rust bundle, the new CrabLink Tauri bundle, and the active CrabNode buildplan. One important freshness caveat: the broad `CODEBUNDLE_RS.md` and the most recent focused `svc-passport` bundle were generated **before the very last recovery-factor signing seam patch**. The live RustyOnions repo plus the final terminal output are therefore authoritative for that last partially completed slice. The CrabLink bundle remains current because we did not mutate CrabLink during the final authorization work.   
+
+---
+
+## 1. Project position at session end
+
+The active mission remains:
+
+```text
+CRABNODE_BUILDPLAN.md
+    ↓
+Physical Mac @testmac through real Passport/device authorization
+    ↓
+real backend username/profile claim with NO dev bypass
+    ↓
+Windows @testpc
+    ↓
+continue CrabNode CN-5+
+    ↓
+reuse evidence to close FINAL_BETA Phase 21
+    ↓
+FINAL_BETA Phases 22–26
+    ↓
+controlled CrabLink Desktop beta
+```
+
+The immediate CrabNode M1 backend work is already substantially implemented: CN-0 through CN-4 established the standalone node lifecycle, canonical service profile, real `svc-gateway → omnigate` product ingress, and durable username/profile state. The buildplan defines CN-4 as the immediate FINAL_BETA unblock where the two-client username/profile path becomes possible once the identity/authentication side is real. 
+
+The remaining blocker is **not local username persistence**. The blocker is making the physical Passport/device present server-verifiable authority without weakening the current fail-closed behavior.
+
+Current correct posture:
+
+```text
+CrabNode durable username/profile backend = PRESENT
+physical Passport = PRESENT
+physical V2 device identity = PRESENT
+canonical DeviceAuthorizationV1 = PRESENT
+canonical root-signing transcript = PRESENT
+strict verifier = PRESENT
+test-only root signer = PRESENT
+RecoveryRoot-factor signing seam = PATCHED BUT NOT YET FORMAT/TEST GREEN
+
+physical DeviceAuthorization signature = NOT CREATED
+signed authorization persistence = NOT IMPLEMENTED
+server device authorization registry = NOT IMPLEMENTED
+challenge/prove = NOT IMPLEMENTED
+device-bound capability = NOT IMPLEMENTED
+@testmac claim = NOT YET PERMITTED
+```
+
+Do **not** weaken username authentication merely to finish the demo.
+
+---
+
+# 2. Repositories and crates touched this session
+
+## RustyOnions repo — source changes
+
+Primary work happened in:
+
+```text
+crates/ron-proto
+crates/ron-auth
+crates/svc-passport
+```
+
+The vast majority of the final cleanup was in `svc-passport`.
+
+The RustyOnions Rust bundle confirms the canonical Native Passport protocol and verifier surfaces are present alongside the CrabNode CN-0–CN-4 implementation. 
+
+## CrabLink repo — inspection only during this authorization slice
+
+No CrabLink source patch was applied during the DeviceAuthorization work at the end of this session.
+
+We performed read-only inventories of:
+
+```text
+apps/crablink-tauri/src-tauri/src/passport_root_confirmation_command_runtime.rs
+apps/crablink-tauri/src-tauri/src/passport_identity_finalization_runtime.rs
+apps/crablink-tauri/src-tauri/src/passport_operational_command_runtime.rs
+apps/crablink-tauri/src-tauri/src/passport_operational_unlock_runtime.rs
+apps/crablink-tauri/src-tauri/src/passport_vault_v2_migration_runtime.rs
+apps/crablink-tauri/src-tauri/src/passport_public_identity_store.rs
+apps/crablink-tauri/src-tauri/src/state.rs
+apps/crablink-tauri/src-tauri/src/commands/passport.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+apps/crablink-tauri/src-tauri/Cargo.toml
+```
+
+The fresh CrabLink bundle was generated at `2026-08-20T07:18:18Z` and should be a good next-session reference. 
+
+No TV/mobile implementation was resumed.
+
+---
+
+# 3. `ron-proto` Physical M1 authorization work
+
+The canonical protocol-owned Native Passport authorization model is now established.
+
+## Canonical `DeviceClassV1`
+
+The active protocol vocabulary is exactly:
+
+```text
+root_admin_desktop
+root_admin_mobile
+personal_desktop
+personal_mobile
+tv_read_only
+recovery_only
+test_harness
+```
+
+The older `svc-passport::native::dto::DeviceClass` values:
+
+```text
+tv_read_only
+desktop_read_only
+mobile_read_only
+```
+
+are historical Phase-3 contract types and must **not** be promoted into the current `DeviceAuthorizationV1` policy.
+
+The current canonical seven-class vocabulary is owned by `ron-proto`. 
+
+## Canonical `DeviceAuthorizationV1`
+
+The protocol shape now includes:
+
+```text
+version
+network_id
+environment
+passport_id
+root_key_epoch
+device_id
+device_public_key
+device_class
+authorized_scope_ceiling
+authorization_nonce
+issued_at_ms
+expires_at_ms?
+root_signature
+```
+
+Critical trust rule:
+
+```text
+root_public_key IS NOT supplied by the authorization wire.
+```
+
+The trusted root public key comes from trusted verification context / canonical Passport root state.
+
+Other locked rules:
+
+```text
+version = 1
+nonce = exactly 16 bytes
+signature = exactly 64 bytes
+network/environment labels bounded
+scope tokens bounded
+max scopes = 32
+scope ceiling sorted + unique
+unknown fields rejected where strict DTO applies
+optional expiry must be later than issuance
+binary fields use base64url without padding
+```
+
+The wire implementation and tests are visible in the RustyOnions bundle. 
+
+## Frozen ID authority
+
+Canonical ID domains are owned by `ron-proto`, while the already-released physical derivation remains unchanged.
+
+Passport ID hash input remains:
+
+```text
+domain|main|ed25519|root_public_key_hex
+```
+
+Device ID remains:
+
+```text
+domain|ed25519|device_public_key_hex
+```
+
+Do not alter these derivations to match any newer theoretical structured encoding.
+
+---
+
+# 4. `ron-auth` Physical M1 authorization work
+
+`ron-auth` now owns the canonical signing transcript and strict verification.
+
+## Canonical transcript
+
+Domain:
+
+```text
+rustyonions.native-passport.device-authorization.v1
+```
+
+Canonical encoding:
+
+```text
+length-prefixed-binary-v1
+```
+
+Historical Phase-0 encoding remains:
+
+```text
+pipe-delimited-canonical-v1
+```
+
+but is explicitly **not signable**.
+
+JSON is also explicitly non-signable.
+
+The canonical transcript is a deterministic binary structure using:
+
+```text
+LP(domain)
+u16 version
+LP(network)
+LP(environment)
+LP(passport_id)
+u64 root_key_epoch
+LP(device_id)
+LP(raw device public key)
+LP(device class)
+u16 scope count
+repeated LP(scope)
+LP(raw 16-byte nonce)
+u64 issued_at
+u8 expiry-present
+optional u64 expiry
+```
+
+where `LP` is a big-endian length-prefixed field.
+
+The frozen test baseline remains:
+
+```text
+PHYSICAL_M1_BINARY_TRANSCRIPT_BYTES=480
+PHYSICAL_M1_BINARY_TRANSCRIPT_B3=
+d8dc1fc08383f61dbc5115daafff9fed7fcacfa52f7a1c9c42b5250cf1a191a7
+```
+
+The terminal reconfirmed the locked transcript tests at **3/3 green** this session. The implementation is also present in the RustyOnions bundle. 
+
+## Strict verifier
+
+The strict verifier checks:
+
+```text
+authorization validation
+trusted root public key validity
+trusted root → Passport-ID binding
+authorization Passport-ID binding
+device public key → Device-ID binding
+network match
+environment match
+root epoch match
+issued-at/skew
+expiry/skew
+canonical transcript reconstruction
+strict Ed25519 signature verification
+```
+
+It rejects:
+
+```text
+wrong root
+wrong Passport
+wrong device binding
+field mutations
+signature mutation
+wrong signer
+BLAKE3-digest signatures
+JSON signatures
+legacy pipe-transcript signatures
+```
+
+Latest reconfirmation:
+
+```text
+RON_AUTH_STRICT_VERIFIER_FINAL_REGRESSION=GREEN
+7 passed
+```
+
+The strict verifier tests and trusted-context model are captured in the RustyOnions bundle. 
+
+---
+
+# 5. `svc-passport` major authorization changes
+
+This was the main crate changed during the session.
+
+## 5.1 `Cargo.toml` feature ownership repair
+
+`ron-proto` became a normal non-optional dependency of `svc-passport`.
+
+Reason:
+
+```text
+src/native_plan.rs
+```
+
+is compiled even when `native-passport` is disabled and now reuses canonical protocol ID constants from `ron-proto`.
+
+Current intended feature shape:
+
+```text
+ron-proto = always available
+
+native-passport feature activates:
+    ron-auth
+    ron-naming
+    argon2
+    chacha20poly1305
+    hkdf
+    sha2
+    hmac
+    ed25519-dalek
+```
+
+`native-passport` is still **not a default feature**.
+
+Green evidence obtained:
+
+```text
+cargo check -p svc-passport --no-default-features
+GREEN
+
+cargo check -p svc-passport \
+  --no-default-features \
+  --features native-passport
+GREEN
+```
+
+The historical Phase-2A test name still contains wording about "optional ron_proto reuse"; the behavior it tests is still useful but the test name is stale. No need to rename it merely for cosmetics.
+
+---
+
+# 6. Root-signing architecture implemented in `svc-passport`
+
+## New file
+
+```text
+crates/svc-passport/src/native/device_authorization_signing.rs
+```
+
+This is the public, purpose-specific DeviceAuthorization signer.
+
+It does **not** expose:
+
+```text
+SigningKey
+raw-message signing
+generic root signing
+HKDF output
+root seed
+filesystem access
+Keychain access
+network access
+capability issuance
+username mutation
+wallet/ledger authority
+```
+
+The current code is visible in the fresh `svc-passport` bundle. 
+
+## Signing sequence
+
+`sign_native_device_authorization_v1(...)` now:
+
+```text
+1. validates DeviceAuthorizationSigningPayloadV1
+2. derives canonical root public identity from supplied BIP-39 seed
+3. verifies payload.passport_id matches the derived Passport
+4. bridges the device public key into the native canonical type
+5. rederives the Device ID from that public key
+6. verifies payload.device_id matches
+7. invokes the narrow root-specific signing primitive
+8. builds DeviceAuthorizationV1
+```
+
+Errors include:
+
+```text
+InvalidPayload
+RootIdentityDerivationFailed
+PassportBindingMismatch
+DevicePublicKeyBridgeFailed
+DeviceIdDerivationFailed
+DeviceIdBindingMismatch
+RootSignatureFailed
+SignedAuthorizationConstructionFailed
+```
+
+No persistence occurs here.
+
+Therefore:
+
+```text
+signature creation != server authorization registration
+```
+
+That distinction must remain.
+
+---
+
+# 7. `root_identity.rs` custody refactor
+
+The root derivation implementation was refactored so the frozen HKDF path has one internal owner.
+
+Important private helper:
+
+```text
+with_native_root_signing_key_v1(...)
+```
+
+This owns the existing frozen:
+
+```text
+BIP39 seed
+    ↓
+HKDF-SHA256
+    ↓
+32-byte Ed25519 root seed
+    ↓
+SigningKey
+```
+
+A narrow sibling-visible helper was added for **only**:
+
+```text
+DeviceAuthorizationSigningPayloadV1
+```
+
+It obtains canonical transcript bytes from `ron-auth` and signs those exact bytes.
+
+There is no:
+
+```text
+pub SigningKey
+pub root signing seed
+generic sign(bytes)
+arbitrary-message root signer
+```
+
+This is an important security boundary to preserve.
+
+---
+
+# 8. Test-only nonphysical root signer is fully GREEN
+
+New focused test:
+
+```text
+crates/svc-passport/tests/
+physical_m1_native_device_authorization_signing.rs
+```
+
+It proves:
+
+```text
+valid canonical authorization cross-verifies through ron-auth
+identical input produces deterministic signature
+wrong Passport binding rejects
+wrong Device-ID binding rejects
+invalid root-seed length rejects
+```
+
+Latest result:
+
+```text
+5 passed
+0 failed
+
+PHYSICAL_M1_NONPHYSICAL_ROOT_SIGNER_CROSS_VERIFY=GREEN
+PHYSICAL_M1_NONPHYSICAL_TRANSCRIPT_B3=
+488e8e4b74ad7edfe38b835bf8f80873ae0ba450570b519dff748ea0a729feb0
+```
+
+That digest differs from the 480-byte transcript baseline because it is a different deterministic fixture. This is expected.
+
+The test implementation is in the latest focused bundle. 
+
+---
+
+# 9. Strict-Clippy cleanup completed
+
+The root signer was initially functionally green but exposed unrelated strict-clippy warnings across `svc-passport`.
+
+We repaired them sequentially.
+
+## `src/native_plan.rs`
+
+Fixed:
+
+```text
+clippy::empty_line_after_doc_comments
+```
+
+The detached:
+
+```text
+BIP-39 seeds are 512 bits
+```
+
+comment was attached to the actual:
+
+```text
+ROOT_IDENTITY_V1_BIP39_SEED_BYTES = 64
+```
+
+constant.
+
+No constant changed.
+
+## `src/native/device_identity.rs`
+
+Changed:
+
+```rust
+SigningKey::from_bytes(&*seed)
+```
+
+to:
+
+```rust
+SigningKey::from_bytes(&seed)
+```
+
+Frozen Device-ID regression:
+
+```text
+6/6 GREEN
+```
+
+No key/ID semantics changed.
+
+## `src/native/dto.rs`
+
+Clippy reported the historical eight-argument `DeviceAuthorizationDraftV1::new`.
+
+We deliberately **did not redesign the DTO** just for lint satisfaction.
+
+Added one narrow:
+
+```rust
+#[allow(clippy::too_many_arguments)]
+```
+
+with documentation explaining that the eight explicit fields intentionally keep authority-relevant bindings visible at call sites.
+
+Phase-1B DTO tests:
+
+```text
+9/9 GREEN
+```
+
+No constructor signature changed.
+
+## `tests/native_passport_phase1f_feature_matrix_acceptance.rs`
+
+The existing test incorrectly assumed:
+
+```text
+DevelopmentInProcess
+```
+
+even under:
+
+```text
+--no-default-features --features native-passport
+```
+
+Production behavior was already correct.
+
+The test was repaired to expect:
+
+```text
+dev-kms ON  -> DevelopmentInProcess
+dev-kms OFF -> ExternalInjected
+```
+
+Both matrices subsequently passed.
+
+This was a **test expectation repair**, not production KMS behavior change.
+
+## `src/native/recovery_identity.rs`
+
+Removed a Clippy-only `let_and_return`.
+
+Regression:
+
+```text
+recovery identity 4/4 GREEN
+root identity adjacent 4/4 GREEN
+```
+
+## `src/native/root_identity.rs`
+
+Removed a second `let_and_return`.
+
+Then changed:
+
+```rust
+SigningKey::from_bytes(&*root_signing_seed)
+```
+
+to:
+
+```rust
+SigningKey::from_bytes(&root_signing_seed)
+```
+
+Root regression:
+
+```text
+4/4 GREEN
+```
+
+Nonphysical root signer:
+
+```text
+5/5 GREEN
+```
+
+No root HKDF, seed, Passport ID, or zeroization change.
+
+## `src/profile_persistence.rs`
+
+The last three warnings were:
+
+```rust
+if let Err(_) = file.write_all(...)
+if let Err(_) = file.sync_all()
+if let Err(_) = fs::hard_link(...)
+```
+
+changed to:
+
+```rust
+if ... .is_err()
+```
+
+These were batched because they were the same lint, same function, and same semantics.
+
+Durability test:
+
+```text
+crabnode_cn4_durable_profile_store
+4/4 GREEN
+```
+
+Specifically reconfirmed:
+
+```text
+restart durability
+strict versioned schema
+corrupt latest snapshot fails closed
+persistence failure never becomes RAM-only username success
+```
+
+No cleanup/error classification or persistence protocol changed.
+
+---
+
+# 10. Root-signer closeout reached GREEN
+
+Before beginning the next recovery-factor seam, the completed root-signing slice ended with:
+
+```text
+PHYSICAL_M1_ROOT_DEVICE_AUTH_SIGNER=GREEN
+FOCUSED_STRICT_CLIPPY=GREEN
+PROFILE_PERSISTENCE_CLIPPY_REPAIR=GREEN
+CN4_DURABILITY_SEMANTICS_PRESERVED=YES
+
+NONPHYSICAL_ROOT_SIGNATURE_CREATED=YES_TEST_ONLY
+NONPHYSICAL_SIGNATURE_CROSS_VERIFIED_THROUGH_RON_AUTH=YES
+
+ROOT_SECRET_OWNER=SVC_PASSPORT_NATIVE_ROOT_IDENTITY
+ROOT_HKDF_IMPLEMENTATION_COUNT=ONE
+ROOT_SIGNING_KEY_EXPORTED=NO
+RAW_GENERIC_ROOT_SIGNER=NO
+
+PASSPORT_BINDING_PRE_SIGN=GREEN
+DEVICE_ID_PUBLIC_KEY_BINDING_PRE_SIGN=GREEN
+
+SIGNED_AUTHORIZATION_PERSISTED=NO
+SERVER_AUTHORIZATION_REGISTRY_MUTATED=NO
+CAPABILITY_ISSUANCE=NO
+
+PHYSICAL_ROOT_SIGNATURE_CREATED=NO
+PHYSICAL_ROOT_UNSEALED=NO
+KEYCHAIN_MUTATION=NO
+USERNAME_MUTATION=NO
+```
+
+This is a real milestone.
+
+---
+
+# 11. Physical Passport state remains frozen
+
+The physical Mac Passport remained untouched throughout all signer/compiler work.
+
+Locked V2 hash:
+
+```text
+ea518d2a23016996edcf305a3726e0af813650c183c462ce7c8fd24304273ed0
+```
+
+Public descriptor:
+
+```text
+3f278e6364448bac095787787458e1d2cf8d1cd1ed5638a31b14b3d83743f0b0
+```
+
+Latest checks confirmed both unchanged.
+
+Important:
+
+```text
+DO NOT rerun V1→V2 migration.
+DO NOT rollback to V1.
+DO NOT rewrite the physical vault.
+DO NOT recreate the Passport.
+```
+
+Physical Mac device public identity remains the already-established V2 identity:
+
+```text
+Device ID:
+device:v1:ed25519:b3:54d9fb339c125915b48f68a3da5c9a4a6493d7813e52aafc3fc645d4e817ee44
+
+Device public key:
+4cb55d925f3d4ef349cef6430cddf69b0f3e87f9839912dbf3f42b8af7cf8210
+```
+
+The device seed remains encrypted inside the V2 operational payload.
+
+---
+
+# 12. CrabLink root-signing inventory conclusions
+
+The newer CrabLink bundle was very useful here. 
+
+## Existing `passport_unlock_root` must NOT become the signing command
+
+Current root confirmation behavior is designed around identity finalization.
+
+Once the public descriptor exists, the command intentionally returns:
+
+```text
+IdentityAvailable
+```
+
+without:
+
+```text
+prompting root PIN again
+unsealing RecoveryRoot again
+```
+
+That is correct for identity reads.
+
+It is **not** correct for a new root signature.
+
+Root-signing rule going forward:
+
+```text
+every new root-authority signature requires a fresh explicit native confirmation
+```
+
+Do not create a reusable "root unlocked" session.
+
+## Existing native secret surface is reusable
+
+CrabLink already has:
+
+```text
+DesktopNativeSecretSurfacePort
+request_root_confirmation_pin()
+```
+
+This keeps PIN entry outside React/WebView.
+
+Reuse it.
+
+Never add:
+
+```text
+#[tauri::command]
+fn ...(pin: String)
+```
+
+or equivalent.
+
+## Existing root PIN verification path is usable
+
+Current identity finalization already knows how to:
+
+```text
+load versioned vault
+base_v1()
+unseal RecoveryRoot platform factor
+verify RecoveryRoot PIN
+derive root public identity
+```
+
+This is the correct platform custody foundation.
+
+## Existing V2 device public-identity reader is canonical
+
+Use:
+
+```text
+read_desktop_native_passport_session_device_public_identity(...)
+```
+
+It:
+
+```text
+requires operational-unlocked session
+borrows operational VMK synchronously
+decrypts authenticated V2 operational payload
+rederives public device identity
+verifies persisted public-key binding
+returns only NativeDevicePublicIdentityV1
+```
+
+Do not rederive device identity in React.
+
+Do not decrypt the device payload in a new ad-hoc command.
+
+## No current desktop DeviceAuthorization command
+
+The inventory found no existing desktop DeviceAuthorization wiring.
+
+Candidate filenames remained available:
+
+```text
+src-tauri/src/passport_device_authorization_command_runtime.rs
+
+src-tauri/tests/
+physical_m1_desktop_device_authorization_command.rs
+```
+
+So we can add the new boundary cleanly later without colliding with an older implementation.
+
+---
+
+# 13. LAST PATCH — currently applied but NOT green yet
+
+This is the single most important handoff fact.
+
+We started the next `svc-passport` slice:
+
+```text
+RecoveryRoot factor
+    ↓
+canonical 24-word mnemonic internally
+    ↓
+BIP-39 seed internally
+    ↓
+existing typed DeviceAuthorization signer
+    ↓
+public DeviceAuthorizationV1
+```
+
+The patch **was applied**.
+
+Terminal markers:
+
+```text
+RECOVERY_FACTOR_DEVICE_AUTHORIZATION_PATCH=APPLIED
+BIP39_SEED_PUBLIC_API_ADDED=NO
+ROOT_SIGNING_KEY_PUBLIC_API_ADDED=NO
+PUBLIC_SIGNED_AUTHORIZATION_OUTPUT=YES
+PATCH_APPLIED=YES
+```
+
+Source custody audit also passed:
+
+```text
+EXISTING_TYPED_ROOT_SIGNER_REUSED=YES
+BIP39_SEED_EXPORTED=NO
+GENERIC_ROOT_SIGNING_SURFACE=NO
+FILESYSTEM_AUTHORITY_ADDED=NO
+PLATFORM_SEALER_AUTHORITY_ADDED=NO
+NETWORK_AUTHORITY_ADDED=NO
+CAPABILITY_AUTHORITY_ADDED=NO
+WALLET_LEDGER_AUTHORITY_ADDED=NO
+```
+
+Then the very first gate failed only because we deliberately ran:
+
+```text
+cargo fmt -p svc-passport -- --check
+```
+
+and the new code had not yet been formatted.
+
+Current exact state:
+
+```text
+PHYSICAL_M1_RECOVERY_DEVICE_AUTH_SIGNER=RED
+FIRST_FAILURE=FORMAT_CHECK
+PATCH_ALREADY_APPLIED=YES
+NEXT_ACTION=FORMAT_ONLY_NEW_SLICE
+RECOVERY_DEVICE_AUTH_SIGNER_RC=1
+```
+
+This is the authoritative end-of-session state. 
+
+### Critical instruction
+
+**DO NOT rerun the recovery-factor patch.**
+
+The files are already modified.
+
+---
+
+# 14. Files changed by the last partially completed patch
+
+## Modified
+
+```text
+crates/svc-passport/src/native/recovery_identity.rs
+crates/svc-passport/src/native/mod.rs
+```
+
+## Newly created
+
+```text
+crates/svc-passport/tests/
+physical_m1_native_recovery_device_authorization_signing.rs
+```
+
+## New public `svc-passport` surface
+
+Intended export:
+
+```text
+sign_native_recovery_device_authorization_v1
+NativeRecoveryDeviceAuthorizationSigningError
+PHYSICAL_M1_RECOVERY_DEVICE_AUTHORIZATION_SIGNING_LABEL
+```
+
+## New recovery-factor signer behavior
+
+The new function is intended to:
+
+```text
+derive_native_recovery_mnemonic_indices(recovery_factor)
+
+with_native_recovery_mnemonic_phrase(...)
+
+derive_bip39_seed_from_canonical_phrase(...)
+
+sign_native_device_authorization_v1(&bip39_seed, payload)
+```
+
+The BIP-39 seed remains a transient native value.
+
+The function returns only:
+
+```text
+DeviceAuthorizationV1
+```
+
+## New error surface
+
+Intended variants:
+
+```text
+RecoveryFactorInvalid
+MnemonicWordMappingFailed
+Bip39SeedDerivationFailed
+DeviceAuthorizationSigning(...)
+```
+
+No secret bytes are embedded in error values.
+
+---
+
+# 15. New test file currently created but NOT RUN
+
+The new file:
+
+```text
+physical_m1_native_recovery_device_authorization_signing.rs
+```
+
+contains five intended tests:
+
+```text
+1. recovery-factor signature cross-verifies through ron-auth
+2. identical input remains deterministic
+3. wrong Passport binding rejects
+4. wrong Device-ID binding rejects
+5. malformed recovery factor rejects
+```
+
+Important:
+
+**None of those five tests have run yet.**
+
+The session stopped at formatting.
+
+Do not write carryover notes saying this new seam is green.
+
+Correct status:
+
+```text
+SOURCE PATCHED
+CUSTODY AUDIT GREEN
+FORMAT RED
+COMPILE UNKNOWN
+TEST UNKNOWN
+CLIPPY UNKNOWN
+```
+
+---
+
+# 16. Exact first action next session
+
+Because the patch is already applied and the first failure is known, do **not** start by expanding to a workspace check.
+
+Start by formatting the existing slice.
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions
+
+cargo fmt -p svc-passport
+
+cargo fmt -p svc-passport -- --check
+
+cargo test \
+  -p svc-passport \
+  --no-default-features \
+  --features native-passport \
+  --test physical_m1_native_recovery_device_authorization_signing \
+  -- \
+  --nocapture
+```
+
+If that first test fails:
+
+```text
+STOP.
+Fix only the first compiler/test failure.
+Do not rerun the patch.
+```
+
+If it passes, continue:
+
+```bash
+cargo test \
+  -p svc-passport \
+  --no-default-features \
+  --features native-passport \
+  --test physical_m1_native_recovery_identity_derivation
+
+cargo test \
+  -p svc-passport \
+  --no-default-features \
+  --features native-passport \
+  --test physical_m1_native_device_authorization_signing
+
+cargo check \
+  -p svc-passport \
+  --no-default-features \
+  --features native-passport
+
+cargo check \
+  -p svc-passport \
+  --no-default-features
+
+cargo clippy \
+  -p svc-passport \
+  --no-default-features \
+  --features native-passport \
+  --test physical_m1_native_recovery_device_authorization_signing \
+  -- \
+  -D warnings
+
+cargo clippy \
+  -p svc-passport \
+  --no-default-features \
+  --features native-passport \
+  --lib \
+  -- \
+  -D warnings
+
+git diff --check -- \
+  crates/svc-passport/src/native/recovery_identity.rs \
+  crates/svc-passport/src/native/mod.rs \
+  crates/svc-passport/tests/physical_m1_native_recovery_device_authorization_signing.rs
+```
+
+Then recheck:
+
+```text
+physical V2 SHA
+public descriptor SHA
+no vault temp file
+```
+
+Only after that may we claim:
+
+```text
+PHYSICAL_M1_RECOVERY_DEVICE_AUTH_SIGNER=GREEN
+```
+
+---
+
+# 17. Important codebundle freshness note
+
+The user ran:
+
+```text
+bash scripts/make_codebundle.sh
+```
+
+and generated:
+
+```text
+CODEBUNDLE_RS.md
+```
+
+**before** applying the final recovery-factor signer patch.
+
+Therefore that broad RustyOnions bundle does not include the latest unformatted seam.
+
+Likewise, the focused `svc-passport` bundle generated around 07:02 predates the 07:31 final patch.
+
+Use this priority next session:
+
+```text
+1. live repo
+2. this final terminal output
+3. these carryover notes
+4. existing bundles for surrounding context
+```
+
+After the recovery-factor seam becomes green, regenerate:
+
+```text
+crates/svc-passport/CODEBUNDLE.md
+```
+
+A broad RustyOnions bundle is optional until the next milestone.
+
+The current CrabLink bundle **does not need regeneration yet** because we have not modified CrabLink since it was produced.
+
+---
+
+# 18. Next architectural step after recovery-factor signer is green
+
+Do **not** immediately create the physical signature.
+
+We still need to establish trusted production ownership for every field in the signed authorization.
+
+The current test fixtures use values such as:
+
+```text
+DeviceClassV1::RootAdminDesktop
+
+root_key_epoch = 7
+
+network_id = rustyonions-devnet
+environment = local-dev
+
+scopes:
+    capability.revoke_self
+    catalog.read
+    content.read
+    identity.read
+```
+
+Those are test fixtures.
+
+They are **not automatically production policy**.
+
+Before the physical Mac signs anything, establish authoritative owners for:
+
+```text
+device_class
+authorized_scope_ceiling
+root_key_epoch
+network_id
+environment
+authorization_nonce
+issued_at_ms
+expires_at_ms
+```
+
+---
+
+# 19. Context/policy work required next
+
+## Device class
+
+Physical Mac almost certainly needs the semantics of:
+
+```text
+RootAdminDesktop
+```
+
+but this must come from trusted local product policy, not a WebView argument.
+
+React must never be able to say:
+
+```text
+authorize me as root_admin_desktop
+```
+
+and have that become authority.
+
+## Scope ceiling
+
+The signer validates syntax and binding.
+
+It must **not** invent policy.
+
+`ron-policy` should own the authoritative:
+
+```text
+DeviceClassV1 → allowed scope ceiling
+```
+
+mapping.
+
+The latest inventory did not establish a finished current mapping.
+
+Do not reuse the old Phase-3 read-only scope array as active root-admin policy.
+
+## Root key epoch
+
+Test fixtures use `7`; another wire fixture uses `0`.
+
+Neither is automatically the physical value.
+
+We need a canonical owner for the physical Passport's current root epoch.
+
+Do not hardcode `7`.
+
+## Network/environment
+
+Test values:
+
+```text
+rustyonions-devnet
+local-dev
+```
+
+need to become authoritative runtime/config values, not strings supplied by React.
+
+## Authorization nonce
+
+Generate native 16-byte randomness.
+
+Prefer an OS-CSPRNG-backed Rust boundary.
+
+Do not generate the root authorization nonce in JS.
+
+## Time
+
+Use native trusted process time, likely:
+
+```text
+SystemTime → UNIX_EPOCH → milliseconds
+```
+
+but freeze one helper/test rather than duplicating conversions.
+
+## Expiration
+
+The protocol permits:
+
+```text
+Some(expiry)
+None
+```
+
+Policy has not yet been established for the physical desktop root-admin authorization.
+
+Do not guess.
+
+---
+
+# 20. Dedicated CrabLink signing command design
+
+Once policy/context is green, implement a **new dedicated command**, not an extension of `passport_unlock_root`.
+
+Conceptual sequence:
+
+```text
+Tauri command invoked
+    ↓
+require stored Passport
+    ↓
+require operational session unlocked
+    ↓
+load durable public Passport descriptor
+    ↓
+read canonical physical V2 device public identity
+    ↓
+construct policy-owned signing context
+    ↓
+native request_root_confirmation_pin()
+    ↓
+unseal RecoveryRoot factor
+    ↓
+verify PIN against RecoveryRoot wrapped VMK
+    ↓
+call svc-passport recovery-factor signer
+    ↓
+drop recovery factor/root-related transient material
+    ↓
+strictly verify returned public authorization through ron-auth
+    ↓
+return only public DeviceAuthorizationV1
+```
+
+Never return:
+
+```text
+PIN
+RecoveryRoot factor
+mnemonic
+BIP-39 seed
+root Ed25519 seed
+SigningKey
+root VMK
+operational VMK
+device signing seed
+```
+
+---
+
+# 21. No persistent root-unlocked session
+
+This must remain an explicit invariant.
+
+Correct model:
+
+```text
+ordinary application operation
+    -> device key
+
+root-authority mutation
+    -> fresh native root confirmation
+    -> one narrow operation
+    -> root material disappears
+```
+
+Incorrect model:
+
+```text
+user entered root PIN once
+    -> root remains globally unlocked indefinitely
+```
+
+Do not build the second model.
+
+---
+
+# 22. Signed DeviceAuthorization persistence still needs design
+
+Once a test/native command can safely create an authorization, decide how to persist it.
+
+Do **not** mutate the frozen V2 operational payload ad hoc.
+
+V2 currently has a narrow purpose:
+
+```text
+base V1 vault
++
+encrypted operational device seed/public binding
+```
+
+A root-signed authorization is public authority metadata and likely belongs in a separate versioned public record/store.
+
+Requirements should include:
+
+```text
+strict schema
+version
+atomic write
+restart recovery
+binding to Passport
+binding to device
+root epoch
+nonce
+issue/expiry
+signature
+no secret material
+corruption fails closed
+```
+
+Then strict verification must occur before accepting persisted authorization after restart.
+
+---
+
+# 23. Server-side authorization work after local signed record
+
+Only after the local signed authorization is real:
+
+```text
+svc-passport durable DeviceAuthorization registry
+challenge issuance
+challenge replay tracking
+/v1/passport/challenge
+/v1/passport/prove
+device possession proof
+authorization lookup
+root epoch validation
+expiry validation
+nonce/replay rejection
+device-bound capability issuance
+```
+
+Server truth remains in `svc-passport`.
+
+Do not move identity authority into:
+
+```text
+gateway
+omnigate
+index
+frontend
+```
+
+---
+
+# 24. Username claim path after device authentication
+
+Once real challenge/prove succeeds:
+
+```text
+physical @testmac device
+    ↓
+root-authorized DeviceAuthorizationV1
+    ↓
+device proves possession
+    ↓
+server issues bounded device capability
+    ↓
+username claim request
+    ↓
+svc-passport durable CN-4 profile store
+```
+
+Then prove:
+
+```text
+@testmac available hint
+@testmac claim succeeds
+second client sees unavailable
+CrabNode restart
+@testmac remains unavailable
+profile resolves to same Passport
+```
+
+This closes the real Physical M1/CN-4 identity demonstration without a dev bypass.
+
+---
+
+# 25. Windows comes after Mac authority is real
+
+After `@testmac` works end-to-end:
+
+```text
+build/run CrabLink on Windows
+create/use Windows Passport/device
+produce real DeviceAuthorization
+prove device challenge
+claim @testpc
+```
+
+Then prove Mac and Windows against the same real CrabNode.
+
+Do not invent a Windows-specific identity protocol; use the same `DeviceAuthorizationV1`.
+
+Platform differences should remain only in:
+
+```text
+secret storage
+native PIN UX
+DPAPI vs Keychain
+filesystem paths
+packaging
+```
+
+---
+
+# 26. CrabNode state and next buildplan movement
+
+The active CrabNode plan explicitly makes CN-0–CN-4 the M1 immediate FINAL_BETA unblock. CN-5 then proves the complete CrabLink content product path through one node; CN-6 supervision follows; CN-7 onward moves into descriptor/overlay/DHT/fetch/replication/durable CAS. 
+
+After the physical identity path is proven:
+
+```text
+CN-5 full one-node product path
+CN-6 supervision
+CN-7 node identity/descriptor
+CN-8 overlay
+CN-9 DHT/provider discovery
+CN-10 remote fetch
+CN-11 replication/repair
+CN-12 durable CAS
+CN-13 mutable-state convergence
+CN-14 moderation convergence
+CN-15 rewards/economic evidence
+CN-16 physical multi-node
+CN-17 WAN
+CN-18 packaging
+CN-19 chaos/soak/security
+```
+
+Do not jump into WAN or DHT global behavior before the present physical identity slice is truthfully closed.
+
+---
+
+# 27. CrabNode runtime / exposure invariants
+
+Keep these distinctions:
+
+```text
+public product gateway
+    MAY be deliberately reachable from clients
+
+admin
+svc-admin
+internal diagnostics
+User Node control
+    loopback-only by default
+```
+
+Never expose admin merely because Windows CrabLink needs to reach the public product gateway.
+
+Do not conflate:
+
+```text
+listener bound
+```
+
+with:
+
+```text
+service ready
+```
+
+Readiness remains dependency-based.
+
+---
+
+# 28. Physical state that must NOT be touched next session
+
+Until explicit physical signing begins:
+
+```text
+no Keychain write
+no vault write
+no descriptor write
+no new V2 migration
+no physical root signature
+no username mutation
+no capability issuance
+```
+
+Keychain existence checks must not use `-w`.
+
+Never paste:
+
+```text
+RecoveryRoot
+recovery phrase
+PIN
+DeviceKey
+VMK
+root seed
+device seed
+```
+
+into terminal/chat.
+
+---
+
+# 29. Key security distinctions to retain
+
+### DeviceKey
+
+The macOS Keychain `device-key` value is a **platform factor**.
+
+It is **not** the Ed25519 device signing seed.
+
+Never repurpose it.
+
+### Device signing seed
+
+Lives inside:
+
+```text
+V2 encrypted operational-device payload
+```
+
+under the operational VMK.
+
+### Root authority
+
+Derived from:
+
+```text
+RecoveryRoot
+→ canonical mnemonic
+→ BIP39 seed
+→ frozen HKDF
+→ Ed25519 root key
+```
+
+### Root public key
+
+Trusted root public key is external verification context.
+
+It is never trusted from `DeviceAuthorizationV1` itself.
+
+---
+
+# 30. FINAL_BETA relationship
+
+This work is not a detour from FINAL_BETA.
+
+It is the real authority work required to make FINAL_BETA Phase 21's physical two-client identity demonstration truthful.
+
+Reuse this evidence rather than implementing another identity path in FINAL_BETA.
+
+Once the physical Mac + Windows proof exists:
+
+```text
+reuse CrabNode/Passport evidence for Phase 21 closeout
+then continue Phases 22–26
+```
+
+---
+
+# 31. What was explicitly NOT changed
+
+During this session's authorization work we did not add:
+
+```text
+wallet mutation
+ron-ledger mutation
+ROC mutation
+ROX mutation
+mint/burn
+settlement
+capability issuance
+username claim bypass
+public follower graph
+B3 authority shortcuts
+provider-discovery fakery
+server finality claims
+```
+
+We also did not modify the physical Passport's cryptographic contents.
+
+CrabLink frontend/React was not given any new secret custody.
+
+---
+
+# 32. Recommended next-session attachment set
+
+Use:
+
+```text
+1. These carryover notes
+2. Final terminal output from this session
+3. CRABNODE_BUILDPLAN.md
+4. latest CrabLink CODEBUNDLE_TAURI_APP
+5. latest svc-passport CODEBUNDLE
+6. RustyOnions CODEBUNDLE_RS for surrounding context
+```
+
+But remember:
+
+```text
+the current svc-passport/RustyOnions bundles predate
+the final recovery-factor signer patch
+```
+
+So live source wins.
+
+After the format/test slice becomes green, regenerate the focused `svc-passport` bundle.
+
+---
+
+# 33. Very first success target next session
+
+Do not define success as physical signing yet.
+
+First target:
+
+```text
+PHYSICAL_M1_RECOVERY_DEVICE_AUTH_SIGNER=GREEN
+```
+
+Specifically:
+
+```text
+format green
+new 5-test recovery signer suite green
+recovery identity regression green
+existing BIP39-seed signer green
+native feature check green
+no-native feature check green
+strict clippy green
+diff check green
+physical vault unchanged
+descriptor unchanged
+```
+
+Only then move into context/policy ownership.
+
+---
+
+# 34. Next major milestone after that
+
+The next meaningful architecture marker should be something equivalent to:
+
+```text
+PHYSICAL_M1_DESKTOP_DEVICE_AUTHORIZATION_CONTEXT_POLICY=GREEN
+```
+
+It should prove authoritative owners for:
+
+```text
+device class
+scope ceiling
+root epoch
+network
+environment
+nonce
+clock
+expiry
+```
+
+Then:
+
+```text
+PHYSICAL_M1_DESKTOP_ROOT_CONFIRMED_DEVICE_AUTH_COMMAND=GREEN
+```
+
+still using deterministic/nonphysical tests first.
+
+Only after that:
+
+```text
+PHYSICAL_M1_MAC_DEVICE_AUTHORIZATION=GREEN
+```
+
+for the first real signature.
+
+Then:
+
+```text
+PHYSICAL_M1_SERVER_CHALLENGE_PROVE=GREEN
+PHYSICAL_M1_DEVICE_CAPABILITY=GREEN
+PHYSICAL_M1_TESTMAC_USERNAME=GREEN
+```
+
+---
+
+# 35. One-paragraph next-session starter
+
+> We are continuing RustyOnions/CrabLink with `CRABNODE_BUILDPLAN.md` as the active plan and Physical M1 identity authorization as the immediate CN-4/FINAL_BETA Phase-21 unblock. The previous session completed canonical `DeviceAuthorizationV1`, the `ron-auth` binary transcript and strict verifier, the purpose-specific `svc-passport` root signer, feature-matrix repairs, and strict-Clippy cleanup; the nonphysical signer is fully green and the physical V2 vault/descriptor remain unchanged. At session end we applied a new `svc-passport` RecoveryRoot-factor→typed-DeviceAuthorization signing seam, modifying `recovery_identity.rs` and `native/mod.rs` and creating `physical_m1_native_recovery_device_authorization_signing.rs`, but stopped at the first gate because `cargo fmt --check` reported formatting differences. **Do not rerun the patch.** First run `cargo fmt -p svc-passport`, then the new focused five-test suite and its regression/check/clippy gates. After that becomes green, establish authoritative desktop DeviceAuthorization policy/context ownership for class/scopes/root epoch/network/environment/nonce/time/expiry before adding the dedicated CrabLink native root-confirmed signing command. Do not create a physical root signature, persist an authorization, issue a capability, or claim `@testmac` until those boundaries are green.
+
+That is the exact continuation point.
+
+
+### END NOTE - AUGUST 20 2026 - 11:05 CST
+
+
+
+### BEGIN NOTE - AUGUST 22 2026 - 02:00 CST
+
+RustyOnions / CrabNode — Comprehensive Carry-Over Notes
+
+Session close date: August 22, 2026
+Active buildplan: CRABNODE_BUILDPLAN.md
+Current position: CN-4 / M1 physical-client acceptance integration
+Immediate next action: durable one-time signed-challenge / replay state
+CN-5: NOT STARTED
+
+These notes are intended to be pasted into the next session and used as the working handoff. The live repositories and fresh terminal evidence remain the source of truth over older prose or codebundles.
+
+1. Executive status
+
+CrabNode remains on the intended buildplan path. We are not doing unrelated Passport work. The current Passport work is required to finish the CN-4/M1 physical-client identity acceptance because the backend must be able to verify that @testmac and later @testpc are controlled by real native Passports/devices rather than trusting client assertions or development bypasses.
+
+High-level state at session close:
+
+ACTIVE_BUILDPLAN=CRABNODE_BUILDPLAN.md
+CURRENT_PHASE=CN-4 / M1 PHYSICAL ACCEPTANCE INTEGRATION
+
+CN-0=GREEN
+CN-1=GREEN enough for M1
+CN-2=GREEN
+CN-3=GREEN
+CN-4_BACKEND_IMPLEMENTATION=GREEN
+
+M1_PHYSICAL_CLIENT_ACCEPTANCE=ACTIVE
+CN-5_STARTED=NO
+
+DURABLE_SERVER_REGISTRY=GREEN
+ROOT_REGISTRATION_CRYPTO_PROOF=GREEN
+RECOVERY_ROOT_PROOF_SIGNING=GREEN
+PRIVATE_ROOT_REGISTRATION_RUNTIME=GREEN
+
+PASSPORT_CHALLENGE_V1_PROTOCOL=GREEN
+SERVICE_CHALLENGE_CRYPTO_VERIFY=GREEN
+SERVICE_KEY_IDENTITY_BOUNDARY=GREEN
+KMS_ROTATION_SAFE_PRESELECTION=GREEN
+REAL_PRIVATE_SIGNED_CHALLENGE_ISSUER=GREEN
+
+DURABLE_CHALLENGE_STATE=NOT_YET_ADDED
+ONE_TIME_CHALLENGE_CONSUMPTION=NOT_YET_ADDED
+PUBLIC_CHALLENGE_ROUTE=NO
+PUBLIC_PROVE_ROUTE=NO
+DEVICE_SERVER_REGISTRATION=NOT_YET_COMPLETE
+DEVICE_CAPABILITY_ISSUANCE=NO
+USERNAME_MUTATION=NO
+
+PHYSICAL_TESTMAC_MUTATED=NO
+PHYSICAL_TESTPC_MUTATED=NO
+
+NEXT_ACTION=DURABLE_ONE_TIME_CHALLENGE_REPLAY_STATE
+
+The biggest advancement this session is that we now have a real cryptographically signed PassportChallengeV1 issuer inside svc-passport, using actual KMS Ed25519 signing and strict ron-auth cross-verification. It is intentionally private and unmounted until one-time durable replay/consumption semantics exist.
+
+The final issuer gate was completely GREEN: six private issuer tests, three canonical ron-auth challenge tests, two KMS identity/rotation tests, six root-registration runtime regressions, strict Clippy, native checks, and cargo check --workspace. The workspace still emits the known pre-existing macronode dead-code warnings; they are not new failures.
+
+2. Crates changed this session
+
+The RustyOnions repo was changed in exactly these substantive crates:
+
+svc-passport
+
+This was the primary crate.
+
+Work completed here includes:
+
+private durable root-registration state machine;
+integration with the existing durable Passport registry store;
+reconciliation of old Phase 8A challenge contract constants/types with the new protocol-owned challenge definitions;
+KMS signing identity/preselection support;
+rotation-safe exact-KID signing;
+new KMS identity/rotation tests;
+new private real signed-challenge issuer;
+native/mod.rs private composition updates.
+
+Important current files include:
+
+crates/svc-passport/src/native/server_registry_store.rs
+crates/svc-passport/src/native/server_registry_runtime.rs
+crates/svc-passport/src/native/server_challenge_issuer.rs
+
+crates/svc-passport/src/native/challenge.rs
+crates/svc-passport/src/native/mod.rs
+
+crates/svc-passport/src/kms/client.rs
+
+crates/svc-passport/tests/physical_m1_service_challenge_kms_identity.rs
+
+The existing server_registry_store.rs was primarily reused/regression-tested rather than replaced.
+
+ron-proto
+
+New canonical Native Passport signed-challenge protocol ownership was established here.
+
+Important changed/new files:
+
+crates/ron-proto/src/native_passport.rs
+crates/ron-proto/src/native_passport/challenge.rs
+crates/ron-proto/tests/native_passport_challenge_v1_wire.rs
+
+ron-proto now owns:
+
+PassportChallengeV1;
+PassportChallengeSigningPayloadV1;
+PassportChallengePurposeV1;
+ServiceKeyIdV1;
+challenge wire validation;
+challenge lifetime constants;
+the closed purpose vocabulary.
+ron-auth
+
+Canonical cryptographic transcript construction and verification for signed service challenges was added here.
+
+Important changed/new files:
+
+crates/ron-auth/src/native_passport.rs
+crates/ron-auth/src/native_passport/challenge.rs
+crates/ron-auth/tests/native_passport_challenge_v1.rs
+
+ron-auth remains the pure cryptographic transcript/verification authority. It does not own KMS keys, durable state, routes, replay mutation, username state, or Passport persistence.
+
+No CrabLink modifications
+
+No CrabLink source changes were made in this session.
+
+No macronode implementation changes from this work
+
+cargo check --workspace continues to report the known macronode dead-code warnings. These were not introduced by this session and are not the current blocker.
+
+3. Root-registration runtime completed this session
+
+At the beginning of this session, the new private root-registration runtime had been written but its first focused gate hit a source-hygiene test.
+
+The only failure was:
+
+root registry runtime gained forbidden authority pattern WebView
+
+The implementation itself had already passed the substantive behavioral tests. The literal WebView appeared only in an RO:CONFIG explanatory comment. The source-hygiene test intentionally scans the production half of the file for forbidden authority-related tokens.
+
+We changed only the wording of the comment. The test was not weakened.
+
+The repaired wording preserved the same meaning:
+
+trusted network/environment/epoch come from service composition;
+they do not come from untrusted client UI state or registration payloads.
+
+No runtime behavior, authority, schema, persistence, or cryptographic logic changed.
+
+Final root runtime gate:
+
+ROOT_REGISTRATION_RUNTIME_GATE=GREEN
+ROOT_REGISTRATION_RUNTIME_TESTS=6_GREEN
+
+STRICT_CANONICAL_ROOT_PROOF_REQUIRED=YES
+CONCRETE_ROOT_KEY_AUTHENTICATED=YES
+PASSPORT_ID_REDERIVED_FROM_ROOT_KEY=YES
+
+TRUSTED_NETWORK_BOUND=YES
+TRUSTED_ENVIRONMENT_BOUND=YES
+TRUSTED_AUDIENCE_BOUND=YES
+TRUSTED_INITIAL_ROOT_EPOCH_BOUND=YES
+
+INVALID_SIGNATURE_REJECTED=YES
+EXPIRED_PROOF_REJECTED=YES
+
+DURABLE_ROOT_REGISTRATION=GREEN
+RESTART_IDEMPOTENCY=GREEN
+DUPLICATE_SNAPSHOT_REWRITE=NO
+CONCURRENT_STALE_GENERATION_REJECTED=YES
+
+REGISTRY_STORE_REGRESSION=GREEN
+RECOVERY_ROOT_PROOF_REGRESSION=GREEN
+SOURCE_HYGIENE=GREEN
+
+Associated regression evidence:
+
+server_registry_runtime tests = 6/6 GREEN
+server_registry_store tests   = 8/8 GREEN
+recovery root proof tests     = 5/5 GREEN
+strict svc-passport clippy    = GREEN
+native feature cargo check    = GREEN
+git diff --check              = GREEN
+Root runtime authority boundary
+
+The root-registration runtime is still deliberately private.
+
+It can now take a cryptographically valid root-registration proof and establish durable root truth, but by itself it does not prove that the challenge was:
+
+actually issued by this server;
+still live;
+unused;
+not cancelled;
+atomically consumed.
+
+Therefore:
+
+PUBLIC_REGISTRATION_API=NO
+PUBLIC_ROUTE_ADDED=NO
+CHALLENGE_CONSUMED=NO
+
+Do not mount this primitive directly.
+
+Its only production caller should ultimately be the server-owned challenge/replay state machine.
+
+4. Existing durable Passport registry foundation
+
+The already-existing durable server registry remained GREEN throughout this work.
+
+Conceptually it owns durable server truth for root/device registration using immutable generation snapshots.
+
+Important behaviors already established:
+
+durable generation number;
+compare-and-swap generation protection;
+lost-update rejection;
+restart recovery;
+strict validation before persistence;
+root Passport ID re-derived from root public key;
+signed device authorization re-verification;
+corruption fail-closed;
+unknown snapshot fields fail-closed;
+private filesystem permissions;
+no raw root secrets;
+no recovery phrase;
+no PIN;
+no wallet/ledger state;
+no username mutation.
+
+Regression tests remain:
+
+server_registry_store = 8/8 GREEN
+
+Including:
+
+empty store open/private persistence
+signed root/device restart survival
+binding/order/revocation rejection
+generation CAS lost-update rejection
+valid revocation restart survival
+signature corruption fail-closed
+unknown snapshot field rejection
+source authority hygiene
+
+The store's generation CAS was reused by the root-registration runtime rather than creating another persistence mechanism.
+
+5. Canonical signed challenge protocol added to ron-proto
+
+Live inspection proved there was previously no real Native Passport PassportChallengeV1. The old svc-passport Phase 8A challenge implementation was intentionally contract-only and explicitly said that service challenge signing/verification/runtime were absent.
+
+We therefore created the real protocol-owned challenge model.
+
+Protocol ownership
+PASSPORT_CHALLENGE_V1_PROTOCOL_OWNER=RON_PROTO
+PASSPORT_CHALLENGE_PURPOSE_OWNER=RON_PROTO
+
+The old svc-passport challenge layer now aliases the protocol-owned purpose enum rather than owning a duplicate enum.
+
+That is important: do not create another challenge purpose state machine or enum in svc-passport.
+
+PassportChallengePurposeV1
+
+The current closed V1 purpose vocabulary contains:
+
+RegisterRoot
+AuthorizeDevice
+RevokeDevice
+ProveSession
+IssueCapability
+RefreshCapability
+ClaimUsername
+TransferUsername
+ReleaseUsername
+PublishProfile
+RegisterSite
+UpdateSite
+WalletAuthorizationRequestReserved
+
+The wallet authorization variant is reserved and rejected by current V1 validation.
+
+No live wallet authority was enabled.
+
+Canonical signed challenge fields
+
+PassportChallengeSigningPayloadV1 / PassportChallengeV1 bind the following public data:
+
+version
+challenge_id
+
+network_id
+environment
+audience
+
+issuing_service_id
+service_key_id
+
+purpose
+requested_scopes
+
+passport_id          optional depending on purpose
+device_id            optional depending on purpose
+operation_body_hash  optional depending on purpose
+
+nonce
+
+issued_at_ms
+expires_at_ms
+
+service_signature    on PassportChallengeV1
+Challenge validation rules now include
+only V1;
+reserved wallet purpose rejected;
+requested scopes must not be empty;
+max scope count remains bounded by existing Native Passport limits;
+scopes must be canonical/sorted;
+duplicates rejected;
+purpose-specific Passport binding enforced;
+purpose-specific Device binding enforced;
+purpose-specific operation body hash enforced;
+issued_at_ms nonzero;
+expiry strictly after issue;
+challenge TTL bounded to 300 seconds;
+unknown JSON fields rejected.
+Clock-skew design
+
+A useful architectural correction was made during this session:
+
+CLOCK_SKEW_WIRE_FIELD=NO
+CLOCK_SKEW_IS_TRUSTED_VERIFIER_POLICY=YES
+
+The challenge does not tell the verifier how much skew to tolerate.
+
+The current V1 ceiling is:
+
+PASSPORT_CHALLENGE_V1_MAX_CLOCK_SKEW_MS=30000
+
+The verifier chooses trusted skew policy locally, subject to that protocol ceiling.
+
+Do not put caller-provided or request-provided clock-skew tolerance into authority-bearing challenge input.
+
+Challenge TTL
+PASSPORT_CHALLENGE_V1_MAX_TTL_MS=300000
+
+Maximum challenge lifetime is five minutes.
+
+6. Canonical challenge transcript and strict verification added to ron-auth
+
+A new pure cryptographic Native Passport service-challenge layer was added to ron-auth.
+
+Canonical domain:
+
+rustyonions.native-passport.service-challenge.v1
+
+Encoding:
+
+length-prefixed-binary-v1
+
+JSON is explicitly not a signing transcript.
+
+PASSPORT_CHALLENGE_V1_JSON_TRANSCRIPT_SIGNABLE=false
+
+Ed25519 signs the canonical transcript bytes themselves.
+
+The transcript binds every meaningful challenge field.
+
+Important APIs now include the equivalent of:
+
+canonical_passport_challenge_v1_transcript(...)
+passport_challenge_v1_transcript_b3_hex(...)
+verify_passport_challenge_v1_strict(...)
+PassportChallengeVerificationContextV1
+
+The verification context supplies trusted local expectations for:
+
+service public key
+network
+environment
+audience
+issuing service
+service key ID
+trusted now
+allowed clock skew
+
+The challenge itself is not allowed to establish those trust anchors.
+
+Strict verification rejects:
+
+wrong service public key;
+wrong network;
+wrong environment;
+wrong audience;
+wrong issuing service;
+wrong service key ID;
+challenge too far in future;
+expired challenge;
+excess verifier skew;
+malformed challenge;
+transcript drift;
+invalid signature.
+
+The cryptographic test mutates each signed field and verifies the original signature no longer validates.
+
+Final challenge crypto evidence:
+
+ron-auth signed challenge tests = 3/3 GREEN
+7. Initial challenge foundation Clippy repair
+
+The first challenge-foundation behavioral gates were GREEN, but strict Clippy stopped on this test expression:
+
+assert!(!PASSPORT_CHALLENGE_V1_JSON_TRANSCRIPT_SIGNABLE);
+
+because the assertion has a compile-time constant value.
+
+The repair was deliberately test-only:
+
+const {
+    assert!(!PASSPORT_CHALLENGE_V1_JSON_TRANSCRIPT_SIGNABLE);
+}
+
+No production logic or protocol behavior changed.
+
+After repair:
+
+RON_AUTH_STRICT_CLIPPY=GREEN
+SVC_PASSPORT_STRICT_CLIPPY=GREEN
+WORKSPACE_CHECK=GREEN
+
+Do not reopen this.
+
+8. Legacy Phase 8A challenge contracts successfully reconciled
+
+The old svc-passport/src/native/challenge.rs remains a contract-only compatibility layer.
+
+We deliberately did not turn that old file into the cryptographic runtime.
+
+Instead:
+
+protocol purpose ownership moved to ron-proto;
+NativePassportChallengePurpose became a compatibility alias to the protocol-owned purpose enum;
+Phase 8A maximum challenge TTL now uses the protocol-owned TTL constant;
+Phase 8A maximum clock skew now uses the protocol-owned ceiling;
+the old source remains contract-only;
+its tests continue to prove it does not gain runtime signing/replay/route authority.
+
+Regression evidence:
+
+native_passport_phase8a_proof_challenge_contract_dto
+9/9 GREEN
+
+native_passport_phase8d_challenge_proof_acceptance
+7/7 GREEN
+
+This separation is deliberate.
+
+Do not weaken the old "contract-only" tests simply because real runtime code now exists elsewhere.
+
+Real runtime belongs in dedicated private server modules.
+
+9. Service-key-ID type mismatch discovered and repaired
+
+Before building the real issuer we inspected KMS ownership and found a concrete integration incompatibility.
+
+The existing development KMS uses KIDs like:
+
+ed25519/default/v1
+ed25519/default/v2
+...
+
+But the original challenge DTO had typed service_key_id as:
+
+NativePassportContextLabelV1
+
+That type rejects /.
+
+Therefore:
+
+ed25519/default/v1
+
+could not be represented by the challenge wire type.
+
+We did not weaken the network/environment context-label grammar.
+
+Instead we created a proper key-ID type.
+
+ServiceKeyIdV1
+
+Canonical owner:
+
+ron-proto
+
+service_key_id in both the unsigned challenge signing payload and signed PassportChallengeV1 is now:
+
+ServiceKeyIdV1
+
+rather than NativePassportContextLabelV1.
+
+The ron-auth verification context was updated correspondingly.
+
+The existing KMS namespace is now canonical and representable:
+
+ed25519/default/vN
+
+Current ServiceKeyIdV1 is bounded to 128 bytes and has its own restricted key-ID grammar, including /.
+
+This preserves semantic separation:
+
+network/environment/audience/issuing-service labels
+!=
+service signing key IDs
+
+Marker:
+
+CONTEXT_LABEL_ABUSED_AS_SERVICE_KID=NO
+
+ron-proto challenge tests increased from 5 to 6 because a dedicated service-key-ID test was added.
+
+Final:
+
+RON_PROTO_CHALLENGE_TESTS=6_GREEN
+10. KMS signing identity / rotation boundary repaired
+
+The second integration issue found during inspection was more important cryptographically.
+
+The existing KmsClient API had:
+
+sign(message) -> (kid, signature)
+
+but did not let a Native Passport challenge issuer choose/bind a specific KID before constructing the signed transcript.
+
+That is unsafe around rotation because the KID is part of the challenge transcript.
+
+We specifically avoided this bad design:
+
+sign once
+discover returned KID
+rewrite challenge
+sign again
+
+and avoided inventing an unstable KID normalization.
+
+New KMS public signing identity
+
+svc-passport/src/kms/client.rs now exposes a public-only signing identity DTO equivalent to:
+
+KmsSigningIdentity {
+    kid
+    public_key
+}
+
+No private signing key leaves the KMS.
+
+New KMS methods
+
+The trait gained authority-sensitive seams equivalent to:
+
+active_signing_identity()
+sign_with_kid(kid, message)
+
+Crucially, their trait defaults are fail-closed.
+
+That means an injected external/production KMS implementation does not silently gain Native Passport challenge-signing authority merely because the trait was extended.
+
+Marker:
+
+EXTERNAL_KMS_NEW_AUTHORITY_DEFAULT=FAIL_CLOSED
+
+Existing KMS APIs were preserved:
+
+sign
+verify
+public_keys
+rotate
+attest
+
+This avoided breaking legacy issuer/JWKS behavior.
+
+DevKms rotation hardening
+
+The development KMS previously stored the current version and key material through separate synchronization pieces.
+
+It now keeps current signing state under one lock:
+
+version
+kid
+signing_key
+verifying_key
+history
+
+This prevents a reader from observing a KID/public-key pair inconsistent with the signing key during rotation.
+
+Rotation generates new random key material before taking the write lock and performs the current-state swap atomically under the lock.
+
+No .await occurs while the lock is held.
+
+sign_with_kid fails if the requested KID is no longer the active KID.
+
+Thus:
+
+preselect KID v1
+rotate to KID v2
+attempt sign_with_kid(v1)
+=> REJECT
+
+Historical public-key verification remains available, so signatures made before rotation still verify using the historical KID.
+
+New focused KMS test
+
+Created:
+
+crates/svc-passport/tests/
+physical_m1_service_challenge_kms_identity.rs
+
+It proves:
+
+selected KID/public key agree
+exact-KID signature verifies
+legacy sign still works
+rotation changes KID/public key
+old preselected KID cannot sign after rotation
+new KID signs successfully
+historical pre-rotation signature still verifies
+
+Final:
+
+KMS_IDENTITY_TESTS=2_GREEN
+
+Additional regressions:
+
+jwks_roundtrip = 1/1 GREEN
+issuer         = 2/2 GREEN
+11. Important patching/inspection mistakes encountered
+
+These were tooling mistakes, not project regressions, but they should be remembered so they are not repeated.
+
+zsh special path variable
+
+An inspection function used:
+
+for path in ...
+
+In zsh, path is a special array tied directly to $PATH.
+
+That clobbered executable lookup inside the function, causing:
+
+command not found: rg
+command not found: head
+command not found: awk
+command not found: python3
+
+No project source changed.
+
+The shell PATH was restored using a new login shell.
+
+Future rule: never use path as a zsh shell variable.
+
+Use names like:
+
+required_path
+source_path
+file_path
+Wrong context-label source path
+
+A follow-up inspection initially looked for NativePassportContextLabelV1 in:
+
+crates/ron-proto/src/id/passport.rs
+
+but the real implementation is in:
+
+crates/ron-proto/src/native_passport.rs
+
+Again, no source changes occurred.
+
+First service-key patch anchor drift
+
+The first service-key/KMS patch tried to match a pre-rustfmt import block and stopped with:
+
+ron-proto challenge test import anchor drifted
+FIRST_FAILURE=PROTOCOL_TYPE_RECONCILIATION
+
+The Python transformation had not written any files yet.
+
+A later gate then failed because the expected new KMS test target did not exist. That was merely a downstream consequence of the original patch abort.
+
+A read-only verification confirmed:
+
+SERVICE_KEY_ID_TYPE_ALREADY_PRESENT=NO
+KMS_ACTIVE_SIGNING_IDENTITY_ALREADY_PRESENT=NO
+KMS_SIGN_WITH_KID_ALREADY_PRESENT=NO
+KMS_TEST_ALREADY_PRESENT=NO
+
+We then reapplied using exact live rustfmt-normalized anchors and staged all files transactionally before replacement.
+
+That patch succeeded.
+
+Future preference: for multi-file authority-sensitive transformations, stage/validate all outputs before committing them rather than relying on brittle sequential edits.
+
+12. Service-key/KMS final gate
+
+The final service identity + KMS gate was fully GREEN:
+
+SERVICE_KEY_KMS_GATE=GREEN
+
+SERVICE_KEY_ID_OWNER=RON_PROTO
+SERVICE_KEY_ID_KMS_NAMESPACE=ed25519/default/vN
+CONTEXT_LABEL_ABUSED_AS_SERVICE_KID=NO
+
+RON_PROTO_CHALLENGE_TESTS=6_GREEN
+RON_AUTH_CHALLENGE_TESTS=3_GREEN
+KMS_IDENTITY_TESTS=2_GREEN
+
+JWKS_REGRESSION=GREEN
+ISSUER_REGRESSION=GREEN
+
+ACTIVE_KID_PUBLIC_KEY_PRESELECTED=YES
+SIGN_WITH_EXACT_KID=YES
+STALE_KID_AFTER_ROTATION_REJECTED=YES
+DEV_KMS_CURRENT_IDENTITY_ATOMIC=YES
+HISTORICAL_SIGNATURE_VERIFICATION=PRESERVED
+
+EXTERNAL_KMS_NEW_AUTHORITY_DEFAULT=FAIL_CLOSED
+LEGACY_SIGN_API=PRESERVED
+
+STRICT_CLIPPY=GREEN
+WORKSPACE_CHECK=GREEN
+
+At that checkpoint there was still:
+
+SIGNED_CHALLENGE_ISSUED=NO
+REPLAY_STATE_MUTATED=NO
+PUBLIC_ROUTE_ADDED=NO
+
+That directly enabled the final major slice of this session.
+
+13. Real private svc-passport signed challenge issuer — COMPLETED GREEN
+
+The final implementation slice added the first real server-owned Native Passport signed challenge issuer.
+
+New private module:
+
+crates/svc-passport/src/native/server_challenge_issuer.rs
+
+It remains private through native/mod.rs.
+
+Markers from application:
+
+PRIVATE_SERVER_CHALLENGE_ISSUER_MODULE=ADDED
+PUBLIC_NATIVE_EXPORT=NO
+SERVER_REGISTRY_RUNTIME_EXPORT_CHANGED=NO
+
+This is important: we did not expose a new public Rust API or HTTP route merely because challenge signing now works.
+
+Trusted inputs
+
+The issuer uses server/caller-owned trusted context.
+
+Confirmed:
+
+TRUSTED_CONTEXT_CALLER_OWNED=YES
+TRUSTED_TIME_NOT_REQUEST_BODY=YES
+
+The request body therefore does not get to choose:
+
+trusted server time;
+network authority;
+environment authority;
+audience authority;
+issuing service authority.
+
+Final gate confirms:
+
+SERVER_TRUSTED_NETWORK_BOUND=YES
+SERVER_TRUSTED_ENVIRONMENT_BOUND=YES
+SERVER_TRUSTED_AUDIENCE_BOUND=YES
+SERVER_TRUSTED_ISSUING_SERVICE_BOUND=YES
+SERVER_TRUSTED_TIME_BOUND=YES
+Challenge randomness
+
+The real issuer generates fresh native randomness for both:
+
+challenge_id
+challenge nonce
+
+Confirmed:
+
+CHALLENGE_ID_NATIVE_RANDOM=YES
+CHALLENGE_NONCE_NATIVE_RANDOM=YES
+FRESH_ID_AND_NONCE_PER_ISSUANCE=YES
+
+Independent issuance tests prove fresh values are used.
+
+KMS signing sequence
+
+The real issuer now uses the intended hardened sequence:
+
+1. validate trusted configuration/request requirements
+2. obtain fresh challenge ID and nonce
+3. preselect exact active KMS KID/public key
+4. construct canonical PassportChallengeSigningPayloadV1
+5. build exact ron-auth canonical transcript
+6. call sign_with_kid on that exact KID
+7. produce PassportChallengeV1
+8. strict-cross-verify it through ron-auth using the preselected public key
+9. return challenge only after verification succeeds
+
+Confirmed markers:
+
+KMS_ACTIVE_IDENTITY_PRESELECTED=YES
+SERVICE_KID_TRANSCRIPT_BOUND=YES
+EXACT_KID_SIGNING=YES
+ONE_SIGNATURE_PER_SUCCESSFUL_ISSUANCE=YES
+LEGACY_KMS_SIGN_PATH_USED=NO
+RON_AUTH_STRICT_CROSS_VERIFY=YES
+
+No signing of JSON occurs:
+
+JSON_BYTE_SIGNING=NO
+Invalid inputs do not gain a signature
+
+Focused test:
+
+protocol_invalid_request_is_rejected_without_signature_output
+
+Marker:
+
+MALFORMED_REQUEST_SIGNED=NO
+
+So structural protocol errors are rejected before producing a service signature.
+
+KMS public identity mismatch fails closed
+
+Focused test:
+
+mismatched_kms_public_identity_fails_after_single_exact_signature
+
+The issuer refuses to return a challenge if the preselected public identity cannot strictly verify the exact signature.
+
+There is no retry through a different key and no second signing pass.
+
+Marker:
+
+MISMATCHED_KMS_PUBLIC_IDENTITY_REJECTED=YES
+Configuration TTL validation
+
+Focused test:
+
+issuer_configuration_rejects_zero_and_excessive_ttl
+
+The private issuer rejects zero TTL and TTL above the protocol ceiling.
+
+Authority hygiene
+
+Focused source test:
+
+private_issuer_source_has_no_route_replay_capability_username_or_value_authority
+
+The issuer itself does not gain:
+
+routing authority;
+replay-state authority;
+capability authority;
+username authority;
+wallet authority;
+ledger authority.
+
+That boundary should remain intact.
+
+14. Final real issuer test evidence
+
+Final issuer test suite:
+
+native::server_challenge_issuer
+6/6 GREEN
+
+Tests:
+
+issuer_configuration_rejects_zero_and_excessive_ttl
+private_issuer_source_has_no_route_replay_capability_username_or_value_authority
+protocol_invalid_request_is_rejected_without_signature_output
+real_private_issuer_signs_once_and_strict_cross_verifies
+mismatched_kms_public_identity_fails_after_single_exact_signature
+independent_issuance_uses_fresh_challenge_id_nonce_and_signature
+
+Additional regression gates immediately afterward:
+
+ron-auth Native Passport challenge       3/3 GREEN
+service KMS identity/rotation            2/2 GREEN
+server root-registration runtime         6/6 GREEN
+strict svc-passport Clippy               GREEN
+native svc-passport check                GREEN
+cargo check --workspace                  GREEN
+
+Final terminal marker:
+
+SIGNED_CHALLENGE_ISSUER_GATE=GREEN
+SIGNED_CHALLENGE_ISSUER_GATE_RC=0
+
+PRIVATE_ISSUER_TESTS=6_GREEN
+REAL_PASSPORT_CHALLENGE_V1_ISSUED_IN_TEST=YES
+
+This is a major milestone.
+
+The server can now create a real cryptographically valid PassportChallengeV1 in tests.
+
+However, it is still only an ephemeral/private issuance primitive.
+
+15. What is explicitly NOT done yet
+
+This distinction is essential for next session.
+
+Even though real signed challenge issuance is GREEN:
+
+PUBLIC_CHALLENGE_ROUTE=NO
+DURABLE_CHALLENGE_STATE=NO
+CHALLENGE_CONSUMED=NO
+CAPABILITY_ISSUED=NO
+USERNAME_MUTATED=NO
+PHYSICAL_TESTMAC_MUTATED=NO
+
+Therefore, do not claim that Native Passport server registration is live end-to-end yet.
+
+Specifically absent:
+
+durable issued challenge records;
+restart-surviving challenge state;
+atomic one-time challenge consumption;
+replay rejection runtime;
+expiry transition persistence;
+cancellation transition persistence;
+public /v1/passport/challenge;
+public /v1/passport/prove;
+challenge + root-registration transaction composition;
+live device server registration;
+live device proof-of-possession;
+device-bound capability issuance;
+real username claim through this authority chain;
+physical Mac backend identity acceptance;
+physical Windows backend identity acceptance.
+16. Existing Phase 11 replay contracts are NOT runtime authority
+
+svc-passport already contains older Phase 11A/11B files such as:
+
+native/replay_consumption.rs
+native/replay_consumption_adapter.rs
+
+Those are earlier contract/adaptor work.
+
+Their comments explicitly say they do not own live replay-store mutation or challenge consumption.
+
+Do not mistake old GREEN Phase 11 contract acceptance for the runtime we now need.
+
+The new runtime should reuse canonical DTO/invariant vocabulary where appropriate, but we must not fake durability by merely switching contract booleans.
+
+Build actual server-owned state.
+
+17. Immediate next implementation: durable one-time challenge/replay state
+
+This is the exact next task:
+
+NEXT_ACTION=DURABLE_ONE_TIME_CHALLENGE_REPLAY_STATE
+
+The real private issuer should now be wrapped by durable server state.
+
+Required high-level state machine
+
+At minimum the runtime needs truthful server-owned states equivalent to:
+
+issued
+consumed
+expired
+cancelled
+
+Challenge state must survive process restart.
+
+A challenge that has been consumed must never become usable again after restart.
+
+A cancelled challenge must not become usable again.
+
+An expired challenge must not become usable merely because the server restarted.
+
+Issuance durability rule
+
+Do not return a usable challenge to a caller before the issued state is durably committed.
+
+Safe conceptual sequence:
+
+build/sign/strict-verify challenge
+attempt durable issued-state commit
+fsync / durable success
+only then return challenge
+
+If persistence fails, the signature may have been produced internally, but the signed challenge must not be exposed as successful issuance.
+
+Do not fake success because signing succeeded.
+
+Store full authoritative binding
+
+The durable record must be sufficient to prove exactly which signed challenge was issued.
+
+At minimum it must be impossible to substitute a different:
+
+challenge_id
+nonce
+network
+environment
+audience
+issuing_service
+service_key_id
+purpose
+requested scopes
+passport binding
+device binding
+operation body hash
+issue time
+expiry
+challenge transcript/signature binding
+
+Whether the best representation is the complete PassportChallengeV1, a canonical immutable record plus signature, or an exact transcript hash should be decided from live source and restart requirements.
+
+Do not create an ambiguous reduced representation.
+
+Replay behavior
+
+Required negative cases should include:
+
+unknown challenge
+already consumed challenge
+cancelled challenge
+expired challenge
+wrong challenge payload/hash
+wrong purpose
+wrong subject binding
+wrong operation body
+wrong scopes
+wrong service key/signature
+stale generation / concurrent mutation
+
+All should fail closed.
+
+Concurrent consumption
+
+Two concurrent attempts at the same challenge must never both win.
+
+Required outcome:
+
+exactly one successful consumption
+all other concurrent attempts rejected as replay/already-consumed
+
+Use real compare-and-swap/generation semantics or another explicit single-winner mechanism.
+
+Do not rely only on in-memory locks because restart durability is part of the requirement.
+
+Bounded state
+
+Challenge/replay state must remain bounded.
+
+Do not create an unbounded forever-growing list.
+
+Implement explicit pruning/retention for terminal expired/consumed/cancelled records while preserving enough tombstone/replay history to make the replay guarantee truthful.
+
+The exact retention design should be inspected against the Native Passport buildplan before committing.
+
+Persistence hardening
+
+Reuse the quality bar already established by server_registry_store:
+
+strict schema/version
+unknown fields rejected
+atomic generation transition
+fsync durability
+private permissions
+symlink/non-file rejection
+corruption fail-closed
+restart recovery
+lost-update rejection
+bounded state
+deterministic ordering
+
+Prefer reuse of the existing durable snapshot patterns rather than inventing an unrelated persistence style.
+
+18. Most important next architectural problem: challenge consumption + root registration atomicity
+
+This deserves special attention.
+
+We currently have two separate durable concepts:
+
+A. challenge/replay state
+B. root registry state
+
+The root registration runtime is already generation-CAS durable.
+
+The challenge runtime will also need durable one-time consumption.
+
+We must not implement:
+
+consume challenge
+then write root
+
+or:
+
+write root
+then consume challenge
+
+and casually label it atomic.
+
+A crash between two independent durable commits can leave inconsistent state.
+
+For example:
+
+root write succeeds
+process crashes before challenge consumption
+
+could leave the root registered but the challenge apparently still usable.
+
+The root-registration runtime is intentionally idempotent, which is helpful, but idempotency alone is not proof of atomic one-time challenge consumption.
+
+Next session should explicitly design crash recovery before mounting routes.
+
+Potential approaches include a recoverable transaction/journal or another composition that can prove deterministic recovery, but inspect the current stores/contracts before choosing. Do not introduce a second competing durable registry or silently weaken the one-time requirement.
+
+Required tests should eventually inject/reproduce failure at every durable transition boundary.
+
+19. Root registration flow once replay state exists
+
+The intended real server registration sequence should become approximately:
+
+client asks svc-passport for RegisterRoot challenge
+
+svc-passport:
+  derives trusted network/environment/audience/time
+  builds purpose-bound request
+  private issuer signs challenge
+  durably records challenge as issued
+  returns signed PassportChallengeV1
+
+client:
+  verifies svc-passport service signature
+  verifies intended purpose/context/body
+  recovery/root key signs canonical ron-auth root-registration proof
+
+svc-passport:
+  locates exact issued challenge
+  verifies service challenge binding/state
+  verifies root proof cryptographically
+  re-derives Passport ID from concrete root public key
+  applies trusted initial root epoch rules
+  atomically establishes durable root + one-time challenge consumption
+  returns truthful result
+
+No arbitrary subject registration.
+
+Backend never generates the user's Passport root key.
+
+Recovery/root secret material remains local.
+
+20. Device registration comes after durable root registration
+
+Once the root is genuinely registered, server device registration must use the already-completed DeviceAuthorization machinery.
+
+Existing foundations that should be reused:
+
+ron-proto DeviceAuthorizationV1
+ron-auth canonical DeviceAuthorization transcript
+strict ron-auth DeviceAuthorization verification
+svc-passport recovery/root DeviceAuthorization signer
+existing native device key/ID flow
+ron-policy device scope ceilings
+durable server device registry records
+
+Do not create another device authorization format.
+
+Server must validate at current trusted server time/context:
+
+Passport/root binding
+root epoch
+network
+environment
+device public key / Device ID
+device class
+authorized scope ceiling
+authorization nonce
+issue/expiry
+root signature
+ron-policy scope ceiling
+
+Then require proof of possession of the device private key before treating the device as active network authority.
+
+21. Capability issuance follows device proof
+
+Do not jump directly from root registration to username mutation.
+
+The normal runtime chain should ultimately be:
+
+registered Passport root
+    ↓
+authorized device
+    ↓
+device proof-of-possession
+    ↓
+device-bound capability
+    ↓
+authorized username/profile mutation
+
+Existing Phase 11 capability contract work may be reused, but it must not be treated as live capability issuance merely because contract tests exist.
+
+No ambient authority.
+
+No webview-provided scope escalation.
+
+No personal device escalation beyond ron-policy.
+
+22. Physical M1 end goal
+
+The purpose of all of this remains the CrabNode physical acceptance milestone.
+
+We need to reach real backend behavior equivalent to:
+
+physical Mac @testmac:
+  real native Passport
+  no dev bypass
+  real signed server challenge
+  real root/device authority
+  real server username claim
+
+other client:
+  @testmac becomes unavailable
+
+restart CrabNode:
+  @testmac still unavailable
+  same owner/profile survives restart
+
+Then prove the actual Windows physical client through the real backend as well.
+
+Project-level target remains:
+
+PHYSICAL_MAC=@testmac
+PHYSICAL_WINDOWS=@testpc
+NO_DEV_BYPASS=YES
+REAL_BACKEND=YES
+
+Only after that physical acceptance is truthfully GREEN should we advance to CN-5.
+
+23. What not to reopen
+
+The next session should not spend time reworking these unless integration exposes actual new evidence of a regression:
+
+native recovery root derivation
+24-word recovery path
+BIP39/PBKDF2 recovery derivation
+root identity derivation
+root registration proof transcript
+root registration proof signing
+recovery root-registration proof wrapper
+DeviceAuthorization canonical transcript
+DeviceAuthorization root signing
+physical Mac authorization sidecar
+root PIN ceremony
+KMS service-key namespace
+ServiceKeyIdV1
+PassportChallengeV1 wire contract
+ron-auth challenge transcript
+strict service challenge verification
+KMS rotation-safe KID preselection
+private signed challenge issuer
+durable server registry store
+private root registration runtime
+
+All are currently GREEN.
+
+Do not reopen physical CrabLink authorization unless the real backend integration finds an actual incompatible assumption.
+
+24. Authority invariants to preserve
+
+These remain mandatory during the next work:
+
+svc-passport owns Passport/device/identity truth
+ron-proto owns canonical protocol DTOs
+ron-auth owns canonical cryptographic transcripts/verifiers
+ron-policy owns scope ceilings/policy
+KMS owns service signing keys
+server challenge runtime owns challenge state/replay
+server registry owns durable Passport/device records
+
+React is never authority
+WebView is never authority
+gateway is never Passport truth
+omnigate is never Passport truth
+DHT is never identity consensus
+wallet/ledger are untouched by identity registration
+
+Specifically:
+
+no server storage of recovery phrase;
+no root private key export;
+no device private key export;
+no PIN in server state;
+no root seed in server state;
+no generic root signing API;
+no generic KMS challenge bypass;
+no client-selected trusted time;
+no client-selected trusted network/environment;
+no unsigned challenge;
+no JSON-byte challenge signing;
+no two-signature "discover KID then sign again" workaround;
+no stale KID signing after rotation;
+no challenge route before durable issuance/replay exists;
+no direct public mounting of server_registry_runtime;
+no fake replay success;
+no fake username success;
+no fake capability.
+25. Known workspace warnings
+
+cargo check --workspace is GREEN but continues to report known macronode dead-code warnings.
+
+Examples include:
+
+DEFAULT_ADMIN_ADDR_STR unused
+parse_addr unused
+default_overlay_addr unused
+default_dht_addr unused
+default_storage_addr unused
+default_index_addr unused
+default_mailbox_addr unused
+default_gateway_addr unused
+
+checkpoint committee structs/functions unused
+checkpoint finality functions unused
+checkpoint validator verification helpers unused
+quorum runtime getters unused
+some RuntimeStatus getters unused
+
+The crabnode binary showed 8 warnings and macronode showed 19 warnings in the final check.
+
+These are not current failures and should not derail the challenge/replay slice.
+
+Fix them later when their owning phase makes them relevant or as a dedicated hygiene pass.
+
+26. Testing cadence for next session
+
+Keep the normal project cadence:
+
+inspect
+small authority-isolated patch
+focused tests
+fix first failure
+focused strict clippy/check
+broader workspace gate only at milestone
+
+For the next challenge state work, test these classes before routes:
+
+normal issue/restart/load
+fresh independent issue
+exact consume
+second consume replay rejection
+concurrent double-consume
+expiry
+cancel
+restart after consume
+restart after cancel
+restart after expiry
+corrupt state
+unknown fields
+stale generation CAS
+disk write failure
+bounded pruning
+wrong challenge binding
+wrong service signature
+wrong purpose
+wrong Passport/device/body
+wrong environment/network
+
+Then test crash/recovery composition with root registration.
+
+Do not add the HTTP route just to make endpoint tests pass before the state machine is trustworthy.
+
+27. Code quality / comments
+
+Continue enforcing CODECHECK.md and CODECOMMENTS.md.
+
+Every new or meaningfully rewritten code file must include appropriate RO headers:
+
+RO:WHAT
+RO:WHY
+RO:INTERACTS
+RO:INVARIANTS
+
+plus applicable:
+
+RO:METRICS
+RO:CONFIG
+RO:SECURITY
+RO:TEST
+
+The files added this session followed that pattern.
+
+Comments should explain authority and failure behavior rather than merely narrating syntax.
+
+One lesson from the WebView hygiene failure: source scanners may intentionally reject forbidden authority vocabulary inside the implementation section, even when it is only explanatory prose. Keep comments semantically clear without accidentally tripping deliberate authority-pattern tests.
+
+28. Shell / patching rules carried forward
+
+Continue using Mac/zsh-safe paste blocks.
+
+Important session-specific addition:
+
+NEVER USE SHELL VARIABLE NAME: path
+
+because path is special in zsh and mutates $PATH.
+
+Also continue:
+
+no unquoted !;
+use shell functions and return, not exit;
+never cargo clean without evidence;
+do not git add/commit/push;
+do not download dependencies/tools unless explicitly requested;
+fix first failure before expanding;
+prefer transactional/staged multi-file patches for authority-sensitive edits;
+live source before stale bundle assumptions.
+29. Codebundle freshness warning
+
+The previously generated svc-passport/CODEBUNDLE.md was created before several of the final changes in this session.
+
+The broad RustyOnions codebundle from Aug. 20 is also now stale for at least:
+
+ron-proto
+ron-auth
+svc-passport
+
+Therefore, next session:
+
+live repo source + this terminal evidence override those bundles.
+
+If fresh bundles are useful at session start, regenerate at least the affected RustyOnions material after confirming the repo is still at this GREEN state.
+
+Do not infer that an older bundle's absence of:
+
+PassportChallengeV1
+ServiceKeyIdV1
+server_challenge_issuer
+active_signing_identity
+sign_with_kid
+
+means those implementations are absent from the live repo.
+
+They were added later.
+
+30. Recommended exact next-session starting point
+
+Start with a very narrow baseline rather than rerunning everything.
+
+First confirm live source contains:
+
+ServiceKeyIdV1
+PassportChallengeV1
+verify_passport_challenge_v1_strict
+KmsSigningIdentity
+active_signing_identity
+sign_with_kid
+server_challenge_issuer
+server_registry_runtime
+server_registry_store
+
+Then inspect the existing Phase 11 replay/consumption contract files and the durable server registry persistence pattern.
+
+From there, implement the smallest real private server challenge state slice.
+
+The intended milestone should be something equivalent to:
+
+DURABLE_SIGNED_CHALLENGE_ISSUANCE=GREEN
+DURABLE_CHALLENGE_RESTART=GREEN
+ONE_TIME_CONSUMPTION=GREEN
+CONCURRENT_DOUBLE_CONSUME_REJECTED=GREEN
+EXPIRED_CHALLENGE_REJECTED=GREEN
+CANCELLED_CHALLENGE_REJECTED=GREEN
+CORRUPT_CHALLENGE_STATE_FAIL_CLOSED=GREEN
+BOUNDED_REPLAY_STATE=GREEN
+
+PUBLIC_ROUTE_ADDED=NO
+ROOT_REGISTRATION_COMPOSED=NO
+
+NEXT_ACTION=ATOMIC_CHALLENGE_CONSUMPTION_PLUS_ROOT_REGISTRATION
+
+After that, solve the crash-consistent root-registration composition.
+
+Only after those two pieces are GREEN should we expose the real challenge/prove path.
+
+31. Short next-session handoff block
+
+This is the condensed version to paste at the very top of the next session if useful:
+
+We are continuing CRABNODE_BUILDPLAN.md, currently in CN-4 / M1 physical-client acceptance integration. CN-0 through CN-4 backend work is substantially GREEN; CN-5 has not started. This session completed the real Native Passport server authentication foundation: durable private root-registration runtime, canonical PassportChallengeV1 in ron-proto, canonical signed-challenge transcript/strict Ed25519 verification in ron-auth, canonical ServiceKeyIdV1, rotation-safe exact-KID KMS preselection/signing in svc-passport, and a real private server_challenge_issuer that generates fresh challenge IDs/nonces, signs exactly once with the preselected KID, and strict-cross-verifies through ron-auth. All final focused gates, strict Clippy, and cargo check --workspace are GREEN aside from known pre-existing macronode dead-code warnings. There is still no public challenge route, durable challenge state, replay consumption, capability issuance, username mutation, or physical @testmac mutation. The exact next action is durable one-time challenge/replay state, followed by crash-safe/atomic composition with the already-GREEN root-registration runtime. Do not expose routes or advance to CN-5 until real physical Mac @testmac and Windows @testpc pass through the actual backend with no dev bypass. Live repo source and fresh terminal evidence override older codebundles.
+
+That should let the next session resume directly at the durable challenge/replay runtime without re-investigating work that is already closed GREEN.
+
+### END NOTE - AUGUST 22 2026 - 02:00 CST
+
+
+
+### BEGIN NOTE - AUGUST 22 2026 - 21:15 CST
+
+
+# RustyOnions / CrabLink / CrabNode — Comprehensive Carry-Over Notes
+
+**Carry-over date:** August 22, 2026
+**Primary repo currently active:** `/Users/mymac/Desktop/RustyOnions`
+**Primary implementation authority:** `CRABNODE_BUILDPLAN.md`
+**Umbrella acceptance authority:** `FINAL_BETA.md`
+**Current implementation area:** CrabNode `CN-4` / Physical M1 Native Passport integration
+**Current immediate objective:** finish real RegisterRoot proof submission through `svc-gateway → Omnigate → svc-passport`, then prove it with the physical Mac client without a development bypass.
+**Do not begin CN-5 yet.**
+
+The CrabNode plan deliberately treats CN-0→CN-4 as the immediate FINAL_BETA Phase 21 unblock, followed later by CN-5/6 for the complete one-node product and CN-7 onward for the decentralized swarm.  FINAL_BETA remains on Phase 21, with Phases 22–26 still required afterward.
+
+---
+
+## 1. Executive status at the exact stopping point
+
+Use this as the authoritative short status at the beginning of the next session:
+
+```text
+PROJECT:
+RustyOnions / CrabLink / CrabNode / ROX Anchor
+
+PRIMARY ACTIVE PLAN:
+CRABNODE_BUILDPLAN.md
+
+UMBRELLA ACCEPTANCE PLAN:
+FINAL_BETA.md
+
+CURRENT CRABNODE AREA:
+CN-4 / Physical M1 Native Passport integration
+
+CN-0:
+GREEN
+
+CN-1:
+GREEN enough for current M1
+real operator lifecycle exists
+
+CN-2:
+GREEN
+canonical CrabNode profile/ports established
+
+CN-3:
+GREEN
+real svc-gateway → Omnigate product ingress established
+
+CN-4 DURABLE PROFILE BACKEND:
+GREEN
+
+CN-4 NATIVE PASSPORT REGISTERROOT CHALLENGE:
+REAL PUBLIC RUNTIME GREEN
+
+CN-4 SVC-PASSPORT REGISTERROOT PROOF:
+GREEN
+
+CN-4 REGISTERROOT PROOF THROUGH OMNIGATE:
+NOT YET APPLIED
+
+CN-4 REGISTERROOT PROOF THROUGH SVC-GATEWAY:
+PENDING
+
+REAL PHYSICAL MAC REGISTERROOT PROOF THROUGH PORT 8090:
+PENDING
+
+PHYSICAL @testmac FULL BACKEND ACCEPTANCE:
+PENDING
+
+PHYSICAL @testpc FULL BACKEND ACCEPTANCE:
+PENDING
+
+CN-5:
+NOT STARTED
+
+FINAL_BETA PHASE21:
+ACTIVE / NOT YET GREEN
+
+FINAL_BETA PHASE22-26:
+PENDING
+
+ROX BUILD_PLAN4:
+GREEN / PARKED
+```
+
+The most recent attempted integration patch did **not** partially modify the repo. It stopped during its preflight with:
+
+```text
+CN4_REGISTERROOT_PROOF_OMNIGATE_APPLY=RED
+REASON=OMNIGATE_CHALLENGE_ROUTE_ANCHOR_COUNT:0
+```
+
+That means:
+
+```text
+LAST_PATCH_PRODUCTION_MUTATION=NO
+LAST_PATCH_PARTIAL_APPLICATION=NO
+ROLLBACK_REQUIRED=NO
+FIRST_NEXT_ACTION=INSPECT_CURRENT_OMNIGATE_ROUTE_SHAPE
+```
+
+This was a brittle patch-anchor mismatch, **not** a compile failure and **not** a product/runtime regression.
+
+---
+
+# 2. Completion estimate at pause
+
+Current useful estimates:
+
+```text
+Physical M1 expanded integration:
+~80–85%
+
+Immediate M1 unblock overall:
+~90%
+
+Full CrabNode CN-0→CN-19:
+~35–40% implementation-weighted
+
+Raw CrabNode phase-count completion:
+~25%
+because CN-0→CN-4 is the current numbered region
+
+Controlled CrabLink Desktop beta overall:
+~73–76%
+```
+
+The raw CrabNode phase count understates actual engineering progress because the plan is primarily integrating and productizing substantial existing RustyOnions components rather than building 20 greenfield phases. The buildplan explicitly defines M1 through M7 in this way. 
+
+The important interpretation is:
+
+```text
+we are close to removing the immediate identity/backend blocker
+
+but
+
+we are not yet close enough to call the complete public CrabNode product done
+```
+
+Later CrabNode work still includes supervision, signed node identity, overlay, networked DHT, remote provider fetching, replication/repair, durable CAS, mutable-state convergence, distributed moderation, service evidence/rewards, physical multi-node acceptance, WAN, packaging and chaos/soak/security.
+
+---
+
+# 3. Source-of-truth hierarchy for the next session
+
+Continue using this order:
+
+```text
+1. Live repository source
+2. Fresh terminal/runtime evidence
+3. CRABNODE_BUILDPLAN.md
+4. FINAL_BETA.md
+5. BUILD_PLAN_Z / current crate-specific plans
+6. QUICKCHAIN / Passport Native / ROX plans as applicable
+7. Architecture blueprints
+8. ALLNOTES / NOTES / combined documents as historical context
+9. Codebundles as snapshots only
+```
+
+The CrabNode buildplan itself also says fresh source/runtime evidence comes first. 
+
+### Important codebundle warning
+
+The newest attached `svc-passport` bundle was generated **before** the tiny final strict-Clippy repair.
+
+That bundle still contains this re-export:
+
+```rust
+NativePassportRegisterRootSubmitOutcomeV1,
+```
+
+in `native/mod.rs`. 
+
+The live repo was subsequently repaired by removing only that unused re-export.
+
+Therefore:
+
+```text
+LIVE_REPO_NEWER_THAN_ATTACHED_SVC_PASSPORT_BUNDLE=YES
+
+BUNDLE_STALE_DIFFERENCE:
+one unused internal re-export in native/mod.rs
+
+BEHAVIORAL_DIFFERENCE:
+NONE
+```
+
+Do not accidentally reintroduce that export because the bundle shows it.
+
+---
+
+# 4. Locked product architecture
+
+Preserve these distinctions.
+
+```text
+RustyOnions
+= backend/value plane
+
+CrabLink
+= Tauri-first product client
+
+CrabNode
+= complete public Service Node
+
+crabnode
+= public operator executable
+
+macronode
+= internal host/composition implementation
+
+svc-admin
+= optional local operator UI
+
+Micronode/User Node
+= private passive verifier
+
+ROX Anchor
+= separate external ROC↔ROX Solana/Anchor system
+```
+
+The CrabNode buildplan explicitly says this is productization of the existing service architecture, not creation of a second node architecture. 
+
+Authority remains:
+
+```text
+React
+= display + explicit user intent
+
+Tauri
+= native privilege
+
+RustyOnions services
+= durable network truth
+
+svc-passport
+= Passport / device / identity authority
+
+ron-auth
+= canonical cryptographic transcripts and verification
+
+ron-policy
+= device scope policy
+
+ron-kms / svc-passport KMS adapter
+= service signing-key custody boundary
+
+svc-wallet
+= economic mutation ingress
+
+ron-ledger
+= ROC balance / receipt truth
+
+svc-index
+= reviewed projections only
+never balance truth
+```
+
+FINAL_BETA codifies the same ownership model and forbids fake identity, receipt, balance, B3, finality and settlement behavior. 
+
+---
+
+# 5. Locked privacy/social/product decisions
+
+These decisions remain active and should not be reopened:
+
+```text
+Desktop is the reference product.
+
+TV / Android / iOS do not enter the current critical path.
+
+Local following remains device-local.
+
+No public follower counts.
+
+No public following counts.
+
+No required server-hosted social graph of everybody's follows.
+
+No cloud-custodied Passport secrets.
+
+No arbitrary site JavaScript/custom executable code in normal beta.
+
+B3 bytes must verify before acceptance/serving.
+
+DHT/provider records are not content truth.
+
+DHT/provider records are not username consensus.
+
+User Node residential IPs must not be published.
+
+Admin surfaces remain loopback-only by default.
+```
+
+FINAL_BETA also explicitly leaves mobile/TV outside the Desktop beta gate. 
+
+---
+
+# 6. Network / runtime topology currently established
+
+Current canonical local physical M1 path:
+
+```text
+CrabLink / external product request
+
+        ↓
+
+svc-gateway
+127.0.0.1:8090
+
+        ↓
+
+Omnigate
+127.0.0.1:9090
+
+        ↓
+
+svc-passport
+127.0.0.1:5307
+```
+
+Other relevant current conventions:
+
+```text
+macronode operator/admin:
+127.0.0.1:8080
+
+optional svc-admin:
+127.0.0.1:5300
+```
+
+Never open the admin plane to LAN merely to make CrabLink connect.
+
+Public product ingress and local operator/admin ingress are separate security surfaces.
+
+---
+
+# 7. Incoming foundation that was already green before the newest work
+
+Several difficult CN-4 foundations were already complete before this session's final integration work.
+
+## Durable CrabNode service key
+
+`ron-kms` contains a durable Ed25519 service key implementation.
+
+Properties already established:
+
+```text
+restart-stable
+nonrotating v1
+durable key record
+canonical KID/public key
+no secret getter
+no Clone/Debug secret leakage
+seed zeroization
+Unix directory 0700
+key record 0600
+unknown fields rejected
+record size bounded
+corruption fails closed
+no automatic destructive rekey
+atomic publication semantics
+```
+
+## svc-passport durable KMS adapter
+
+`DurableRonKmsClient` maps the persisted `ron-kms` key into the svc-passport `KmsClient` contract.
+
+It supports:
+
+```text
+active_signing_identity
+exact-KID sign
+exact-KID verify
+public key view
+restart-stable KID
+unsupported rotation fails closed
+```
+
+The current bundle shows this adapter and its exact-KID semantics. 
+
+## Real CrabNode service identity
+
+Canonical CrabNode home:
+
+```text
+/Users/mymac/Library/Application Support/CrabNode
+```
+
+Current service identity:
+
+```text
+KID:
+ed25519/crabnode/svc-passport/30d1d523-28c0-4f60-a677-5156959507a8/v1
+
+service key record SHA256:
+83f83b070e85759d0eee648efeea17276aa4b78845305401c938a8ceb763891e
+
+mode:
+0600
+```
+
+Secret material was never printed during verification.
+
+## Private-beta trusted context
+
+Canonical server-owned values:
+
+```text
+network_id:
+rustyonions-devnet
+
+environment:
+private-beta
+
+audience:
+svc-passport
+
+issuing_service_id:
+svc-passport
+
+challenge TTL:
+60,000 ms
+
+replay retention:
+120,000 ms
+
+initial root epoch:
+0
+```
+
+Clients are not allowed to choose these.
+
+---
+
+# 8. Existing durable RegisterRoot coordinator
+
+This is one of the most important completed pieces.
+
+The server coordinator owns the actual crash-recoverable authority transaction:
+
+```text
+validate challenge + proof binding
+
+        ↓
+
+persist immutable redo intent
+
+        ↓
+
+consume exact one-time challenge
+
+        ↓
+
+idempotently register Passport root
+
+        ↓
+
+clear redo intent
+```
+
+Do not duplicate this state machine in HTTP handlers, Omnigate, gateway, CrabLink or macronode.
+
+Already-green coordinator behavior includes:
+
+```text
+proof-binding mismatch never writes redo intent
+
+normal transaction:
+challenge consumed
+root registered
+intent cleared
+
+restart after durable intent:
+recovers
+
+restart after challenge consumption:
+recovers
+
+restart after root registration before intent completion:
+recovers
+
+accepted_at remains immutable during recovery
+```
+
+The newest `svc-passport` implementation continues to call the existing coordinator rather than creating another transaction path.
+
+---
+
+# 9. Major accomplishment this session — fixed RegisterRoot challenge path
+
+The challenge half is now **real-runtime green**, not merely unit-tested.
+
+## svc-passport challenge endpoint
+
+Fixed endpoint:
+
+```text
+POST /v1/passport/register/challenge
+```
+
+The request contains only caller-owned bindings:
+
+```json
+{
+  "passport_id": "...",
+  "requested_scopes": [...],
+  "operation_body_hash": "..."
+}
+```
+
+The request intentionally does **not** accept:
+
+```text
+purpose
+network
+environment
+audience
+service KID
+trusted timestamp
+root epoch
+device binding
+```
+
+The route always server-forces:
+
+```text
+purpose = register_root
+```
+
+The newest bundle shows the strict handler DTO and server-owned time path. 
+
+---
+
+# 10. Full public RegisterRoot challenge ingress now proven
+
+The full path is:
+
+```text
+POST :8090
+/identity/passport/register/challenge
+
+       ↓
+
+svc-gateway
+
+       ↓
+
+POST :9090
+/v1/identity/passport/register/challenge
+
+       ↓
+
+Omnigate
+
+       ↓
+
+POST :5307
+/v1/passport/register/challenge
+
+       ↓
+
+svc-passport durable challenge issuer
+```
+
+This was exercised against the **real managed CrabNode**.
+
+Observed public request result:
+
+```text
+PUBLIC_REGISTERROOT_HTTP=200
+```
+
+This was not an internal direct-to-svc-passport shortcut.
+
+---
+
+# 11. Important Omnigate policy issue found and repaired this session
+
+The first real public challenge attempt reached Omnigate but returned:
+
+```json
+{
+  "code": "POLICY_DENY",
+  "reason": "default"
+}
+```
+
+HTTP:
+
+```text
+403
+```
+
+This was correctly diagnosed as a policy-classification problem rather than a routing failure.
+
+The loaded policy bundle:
+
+```text
+default_action = deny
+```
+
+and previously admitted only safe read methods.
+
+We did **not**:
+
+```text
+disable policy
+allow all POSTs
+add a development bypass
+trust a caller-selected header
+change ron-policy's schema to invent path matching
+```
+
+Instead, Omnigate now derives a trusted local classification tag from the exact method+URI for the reviewed challenge route.
+
+Tag:
+
+```text
+cn4-fixed-identity-admission
+```
+
+The policy allows POST only when that trusted tag is present.
+
+Properties proven:
+
+```text
+DEFAULT_DENY=PRESERVED
+EXACT_REGISTERROOT_CHALLENGE_POST=ALLOWED
+DIFFERENT_POST=DENIED
+CALLER_HEADER_TAG_INJECTION=REJECTED
+GLOBAL_POST_ALLOW=NO
+POLICY_DISABLED=NO
+```
+
+This is an important security result.
+
+---
+
+# 12. Real public RegisterRoot challenge durability proof
+
+A real challenge was issued through the public `8090` ingress and then compared against the durable svc-passport store.
+
+Latest publicly issued challenge used for the closeout:
+
+```text
+challenge_id:
+challenge:v1:b3:f8f5ed39f9ae5384cf3c00458e328d85a196c6b173471974229dcab2cce8a8cb
+
+canonical challenge SHA256:
+49d4e6ae5d6dca9535c87c207cde9749582e6f17333faeeef73c3f784e7a53f0
+```
+
+Durable file:
+
+```text
+/Users/mymac/Library/Application Support/CrabNode/data/native-passport/challenges/challenge-v1-00000000000000000003.json
+```
+
+Generation:
+
+```text
+3
+```
+
+Status:
+
+```text
+issued
+```
+
+The proof established:
+
+```text
+public gateway response
+=
+exact durable svc-passport challenge
+```
+
+---
+
+# 13. Restart proof for the publicly issued challenge
+
+After issuing the challenge through real public ingress, the managed CrabNode was restarted.
+
+After restart:
+
+```text
+same challenge ID remained present
+same canonical challenge hash remained present
+challenge remained status=issued
+service KID remained unchanged
+service key record hash remained unchanged
+CrabNode readiness returned truthful green
+```
+
+Therefore:
+
+```text
+PUBLIC_RESPONSE_MATCHED_DURABLE_RECORD=YES
+
+RESTART_WITH_PUBLIC_CHALLENGE=GREEN
+
+CHALLENGE_STABLE_ACROSS_RESTART=YES
+
+SERVICE_KID_STABLE_ACROSS_RESTART=YES
+
+SERVICE_KEY_RECORD_STABLE_ACROSS_RESTART=YES
+```
+
+This formally closed the **challenge half** of the real RegisterRoot operation.
+
+---
+
+# 14. Generic Native Passport surfaces stayed closed
+
+The real closeout explicitly checked the generic routes.
+
+At `svc-gateway`:
+
+```text
+/identity/passport/challenge
+→ 404
+
+/identity/passport/prove
+→ 404
+```
+
+At svc-passport:
+
+```text
+/v1/passport/challenge
+→ 404
+
+/v1/passport/prove
+→ 404
+```
+
+At Omnigate:
+
+```text
+/v1/identity/passport/challenge
+→ 403 POLICY_DENY
+
+/v1/identity/passport/prove
+→ 403 POLICY_DENY
+```
+
+The 403 at Omnigate is **correct fail-closed behavior** because policy executes before nonexistent routes fall through to routing.
+
+It is not evidence that a generic route exists.
+
+The correct interpretation is:
+
+```text
+GATEWAY_GENERIC_SURFACE:
+unmounted
+
+SVC_PASSPORT_GENERIC_SURFACE:
+unmounted
+
+OMNIGATE_GENERIC_POST:
+denied before routing
+
+GENERIC_NATIVE_PASSPORT_AUTHORITY:
+not exposed
+```
+
+---
+
+# 15. Major accomplishment this session — fixed RegisterRoot proof route in svc-passport
+
+After closing the challenge half, we inventoried the exact live coordinator/proof APIs and implemented the **fixed RegisterRoot-only proof submission route**.
+
+Endpoint:
+
+```text
+POST /v1/passport/register/proof
+```
+
+This is **not**:
+
+```text
+/v1/passport/prove
+```
+
+and no generic proof endpoint was added.
+
+The new handler appears in the newest codebundle. 
+
+---
+
+# 16. New fixed proof HTTP DTO
+
+The HTTP request intentionally accepts only:
+
+```text
+challenge
+root_public_key
+proof_created_at_ms
+proof_signed_payload_hex
+```
+
+Equivalent shape:
+
+```json
+{
+  "challenge": { "...signed server challenge..." },
+  "root_public_key": "...",
+  "proof_created_at_ms": 123,
+  "proof_signed_payload_hex": "..."
+}
+```
+
+The caller cannot supply:
+
+```text
+root_key_epoch
+accepted_at_ms
+challenge_transcript_hash
+proof contract domain
+challenge contract domain
+network
+environment
+audience
+server purpose
+requested scopes independently
+operation hash independently
+service KID choice
+```
+
+This is visible in the new strict request DTO. 
+
+---
+
+# 17. Server reconstructs the canonical proof transcript
+
+`submit_register_root_proof_durable` reconstructs the canonical server-side transcript from:
+
+```text
+the signed challenge
+
+plus
+
+the concrete root public key
+
+plus
+
+proof creation time
+
+plus
+
+trusted runtime configuration
+```
+
+Server-derived fields include:
+
+```text
+challenge transcript B3 hash
+
+challenge contract domain/version
+
+proof contract domain/version
+
+network
+
+environment
+
+audience
+
+passport binding
+
+operation body hash
+
+requested scopes
+
+challenge issue/expiry times
+
+trusted initial root epoch
+```
+
+The implementation uses the canonical `ron-auth` challenge transcript hash and the existing `RootRegistrationProofTranscriptV1`, then feeds it into the existing crash-recoverable coordinator.
+
+This preserves the correct ownership model:
+
+```text
+HTTP layer:
+parses bounded evidence
+
+runtime layer:
+reconstructs trusted transcript
+
+coordinator:
+owns mutation transaction
+
+registry:
+owns durable root authority
+```
+
+---
+
+# 18. Proof handler error surface
+
+The fixed HTTP handler returns a redacted result.
+
+Success schema:
+
+```text
+svc-passport.native-register-root-proof-result.v1
+```
+
+Possible statuses:
+
+```text
+registered
+
+already_registered
+```
+
+Safe problem classes include:
+
+```text
+register_root_proof_rejected
+register_root_proof_replay
+register_root_conflict
+register_root_service_unavailable
+```
+
+Internal storage/KMS/CAS/recovery details remain opaque.
+
+The newest bundle confirms this behavior. 
+
+---
+
+# 19. Proof-route focused behavioral evidence
+
+Three new focused tests were added.
+
+## Test 1 — valid proof + one-time replay rejection
+
+Proves:
+
+```text
+valid root proof
+→ HTTP 200
+→ durable root registered
+
+same challenge submitted again
+→ conflict/replay rejection
+```
+
+## Test 2 — forged proof does not consume challenge
+
+This is especially important.
+
+Sequence:
+
+```text
+issue challenge
+
+submit forged root signature
+
+proof rejected
+
+same challenge remains usable
+
+submit genuine proof
+
+registration succeeds
+```
+
+This proves invalid crypto fails **before** one-time challenge mutation.
+
+That directly validates the intended transaction order.
+
+## Test 3 — caller cannot inject trusted fields
+
+The test attempts to inject fields such as:
+
+```text
+accepted_at_ms
+
+root_key_epoch
+
+challenge_transcript_hash
+```
+
+Strict JSON rejection occurs.
+
+It also confirms generic:
+
+```text
+/v1/passport/challenge
+/v1/passport/prove
+```
+
+remain absent.
+
+The terminal evidence showed all three tests passing. 
+
+---
+
+# 20. Challenge and runtime regressions after proof implementation
+
+After adding the proof route we also reran:
+
+```text
+crabnode_cn4_register_root_challenge_route
+4 tests
+4 green
+```
+
+Those include:
+
+```text
+only RegisterRoot challenge surface added
+trusted challenge fields cannot be injected
+noncanonical scope ordering rejected
+real server-bound challenge returned
+```
+
+And:
+
+```text
+crabnode_cn4_native_runtime_mount
+2 tests
+2 green
+```
+
+Those prove:
+
+```text
+malformed trusted context fails before router availability
+
+constrained CrabNode surface remains preserved
+```
+
+Terminal evidence confirms these passes.
+
+Total focused behavioral suite for this slice:
+
+```text
+proof:
+3
+
+challenge:
+4
+
+runtime mount:
+2
+
+TOTAL:
+9 GREEN
+```
+
+---
+
+# 21. Strict production Clippy failure and repair
+
+The first proof-route gate initially stopped at exactly one warning promoted to an error:
+
+```text
+unused import / re-export:
+NativePassportRegisterRootSubmitOutcomeV1
+```
+
+Location:
+
+```text
+crates/svc-passport/src/native/mod.rs
+```
+
+This was not a behavioral defect.
+
+The type remained correctly internal to:
+
+```text
+server_runtime_mount.rs
+```
+
+Only the unused `pub(crate) use` was unnecessary.
+
+Repair:
+
+```text
+removed:
+NativePassportRegisterRootSubmitOutcomeV1
+from native/mod.rs re-export list
+
+type itself:
+preserved
+
+behavior:
+unchanged
+```
+
+After the repair:
+
+```text
+cargo clippy
+-p svc-passport
+--no-default-features
+--features native-passport
+--lib
+--no-deps
+-- -D warnings
+```
+
+was GREEN.
+
+Then:
+
+```text
+cargo check
+-p svc-passport
+--no-default-features
+--features native-passport
+```
+
+was GREEN.
+
+Final svc-passport proof-route gate:
+
+```text
+CN4_REGISTERROOT_PROOF_ROUTE=GREEN
+
+REGISTERROOT_PROOF_TESTS=3_GREEN
+
+REGISTERROOT_CHALLENGE_TESTS=4_GREEN
+
+NATIVE_RUNTIME_MOUNT_TESTS=2_GREEN
+
+TOTAL_FOCUSED_BEHAVIOR_TESTS=9_GREEN
+
+SVC_PASSPORT_STRICT_PRODUCTION_CLIPPY=GREEN
+
+SVC_PASSPORT_NATIVE_CHECK=GREEN
+
+GENERIC_PROVE_ROUTE_ADDED=NO
+
+CAPABILITY_ISSUANCE=NO
+
+USERNAME_MUTATION=NO
+
+WALLET_LEDGER_MUTATION=NO
+
+CN5_STARTED=NO
+```
+
+---
+
+# 22. Files changed in svc-passport during the proof slice
+
+The important modified/new files are:
+
+```text
+crates/svc-passport/src/http/handlers/native_register_root_proof.rs
+NEW
+
+crates/svc-passport/src/http/handlers/mod.rs
+MODIFIED
+
+crates/svc-passport/src/http/router.rs
+MODIFIED
+
+crates/svc-passport/src/native/server_runtime_mount.rs
+MODIFIED
+
+crates/svc-passport/src/native/mod.rs
+MODIFIED
+
+crates/svc-passport/tests/crabnode_cn4_register_root_proof_route.rs
+NEW
+```
+
+The codebundle confirms the new handler and router route are present. 
+
+Existing relevant challenge files remain:
+
+```text
+src/http/handlers/native_register_root_challenge.rs
+
+tests/crabnode_cn4_register_root_challenge_route.rs
+```
+
+---
+
+# 23. Current exact svc-passport route posture
+
+The constrained CrabNode profile router now mounts:
+
+```text
+/v1/passport/register/challenge
+
+/v1/passport/register/proof
+```
+
+It does **not** mount:
+
+```text
+/v1/passport/challenge
+
+/v1/passport/prove
+
+full capability issue routes
+
+KMS admin
+
+key export
+
+generic Native Passport proof runtime
+```
+
+The current router in the newest bundle shows the two fixed routes. 
+
+---
+
+# 24. Phase14 route contract still needs to be updated
+
+Historical Phase14 used a generic operation kind named:
+
+```text
+ProofSubmit
+```
+
+and its stale paths were effectively:
+
+```text
+public:
+ /identity/passport/prove
+
+Omnigate:
+ /v1/identity/passport/prove
+
+svc-passport:
+ /v1/passport/prove
+```
+
+That generic route is no longer the desired beta surface.
+
+The correct CN-4 route must be:
+
+```text
+public:
+ /identity/passport/register/proof
+
+Omnigate:
+ /v1/identity/passport/register/proof
+
+svc-passport:
+ /v1/passport/register/proof
+```
+
+We should retain the existing logical `ProofSubmit` operation kind if that avoids unnecessary enum/protocol churn, but its **actual path contract must be RegisterRoot-only**.
+
+Also:
+
+```text
+requires_device_bound_capability = false
+```
+
+because this operation establishes the initial root before device authorization.
+
+Do not fabricate an existing device capability requirement.
+
+---
+
+# 25. Last attempted patch and exact failure
+
+The final attempted patch was intended to do all of:
+
+```text
+1. Retarget Phase14 ProofSubmit paths.
+
+2. Update Phase14 tests.
+
+3. Add:
+   Omnigate
+   /v1/identity/passport/register/proof
+
+4. Proxy it to:
+   svc-passport
+   /v1/passport/register/proof
+
+5. Extend the exact trusted Omnigate policy classification
+   from challenge-only
+   to challenge + proof.
+
+6. Add focused Omnigate proof proxy tests.
+
+7. Keep:
+   generic /prove absent
+   default deny
+   16 KiB body cap
+   caller tag injection rejected.
+```
+
+But it stopped before mutation:
+
+```text
+CN4_REGISTERROOT_PROOF_OMNIGATE_APPLY=RED
+
+REASON:
+OMNIGATE_CHALLENGE_ROUTE_ANCHOR_COUNT:0
+```
+
+Interpretation:
+
+```text
+the Python patch expected one exact multi-line formatting shape
+
+the live Omnigate source has a different textual shape
+
+there is no evidence the intended route is missing
+
+there is no evidence the current route is broken
+
+production source was not written
+
+repair the patch anchor after inspecting live source
+```
+
+This is the **first next-session issue**.
+
+---
+
+# 26. Do not repeat the failed giant patch blindly
+
+At the beginning of the next session, do **not** rerun the same block.
+
+First inspect:
+
+```text
+crates/omnigate/src/routes/v1/mod.rs
+
+crates/omnigate/src/routes/v1/profile.rs
+
+crates/omnigate/src/middleware/policy.rs
+
+crates/omnigate/configs/policy.bundle.json
+
+crates/omnigate/tests/policy_gate.rs
+
+crates/omnigate/tests/crabnode_cn4_register_root_challenge_proxy.rs
+```
+
+Also inspect:
+
+```text
+crates/svc-passport/src/native/gateway_omnigate_routes.rs
+
+tests:
+native_passport_phase14a_...
+native_passport_phase14b_...
+native_passport_phase14c_...
+native_passport_phase14d_...
+```
+
+The goal is to determine the exact live route expression that caused:
+
+```text
+OMNIGATE_CHALLENGE_ROUTE_ANCHOR_COUNT=0
+```
+
+Then write a smaller patch using the real formatting.
+
+---
+
+# 27. Recommended exact first next-session inspection
+
+A good first source-only command is:
+
+```bash
+cd /Users/mymac/Desktop/RustyOnions || return
+
+printf '%s\n' \
+  "=== CN-4 REGISTERROOT PROOF OMNIGATE RESUME INVENTORY ==="
+
+printf '\n%s\n' \
+  "=== LIVE OMNIGATE V1 REGISTERROOT MOUNTS ==="
+
+rg -n -C 12 \
+  'register/challenge|register/proof|identity/passport/prove|DefaultBodyLimit|NATIVE_PASSPORT_FIXED_BODY_LIMIT' \
+  crates/omnigate/src/routes/v1/mod.rs \
+  crates/omnigate/src/routes/v1/profile.rs
+
+printf '\n%s\n' \
+  "=== LIVE OMNIGATE POLICY CLASSIFICATION ==="
+
+rg -n -C 12 \
+  'CN4_FIXED_IDENTITY_ADMISSION|cn4-fixed-identity-admission|register/challenge|register/proof|trusted_policy_tags' \
+  crates/omnigate/src/middleware/policy.rs \
+  crates/omnigate/configs/policy.bundle.json \
+  crates/omnigate/tests/policy_gate.rs
+
+printf '\n%s\n' \
+  "=== LIVE PHASE14 PROOFSUBMIT CONTRACT ==="
+
+rg -n -C 12 \
+  'ProofSubmit|passport/prove|register/proof|register/challenge' \
+  crates/svc-passport/src/native/gateway_omnigate_routes.rs \
+  crates/svc-passport/tests/native_passport_phase14a_gateway_omnigate_route_contract.rs \
+  crates/svc-passport/tests/native_passport_phase14b_omnigate_fixed_route_admission.rs \
+  crates/svc-passport/tests/native_passport_phase14c_gateway_fixed_route_admission.rs \
+  crates/svc-passport/tests/native_passport_phase14d_gateway_omnigate_route_mount_acceptance.rs
+
+printf '%s\n' \
+  "=== CN-4 OMNIGATE RESUME INVENTORY COMPLETE ===" \
+  "SOURCE_MUTATED=NO"
+```
+
+This should precede any patch.
+
+---
+
+# 28. Recommended immediate implementation sequence
+
+Once the live route shape is known, finish M1 in this order.
+
+## Slice A — Phase14 contract retarget
+
+Change only the stale contract:
+
+```text
+ProofSubmit:
+
+/identity/passport/prove
+→ /identity/passport/register/proof
+
+/v1/identity/passport/prove
+→ /v1/identity/passport/register/proof
+
+/v1/passport/prove
+→ /v1/passport/register/proof
+```
+
+Update the Phase14 contract tests.
+
+Do not add generic `/prove`.
+
+## Slice B — Omnigate proof proxy
+
+Add exact route:
+
+```text
+POST
+/v1/identity/passport/register/proof
+```
+
+Proxy:
+
+```text
+→ POST /v1/passport/register/proof
+```
+
+Use the existing safe Passport proxy mechanism.
+
+Do not deserialize/reconstruct proof in Omnigate.
+
+Do not perform root verification in Omnigate.
+
+Do not register roots in Omnigate.
+
+## Slice C — Omnigate policy classification
+
+Extend the already-green trusted internal classification to admit exactly:
+
+```text
+POST /v1/identity/passport/register/challenge
+
+POST /v1/identity/passport/register/proof
+```
+
+Still deny:
+
+```text
+POST /v1/identity/passport/prove
+
+nearby fake paths
+
+all other unmatched writes
+```
+
+Keep:
+
+```text
+default_action = deny
+```
+
+## Slice D — focused Omnigate tests
+
+Prove:
+
+```text
+exact proof path forwards exact body
+
+authorization/correlation/request ID behavior preserved
+
+hop-by-hop Connection filtered
+
+body >16 KiB → 413
+
+downstream unavailable → 502
+
+generic prove remains closed
+
+policy admits exact RegisterRoot proof
+
+nearby POST denied
+
+caller header cannot synthesize trusted policy tag
+```
+
+## Slice E — svc-gateway public edge
+
+After Omnigate is green, add:
+
+```text
+POST
+/identity/passport/register/proof
+```
+
+proxy to:
+
+```text
+/v1/identity/passport/register/proof
+```
+
+Preserve the same challenge-route hardening:
+
+```text
+body cap:
+16,384 bytes
+
+gateway deadline:
+5,000 ms
+
+identity verification authority:
+NO
+
+generic /prove:
+ABSENT
+```
+
+Then run focused gateway tests and strict production Clippy.
+
+## Slice F — real managed CrabNode proof
+
+Build:
+
+```text
+cargo build -p macronode --bins
+```
+
+Restart:
+
+```text
+crabnode restart
+```
+
+Prove readiness.
+
+Then exercise:
+
+```text
+8090
+→ 9090
+→ 5307
+```
+
+for both challenge and proof.
+
+---
+
+# 29. Physical Mac path after backend proof ingress exists
+
+Once `/identity/passport/register/proof` works through port 8090, stop creating synthetic backend infrastructure.
+
+Move to the real physical Mac CrabLink flow.
+
+The client must:
+
+```text
+1. Have existing Native Passport root/recovery material locally.
+
+2. Request RegisterRoot challenge through the real CrabNode gateway.
+
+3. Verify/use the server challenge according to the existing native boundary.
+
+4. Construct canonical root proof using native privilege.
+
+5. Keep recovery factor/root secret/PIN out of React.
+
+6. Submit only:
+   signed challenge
+   root public key
+   proof_created_at_ms
+   proof signature
+
+7. Receive durable root registration result.
+
+8. Restart CrabNode.
+
+9. Prove registered root persists.
+
+10. Restart CrabLink.
+
+11. Prove local Passport still works.
+
+12. Continue into root-authorized device enrollment.
+```
+
+No root secret should ever cross into the webview.
+
+---
+
+# 30. Existing physical Mac work that should be reused
+
+Do not rebuild these pieces.
+
+Previously green physical Mac work includes:
+
+```text
+native Passport create/unlock
+
+existing-Passport onboarding reconciliation
+
+locked/no-passport/operational status semantics
+
+restart unlock
+
+root PIN verification
+
+recovery signer
+
+root identity derivation
+
+Passport ID derivation
+
+root registration proof signing
+
+device identity derivation
+
+device key generation foundation
+
+device authorization context
+
+device authorization signing
+
+gateway origin allowlist
+
+public identity descriptor
+
+restart identity idempotency
+```
+
+The current `svc-passport` bundle contains the native root/device derivation and signing surfaces that should be reused rather than duplicated. 
+
+---
+
+# 31. Physical device authorization sequence after RegisterRoot
+
+The likely intended order remains:
+
+```text
+Register Passport root
+
+        ↓
+
+generate/persist device identity locally
+
+        ↓
+
+root-authorize physical desktop device
+
+        ↓
+
+prove device possession
+
+        ↓
+
+grant bounded ron-policy scopes
+
+        ↓
+
+perform authenticated username/profile mutation
+```
+
+Do not short-circuit this into:
+
+```text
+Passport ID string
+=
+authentication
+```
+
+A public Passport identifier is not proof of root/device control.
+
+---
+
+# 32. Mac `@testmac` acceptance target
+
+After root/device authorization is complete, prove on the real backend:
+
+```text
+real Mac Passport
+
+real device authorization
+
+no dev KMS
+
+no dev bypass
+
+real svc-gateway ingress
+
+real Omnigate
+
+real svc-passport
+
+claim @testmac
+
+public profile resolves
+
+restart CrabNode
+
+@testmac still resolves
+
+restart CrabLink
+
+Passport unlock works
+
+profile state remains truthful
+```
+
+Only after that should we call physical Mac M1 acceptance green.
+
+---
+
+# 33. Windows `@testpc` target
+
+Windows should not be used for repetitive duplicate verification.
+
+Use it when Mac has established the canonical real path.
+
+Then prove:
+
+```text
+physical Windows CrabLink
+
+independent Passport/device identity
+
+same real backend protocol
+
+no Mac-only assumption
+
+claim @testpc
+
+public profile resolves
+
+restart
+
+secure persistence survives
+
+no dev bypass
+```
+
+Windows has already had the required basic Rust/MSVC environment prepared, so it should be used as a **cross-platform acceptance machine**, not as another development sandbox.
+
+---
+
+# 34. FINAL_BETA relationship
+
+FINAL_BETA Phase 21 remains:
+
+```text
+Full Desktop Decentralized Beta Demonstration
+```
+
+Its ultimate acceptance requires:
+
+```text
+SOCIAL_FLOW=GREEN
+SITE_TEMPLATES=GREEN
+PAID_FLOW=GREEN
+QUICKCHAIN_FLOW=GREEN
+ROX_TESTNET_FLOW=GREEN
+RESTART_RECONCILIATION=GREEN
+```
+
+before Phase 22. 
+
+The complete Phase 21 demonstration ultimately includes real Passport/profile, social flow, publication, templates, paid/receipt/ROC, QuickChain, ROX private-testnet paths and restart/reconciliation. 
+
+We are currently solving the **real identity/backend blocker** that prevents that demonstration from proceeding honestly.
+
+---
+
+# 35. FINAL_BETA work after Phase 21
+
+Once the full integrated demonstration is green:
+
+```text
+Phase 22
+Security / Moderation / Privacy / Abuse Controls
+
+Phase 23
+UX / Accessibility / Performance
+
+Phase 24
+Desktop Packaging / Signing / Update / Recovery
+
+Phase 25
+Private Beta Operations
+
+Phase 26
+Final Acceptance / Launch
+```
+
+Phase 22 includes secret scans, sandbox corpus, replay, rate limits, moderation and privacy boundaries. 
+
+Phase 23 includes UX, keyboard/screen-reader accessibility, contrast, startup and long-session performance. 
+
+Phase 24 requires actual installable/signable beta artifacts and migration/recovery behavior. 
+
+Phase 25 is the controlled invite-only operational posture. 
+
+Phase 26 reruns automated and manual final acceptance before an honest beta release decision. 
+
+---
+
+# 36. CrabNode roadmap after immediate M1
+
+The official milestone structure is:
+
+```text
+M1:
+CN-0 → CN-4
+immediate Phase21 unblock
+
+M2:
+CN-5 → CN-6
+complete one-node product + supervision
+
+M3:
+CN-7 → CN-12
+real decentralized content swarm
+
+M4:
+CN-13 → CN-14
+distributed mutable public state/moderation
+
+M5:
+CN-15
+economic/service evidence closure
+
+M6:
+CN-16
+physical Mac/Windows/Linux acceptance
+
+M7:
+CN-17 → CN-19
+WAN + packaging + chaos/security/public operator readiness
+```
+
+This is directly defined by `CRABNODE_BUILDPLAN.md`. 
+
+Do **not** interpret later numbers as all-new code. Much of overlay, DHT, provider, index, storage, evidence and economic infrastructure already exists; those phases should integrate and harden canonical crates. 
+
+---
+
+# 37. How to increase momentum without lowering standards
+
+This is the most important process improvement for the next sessions.
+
+## A. Keep the product spine as the only critical path
+
+For now:
+
+```text
+RegisterRoot proof ingress
+
+→ physical Mac root registration
+
+→ physical device authorization
+
+→ @testmac
+
+→ Windows @testpc
+
+→ Phase21 A/B product demonstration
+```
+
+Anything not blocking that should be parked.
+
+Do not jump into:
+
+```text
+CN-5
+overlay
+DHT
+rewards
+ROX
+TV
+mobile
+general UI cleanup
+```
+
+while the M1 identity path is unfinished.
+
+---
+
+## B. Stop writing very large source patches before inspecting the exact live anchor
+
+The last RED was avoidable.
+
+The patch attempted to edit many files at once and relied on an exact multiline route anchor.
+
+New rule:
+
+```text
+inspect exact source first
+
+then patch semantic unit
+
+then test
+```
+
+For route changes:
+
+```text
+rg/sed current router
+
+→ patch 1–3 files
+
+→ focused tests
+
+→ continue
+```
+
+This reduces time spent repairing scripts rather than code.
+
+---
+
+## C. Prefer semantic anchors to formatting anchors
+
+Where practical, patches should anchor around:
+
+```text
+route string
+function name
+enum variant
+constant name
+```
+
+instead of an entire rustfmt-sensitive multiline expression.
+
+For example, anchoring on:
+
+```text
+"/identity/passport/register/challenge"
+```
+
+plus the neighboring `.route(` is safer than requiring an exact 7-line formatted block.
+
+Still fail closed if the semantic match is ambiguous.
+
+---
+
+## D. Batch adjacent low-risk work, isolate authority mutations
+
+Good batching:
+
+```text
+route catalog strings
+proxy route mount
+proxy test fixtures
+documentation comments
+```
+
+Keep isolated:
+
+```text
+policy admission
+root mutation
+durability
+cryptography
+wallet/ledger
+quorum/finality
+external-chain operations
+```
+
+This follows the project's established fast-safe cadence.
+
+---
+
+## E. Focused tests first; broad gates only at milestones
+
+For each small slice:
+
+```text
+1. focused test
+2. strict Clippy for touched production crate
+3. focused cargo check
+```
+
+Do **not** run:
+
+```text
+cargo check --workspace
+```
+
+after every two-line route change.
+
+Run workspace check at:
+
+```text
+session baseline when warranted
+
+M1 integration closeout
+
+before moving to CN-5
+
+major cross-crate milestones
+```
+
+This preserves standards while saving significant compile time.
+
+---
+
+## F. Reuse green evidence instead of mechanically rerunning everything
+
+Already parked evidence should be marked:
+
+```text
+GREEN_PREVIOUS_RUN
+```
+
+and only rerun if:
+
+```text
+the relevant implementation changed
+
+a dependency changed
+
+integration produces conflicting evidence
+
+the active buildplan requires a fresh physical proof
+```
+
+For example:
+
+```text
+proof coordinator recovery 6/6
+```
+
+does not need to be rerun after a gateway path string change.
+
+But:
+
+```text
+public 8090 proof submission
+```
+
+must be run fresh once gateway integration exists.
+
+---
+
+## G. Do not use broad Clippy debt as a blocker for unrelated M1 work
+
+Use:
+
+```text
+strict production/library Clippy on touched crates
+```
+
+We already know Omnigate has older broad test/style lint debt.
+
+Do not spend a session cleaning unrelated historical lint unless it becomes the first actual failing production gate.
+
+---
+
+## H. Keep one acceptance matrix
+
+At each session, maintain only:
+
+```text
+GREEN
+PENDING
+RED_FIRST_FAILURE
+DO_NOT_RERUN
+```
+
+Example now:
+
+```text
+REGISTERROOT_CHALLENGE_PUBLIC_RUNTIME:
+GREEN
+
+SVC_PASSPORT_REGISTERROOT_PROOF:
+GREEN
+
+OMNIGATE_PROOF:
+PENDING
+
+GATEWAY_PROOF:
+PENDING
+
+PHYSICAL_MAC_PROOF:
+PENDING
+```
+
+This prevents rediscovery.
+
+---
+
+## I. Stop synthetic testing once the corresponding real layer is available
+
+We needed synthetic unit/integration tests while building each layer.
+
+Once:
+
+```text
+svc-passport
+Omnigate
+gateway
+```
+
+are connected, the highest-value next test is the real managed CrabNode.
+
+Do not add three more mock proxy suites if the real runtime can provide stronger evidence.
+
+---
+
+## J. Use Windows only when it adds new evidence
+
+Best sequence:
+
+```text
+Mac establishes canonical flow
+
+Windows verifies:
+cross-platform key storage
+networking
+Tauri/native behavior
+independent Passport
+@testpc
+```
+
+Do not A/B identical backend tests on Windows.
+
+---
+
+## K. Regenerate codebundles only at meaningful milestones
+
+The current bundle became stale immediately because it was generated just before a one-line repair.
+
+Better cadence:
+
+```text
+finish Omnigate + gateway proof integration
+
+real runtime green
+
+then regenerate relevant bundles
+```
+
+That gives the next session a coherent snapshot.
+
+---
+
+## L. Never `cargo clean` without evidence
+
+Continue reusing build artifacts.
+
+One accidental clean previously removed roughly 9 GiB and created unnecessary recompilation.
+
+Only clean if there is actual evidence of corrupt/stale build artifacts.
+
+---
+
+# 38. Engineering standards that must remain non-negotiable
+
+Speed does **not** mean relaxing these:
+
+```text
+no fake success
+
+no dev bypass
+
+no fake balance
+
+no fake receipt
+
+no fake B3
+
+no fake provider discovery
+
+no fake quorum
+
+no fake finality
+
+no fake settlement
+
+no secret in React
+
+no generic Native Passport proof surface
+
+no cloud Passport custody
+
+no public User Node IP
+
+no admin exposure to LAN by convenience
+
+no wallet/ledger authority shift
+
+no policy disablement for smoke tests
+```
+
+Also preserve:
+
+```text
+strict DTO unknown-field rejection
+
+bounded body sizes
+
+bounded queues/state
+
+replay/idempotency rejection
+
+durable-before-success semantics
+
+truthful readiness
+
+no lock across .await
+
+OAP/1:
+1 MiB max frame
+~64 KiB chunks where applicable
+```
+
+---
+
+# 39. Code-comment standards
+
+Every new or meaningfully rewritten production file should continue to include appropriate:
+
+```text
+RO:WHAT
+RO:WHY
+RO:INTERACTS
+RO:INVARIANTS
+```
+
+plus relevant:
+
+```text
+RO:METRICS
+RO:CONFIG
+RO:SECURITY
+RO:TEST
+```
+
+Comments should explain actual authority, failure ordering and test contracts rather than repeat code mechanically.
+
+---
+
+# 40. Special current security invariants for RegisterRoot
+
+Do not regress these.
+
+```text
+challenge purpose:
+server forced RegisterRoot
+
+challenge time:
+server owned
+
+network/environment/audience:
+server owned
+
+service signing KID:
+server/KMS owned
+
+initial root epoch:
+server policy owned
+
+accepted_at:
+server owned
+
+challenge transcript hash:
+server reconstructed
+
+proof domains:
+canonical constants
+
+requested scopes:
+taken from signed challenge
+
+operation body hash:
+taken from signed challenge
+
+device binding for initial root:
+none
+
+root proof:
+must cryptographically verify
+
+forged proof:
+must not consume challenge
+
+valid challenge:
+one-time use
+
+root registry:
+durable
+
+redo transaction:
+crash recoverable
+```
+
+---
+
+# 41. Important distinction between RegisterRoot and later capabilities
+
+Do not couple initial RegisterRoot to device-capability issuance.
+
+Current proof completion intentionally reports:
+
+```text
+CAPABILITY_ISSUED=NO
+```
+
+After root registration, later device authorization can create bounded device capability according to existing policy.
+
+Initial root registration cannot require a capability that can only exist after root/device authorization.
+
+---
+
+# 42. Do not reopen completed ROX work
+
+ROX Anchor Phase20 / BUILD_PLAN4 remains parked.
+
+Do not begin:
+
+```text
+new public bridge
+mainnet
+production mint/burn
+staking
+liquidity
+exchange behavior
+```
+
+During later production hardening remember:
+
+```text
+add Solana security.txt/contact metadata
+
+review Explorer-visible deployment metadata
+```
+
+And for the future desired ROX↔SOL 33 bps burn:
+
+```text
+verify Token-2022 mechanism first
+
+keep intended scope swap-only unless explicitly changed
+
+do not make every ROX transfer burn 33 bps by accident
+```
+
+---
+
+# 43. Do not reopen QuickChain without integration need
+
+QuickChain Phase19 evidence is already substantial and FINAL_BETA treats Phase19 as the private multi-node/finality gate preceding ROX Phase20. 
+
+Only run fresh QuickChain evidence when Phase21 integrated demonstration actually reaches that step.
+
+Do not rebuild QuickChain merely because another session started.
+
+---
+
+# 44. Honest launch classification
+
+The eventual release wording remains:
+
+```text
+CrabLink Desktop decentralized private beta
+
+QuickChain private-network beta
+
+ROX Anchor private Solana testnet demonstration
+```
+
+Do not claim:
+
+```text
+public blockchain live
+
+public ROX bridge live
+
+mainnet live
+
+production mint/burn live
+
+staking live
+
+liquidity live
+
+exchange ready
+```
+
+FINAL_BETA explicitly requires this distinction. 
+
+---
+
+# 45. Exact next-session priority order
+
+Use this order and do not expand scope until each item is green:
+
+```text
+1. Inspect actual Omnigate challenge route syntax that caused
+   OMNIGATE_CHALLENGE_ROUTE_ANCHOR_COUNT:0.
+
+2. Retarget Phase14 ProofSubmit contract to RegisterRoot-only paths.
+
+3. Add Omnigate fixed RegisterRoot proof proxy.
+
+4. Extend existing trusted Omnigate exact-route policy classification.
+
+5. Run focused Phase14 + Omnigate tests.
+
+6. Add svc-gateway fixed RegisterRoot proof proxy.
+
+7. Apply 16 KiB body cap + 5 sec gateway deadline.
+
+8. Run focused gateway tests + strict production Clippy.
+
+9. cargo check -p macronode.
+
+10. Build/restart real CrabNode.
+
+11. Exercise proof through:
+    :8090 → :9090 → :5307.
+
+12. Connect physical Mac native proof producer.
+
+13. Prove real root registration.
+
+14. Restart and prove durable root.
+
+15. Complete physical device authorization.
+
+16. Claim/resolve @testmac.
+
+17. Restart/reconcile @testmac.
+
+18. Use Windows for independent @testpc.
+
+19. Close physical M1.
+
+20. Only then consider CN-5.
+```
+
+---
+
+# 46. What should count as the next major green milestone
+
+The next meaningful milestone should look approximately like:
+
+```text
+CN4_REAL_PUBLIC_REGISTERROOT_PROOF=GREEN
+
+PUBLIC_PROOF_ROUTE=
+/identity/passport/register/proof
+
+OMNIGATE_PROOF_ROUTE=
+/v1/identity/passport/register/proof
+
+SVC_PASSPORT_PROOF_ROUTE=
+/v1/passport/register/proof
+
+FULL_INGRESS_CHAIN=
+GATEWAY_TO_OMNIGATE_TO_SVC_PASSPORT
+
+ROOT_PROOF_VERIFIED=YES
+
+CHALLENGE_CONSUMED_ONCE=YES
+
+ROOT_REGISTERED_DURABLY=YES
+
+REPLAY_REJECTED=YES
+
+FORGED_PROOF_DID_NOT_CONSUME_CHALLENGE=YES
+
+GENERIC_PROVE_ROUTE=ABSENT
+
+DEFAULT_DENY=PRESERVED=YES
+
+DEV_KMS_USED=NO
+
+GATEWAY_IDENTITY_AUTHORITY=NO
+
+OMNIGATE_IDENTITY_AUTHORITY=NO
+
+SVC_PASSPORT_IDENTITY_AUTHORITY=YES
+
+CAPABILITY_ISSUED=NO
+
+USERNAME_MUTATED=NO
+
+WALLET_LEDGER_MUTATED=NO
+
+CN5_STARTED=NO
+```
+
+After that, the critical next milestone becomes **physical Mac root/device authorization**, not additional backend scaffolding.
+
+---
+
+# 47. Session accomplishments in condensed chronological order
+
+For quick historical reference, this session effectively progressed through:
+
+```text
+1. Full svc-gateway RegisterRoot challenge source gate was green.
+
+2. Real managed CrabNode public challenge proof attempted.
+
+3. Public request reached Omnigate but got 403 POLICY_DENY.
+
+4. Root cause traced to default-deny Omnigate policy bundle.
+
+5. Exact trusted local RegisterRoot challenge classification added.
+
+6. Default deny preserved.
+
+7. Caller policy-tag injection rejected.
+
+8. Omnigate policy tests green.
+
+9. Real public challenge retried.
+
+10. Public gateway returned HTTP 200.
+
+11. Public challenge matched durable svc-passport state exactly.
+
+12. Managed CrabNode restarted.
+
+13. Same challenge survived restart.
+
+14. Same service KID/key survived restart.
+
+15. Generic gateway/svc-passport Native Passport routes remained 404.
+
+16. Generic Omnigate POSTs correctly remained 403 POLICY_DENY.
+
+17. Real RegisterRoot challenge half formally closed green.
+
+18. Live proof/coordinator/ron-auth inventory performed.
+
+19. Fixed svc-passport RegisterRoot proof route implemented.
+
+20. Server reconstructs trusted proof transcript.
+
+21. Existing crash-recoverable coordinator reused.
+
+22. Three new proof tests green.
+
+23. Four challenge regression tests green.
+
+24. Two runtime-mount tests green.
+
+25. One unused internal re-export caused strict Clippy RED.
+
+26. Only that re-export was removed.
+
+27. Strict svc-passport production Clippy green.
+
+28. Native svc-passport check green.
+
+29. Attempted Phase14 + Omnigate proof integration.
+
+30. Patch preflight found stale textual anchor.
+
+31. Patch aborted before mutation.
+
+32. Current clean stopping point established.
+```
+
+That is substantial forward progress.
+
+---
+
+# 48. Current known GREEN evidence that should not be casually repeated
+
+Unless directly affected:
+
+```text
+RegisterRoot coordinator recovery:
+6/6
+
+durable ron-kms key:
+GREEN
+
+svc-passport durable KMS adapter:
+GREEN
+
+runtime mount:
+2/2
+
+challenge HTTP:
+4/4
+
+proof HTTP:
+3/3
+
+proof/challenge/runtime focused total:
+9/9
+
+svc-passport strict native lib Clippy:
+GREEN
+
+svc-passport native check:
+GREEN
+
+real public challenge:
+HTTP 200
+
+public challenge durable match:
+GREEN
+
+challenge restart persistence:
+GREEN
+
+service identity restart persistence:
+GREEN
+
+Omnigate challenge policy admission:
+GREEN
+
+generic route closure:
+GREEN
+```
+
+Re-run only the subset impacted by subsequent integration.
+
+---
+
+# 49. Current known PENDING items
+
+```text
+Phase14 ProofSubmit path retarget
+
+Omnigate RegisterRoot proof handler
+
+Omnigate RegisterRoot proof route mount
+
+Omnigate proof policy admission
+
+Omnigate proof proxy focused acceptance
+
+svc-gateway proof route
+
+svc-gateway proof body cap/deadline
+
+real public proof HTTP
+
+real durable root registration through public ingress
+
+physical Mac proof production/submission
+
+root-authorized device
+
+device possession proof
+
+bounded device scopes
+
+@testmac real username/profile acceptance
+
+Windows independent Passport
+
+@testpc
+
+physical A/B identity/feed acceptance
+```
+
+---
+
+# 50. Current known NOT-STARTED / intentionally deferred
+
+```text
+CN-5 expansion
+
+new overlay work
+
+new DHT work
+
+new replication work
+
+new durable CAS work
+
+new mutable-state consensus work
+
+new distributed moderation work
+
+new rewards work
+
+WAN work
+
+packaging work
+
+public-beta chaos/soak
+
+TV
+
+Android
+
+iOS
+
+ROX production/mainnet
+```
+
+---
+
+# 51. Suggested next-session opening note
+
+This can be pasted at the top of the next session:
+
+```text
+We are continuing RustyOnions / CrabLink / CrabNode with CRABNODE_BUILDPLAN.md as the active implementation authority and FINAL_BETA.md as the umbrella beta acceptance plan.
+
+Current work is CN-4 / Physical M1 Native Passport integration. Do not start CN-5 yet.
+
+The real managed CrabNode RegisterRoot CHALLENGE half is fully GREEN through public svc-gateway → Omnigate → svc-passport ingress. Public HTTP 200 was proven, the public response matched the durable svc-passport challenge exactly, the challenge and durable service KID/key survived managed restart, and generic challenge/prove surfaces remain closed. Omnigate intentionally returns 403 POLICY_DENY for unapproved generic POSTs while gateway and svc-passport generic routes are 404.
+
+The fixed svc-passport RegisterRoot PROOF endpoint is also GREEN:
+POST /v1/passport/register/proof.
+It accepts only the signed challenge, root public key, proof-created time, and signed proof payload. Server-owned context, challenge hash, root epoch and accepted time are reconstructed/owned server-side. The existing crash-recoverable coordinator is reused. Three proof tests, four challenge tests and two runtime-mount tests are GREEN. Strict native svc-passport production Clippy and cargo check are GREEN.
+
+The newest attached svc-passport CODEBUNDLE was generated immediately before the final one-line Clippy repair, so live repo source is newer: native/mod.rs no longer re-exports NativePassportRegisterRootSubmitOutcomeV1. Behavior is unchanged.
+
+The final attempted patch was meant to retarget Phase14 ProofSubmit and mount the Omnigate RegisterRoot proof proxy, but it FAILED IN PREFLIGHT BEFORE ANY SOURCE MUTATION:
+CN4_REGISTERROOT_PROOF_OMNIGATE_APPLY=RED
+REASON=OMNIGATE_CHALLENGE_ROUTE_ANCHOR_COUNT:0
+
+Therefore the exact next action is NOT to rerun that patch. First inspect the live Omnigate v1 route shape in:
+crates/omnigate/src/routes/v1/mod.rs
+crates/omnigate/src/routes/v1/profile.rs
+crates/omnigate/src/middleware/policy.rs
+and the Phase14 route contract/tests.
+
+Then make the smallest real patch to:
+1. retarget ProofSubmit to:
+   /identity/passport/register/proof
+   /v1/identity/passport/register/proof
+   /v1/passport/register/proof
+2. mount the fixed Omnigate proof proxy,
+3. extend the trusted exact-route policy admission to challenge + proof,
+4. keep default-deny and generic /prove closed,
+5. run focused Phase14/Omnigate tests.
+
+After Omnigate is green, mount the same fixed proof path in svc-gateway with the existing 16 KiB body cap and 5s deadline, run strict focused gateway verification, rebuild/restart the real CrabNode, and prove RegisterRoot proof through port 8090.
+
+Then move directly to the real physical Mac Native Passport root/device authorization and @testmac. Use Windows @testpc only once it materially adds cross-platform evidence. No dev bypass, no generic prove route, no fake identity/capability/economic state, no CN-5 until M1 physical acceptance is genuinely green.
+
+Optimize for momentum: inspect first, small patch, focused test, fix first failure, broad gate only at milestones. Do not cargo clean. Do not reopen QuickChain/ROX unless current integration needs fresh evidence.
+```
+
+---
+
+## Bottom line
+
+We ended the session at a good boundary.
+
+The most difficult part of the current server-side identity work—the durable authority transaction itself—is already built and tested. The real public **challenge** path is proven through a managed CrabNode, and the real `svc-passport` **proof transaction** is now green as well. What remains immediately is mostly integration of that already-correct proof transaction through Omnigate and `svc-gateway`, followed by the physical Mac client proving it for real.
+
+The fastest safe approach from here is to **stop expanding architecture, finish this one vertical identity path completely, prove `@testmac`, prove `@testpc`, and then let the green M1 evidence unlock the rest of FINAL_BETA Phase 21.** That will increase momentum much more than parallelizing unrelated later CrabNode phases.
+
+
+
+### END NOTE - AUGUST 22 2026 - 21:15 CST
+
+
+
+
+
+### BEGIN NOTE - AUGUST 24 2026 - 01:15 CST
+
+RustyOnions / CrabLink / CrabNode — Comprehensive Carry-Over Notes
+
+Session close: August 24, 2026
+Active mission: finish CRABNODE_BUILDPLAN.md CN-4 physical identity chain, reuse that evidence to close FINAL_BETA.md Phase 21, then continue toward controlled CrabLink Desktop beta.
+
+The session made substantial progress. The entire backend ProveSession/device-possession path is now real and proven through the managed CrabNode, the CrabLink native DeviceKey custody/signing path exists, CrabLink can cryptographically authenticate the live CrabNode service challenge, and the native client HTTP possession orchestrator compiles and passes its focused tests. We are down to a small Tauri command-signature compiler repair before we can rebuild CrabLink and run the first real physical Mac DeviceKey possession proof.
+
+The session ended intentionally on that compiler failure. Do not redo any backend ingress, trust, signer, or custody work next session.
+
+1. Exact current state / where to resume
+Active phase
+ACTIVE_BUILDPLAN=CRABNODE_BUILDPLAN.md
+ACTIVE_PHASE=CN-4
+ACTIVE_SUBGOAL=PHYSICAL_DEVICE_POSSESSION
+CN5_STARTED=NO
+
+The identity authority chain remains:
+
+registered Passport root
+→ root-signed DeviceAuthorization
+→ durable server-side device registration
+→ DeviceKey proof-of-possession
+→ bounded device capability
+→ @testmac username/profile mutation
+
+We are currently between:
+
+DeviceKey proof-of-possession client implementation
+
+and:
+
+real physical Mac proof-of-possession
+
+We must not skip directly to capability issuance or username mutation.
+
+2. Critical next-session blocker
+
+The final change this session added the zero-argument Tauri command:
+
+passport_verify_device_possession
+
+The source apply succeeded:
+
+CN4_CRABLINK_DEVICE_POSSESSION_COMMAND_APPLY=GREEN
+
+Known applied surfaces:
+
+RUST_TAURI_COMMAND=ADDED
+TAURI_HANDLER_REGISTRY=ADDED
+CENTRAL_ALLOWLIST=ADDED
+PASSPORT_ADAPTER=ADDED
+DRAWER_TRIGGER=ADDED
+CALLER_AUTHORITY_FIELDS=ZERO
+
+But the focused compile gate failed immediately in the Rust Tauri command.
+
+Exact compiler failure
+error[E0277]: async commands that contain references as inputs must return a `Result`
+   --> src/commands/passport.rs:816:6
+    |
+816 | ) -> PassportOperationalCommandDtoV1 {
+    |      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+And:
+
+error[E0597]: `__tauri_message__` does not live long enough
+
+Tauri 2.11.2 reports that the generated async command future requires 'static, and the command currently combines an async command/state reference with a plain DTO return type.
+
+This is the first thing to fix next session.
+
+Do not treat the strings such as:
+
+CENTRAL_ALLOWLIST=GREEN
+HANDLER_REGISTRY=GREEN
+PASSPORT_ADAPTER=GREEN
+DRAWER_TRIGGER=GREEN
+PRODUCTION_BUILD=GREEN
+
+from the body of the verification function as successful runtime evidence. The function exited during the first cargo check, before those final success markers could execute.
+
+Current truthful status
+POSSESSION_COMMAND_SOURCE_APPLY=GREEN
+POSSESSION_COMMAND_RUST_COMPILE=RED
+CENTRAL_ALLOWLIST_SOURCE_CHANGE=PRESENT
+HANDLER_REGISTRY_SOURCE_CHANGE=PRESENT
+PASSPORT_ADAPTER_SOURCE_CHANGE=PRESENT
+DRAWER_TRIGGER_SOURCE_CHANGE=PRESENT
+FOCUSED_COMMAND_VERIFY=NOT_COMPLETE
+PRODUCTION_BUILD_AFTER_COMMAND_PATCH=NOT_GREEN
+PHYSICAL_DEVICE_POSSESSION=NOT_YET_RUN
+3. Recommended first repair next session
+
+Inspect the current live function around:
+
+apps/crablink-tauri/src-tauri/src/commands/passport.rs
+~line 813
+
+Do not blindly patch against the old bundle because the latest possession-command change happened after that bundle was generated.
+
+Useful inspection:
+
+cd /Users/mymac/Desktop/crablink
+
+sed -n '780,850p' \
+  apps/crablink-tauri/src-tauri/src/commands/passport.rs
+
+rg -n -C 8 \
+  'passport_verify_device_possession|PassportOperationalCommandDtoV1' \
+  apps/crablink-tauri/src-tauri/src/commands/passport.rs
+
+The likely smallest correct repair is to make the async Tauri command return a Tauri-compatible Result<DTO, redacted-error> rather than a bare DTO.
+
+The compiler is explicitly telling us this.
+
+Existing CrabLink Passport commands already demonstrate the general safe command convention: passport_unlock_operational takes State<'_, AppState> and returns a Result<PassportOperationalCommandDtoV1, PassportStatusProblemV1>, while the older synchronous passport_authorize_device can return its DTO directly.
+
+Preserve during repair
+
+Do not solve the compiler error by changing any authority boundary.
+
+Keep:
+
+COMMAND_ARGUMENTS=ZERO_USER_ARGUMENTS
+PASSPORT_ID_FROM_WEBVIEW=NO
+DEVICE_ID_FROM_WEBVIEW=NO
+PUBLIC_KEY_FROM_WEBVIEW=NO
+SCOPES_FROM_WEBVIEW=NO
+GATEWAY_FROM_WEBVIEW=NO
+SIGNATURE_FROM_WEBVIEW=NO
+PIN_FROM_WEBVIEW=NO
+RECOVERY_ROOT=NO
+DEVICE_SECRET_RETURN=NO
+SIGNATURE_RETURN=NO
+CAPABILITY_RETURN=NO
+
+Do not convert the native HTTP runtime to frontend fetches.
+
+Do not turn the DeviceKey signer into a generic signing command.
+
+Do not make the command synchronous merely to evade Tauri's async requirement—the underlying native possession flow legitimately performs HTTP awaits.
+
+4. Verification immediately after fixing the command
+
+After the smallest compiler repair:
+
+cargo fmt
+→ focused cargo check for crablink-tauri
+→ focused possession-command boundary tests
+→ relevant Passport adapter/Tauri boundary tests
+→ Vite/desktop production build
+
+No test-target Clippy.
+
+No broad dependency Clippy.
+
+No ron-kernel cleanup.
+
+No large historical regression suite unless the focused gate reveals a real integration problem.
+
+The existing central Tauri boundary is fixed-command based, and the earlier bundle shows the Passport commands are admitted through ALLOWED_TAURI_COMMANDS and invoked through the typed adapter rather than raw React privilege.
+
+5. What we entered this session with
+
+These were already GREEN before the work described below:
+
+CN foundation
+CN-0=GREEN
+CN-1=GREEN_ENOUGH_FOR_M1
+CN-2=GREEN
+CN-3=GREEN
+CN-4_DURABLE_PROFILE_BACKEND=GREEN
+
+Canonical ports:
+
+macronode admin       127.0.0.1:8080
+svc-gateway           127.0.0.1:8090
+Omnigate              127.0.0.1:9090
+svc-passport          127.0.0.1:5307
+optional svc-admin    127.0.0.1:5300
+
+Canonical product chain:
+
+CrabLink native
+→ svc-gateway :8090
+→ Omnigate :9090
+→ svc-passport :5307
+Existing physical Passport
+
+Passport:
+
+passport:v1:main:ed25519:b3:2c51898d0ee5161bead99d6a9f2a6afa4c0d3abdd4e539f4ce3f5fdee597a2dd
+
+Physical Mac device:
+
+device:v1:ed25519:b3:54d9fb339c125915b48f68a3da5c9a4a6493d7813e52aafc3fc645d4e817ee44
+
+Current durable registry generation:
+
+GENERATION=2
+PASSPORT_COUNT=1
+DEVICE_COUNT=1
+
+Tree hash:
+
+9bb307101c6e6df59a2242bbce944ba558baf278ad3b59426c9475a4374264f7
+Existing DeviceAuthorization
+
+The Mac already has its durable root-signed DeviceAuthorization.
+
+It had previously been:
+
+strictly verified
+persisted locally
+registered through public 8090 ingress
+proven restart-stable
+idempotently reusable
+
+Therefore this session correctly did not request another RecoveryRoot ceremony.
+
+6. RustyOnions work completed this session
+6.1 Fixed Phase14A route-count drift
+
+The fixed identity route catalog grew from:
+
+13
+
+to:
+
+15
+
+because the two reviewed ProveSession routes were added:
+
+DeviceSessionChallenge
+DeviceSessionProof
+
+The stale Phase14A expected count was repaired.
+
+Result:
+
+PHASE14A=6/6 GREEN
+FIXED_ROUTE_COUNT=15
+
+No production authority change was involved in that repair.
+
+7. Fixed Phase14D route-count drift
+
+Phase14D subsequently failed for the same reason:
+
+left: 15
+right: 13
+
+Two stale hard-coded values were updated:
+
+native_gateway_omnigate_route_mount_acceptance_fixed_route_count()
+13 → 15
+
+decision.accepted_route_count
+13 → 15
+
+Focused Phase14D result:
+
+6 passed
+0 failed
+
+Final:
+
+CN4_PHASE14D_ROUTE_COUNT_VERIFY=GREEN
+FIXED_ROUTE_COUNT=15
+
+No production source changed.
+
+8. Omnigate production ProveSession ingress verified
+
+The production Omnigate routes now include:
+
+POST /v1/identity/passport/challenge
+POST /v1/identity/passport/prove
+
+Downstream targets:
+
+/v1/passport/challenge
+/v1/passport/prove
+
+Behavior remains:
+
+proxy-only
+16 KiB request cap
+default-deny posture preserved
+trusted classification derived locally
+caller cannot fabricate trusted policy tag
+svc-passport remains identity authority
+
+Production check:
+
+cargo check -p omnigate
+GREEN
+
+Policy unit tests:
+
+2 passed
+0 failed
+
+Final:
+
+CN4_PROVE_SESSION_OMNIGATE_PRODUCTION_VERIFY=GREEN
+9. Omnigate stale acceptance tests repaired
+
+Several old CN-4 tests still assumed the compact:
+
+/v1/identity/passport/challenge
+/v1/identity/passport/prove
+
+paths must remain absent.
+
+That assumption was valid before possession work, but became stale once those two paths became reviewed fixed routes.
+
+Repaired tests moved their negative assertions to nearby unreviewed routes such as:
+
+/v1/identity/passport/challenge/extra
+/v1/identity/passport/prove/extra
+
+Files touched included:
+
+crates/omnigate/tests/crabnode_cn4_register_root_challenge_proxy.rs
+crates/omnigate/tests/crabnode_cn4_register_root_proof_proxy.rs
+crates/omnigate/tests/crabnode_cn4_device_authorize_proxy.rs
+crates/omnigate/tests/policy_gate.rs
+
+New acceptance test:
+
+crates/omnigate/tests/crabnode_cn4_device_session_proxy.rs
+
+New tests proved:
+
+exact challenge/prove proxying
+header forwarding
+hop-by-hop Connection filtering
+16 KiB body cap
+
+Focused results:
+
+DeviceAuthorize                  3/3
+DeviceSession                    2/2
+RegisterRoot challenge           4/4
+RegisterRoot proof               3/3
+policy_gate                      4/4
+
+Final:
+
+CN4_PROVE_SESSION_OMNIGATE_ACCEPTANCE_VERIFY=GREEN
+10. svc-gateway 8090 ProveSession ingress added
+
+Production file changed:
+
+crates/svc-gateway/src/routes/product.rs
+
+Added public routes:
+
+POST /identity/passport/challenge
+POST /identity/passport/prove
+
+Forwarding:
+
+8090 /identity/passport/challenge
+→ 9090 /v1/identity/passport/challenge
+
+8090 /identity/passport/prove
+→ 9090 /v1/identity/passport/prove
+
+Existing gateway policy reused:
+
+BODY_CAP_BYTES=16384
+DEADLINE_MS=5000
+OPAQUE_PROXY_ONLY=YES
+
+No gateway verification or identity authority was introduced.
+
+No capability issuance.
+
+No username mutation.
+
+Focused svc-gateway test expanded:
+
+crates/svc-gateway/tests/identity_routes_proxy.rs
+
+Result:
+
+13 passed
+0 failed
+
+Production check:
+
+cargo check -p svc-gateway
+GREEN
+
+Final:
+
+CN4_GATEWAY_PROVE_SESSION_INGRESS_VERIFY=GREEN
+11. Full source-level possession ingress now exists
+
+After that work, the source path was:
+
+CrabLink/native
+    ↓
+8090 svc-gateway
+    ↓
+9090 Omnigate
+    ↓
+5307 svc-passport
+
+Verified properties:
+
+BODY_CAP_16K=GREEN
+GATEWAY_DEADLINE_5S=GREEN
+HEADER_FORWARDING=GREEN
+HOP_BY_HOP_FILTERING=GREEN
+REGISTERROOT_REGRESSION=PRESERVED
+DEVICE_AUTHORIZE_REGRESSION=PRESERVED
+
+GATEWAY_AUTHORITY=NO
+OMNIGATE_AUTHORITY=NO
+SVC_PASSPORT_AUTHORITY=YES
+12. Managed CrabNode was rebuilt and restarted
+
+Command built:
+
+cargo build -p macronode --bins
+
+Build succeeded despite known warnings.
+
+Managed restart:
+
+old pid=14799
+new pid=25092
+
+Node ID remained stable:
+
+13c726e5ea7a423191529fadee9612910128a9e4597a4edabebb42c43068be7d
+
+Restart explicitly reported preserved node ID.
+
+Health after restart:
+
+8080 admin ready       GREEN
+8090 svc-gateway       GREEN
+9090 Omnigate          GREEN
+5307 svc-passport      GREEN
+13. First real public ProveSession challenge succeeded
+
+A challenge was requested through:
+
+POST http://127.0.0.1:8090/identity/passport/challenge
+
+using the real physical Passport/device and:
+
+requested_scopes=["identity.read"]
+
+HTTP:
+
+200
+
+Observed live challenge:
+
+version=1
+purpose=prove_session
+network_id=rustyonions-devnet
+environment=private-beta
+audience=svc-passport
+issuing_service_id=svc-passport
+
+Service KID:
+
+ed25519/crabnode/svc-passport/30d1d523-28c0-4f60-a677-5156959507a8/v1
+
+It was bound to the real physical Passport and real physical Device ID.
+
+TTL was 60 seconds.
+
+The server signed it.
+
+Final:
+
+PUBLIC_PROVESESSION_CHALLENGE=GREEN
+REAL_REGISTERED_DEVICE_RECOGNIZED=YES
+14. Public proof route reached svc-passport
+
+A deliberately malformed proof {} was submitted through:
+
+POST http://127.0.0.1:8090/identity/passport/prove
+
+Result:
+
+HTTP 400
+
+with:
+
+{
+  "schema": "svc-passport.native-device-session-problem.v1",
+  "code": "invalid_request",
+  "message": "Device session request is invalid",
+  "retryable": false
+}
+
+This proved the complete runtime route:
+
+8090 → 9090 → 5307
+
+without consuming the valid challenge.
+
+Final:
+
+CN4_PUBLIC_PROVE_SESSION_RUNTIME_VERIFY=GREEN
+
+The old challenge is now long expired and must never be reused. The real CrabLink possession command requests a fresh challenge each time.
+
+15. New svc-passport DeviceKey signing primitive
+
+New production module:
+
+crates/svc-passport/src/native/device_session_signing.rs
+
+and export wiring in:
+
+crates/svc-passport/src/native/mod.rs
+
+Purpose:
+
+sign exactly one canonical DeviceSessionProof transcript
+using the operational DeviceKey
+
+It is deliberately not a generic signer.
+
+Flow:
+
+NativeSecretBytes DeviceKey seed
+→ validate exactly 32 bytes
+→ derive native Device ID/public key
+→ require transcript Device ID/public key match
+→ ron-auth canonical DeviceSession transcript
+→ Ed25519 sign
+→ ron-auth strict self-verification
+→ return public Ed25519SignatureV1 only
+
+Security properties:
+
+DEVICE_SEED_EXPORTED=NO
+GENERIC_MESSAGE_SIGNER=NO
+RECOVERY_ROOT_USED=NO
+ROOT_PIN_USED=NO
+HTTP_CHANGED=NO
+CAPABILITY_ISSUED=NO
+USERNAME_MUTATED=NO
+
+Focused tests:
+
+device_session_signature_cross_verifies_through_ron_auth
+device_session_signer_rejects_transcript_bound_to_another_device
+
+Result:
+
+2 passed
+0 failed
+
+cargo check -p svc-passport --features native-passport:
+
+GREEN
+16. Important Clippy decision from this session
+
+We explicitly changed workflow.
+
+Do not run strict Clippy on individual test targets during normal implementation.
+
+Use:
+
+cargo test
+
+to compile and validate test code.
+
+Strict Clippy is now primarily for:
+
+production/lib code
+meaningful milestone gates
+final cleanup
+
+and should not cause work expansion into unrelated crates.
+
+The signer verification attempted:
+
+cargo clippy -p svc-passport --lib --features native-passport -- -D warnings
+
+but dependency linting reached ron-kernel and surfaced 77 pre-existing pedantic errors.
+
+Examples were:
+
+doc_markdown
+must_use_candidate
+new_without_default
+missing_panics_doc
+missing_errors_doc
+unused_async
+manual_clamp
+inline_always
+
+None were in the new DeviceSession signer.
+
+Therefore truthful classification is:
+
+DEVICE_SESSION_SIGNER_TESTS=GREEN
+SVC_PASSPORT_CHECK=GREEN
+STRICT_CLIPPY=DEFERRED_UNRELATED_RON_KERNEL_DEBT
+
+Do not touch ron-kernel as part of CN-4 possession.
+
+This is intentional project policy now.
+
+17. CrabLink native custody inspection
+
+The session inspected the real existing CrabLink V2 vault/session design before adding signing.
+
+Important findings:
+
+DesktopOperationalVaultSessionStore keeps:
+
+NativeSecretBytes operational_vmk
+
+inside native Rust only.
+
+Its existing migration borrow API is:
+
+pub(crate)
+synchronous
+does not return VMK
+holds session custody during operation
+
+The V2 vault payload contains the durable operational DeviceKey signing seed.
+
+Existing public device identity reads authenticate/decrypt that payload but return only public identity; seed and VMK never leave native custody.
+
+The inspected source states those invariants explicitly.
+
+18. CrabLink DeviceKey signing custody bridge added
+
+New production file:
+
+apps/crablink-tauri/src-tauri/src/passport_device_session_signing_runtime.rs
+
+Modified:
+
+passport_operational_unlock_runtime.rs
+lib.rs
+
+New purpose-specific VMK borrow:
+
+with_operational_vmk_for_device_session_signing
+
+Properties:
+
+pub(crate)
+synchronous
+no async boundary
+VMK not returned
+VMK not cloned
+DeviceKey seed not returned
+
+Runtime flow:
+
+operational session VMK
+→ load stored encrypted vault
+→ require V2
+→ authenticated decrypt of operational device payload
+→ borrow payload.device_signing_seed()
+→ svc_passport::sign_native_device_session_proof_v1()
+→ public signature only
+
+No:
+
+RecoveryRoot
+root PIN
+Tauri command
+HTTP
+capability
+username
+wallet
+ledger
+
+Boundary test:
+
+physical_m1_device_session_signing_boundary.rs
+
+Results:
+
+3 passed
+0 failed
+
+Tauri crate check:
+
+GREEN
+
+Final:
+
+CN4_CRABLINK_DEVICE_SESSION_SIGNING_CUSTODY_VERIFY=GREEN
+19. CrabLink live ProveSession trust verifier added
+
+New production file:
+
+apps/crablink-tauri/src-tauri/src/passport_device_session_trust.rs
+
+It reuses the already-pinned controlled-beta svc-passport trust anchor instead of introducing another trust root.
+
+Pinned context remains:
+
+network=rustyonions-devnet
+environment=private-beta
+audience=svc-passport
+issuing_service=svc-passport
+
+Pinned KID:
+
+ed25519/crabnode/svc-passport/30d1d523-28c0-4f60-a677-5156959507a8/v1
+
+Pinned service public key:
+
+cdfa779d2abe1fd568d1c8cf2293f94c3a7b3d87f48321423c18e7f8c74763f7
+
+The existing trust module in the latest bundle confirms this controlled-beta anchor.
+
+The new ProveSession verifier requires:
+
+purpose == ProveSession
+Passport ID exact match
+Device ID exact match
+operation_body_hash absent
+requested scopes exact match
+TTL == 60,000 ms
+service context/KID exact match
+strict Ed25519 service signature verification
+time validity
+20. CrabLink native ProveSession HTTP orchestrator added
+
+New production file:
+
+apps/crablink-tauri/src-tauri/src/passport_device_session_http_runtime.rs
+
+This is the main native possession workflow.
+
+It performs:
+
+1. Load durable public Passport descriptor.
+2. Read authenticated V2 public Device identity.
+3. Strictly load/verify local root-signed DeviceAuthorization.
+4. Require identity.read inside its authorized scope ceiling.
+5. Read gateway settings without holding settings lock across await.
+6. Require exact controlled-beta gateway:
+   http://127.0.0.1:8090
+7. POST /identity/passport/challenge.
+8. Bound response body to 16 KiB.
+9. Strictly decode PassportChallengeV1.
+10. Verify service challenge against pinned svc-passport anchor.
+11. Compute canonical challenge transcript B3 hash.
+12. Build canonical ron-auth DeviceSessionProofTranscriptV1.
+13. Sign using native V2 DeviceKey custody runtime.
+14. POST /identity/passport/prove.
+15. Bound proof response to 16 KiB.
+16. Require exact result:
+    schema=svc-passport.native-device-session-proof-result.v1
+    status=proven
+17. Return only redacted public success metadata.
+
+Critical ordering:
+
+LOCAL_DEVICE_AUTH
+BEFORE NETWORK
+
+SERVICE_CHALLENGE_TRUST
+BEFORE DEVICEKEY SIGNING
+
+DEVICEKEY SIGNING
+BEFORE PROOF SUBMISSION
+
+No direct:
+
+9090 access
+5307 access
+
+No root material.
+
+No capability.
+
+No username.
+
+21. Live service-challenge crypto cross-verification succeeded
+
+The focused CrabLink test used the actual service-signed challenge returned by the managed CrabNode earlier in this session.
+
+That real challenge successfully verified against CrabLink's pinned service trust anchor.
+
+This is significant because it demonstrates:
+
+CrabNode currently serving challenge
+==
+service identity CrabLink trusts
+
+not merely compatibility with a synthetic test fixture.
+
+The same focused test also proved:
+
+wrong purpose → rejected
+wrong Device ID → rejected
+22. One test false positive repaired
+
+The first HTTP-runtime boundary run showed:
+
+2 passed
+1 failed
+
+The failing test claimed:
+
+local signed DeviceAuthorization must be verified before network challenge issuance
+
+Production ordering was actually correct.
+
+The test had searched:
+
+source.find("DEVICE_SESSION_CHALLENGE_PATH")
+
+which found the constant declaration near the top of the source, not the later HTTP use.
+
+The test was repaired to search for the route use after the local authorization verification location.
+
+No production code changed.
+
+Rerun:
+
+3 passed
+0 failed
+
+Tauri production check:
+
+GREEN
+
+Final:
+
+CN4_CRABLINK_NATIVE_PROVESESSION_RUNTIME_VERIFY=GREEN
+23. Final command-wiring work applied but not yet compiled
+
+The last implementation slice added the public zero-argument command.
+
+Command:
+
+passport_verify_device_possession
+
+Applied surfaces:
+
+Rust Tauri command
+invoke handler registry
+central Tauri command allowlist
+Passport adapter
+PassportDrawer advanced trigger
+
+Design:
+
+ZERO_USER_ARGUMENTS=YES
+RESULT=REDACTED_STATUS_ONLY
+
+No caller authority fields.
+
+No:
+
+Passport ID argument
+Device ID argument
+scope argument
+gateway argument
+challenge argument
+signature argument
+PIN
+RecoveryRoot
+DeviceKey material
+
+Apply marker:
+
+CN4_CRABLINK_DEVICE_POSSESSION_COMMAND_APPLY=GREEN
+
+But again:
+
+VERIFY=RED
+
+due solely to the Tauri async command signature compile issue.
+
+24. Exact repositories/crates touched in this session
+RustyOnions
+svc-passport
+
+Definitely touched:
+
+crates/svc-passport/src/native/gateway_omnigate_routes.rs
+crates/svc-passport/src/native/device_session_signing.rs
+crates/svc-passport/src/native/mod.rs
+
+crates/svc-passport/tests/native_passport_phase14a_gateway_omnigate_route_contract.rs
+crates/svc-passport/tests/native_passport_phase14d_gateway_omnigate_route_mount_acceptance.rs
+
+Phase14B/C/D route contract compatibility was also verified.
+
+Existing ProveSession server runtime/HTTP code was reused rather than replaced.
+
+omnigate
+
+Production:
+
+crates/omnigate/src/routes/v1/mod.rs
+crates/omnigate/src/routes/v1/profile.rs
+crates/omnigate/src/middleware/policy.rs
+
+Tests:
+
+crates/omnigate/tests/crabnode_cn4_register_root_challenge_proxy.rs
+crates/omnigate/tests/crabnode_cn4_register_root_proof_proxy.rs
+crates/omnigate/tests/crabnode_cn4_device_authorize_proxy.rs
+crates/omnigate/tests/policy_gate.rs
+crates/omnigate/tests/crabnode_cn4_device_session_proxy.rs
+svc-gateway
+crates/svc-gateway/src/routes/product.rs
+crates/svc-gateway/tests/identity_routes_proxy.rs
+macronode
+
+No new functional source patch was made in this slice.
+
+It was rebuilt to get the new gateway/Omnigate routes into the managed CrabNode.
+
+25. CrabLink files definitely added/changed before final command patch
+
+New:
+
+apps/crablink-tauri/src-tauri/src/passport_device_session_signing_runtime.rs
+apps/crablink-tauri/src-tauri/src/passport_device_session_trust.rs
+apps/crablink-tauri/src-tauri/src/passport_device_session_http_runtime.rs
+
+apps/crablink-tauri/src-tauri/tests/physical_m1_device_session_signing_boundary.rs
+apps/crablink-tauri/src-tauri/tests/physical_m1_device_session_http_boundary.rs
+
+Modified:
+
+apps/crablink-tauri/src-tauri/src/passport_operational_unlock_runtime.rs
+apps/crablink-tauri/src-tauri/src/lib.rs
+
+Final command apply also changed the current live versions of at least the corresponding:
+
+src-tauri/src/commands/passport.rs
+src-tauri/src/lib.rs
+src/platform/tauriPlatform.js
+src/adapters/passportAdapter.js
+src/app/shell/PassportDrawer.jsx
+
+and possibly focused source-boundary tests associated with that apply.
+
+Because the final command patch happened after the most recent CrabLink bundle, use live source/diff to confirm the complete final file list next session.
+
+26. Codebundle freshness warning
+
+The latest attached CrabLink bundle was generated:
+
+2026-08-24T04:35:24Z
+Git: 2079231
+dirty
+
+That bundle was generated before:
+
+CrabLink DeviceSession signing custody runtime
+CrabLink DeviceSession trust verifier
+CrabLink native HTTP orchestrator
+zero-argument possession Tauri command wiring
+
+Therefore it is now stale for the active CN-4 slice.
+
+It remains useful for surrounding architecture, but live repo source overrides it.
+
+Likewise, the RustyOnions bundle from August 23 is stale relative to this session's:
+
+Omnigate ProveSession ingress
+svc-gateway ProveSession ingress
+Phase14 count repairs
+svc-passport DeviceSession signer
+Next-session bundle recommendation
+
+Do not regenerate bundles before fixing the two-line/small command compile problem unless needed.
+
+Best momentum:
+
+1. fix command compile
+2. run focused verification
+3. run physical Mac possession
+4. then generate fresh RustyOnions + CrabLink bundles
+
+That gives the next milestone bundle much more value.
+
+For CrabLink the known command is:
+
+cd /Users/mymac/Desktop/crablink
+bash scripts/make_codebundle.sh
+27. Current evidence ledger
+Fully GREEN
+CN0
+CN1 M1 baseline
+CN2 canonical profile/ports
+CN3 svc-gateway→Omnigate ingress
+
+RegisterRoot challenge runtime
+RegisterRoot proof runtime
+RegisterRoot Omnigate ingress
+RegisterRoot gateway ingress
+physical Mac RegisterRoot
+RegisterRoot replay rejection
+RegisterRoot restart persistence
+
+durable service trust anchor
+CrabLink pinned service trust
+
+DeviceAuthorization client signing
+DeviceAuthorization local persistence
+DeviceAuthorization public 8090 ingress
+physical device registration
+server restart persistence
+exact repeat idempotency
+
+ron-auth DeviceSessionProof crypto
+svc-passport private ProveSession runtime
+svc-passport internal ProveSession HTTP
+
+Phase14A route contract
+Phase14B route admission
+Phase14C gateway admission
+Phase14D mount acceptance
+
+Omnigate ProveSession routes
+Omnigate ProveSession policy
+Omnigate ProveSession proxy acceptance
+
+svc-gateway ProveSession public routes
+svc-gateway ProveSession proxy acceptance
+
+managed CrabNode rebuild/restart
+8090 health
+9090 health
+5307 health
+8080 readiness
+
+real public ProveSession challenge through 8090
+real registered physical device recognized
+public proof path reaches svc-passport
+
+svc-passport DeviceKey purpose-specific signer
+CrabLink V2 DeviceKey signing custody
+CrabLink live service-challenge verification
+CrabLink native ProveSession HTTP orchestrator
+Applied but NOT fully verified
+passport_verify_device_possession Tauri command wiring
+central allowlist addition
+invoke handler registration
+Passport adapter addition
+PassportDrawer advanced trigger
+
+Reason:
+
+Tauri async command compile failure
+Not yet done
+real physical Mac DeviceKey possession proof
+device-bound capability issuance
+@testmac username/profile mutation
+post-possession restart acceptance
+Windows @testpc physical acceptance
+CN4 closeout
+CN5
+28. Physical Mac possession procedure after command compile is GREEN
+
+Once the command compiles and focused source boundaries pass:
+
+Keep managed CrabNode
+
+The managed backend already has the correct routes.
+
+If still running, simply verify:
+
+8080
+8090
+9090
+5307
+
+Do not rebuild RustyOnions again merely because the client signer module was added: that signer is consumed by CrabLink as a Rust dependency and does not alter the already-proven server possession behavior.
+
+Rebuild/restart CrabNode only if:
+
+it is not running
+health is red
+backend source is changed again
+Rebuild CrabLink
+
+The Tauri binary must be rebuilt because all of the new possession logic is native Rust.
+
+After an application restart, remember:
+
+durable V2 vault persists
+DeviceAuthorization sidecar persists
+DeviceKey persists encrypted in V2 vault
+operational VMK session does NOT persist
+
+Therefore the app will need the normal operational unlock before possession can run.
+
+This should use the existing native secure PIN prompt.
+
+It must not request a RecoveryRoot confirmation.
+
+29. Expected physical possession flow
+
+When the user triggers the new advanced Passport action:
+
+Verify device possession
+
+the intended native sequence is:
+
+CrabLink loads public Passport identity
+↓
+CrabLink authenticates V2 device identity
+↓
+CrabLink re-verifies persisted root-signed DeviceAuthorization
+↓
+CrabLink confirms identity.read is permitted
+↓
+POST 8090 /identity/passport/challenge
+↓
+new server-signed ProveSession challenge
+↓
+CrabLink verifies pinned svc-passport service key/KID/context
+↓
+CrabLink computes canonical challenge transcript hash
+↓
+CrabLink builds canonical ron-auth DeviceSession proof transcript
+↓
+operational session borrows VMK synchronously
+↓
+V2 operational payload decrypts
+↓
+DeviceKey seed stays native
+↓
+svc-passport purpose-specific signer signs
+↓
+POST 8090 /identity/passport/prove
+↓
+svc-passport verifies durable challenge + current DeviceAuthorization + DeviceKey signature
+↓
+challenge consumed once
+↓
+status = proven
+↓
+React receives only redacted success
+
+Expected server success schema:
+
+svc-passport.native-device-session-proof-result.v1
+
+Expected:
+
+status=proven
+30. What physical success proves
+
+Once that live action succeeds, we can truthfully say:
+
+The physical Mac controls the private DeviceKey corresponding to the durable registered Device ID.
+The proof traversed the real public CrabNode gateway.
+The challenge was authenticated by CrabLink before signing.
+The DeviceKey seed never crossed WebView IPC.
+RecoveryRoot/root PIN was not used.
+The server consumed a purpose-specific one-time challenge.
+DeviceAuthorization alone was not mistaken for possession.
+
+That is the missing link between:
+
+authorized device
+
+and:
+
+usable device session authority
+31. What comes immediately after physical possession
+
+Do not start CN-5 yet.
+
+Next CN-4 slice after successful physical Mac proof:
+
+Device-bound bounded capability
+
+Capability issuance must occur only after possession is proven.
+
+Before issuance the server must revalidate:
+
+current device registration
+current DeviceAuthorization
+current authorization status
+revocation state
+current ron-policy ceiling
+requested scopes
+
+This is particularly important because the ProveSession runtime already identified the conceptual cross-store race window. The possession result itself intentionally returns no capability.
+
+Capability constraints:
+
+device-bound
+bounded scopes
+short-lived
+server-issued
+no WebView-selected authority
+replay resistant
+
+No capability should be synthesized locally.
+
+32. Then @testmac username/profile mutation
+
+Only after a real bounded device capability exists:
+
+@testmac
+
+may be claimed/updated through the real backend.
+
+The username/profile authority must remain:
+
+svc-passport / durable backend truth
+
+not React.
+
+The desired chain should be captured in acceptance evidence:
+
+physical Passport root
+→ physical DeviceAuthorization
+→ physical DeviceKey possession
+→ bounded capability
+→ real @testmac username/profile mutation
+33. Restart acceptance after @testmac
+
+After Mac identity mutation:
+
+restart CrabLink
+restart CrabNode where appropriate
+
+Verify:
+
+Passport durable
+DeviceAuthorization durable
+device registration durable
+username/profile durable
+DeviceKey durable
+operational session locked after app restart
+fresh operational unlock required
+no persistent root-unlocked state
+
+Then a new possession session should work using a new challenge, not by replaying an old proof.
+
+34. Windows @testpc follows Mac
+
+Only after the Mac chain is completely real should we move to the Windows physical client.
+
+Windows environment already exists:
+
+HP EliteDesk 805 G6 Mini
+Ryzen 5 PRO 4650GE
+Windows 11 Pro
+Git installed
+Rust stable-msvc
+VS Build Tools installed
+
+Goal:
+
+@testpc
+
+must go through the same real authority chain without dev bypass.
+
+Windows should prove:
+
+DPAPI operational custody
+V2 DeviceKey
+DeviceAuthorization
+ProveSession possession
+bounded capability
+username/profile
+real CrabNode ingress
+
+Do not duplicate Mac acceptance unnecessarily; focus on Windows-specific custody/platform differences and physical interoperability.
+
+35. CN-4 exit criteria
+
+CN-4 should not be called complete until at minimum:
+
+Mac physical possession GREEN
+Mac bounded capability GREEN
+@testmac mutation GREEN
+restart persistence GREEN
+
+Windows physical possession GREEN
+@testpc mutation GREEN
+
+no dev bypass
+no WebView secret custody
+no fake authority
+real 8090→9090→5307 path
+
+Only then begin CN-5.
+
+36. Current security invariants — do not weaken
+Client
+React = display/user intent
+Tauri/native Rust = local privilege
+
+Never send through React/WebView:
+
+PIN
+VMK
+operational factor
+RecoveryRoot
+DeviceKey seed
+raw signed DeviceAuthorization
+raw device signature
+raw capability material
+Passport
+svc-passport owns Passport/device/identity truth
+Device possession
+DeviceAuthorization != possession
+possession requires operational DeviceKey signature
+RecoveryRoot
+
+Routine session possession must never use:
+
+RecoveryRoot
+root PIN
+root signing session
+Network
+
+Public desktop identity operations go through:
+
+8090
+
+not directly to:
+
+9090
+5307
+Capability
+no capability before possession
+Username
+no username mutation before bounded capability
+Node phase
+NO CN5 UNTIL CN4 IDENTITY CHAIN CLOSES
+37. Testing/cadence decision for future sessions
+
+The biggest process improvement made this session is worth preserving.
+
+Old pattern that was wasting time
+tiny test change
+→ test
+→ strict Clippy
+→ dependency Clippy failures
+→ unrelated cleanup
+→ another large regression suite
+New preferred cadence
+inspect
+→ smallest real patch
+→ focused compile/test
+→ fix first real failure
+→ one grouped regression gate at milestone
+Tests
+
+Use:
+
+cargo test
+
+Test code does not need separate strict Clippy during active development.
+
+Production source
+
+Use:
+
+cargo check
+
+after each meaningful production slice.
+
+Strict production Clippy is appropriate:
+
+when it stays scoped
+at milestone closeout
+during final cleanup
+
+but unrelated dependency lint debt must not hijack CN work.
+
+ron-kernel
+
+Do not repair its Clippy backlog now.
+
+Save it for the planned cleanup/hardening pass.
+
+38. Other momentum improvements
+
+To finish faster without reducing standards:
+
+Batch adjacent low-risk wiring
+
+Once a pure command-boundary shape is known, it is reasonable to batch:
+
+command literal
+handler registration
+typed adapter
+UI trigger
+source-boundary test
+
+because these are mechanically coupled and do not independently mutate authority.
+
+Keep isolated slices for high-risk work
+
+Continue isolating:
+
+DeviceKey signing
+challenge consumption
+capability issuance
+username mutation
+wallet/ledger changes
+durability
+network trust
+
+Those deserve focused evidence.
+
+Stop reopening GREEN layers
+
+Do not rerun:
+
+RegisterRoot
+DeviceAuthorization
+Phase14A-D
+Omnigate possession proxy
+svc-gateway possession proxy
+service trust anchor
+DeviceKey signer unit tests
+
+unless a later modification actually touches those layers.
+
+Avoid unnecessary rebuilds
+
+Backend is already running the correct ProveSession server behavior.
+
+The next rebuild that matters is CrabLink after the Tauri command compiles.
+
+39. Disk/build notes
+
+The Mac had:
+
+113 GiB volume
+~10 GiB used reported in displayed line
+~6.1 GiB available
+
+during the managed build output.
+
+Disk pressure has historically been a problem.
+
+Continue using:
+
+CARGO_INCREMENTAL=0
+
+for heavy Rust gates when warranted.
+
+Do not:
+
+cargo clean
+
+without evidence.
+
+Do not delete:
+
+RustyOnions target
+CrabNode runtime state
+Passport state
+CrabLink native vault
+
+merely to gain space.
+
+40. Build warnings
+
+The managed macronode --bins build emitted several existing dead-code warnings in:
+
+services/ports.rs
+checkpoint committee/finality/signing
+quorum participation
+runtime status
+
+They did not block the build.
+
+Do not treat these as CN-4 possession blockers.
+
+41. CrabNode durable runtime facts
+
+CrabNode home:
+
+/Users/mymac/Library/Application Support/CrabNode
+
+Node ID:
+
+13c726e5ea7a423191529fadee9612910128a9e4597a4edabebb42c43068be7d
+
+Native Passport data includes:
+
+data/native-passport/service-key
+data/native-passport/challenges
+data/native-passport/registry
+data/native-passport/root-registration-redo
+data/passport-profile
+
+Admin stays:
+
+loopback-only
+
+Do not expose admin to LAN merely for CrabLink.
+
+42. Service trust anchor
+
+Controlled-beta trust remains:
+
+schema=svc-passport.native-register-root-trust-anchor.v1
+network=rustyonions-devnet
+environment=private-beta
+audience=svc-passport
+root_epoch=0
+ttl=60000
+
+KID:
+
+ed25519/crabnode/svc-passport/30d1d523-28c0-4f60-a677-5156959507a8/v1
+
+Public key:
+
+cdfa779d2abe1fd568d1c8cf2293f94c3a7b3d87f48321423c18e7f8c74763f7
+
+The live ProveSession challenge was successfully cross-verified against it this session.
+
+43. FINAL_BETA relationship
+
+We are still using CrabNode work to close FINAL_BETA Phase 21 rather than duplicating implementation.
+
+Broad state remains approximately:
+
+Phases 0–1 mostly GREEN
+Phase 2 partially open
+Phases 3–5 applied/verified
+Phase 8 local following partial
+Phase 11 site security mostly complete
+Phase 15 forums GREEN
+Phase 16 manifest/restart GREEN
+Phase 19 checkpoint/finality/DA GREEN
+Phase 20 ROX Anchor GREEN
+Phase 21 ACTIVE — CrabNode / physical integration
+Phases 22–26 pending
+
+Do not resume TV/Android/iOS simply because desktop identity is close.
+
+Desktop remains reference product.
+
+44. ROX reminders — not active work
+
+Do not reopen ROX Anchor unless integration requires fresh evidence.
+
+Before public ROX production eventually:
+
+add Solana security.txt/contact metadata
+review Explorer-visible metadata
+
+Future desired ROX↔SOL burn:
+
+33 bps
+
+must first verify:
+
+Token-2022 mechanism
+swap-only intended scope
+
+No production mint/burn/staking/liquidity work now.
+
+45. What NOT to do next session
+
+Do not:
+
+start CN5
+redo RegisterRoot
+redo DeviceAuthorization
+rerun physical RegisterRoot proof
+reissue root DeviceAuthorization
+ask for RecoveryRoot PIN for possession
+add a generic DeviceKey signer
+return signatures to React
+return capabilities to React
+let React choose scopes
+let React choose Passport/device identity
+call 9090 or 5307 directly from CrabLink
+fix ron-kernel Clippy
+Clippy-test every new test
+cargo clean
+regenerate giant bundles before fixing the compiler issue
+start Windows acceptance before Mac possession closes
+start username mutation before capability
+46. Exact first-session sequence for the next conversation
+
+Use this order.
+
+Step 1 — inspect current command
+passport_verify_device_possession
+
+around line ~813 of:
+
+apps/crablink-tauri/src-tauri/src/commands/passport.rs
+Step 2 — repair only the Tauri async return/lifetime contract
+
+Expected direction:
+
+bare DTO
+→ Result<redacted DTO, redacted serializable error>
+
+Preserve zero caller arguments.
+
+Step 3 — focused compile
+cargo check crablink-tauri
+Step 4 — focused command boundaries
+
+Verify:
+
+command registration
+central allowlist
+Passport adapter
+drawer trigger
+zero arguments
+redacted result
+no secret/signature/capability return
+Step 5 — frontend production build
+
+Only after Rust compiles.
+
+Step 6 — rebuild physical CrabLink app
+
+Use the existing physical-M1 build route.
+
+Step 7 — ensure CrabNode is alive
+
+Health only; no unnecessary backend rebuild.
+
+Step 8 — operationally unlock CrabLink
+
+After app restart the in-memory VMK will be locked.
+
+Use the normal native secure operational unlock.
+
+Step 9 — trigger physical DeviceKey possession
+
+Use:
+
+passport_verify_device_possession
+
+through the actual UI/adapter/Tauri path.
+
+Step 10 — record real proof evidence
+
+Expected:
+
+fresh challenge
+service trust verified
+DeviceKey signature
+proof accepted
+status=proven
+no RecoveryRoot
+no capability
+no username mutation
+Step 11 — then design/implement bounded capability issuance
+
+Only after physical possession GREEN.
+
+47. Suggested session-start statement
+
+A compact starting note for the next session:
+
+Continue CRABNODE_BUILDPLAN.md CN-4 physical identity work. Backend ProveSession ingress 8090→9090→5307 is GREEN, managed CrabNode runtime challenge/proof routing is GREEN, the svc-passport purpose-specific DeviceKey signer is GREEN, CrabLink V2 DeviceKey custody is GREEN, and CrabLink's native ProveSession trust + HTTP orchestrator is GREEN. The current blocker is only the newly applied zero-argument passport_verify_device_possession Tauri command: cargo check fails because Tauri 2.11.2 requires an async command containing reference/state inputs to return a Result, while the command currently returns a bare PassportOperationalCommandDtoV1. Fix that compiler issue first without changing authority boundaries, run focused command/adaptor/build verification, rebuild CrabLink, operationally unlock it, and run the first real physical Mac DeviceKey possession proof. Do not start capability/username work or CN-5 until possession is GREEN. Do not fix unrelated ron-kernel Clippy debt and do not run Clippy on test targets.
+
+48. Bottom-line handoff
+
+The most important state to carry forward is:
+
+BACKEND_PROVESESSION=GREEN
+PUBLIC_8090_PROVESESSION=GREEN
+MANAGED_CRABNODE_RUNTIME=GREEN
+REAL_SERVICE_CHALLENGE=GREEN
+CRABLINK_PINNED_SERVICE_VERIFY=GREEN
+SVC_PASSPORT_DEVICEKEY_SIGNER=GREEN
+CRABLINK_V2_DEVICEKEY_CUSTODY=GREEN
+CRABLINK_NATIVE_HTTP_PROVESESSION=GREEN
+
+POSSESSION_TAURI_COMMAND_APPLY=GREEN
+POSSESSION_TAURI_COMMAND_COMPILE=RED
+
+FIRST_NEXT_ACTION=
+FIX_ASYNC_TAURI_COMMAND_RESULT_SIGNATURE
+
+THEN=
+REBUILD_CRABLINK_AND_RUN_REAL_PHYSICAL_MAC_DEVICE_POSSESSION
+
+CAPABILITY_ISSUED=NO
+USERNAME_MUTATED=NO
+@testmac=NOT_YET_CLAIMED
+@testpc=NOT_YET_RUN
+CN5_STARTED=NO
+
+This is a good stopping point because the hard architecture is now in place. The remaining immediate failure is narrow and local to Tauri command mechanics, not the cryptographic, storage, trust, network, or server possession design. Once that compiles, the next meaningful evidence should be the actual physical Mac proving control of its persisted DeviceKey through the live CrabNode.
+
+### END NOTE - AUGUST 24 2026 - 01:15 CST

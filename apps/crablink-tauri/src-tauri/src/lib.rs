@@ -6,15 +6,35 @@
 
 mod commands;
 mod confirmed_roc;
-mod media;
-pub mod local_following_store;
 pub mod local_following_feed_cache_store;
+pub mod local_following_store;
+mod media;
 #[cfg(all(test, desktop))]
 mod onboarding_phase11b_command_path_tests;
 #[cfg(desktop)]
 pub mod passport_clear_command_runtime;
 #[cfg(desktop)]
 pub mod passport_create_command_runtime;
+#[cfg(desktop)]
+pub mod passport_device_authorization_command_bridge;
+#[cfg(desktop)]
+pub mod passport_device_authorization_command_runtime;
+#[cfg(desktop)]
+pub mod passport_device_authorization_persistence_runtime;
+#[cfg(desktop)]
+pub mod passport_device_authorization_runtime_context;
+#[cfg(desktop)]
+pub mod passport_device_authorization_store;
+#[cfg(desktop)]
+pub mod passport_device_key_random_runtime;
+#[cfg(desktop)]
+pub mod passport_device_session_http_runtime;
+#[cfg(desktop)]
+pub mod passport_device_session_signing_runtime;
+#[cfg(desktop)]
+pub mod passport_device_session_trust;
+#[cfg(desktop)]
+pub mod passport_identity_finalization_runtime;
 #[cfg(desktop)]
 pub mod passport_operational_command_runtime;
 #[cfg(desktop)]
@@ -33,10 +53,18 @@ pub mod passport_platform_sealer;
 pub mod passport_platform_sealer_linux;
 #[cfg(any(target_os = "windows", test))]
 pub mod passport_platform_sealer_windows;
+#[cfg(desktop)]
+pub mod passport_public_identity_runtime;
+#[cfg(desktop)]
+pub mod passport_public_identity_store;
 pub mod passport_recovery_acknowledgement_store;
 #[cfg(desktop)]
 pub mod passport_recovery_ceremony_runtime;
 pub mod passport_recovery_phrase_runtime;
+#[cfg(desktop)]
+pub mod passport_register_root_intent;
+#[cfg(desktop)]
+pub mod passport_register_root_trust;
 #[cfg(desktop)]
 pub mod passport_root_confirmation_command_runtime;
 #[cfg(desktop)]
@@ -47,10 +75,15 @@ pub mod passport_vault_create_runtime;
 pub mod passport_vault_runtime;
 #[cfg(desktop)]
 pub mod passport_vault_store;
+pub mod passport_vault_v2_migration_runtime;
 mod state;
 
 use state::AppState;
 
+#[cfg(desktop)]
+use local_following_feed_cache_store::LocalFollowingFeedCacheStore;
+#[cfg(desktop)]
+use local_following_store::initialize_desktop_local_following_store;
 #[cfg(desktop)]
 use passport_platform_runtime::{
     new_desktop_platform_material_clearer, new_desktop_platform_sealer,
@@ -58,35 +91,24 @@ use passport_platform_runtime::{
 #[cfg(desktop)]
 use passport_vault_runtime::initialize_desktop_passport_vault_store;
 #[cfg(desktop)]
-use local_following_feed_cache_store::LocalFollowingFeedCacheStore;
-#[cfg(desktop)]
-use local_following_store::initialize_desktop_local_following_store;
-#[cfg(desktop)]
 use tauri::Manager;
 
 #[doc(hidden)]
 pub mod phase8a4_test_support {
     pub use crate::commands::local_following::{
-        read_local_following_from_store,
-        write_local_following_to_store,
-        FINAL_BETA_PHASE8A4_LABEL,
-        LOCAL_FOLLOWING_READ_COMMAND,
-        LOCAL_FOLLOWING_READ_FAILED_MESSAGE,
-        LOCAL_FOLLOWING_WRITE_COMMAND,
-        LOCAL_FOLLOWING_WRITE_FAILED_MESSAGE,
+        read_local_following_from_store, write_local_following_to_store, FINAL_BETA_PHASE8A4_LABEL,
+        LOCAL_FOLLOWING_READ_COMMAND, LOCAL_FOLLOWING_READ_FAILED_MESSAGE,
+        LOCAL_FOLLOWING_WRITE_COMMAND, LOCAL_FOLLOWING_WRITE_FAILED_MESSAGE,
     };
 }
 
 #[doc(hidden)]
 pub mod phase9a8_test_support {
     pub use crate::commands::local_following_feed_cache::{
-        read_local_following_feed_cache_from_store,
-        write_local_following_feed_cache_to_store,
-        FINAL_BETA_PHASE9A8_LABEL,
-        LOCAL_FOLLOWING_FEED_CACHE_READ_COMMAND,
+        read_local_following_feed_cache_from_store, write_local_following_feed_cache_to_store,
+        FINAL_BETA_PHASE9A8_LABEL, LOCAL_FOLLOWING_FEED_CACHE_READ_COMMAND,
         LOCAL_FOLLOWING_FEED_CACHE_READ_FAILED_MESSAGE,
-        LOCAL_FOLLOWING_FEED_CACHE_UNAVAILABLE_MESSAGE,
-        LOCAL_FOLLOWING_FEED_CACHE_WRITE_COMMAND,
+        LOCAL_FOLLOWING_FEED_CACHE_UNAVAILABLE_MESSAGE, LOCAL_FOLLOWING_FEED_CACHE_WRITE_COMMAND,
         LOCAL_FOLLOWING_FEED_CACHE_WRITE_FAILED_MESSAGE,
     };
 }
@@ -160,28 +182,24 @@ pub fn run() {
                 std::io::Error::other("native local following store initialization failed")
             })?;
 
-        let local_following_feed_cache_store =
-            LocalFollowingFeedCacheStore::from_app_data_root(
-                app_data_directory.clone(),
-            )
-            .map_err(|_| {
-                std::io::Error::other(
-                    "native local following feed cache store initialization failed",
-                )
-            })?;
+        let local_following_feed_cache_store = LocalFollowingFeedCacheStore::from_app_data_root(
+            app_data_directory.clone(),
+        )
+        .map_err(|_| {
+            std::io::Error::other("native local following feed cache store initialization failed")
+        })?;
 
         let passport_platform_sealer = new_desktop_platform_sealer();
 
         let passport_platform_material_clearer = new_desktop_platform_material_clearer();
 
-        let state =
-            AppState::with_native_passport_runtime_and_local_following_and_feed_cache(
-                initialized.store,
-                passport_platform_sealer,
-                passport_platform_material_clearer,
-                initialized_local_following.store,
-                local_following_feed_cache_store,
-            );
+        let state = AppState::with_native_passport_runtime_and_local_following_and_feed_cache(
+            initialized.store,
+            passport_platform_sealer,
+            passport_platform_material_clearer,
+            initialized_local_following.store,
+            local_following_feed_cache_store,
+        );
 
         if !state.passport_vault_store.root_directory().is_absolute() {
             return Err(
@@ -216,6 +234,8 @@ pub fn run() {
             commands::passport::passport_lock,
             commands::passport::passport_unlock_operational,
             commands::passport::passport_unlock_root,
+            commands::passport::passport_authorize_device,
+            commands::passport::passport_verify_device_possession,
             commands::passport::passport_recovery_ceremony,
             commands::wallet::wallet_balance_gateway,
             commands::gateway::gateway_request,
