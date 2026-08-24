@@ -813,7 +813,7 @@ pub const PASSPORT_VERIFY_DEVICE_POSSESSION_COMMAND: &str = "passport_verify_dev
 #[tauri::command]
 pub async fn passport_verify_device_possession(
     state: State<'_, AppState>,
-) -> PassportOperationalCommandDtoV1 {
+) -> Result<PassportOperationalCommandDtoV1, PassportStatusProblemV1> {
     let state_label = match prove_physical_m1_device_session(state.inner()).await {
         Ok(outcome)
             if outcome.local_device_authorization_verified
@@ -826,7 +826,7 @@ pub async fn passport_verify_device_possession(
         Ok(_) | Err(_) => "possession_rejected",
     };
 
-    PassportOperationalCommandDtoV1 {
+    Ok(PassportOperationalCommandDtoV1 {
         schema: PASSPORT_DEVICE_POSSESSION_DTO_SCHEMA_V1,
         command_name: PASSPORT_VERIFY_DEVICE_POSSESSION_COMMAND,
         source_phase_label: PHYSICAL_M1_DEVICE_SESSION_HTTP_LABEL,
@@ -840,7 +840,7 @@ pub async fn passport_verify_device_possession(
         platform_material_mutated: false,
         recovery_root_unsealed: false,
         wallet_or_ledger_mutated: false,
-    }
+    })
 }
 
 #[cfg(test)]

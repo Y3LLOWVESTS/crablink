@@ -74,7 +74,7 @@ test(
 
     assert.match(
       adapter,
-      /runPassportCommand\([\r\n\s]*PASSPORT_COMMANDS\.verifyDevicePossession[\r\n\s]*\)/,
+      /runPassportCommand\([\r\n\s]*PASSPORT_COMMANDS\.verifyDevicePossession[\r\n\s]*,?[\r\n\s]*\)/,
     );
 
     assert.doesNotMatch(
