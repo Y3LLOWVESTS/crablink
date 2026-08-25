@@ -6,7 +6,7 @@
 //! RO:TEST — unit tests below and tests/phase15t_operational_unlock_command_lock_and_status_bridge.rs.
 
 use std::sync::Arc;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::{
     io::Write,
     process::{Command, Stdio},
@@ -37,6 +37,143 @@ pub const ONBOARDING_PHASE6B2B1_NATIVE_LABEL: &str =
 #[cfg(target_os = "macos")]
 const MACOS_HIDDEN_ANSWER_SCRIPT: &str = r#"set dialog_result to display dialog "Enter CrabLink Passport PIN" default answer "" with hidden answer buttons {"Cancel", "Unlock"} default button "Unlock" cancel button "Cancel" with title "CrabLink Passport"
 text returned of dialog_result"#;
+
+#[cfg(target_os = "windows")]
+const WINDOWS_HIDDEN_PIN_SCRIPT: &str = r#"
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+$form = New-Object System.Windows.Forms.Form
+$form.Text = 'CrabLink Passport'
+$form.ClientSize = New-Object System.Drawing.Size(420, 150)
+$form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+$form.MaximizeBox = $false
+$form.MinimizeBox = $false
+$form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
+$form.TopMost = $true
+
+$label = New-Object System.Windows.Forms.Label
+$label.Text = 'Enter CrabLink Passport PIN'
+$label.Location = New-Object System.Drawing.Point(20, 18)
+$label.Size = New-Object System.Drawing.Size(380, 24)
+
+$pin = New-Object System.Windows.Forms.TextBox
+$pin.Location = New-Object System.Drawing.Point(20, 48)
+$pin.Size = New-Object System.Drawing.Size(380, 24)
+$pin.UseSystemPasswordChar = $true
+
+$ok = New-Object System.Windows.Forms.Button
+$ok.Text = 'Unlock'
+$ok.Location = New-Object System.Drawing.Point(224, 95)
+$ok.Size = New-Object System.Drawing.Size(84, 30)
+$ok.DialogResult = [System.Windows.Forms.DialogResult]::OK
+
+$cancel = New-Object System.Windows.Forms.Button
+$cancel.Text = 'Cancel'
+$cancel.Location = New-Object System.Drawing.Point(316, 95)
+$cancel.Size = New-Object System.Drawing.Size(84, 30)
+$cancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+
+$form.Controls.Add($label)
+$form.Controls.Add($pin)
+$form.Controls.Add($ok)
+$form.Controls.Add($cancel)
+$form.AcceptButton = $ok
+$form.CancelButton = $cancel
+$form.Add_Shown({ $pin.Focus() })
+
+$result = $form.ShowDialog()
+
+if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+    [Console]::Out.Write($pin.Text)
+    $pin.Text = ''
+    $form.Dispose()
+    exit 0
+}
+
+$pin.Text = ''
+$form.Dispose()
+exit 2
+"#;
+
+#[cfg(target_os = "windows")]
+const WINDOWS_RECOVERY_PHRASE_SCRIPT: &str = r#"
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+$phrase = [Console]::In.ReadLine()
+$fingerprint = [Console]::In.ReadLine()
+
+if ([string]::IsNullOrWhiteSpace($phrase) -or
+    [string]::IsNullOrWhiteSpace($fingerprint)) {
+    exit 3
+}
+
+$form = New-Object System.Windows.Forms.Form
+$form.Text = 'CrabLink Passport Recovery'
+$form.ClientSize = New-Object System.Drawing.Size(680, 360)
+$form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+$form.MaximizeBox = $false
+$form.MinimizeBox = $false
+$form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
+$form.TopMost = $true
+
+$heading = New-Object System.Windows.Forms.Label
+$heading.Text = 'Write down these 24 recovery words in order:'
+$heading.Location = New-Object System.Drawing.Point(20, 18)
+$heading.Size = New-Object System.Drawing.Size(640, 24)
+
+$phraseLabel = New-Object System.Windows.Forms.Label
+$phraseLabel.Text = $phrase
+$phraseLabel.Location = New-Object System.Drawing.Point(20, 52)
+$phraseLabel.Size = New-Object System.Drawing.Size(640, 110)
+$phraseLabel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+
+$fingerprintLabel = New-Object System.Windows.Forms.Label
+$fingerprintLabel.Text = 'Fingerprint: ' + $fingerprint
+$fingerprintLabel.Location = New-Object System.Drawing.Point(20, 178)
+$fingerprintLabel.Size = New-Object System.Drawing.Size(640, 24)
+
+$warning = New-Object System.Windows.Forms.Label
+$warning.Text = 'CrabLink cannot recover this phrase for you. Store it offline before continuing.'
+$warning.Location = New-Object System.Drawing.Point(20, 216)
+$warning.Size = New-Object System.Drawing.Size(640, 48)
+
+$ack = New-Object System.Windows.Forms.Button
+$ack.Text = 'I Wrote It Down'
+$ack.Location = New-Object System.Drawing.Point(438, 300)
+$ack.Size = New-Object System.Drawing.Size(130, 32)
+$ack.DialogResult = [System.Windows.Forms.DialogResult]::OK
+
+$cancel = New-Object System.Windows.Forms.Button
+$cancel.Text = 'Cancel'
+$cancel.Location = New-Object System.Drawing.Point(576, 300)
+$cancel.Size = New-Object System.Drawing.Size(84, 32)
+$cancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+
+$form.Controls.Add($heading)
+$form.Controls.Add($phraseLabel)
+$form.Controls.Add($fingerprintLabel)
+$form.Controls.Add($warning)
+$form.Controls.Add($ack)
+$form.Controls.Add($cancel)
+$form.AcceptButton = $ack
+$form.CancelButton = $cancel
+
+$result = $form.ShowDialog()
+
+$phraseLabel.Text = ''
+$phrase = ''
+$fingerprint = ''
+$form.Dispose()
+
+if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+    [Console]::Out.Write('ACK')
+    exit 0
+}
+
+exit 2
+"#;
 
 pub type SharedDesktopNativeSecretSurface = Arc<dyn DesktopNativeSecretSurfacePort>;
 
@@ -222,6 +359,152 @@ button returned of dialog_result
     }
 }
 
+#[cfg(target_os = "windows")]
+#[derive(Debug, Clone, Copy, Default)]
+pub struct WindowsHiddenPinNativeSecretSurface;
+
+#[cfg(target_os = "windows")]
+impl DesktopNativeSecretSurfacePort for WindowsHiddenPinNativeSecretSurface {
+    fn request_operational_pin(
+        &self,
+    ) -> Result<DesktopNativeSecretSurfaceOutcome, DesktopNativeSecretSurfaceError> {
+        request_windows_hidden_pin()
+    }
+
+    fn show_recovery_phrase(
+        &self,
+        phrase: &str,
+        fingerprint: &str,
+    ) -> Result<DesktopNativeRecoveryPhraseOutcome, DesktopNativeSecretSurfaceError> {
+        request_windows_recovery_phrase_acknowledgement(phrase, fingerprint)
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_system_powershell() -> Result<std::path::PathBuf, DesktopNativeSecretSurfaceError> {
+    let system_root =
+        std::env::var_os("SystemRoot").ok_or(DesktopNativeSecretSurfaceError::Unavailable)?;
+
+    let powershell = std::path::PathBuf::from(system_root)
+        .join("System32")
+        .join("WindowsPowerShell")
+        .join("v1.0")
+        .join("powershell.exe");
+
+    if !powershell.is_absolute() || !powershell.is_file() {
+        return Err(DesktopNativeSecretSurfaceError::Unavailable);
+    }
+
+    Ok(powershell)
+}
+
+#[cfg(target_os = "windows")]
+fn request_windows_hidden_pin(
+) -> Result<DesktopNativeSecretSurfaceOutcome, DesktopNativeSecretSurfaceError> {
+    let powershell = windows_system_powershell()?;
+
+    let output = Command::new(powershell)
+        .args([
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-STA",
+            "-WindowStyle",
+            "Hidden",
+            "-Command",
+            WINDOWS_HIDDEN_PIN_SCRIPT,
+        ])
+        .output()
+        .map_err(|_| DesktopNativeSecretSurfaceError::Unavailable)?;
+
+    if output.status.code() == Some(2) {
+        return Ok(DesktopNativeSecretSurfaceOutcome::Cancelled);
+    }
+
+    if !output.status.success() {
+        return Ok(DesktopNativeSecretSurfaceOutcome::Unavailable);
+    }
+
+    let mut secret = output.stdout;
+
+    while matches!(secret.last(), Some(b'\n' | b'\r')) {
+        secret.pop();
+    }
+
+    match NativeSecretBytes::new(secret) {
+        Ok(secret) => Ok(DesktopNativeSecretSurfaceOutcome::Secret(secret)),
+        Err(_) => Ok(DesktopNativeSecretSurfaceOutcome::Rejected),
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn request_windows_recovery_phrase_acknowledgement(
+    phrase: &str,
+    fingerprint: &str,
+) -> Result<DesktopNativeRecoveryPhraseOutcome, DesktopNativeSecretSurfaceError> {
+    validate_native_recovery_phrase_display(phrase, fingerprint)?;
+
+    let powershell = windows_system_powershell()?;
+
+    let mut child = Command::new(powershell)
+        .args([
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-STA",
+            "-WindowStyle",
+            "Hidden",
+            "-Command",
+            WINDOWS_RECOVERY_PHRASE_SCRIPT,
+        ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|_| DesktopNativeSecretSurfaceError::Unavailable)?;
+
+    {
+        let stdin = child
+            .stdin
+            .as_mut()
+            .ok_or(DesktopNativeSecretSurfaceError::Unavailable)?;
+
+        stdin
+            .write_all(phrase.as_bytes())
+            .map_err(|_| DesktopNativeSecretSurfaceError::Unavailable)?;
+
+        stdin
+            .write_all(b"\n")
+            .map_err(|_| DesktopNativeSecretSurfaceError::Unavailable)?;
+
+        stdin
+            .write_all(fingerprint.as_bytes())
+            .map_err(|_| DesktopNativeSecretSurfaceError::Unavailable)?;
+
+        stdin
+            .write_all(b"\n")
+            .map_err(|_| DesktopNativeSecretSurfaceError::Unavailable)?;
+    }
+
+    let output = child
+        .wait_with_output()
+        .map_err(|_| DesktopNativeSecretSurfaceError::Unavailable)?;
+
+    if output.status.code() == Some(2) {
+        return Ok(DesktopNativeRecoveryPhraseOutcome::Cancelled);
+    }
+
+    if !output.status.success() {
+        return Ok(DesktopNativeRecoveryPhraseOutcome::Unavailable);
+    }
+
+    if output.stdout.as_slice() == b"ACK" {
+        Ok(DesktopNativeRecoveryPhraseOutcome::Acknowledged)
+    } else {
+        Ok(DesktopNativeRecoveryPhraseOutcome::Unavailable)
+    }
+}
+
 fn validate_native_recovery_phrase_display(
     phrase: &str,
     fingerprint: &str,
@@ -252,7 +535,12 @@ pub fn new_desktop_native_secret_surface() -> SharedDesktopNativeSecretSurface {
         Arc::new(MacosHiddenAnswerNativeSecretSurface)
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "windows")]
+    {
+        Arc::new(WindowsHiddenPinNativeSecretSurface)
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         Arc::new(UnavailableDesktopNativeSecretSurface)
     }
@@ -299,7 +587,7 @@ pub struct DesktopNativeSecretSurfacePosture {
 pub fn desktop_native_secret_surface_posture() -> DesktopNativeSecretSurfacePosture {
     DesktopNativeSecretSurfacePosture {
         phase_label: NATIVE_PASSPORT_PHASE15U_LABEL,
-        platform_native_prompt_selected: cfg!(target_os = "macos"),
+        platform_native_prompt_selected: cfg!(any(target_os = "macos", target_os = "windows")),
         macos_hidden_answer_prompt_added: cfg!(target_os = "macos"),
         frontend_pin_input_added: false,
         tauri_pin_argument_added: false,
@@ -336,7 +624,10 @@ pub fn desktop_operational_command_runtime_posture() -> DesktopOperationalComman
         public_lock_command_added: true,
         status_combines_persistent_and_session_state: true,
         native_secret_surface_port_added: true,
-        production_native_pin_prompt_installed: cfg!(target_os = "macos"),
+        production_native_pin_prompt_installed: cfg!(any(
+            target_os = "macos",
+            target_os = "windows"
+        )),
         pin_received_from_webview: false,
         pin_serialized: false,
         operational_vmk_serialized: false,
@@ -609,7 +900,7 @@ mod tests {
         assert_eq!(posture.phase_label, NATIVE_PASSPORT_PHASE15U_LABEL);
         assert_eq!(
             posture.platform_native_prompt_selected,
-            cfg!(target_os = "macos")
+            cfg!(any(target_os = "macos", target_os = "windows"))
         );
         assert_eq!(
             posture.macos_hidden_answer_prompt_added,
@@ -633,7 +924,7 @@ mod tests {
         assert!(posture.native_secret_surface_port_added);
         assert_eq!(
             posture.production_native_pin_prompt_installed,
-            cfg!(target_os = "macos")
+            cfg!(any(target_os = "macos", target_os = "windows"))
         );
         assert!(!posture.pin_received_from_webview);
         assert!(!posture.pin_serialized);
