@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   isAllowedTauriCommand,
@@ -23,10 +24,10 @@ import {
 } from './passportAdapter.js';
 
 const ROOT = path.resolve(
-  new URL(
-    '../../../..',
-    import.meta.url,
-  ).pathname,
+  path.dirname(
+    fileURLToPath(import.meta.url),
+  ),
+  '../../../..',
 );
 
 const RUST = path.join(
