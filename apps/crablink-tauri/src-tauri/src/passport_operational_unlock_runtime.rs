@@ -1,7 +1,7 @@
 //! RO:WHAT — Loads a stored platform-bound Native Passport vault, unseals only its operational factor, unlocks its operational VMK, and retains that VMK in native-only session custody.
 //! RO:WHY — Phase 15S establishes the real locked-to-operational-unlocked transition before exposing a bounded Tauri command.
 //! RO:INTERACTS — NativeVaultStore, NativePlatformSealer, versioned V1/V2 platform-bound vault decoding, Phase 15Q operational unlock, AppState, and the crate-private Physical M1 V1-to-V2 migration bridge.
-//! RO:INVARIANTS — only the device/operational factor is unsealed; recovery-root material remains sealed; one unlock attempt may run at a time; failed attempts restore Locked state; lock drops the zeroizing VMK; migration and DeviceSession signing may borrow the VMK only through purpose-specific crate-private synchronous closures.
+//! RO:INVARIANTS — only the device/operational factor is unsealed; recovery-root material remains sealed; one unlock attempt may run at a time; failed attempts restore Locked state; lock drops the zeroizing VMK; migration and purpose-specific DeviceKey signing may borrow the VMK only through crate-private synchronous closures.
 //! RO:SECURITY — no PIN persistence, root unlock, VMK export, secret serialization, frontend secret return, capability issuance, generic signing, wallet mutation, ledger mutation, or logging.
 //! RO:TEST — tests/phase15s_operational_unseal_and_locked_vault_unlock_runtime.rs plus physical_m1_device_session_signing_boundary.rs.
 
@@ -205,6 +205,31 @@ impl DesktopOperationalVaultSessionStore {
     /// purpose-specific DeviceKey signing operation completes while native
     /// session custody remains held.
     pub(crate) fn with_operational_vmk_for_device_session_signing<T>(
+        &self,
+        operation: impl FnOnce(&NativeSecretBytes) -> T,
+    ) -> Result<T, DesktopOperationalUnlockError> {
+        let slot = self
+            .slot
+            .lock()
+            .map_err(|_| DesktopOperationalUnlockError::SessionUnavailable)?;
+
+        let session = match &*slot {
+            DesktopOperationalVaultSessionSlot::OperationalUnlocked(session) => session,
+            DesktopOperationalVaultSessionSlot::Locked
+            | DesktopOperationalVaultSessionSlot::Unlocking => {
+                return Err(DesktopOperationalUnlockError::SessionUnavailable);
+            }
+        };
+
+        Ok(operation(&session.operational_vmk))
+    }
+
+    /// Borrow the operational VMK only for crate-owned synchronous
+    /// PassportRequestProofV1 signing.
+    ///
+    /// This boundary mirrors DeviceSession signing custody: no VMK is
+    /// returned, cloned, serialized, or held across an async operation.
+    pub(crate) fn with_operational_vmk_for_request_proof_signing<T>(
         &self,
         operation: impl FnOnce(&NativeSecretBytes) -> T,
     ) -> Result<T, DesktopOperationalUnlockError> {

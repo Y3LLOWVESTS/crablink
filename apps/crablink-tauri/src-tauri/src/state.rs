@@ -1,8 +1,8 @@
-//! RO:WHAT — In-memory Tauri app state for the first CrabLink native client lane.
-//! RO:WHY — Proves command boundaries before durable settings/vault/cache work.
-//! RO:INTERACTS — command handlers, svc-gateway HTTP client, local app settings, stream session, video jobs/sources.
-//! RO:INVARIANTS — no lock across await; settings/session/jobs/sources are preferences/display, not backend truth.
-//! RO:SECURITY — no private keys, seeds, raw capabilities, ingest secrets, receipts, media bytes, or spend authority.
+//! RO:WHAT — In-memory Tauri app state for CrabLink native client state, including the short-lived Native Passport capability session.
+//! RO:WHY — Native privilege and temporary device-bound authority must remain outside React while durable network truth stays in RustyOnions.
+//! RO:INTERACTS — command handlers, svc-gateway HTTP client, local settings/media state, Passport vault/session stores, and the memory-only capability session.
+//! RO:INVARIANTS — no lock across await; the capability session is native-memory-only and never becomes durable local truth; backend services remain capability authority.
+//! RO:SECURITY — private keys, seeds, VMKs, PINs, capability material, receipts, media bytes, and spend authority never serialize from AppState to React.
 
 use crate::local_following_feed_cache_store::LocalFollowingFeedCacheStore;
 use crate::local_following_store::DesktopLocalFollowingStore;
@@ -98,6 +98,9 @@ pub struct AppState {
     #[cfg(desktop)]
     pub passport_device_authorization_store:
         crate::passport_device_authorization_store::DesktopDeviceAuthorizationStore,
+    #[cfg(desktop)]
+    pub passport_capability_session:
+        crate::passport_capability_session::DesktopCapabilitySessionStore,
     #[cfg(desktop)]
     pub passport_recovery_acknowledgement_store: DesktopRecoveryAcknowledgementStore,
     #[cfg(desktop)]
@@ -201,6 +204,8 @@ impl AppState {
             passport_vault_store,
             passport_public_identity_store,
             passport_device_authorization_store,
+            passport_capability_session:
+                crate::passport_capability_session::DesktopCapabilitySessionStore::default(),
             passport_platform_sealer,
             passport_platform_material_clearer,
             passport_operational_session: DesktopOperationalVaultSessionStore::default(),

@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — Compact Passport drawer for the CrabLink React shell.
  * RO:WHY — Keeps identity/wallet controls accessible without turning the passport dropdown into a debug dashboard.
- * RO:INTERACTS — appContext, identityClient, walletClient, PassportSummary, PassportActions, devPassportSessions, publicProfileCache, recentReceipts, localCatalog.
- * RO:INVARIANTS — no fake identity, balance, receipt, CID, catalogue, or permission truth; gateway-only reads; no direct wallet/ledger calls.
+ * RO:INTERACTS — appContext, identityClient, walletClient, PassportSummary, PassportActions, passportAdapter, Native Passport device/capability commands, publicProfileCache, recentReceipts, localCatalog.
+ * RO:INVARIANTS — no fake identity, balance, receipt, CID, catalogue, capability, or permission truth; native authority inputs remain outside React; gateway-only product networking; no direct wallet/ledger calls.
  * RO:METRICS — identity/wallet/bootstrap/profile calls inherit gateway x-correlation-id behavior.
  * RO:CONFIG — gatewayUrl, passportSubject, walletAccount, local storage backend, optional dev session URL/hash params.
- * RO:SECURITY — no private keys, seed phrases, private alt mappings, or spend authority are requested/rendered.
- * RO:TEST — manual drawer open/close, bootstrap starter ROC, refresh identity, refresh balance, profile/library/receipts navigation, stream-safe dev session switch.
+ * RO:SECURITY — no private keys, seed phrases, DeviceKey material, proof signatures, capability IDs/material, private alt mappings, or spend authority are requested/rendered.
+ * RO:TEST — focused Physical M1 device/capability source-boundary tests, production Vite build, and physical desktop acceptance.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -40,6 +40,7 @@ import {
   clearNativePassport,
   confirmNativePassportRoot,
   createNativePassport,
+  issueNativePassportUsernameCapability,
   lockNativePassport,
   readNativePassportStatus,
   unlockNativePassportOperational,
@@ -274,7 +275,7 @@ export default function PassportDrawer({ id, navigation, onClose }) {
       context.notify?.({
         title: `Native Passport ${label}`,
         message: `${commandResult.commandName || 'passport command'} returned ${commandResult.state}.`,
-        tone: commandResult.state === 'unavailable' ? 'warning' : 'success',
+        tone: nativePassportCommandTone(commandResult.state),
       });
 
       return next;
@@ -852,6 +853,21 @@ export default function PassportDrawer({ id, navigation, onClose }) {
             </button>
             <button
               type="button"
+              onClick={() =>
+                runNativePassportCommand(
+                  issueNativePassportUsernameCapability,
+                  'issue username capability',
+                )
+              }
+              disabled={!nativePassportAvailable || nativePassportBusy}
+              title="Uses the authenticated local Passport and DeviceKey to request a short-lived native-only username-claim capability through the public CrabNode gateway. No capability ID, proof signature, DeviceKey, PIN, or authority material is returned to React."
+            >
+              {nativePassportCommand === 'issue username capability'
+                ? 'Preparing username claim…'
+                : 'Prepare username claim'}
+            </button>
+            <button
+              type="button"
               onClick={() => runNativePassportCommand(confirmNativePassportRoot, 'root confirm')}
               disabled={!nativePassportAvailable || nativePassportBusy}
               title="Redacted root-sensitive confirmation bridge only; no root material is returned."
@@ -1314,6 +1330,23 @@ function safeNativePassportDisplayValue(value) {
 
 function safeBooleanLabel(value) {
   return value === true ? 'YES' : 'NO';
+}
+
+function nativePassportCommandTone(state) {
+  const normalized = String(state || '')
+    .trim()
+    .toLowerCase();
+
+  if (
+    !normalized ||
+    normalized === 'unavailable' ||
+    normalized === 'cancelled' ||
+    normalized.endsWith('_rejected')
+  ) {
+    return 'warning';
+  }
+
+  return 'success';
 }
 
 function fallbackAwareMessage(error, storage) {

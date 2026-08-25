@@ -1,8 +1,8 @@
 /**
  * RO:WHAT — React-safe adapter for desktop Native Passport Tauri commands.
  * RO:WHY — Phase 15AB gives UI code a narrow command boundary without raw invoke, PIN arguments, or secret custody.
- * RO:INTERACTS — platform/tauriPlatform.js and Rust commands: passport_status, passport_create, passport_lock, passport_unlock_operational, passport_unlock_root, passport_authorize_device, passport_clear.
- * RO:INVARIANTS — fixed command names only; no dynamic command dispatch; no caller-supplied PIN/secret/root material; command DTOs remain redacted display truth.
+ * RO:INTERACTS — platform/tauriPlatform.js and fixed Rust Passport commands, including DeviceKey possession, username-capability issuance, and protected username/profile claim.
+ * RO:INVARIANTS — fixed command names only; no dynamic command dispatch; protected claim forwards public profile intent only; PIN/root/device/capability/proof authority stays native; command DTOs remain redacted display truth.
  * RO:SECURITY — never serializes PINs, VMKs, vault bytes, platform factors, recovery-root material, private keys, seed phrases, raw capabilities, wallet mutation, or ledger mutation.
  * RO:TEST — src/adapters/passportAdapter.test.mjs.
  */
@@ -21,6 +21,10 @@ export const PASSPORT_COMMANDS = Object.freeze({
   authorizeDevice: 'passport_authorize_device',
   verifyDevicePossession:
     'passport_verify_device_possession',
+  issueUsernameCapability:
+    'passport_issue_username_capability',
+  claimUsername:
+    'passport_claim_username',
   recoveryCeremony:
     'passport_recovery_ceremony',
   clear: 'passport_clear',
@@ -67,6 +71,22 @@ const RECOVERY_CEREMONY_DEFAULTS =
     wordsReturnedToWebview: false,
     secretMaterialReturned: false,
     recoveryRootExported: false,
+    walletOrLedgerMutated: false,
+  });
+
+const USERNAME_CLAIM_DEFAULTS =
+  Object.freeze({
+    schema:
+      'crablink.native-passport.username-claim-command.v1',
+    commandName:
+      PASSPORT_COMMANDS.claimUsername,
+    sourcePhaseLabel: 'UNKNOWN',
+    state: 'username_claim_rejected',
+    username: '',
+    handle: '',
+    profileCrabUrl: '',
+    backendConfirmed: false,
+    redacted: true,
     walletOrLedgerMutated: false,
   });
 
@@ -139,6 +159,67 @@ export function normalizePassportCommandDto(dto, commandName) {
     encryptedVaultMutated: value.encryptedVaultMutated === true,
     platformMaterialMutated: value.platformMaterialMutated === true,
     recoveryRootUnsealed: false,
+    walletOrLedgerMutated: false,
+  };
+}
+
+export function normalizePassportUsernameClaimDto(
+  dto,
+) {
+  const value =
+    dto && typeof dto === 'object'
+      ? dto
+      : {};
+
+  const state =
+    stringOrDefault(
+      value.state,
+      USERNAME_CLAIM_DEFAULTS.state,
+    );
+
+  const backendConfirmed =
+    state === 'username_claimed' &&
+    value.backendConfirmed === true;
+
+  return {
+    ...USERNAME_CLAIM_DEFAULTS,
+    schema: stringOrDefault(
+      value.schema,
+      USERNAME_CLAIM_DEFAULTS.schema,
+    ),
+    commandName: stringOrDefault(
+      value.commandName,
+      USERNAME_CLAIM_DEFAULTS.commandName,
+    ),
+    sourcePhaseLabel: stringOrDefault(
+      value.sourcePhaseLabel,
+      USERNAME_CLAIM_DEFAULTS
+        .sourcePhaseLabel,
+    ),
+    state,
+    username:
+      backendConfirmed
+        ? stringOrDefault(
+            value.username,
+            '',
+          )
+        : '',
+    handle:
+      backendConfirmed
+        ? stringOrDefault(
+            value.handle,
+            '',
+          )
+        : '',
+    profileCrabUrl:
+      backendConfirmed
+        ? stringOrDefault(
+            value.profileCrabUrl,
+            '',
+          )
+        : '',
+    backendConfirmed,
+    redacted: true,
     walletOrLedgerMutated: false,
   };
 }
@@ -268,6 +349,52 @@ export async function verifyNativePassportDevicePossession() {
   );
 }
 
+export async function issueNativePassportUsernameCapability() {
+  return runPassportCommand(
+    PASSPORT_COMMANDS.issueUsernameCapability,
+  );
+}
+
+export async function claimNativePassportUsername(
+  profileIntent = {},
+) {
+  const input =
+    profileIntent &&
+    typeof profileIntent === 'object'
+      ? profileIntent
+      : {};
+
+  const safeIntent = {
+    requested_username:
+      typeof input.requestedUsername === 'string'
+        ? input.requestedUsername
+        : '',
+    display_name:
+      optionalPublicProfileText(
+        input.displayName,
+      ),
+    bio:
+      optionalPublicProfileText(
+        input.bio,
+      ),
+    avatar_image:
+      optionalPublicProfileText(
+        input.avatarImage,
+      ),
+  };
+
+  const dto = await callTauri(
+    PASSPORT_COMMANDS.claimUsername,
+    {
+      intent: safeIntent,
+    },
+  );
+
+  return normalizePassportUsernameClaimDto(
+    dto,
+  );
+}
+
 export async function beginNativePassportRecoveryCeremony() {
   const dto = await callTauri(
     PASSPORT_COMMANDS.recoveryCeremony,
@@ -284,6 +411,18 @@ async function runPassportCommand(commandName) {
   const dto = await callTauri(commandName);
 
   return normalizePassportCommandDto(dto, commandName);
+}
+
+function optionalPublicProfileText(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim();
+
+  return normalized.length > 0
+    ? normalized
+    : null;
 }
 
 function stringOrDefault(value, fallback) {

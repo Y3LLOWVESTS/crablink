@@ -1,14 +1,18 @@
-//! RO:WHAT — Implements redacted desktop Native Passport status, lock, operational unlock, device authorization, DeviceKey possession verification, and local clear commands.
-//! RO:WHY — Tauri mediates native Passport privilege while React remains display/user intent and never receives custody or signed authority material.
-//! RO:INTERACTS — operational/root/device-authorization/device-session runtimes, AppState, svc-passport status contracts, local authorization storage, and the Tauri handler registry.
-//! RO:INVARIANTS — DeviceAuthorization is strictly reverified; possession accepts no caller identity/secret fields and returns only redacted status; clear removes authorization metadata before descriptor/custody cleanup.
-//! RO:SECURITY — PIN, VMK, platform factor, vault bytes, root/device secrets, DeviceAuthorization, proof signatures, and raw capabilities never serialize to React.
-//! RO:TEST — focused Passport command, DeviceAuthorization/DeviceSession boundaries, clear lifecycle, and operational-unlock integration tests.
+//! RO:WHAT — Implements redacted desktop Native Passport status, lock, operational unlock, device authorization, DeviceKey possession, bounded username-capability issuance, protected username/profile claim, and local clear commands.
+//! RO:WHY — Tauri mediates native Passport privilege while React supplies only public user intent and never receives custody or signed authority material.
+//! RO:INTERACTS — operational/root/device-authorization/device-session/capability/protected-username runtimes, AppState, svc-passport status contracts, local authorization storage, and the Tauri handler registry.
+//! RO:INVARIANTS — DeviceAuthorization is strictly reverified; possession/capability commands accept no caller authority; username claim accepts public profile intent only while Passport/device/capability/proof authority remains native; lock and clear drop native capability authority before continuing.
+//! RO:SECURITY — PIN, VMK, platform factor, vault bytes, root/device secrets, DeviceAuthorization, proof signatures, capability IDs/material, Passport ownership authority, and raw capabilities never serialize to React.
+//! RO:TEST — focused Passport command, DeviceAuthorization/DeviceSession/protected-username boundaries, clear lifecycle, and operational-unlock integration tests.
 
 use crate::passport_device_authorization_command_bridge::PHYSICAL_M1_DEVICE_AUTHORIZATION_COMMAND_BRIDGE_LABEL;
 use crate::passport_device_authorization_persistence_runtime::authorize_or_reuse_persisted_physical_m1_device_authorization;
 use crate::passport_device_session_http_runtime::{
     prove_physical_m1_device_session, PHYSICAL_M1_DEVICE_SESSION_HTTP_LABEL,
+};
+use crate::passport_username_claim_http_runtime::{
+    claim_physical_m1_protected_username, DesktopProtectedUsernameClaimHttpError,
+    DesktopProtectedUsernameClaimIntentV1, PHYSICAL_M1_PROTECTED_USERNAME_HTTP_LABEL,
 };
 use crate::{
     passport_clear_command_runtime::{
@@ -370,6 +374,11 @@ pub fn passport_status(
 pub fn passport_clear(
     state: State<'_, AppState>,
 ) -> Result<PassportOperationalCommandDtoV1, PassportStatusProblemV1> {
+    state
+        .passport_capability_session
+        .clear()
+        .map_err(|_| unavailable_problem())?;
+
     if state.passport_device_authorization_store.clear().is_err() {
         return Ok(PassportOperationalCommandDtoV1 {
             schema: PASSPORT_CLEAR_DTO_SCHEMA_V1,
@@ -618,6 +627,11 @@ pub fn passport_create(
 pub fn passport_lock(
     state: State<'_, AppState>,
 ) -> Result<PassportOperationalCommandDtoV1, PassportStatusProblemV1> {
+    state
+        .passport_capability_session
+        .clear()
+        .map_err(|_| unavailable_problem())?;
+
     let outcome = lock_desktop_native_passport_operational(&state.passport_operational_session)
         .map_err(|_| unavailable_problem())?;
 
@@ -797,6 +811,133 @@ pub fn passport_authorize_device(
 }
 
 /// Public redacted DeviceKey-possession command schema.
+pub const PASSPORT_USERNAME_CAPABILITY_DTO_SCHEMA_V1: &str =
+    "crablink.native-passport.username-capability-command.v1";
+
+pub const PASSPORT_ISSUE_USERNAME_CAPABILITY_COMMAND: &str = "passport_issue_username_capability";
+
+pub const PASSPORT_USERNAME_CLAIM_DTO_SCHEMA_V1: &str =
+    "crablink.native-passport.username-claim-command.v1";
+
+pub const PASSPORT_CLAIM_USERNAME_COMMAND: &str = "passport_claim_username";
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PassportUsernameClaimCommandDtoV1 {
+    pub schema: &'static str,
+    pub command_name: &'static str,
+    pub source_phase_label: &'static str,
+    pub state: &'static str,
+    pub username: Option<String>,
+    pub handle: Option<String>,
+    pub profile_crab_url: Option<String>,
+    pub backend_confirmed: bool,
+    pub redacted: bool,
+    pub wallet_or_ledger_mutated: bool,
+}
+
+/// Obtain the fixed Physical M1 username capability using only native-owned
+/// Passport/device state and return redacted outcome state.
+///
+/// The WebView supplies no Passport ID, Device ID, scopes, challenge,
+/// signature, capability ID, expiry, PIN, or secret material.
+#[tauri::command]
+pub async fn passport_issue_username_capability(
+    state: State<'_, AppState>,
+) -> Result<PassportOperationalCommandDtoV1, PassportStatusProblemV1> {
+    let capability_issued = matches!(
+        crate::passport_capability_http_runtime::
+            issue_physical_m1_username_capability(state.inner()).await,
+        Ok(outcome)
+            if outcome.local_device_authorization_verified
+                && outcome.service_challenge_verified
+                && outcome.capability_issued
+                && outcome.capability_stored_native_only
+    );
+
+    Ok(PassportOperationalCommandDtoV1 {
+        schema: PASSPORT_USERNAME_CAPABILITY_DTO_SCHEMA_V1,
+        command_name: PASSPORT_ISSUE_USERNAME_CAPABILITY_COMMAND,
+        source_phase_label:
+            crate::passport_capability_http_runtime::PHYSICAL_M1_CAPABILITY_HTTP_LABEL,
+        state: if capability_issued {
+            "capability_issued"
+        } else {
+            "capability_rejected"
+        },
+        redacted: true,
+        native_secure_input_requested: false,
+        pin_received_from_webview: false,
+        secret_material_returned: false,
+        session_changed: false,
+        encrypted_vault_mutated: false,
+        platform_material_mutated: false,
+        recovery_root_unsealed: false,
+        wallet_or_ledger_mutated: false,
+    })
+}
+
+/// Claim one protected username/profile through the native authority path.
+///
+/// The WebView supplies public profile intent only. Passport identity, Device
+/// identity, capability authority, request nonce, timestamp, request binding,
+/// DeviceKey signature, and ingress selection remain native-owned.
+#[tauri::command]
+pub async fn passport_claim_username(
+    intent: DesktopProtectedUsernameClaimIntentV1,
+    state: State<'_, AppState>,
+) -> Result<PassportUsernameClaimCommandDtoV1, PassportStatusProblemV1> {
+    match claim_physical_m1_protected_username(state.inner(), intent).await {
+        Ok(outcome) => Ok(PassportUsernameClaimCommandDtoV1 {
+            schema: PASSPORT_USERNAME_CLAIM_DTO_SCHEMA_V1,
+            command_name: PASSPORT_CLAIM_USERNAME_COMMAND,
+            source_phase_label: PHYSICAL_M1_PROTECTED_USERNAME_HTTP_LABEL,
+            state: "username_claimed",
+            username: Some(outcome.username),
+            handle: Some(outcome.handle),
+            profile_crab_url: Some(outcome.profile_crab_url),
+            backend_confirmed: outcome.backend_confirmed,
+            redacted: true,
+            wallet_or_ledger_mutated: false,
+        }),
+
+        Err(error) => Ok(PassportUsernameClaimCommandDtoV1 {
+            schema: PASSPORT_USERNAME_CLAIM_DTO_SCHEMA_V1,
+            command_name: PASSPORT_CLAIM_USERNAME_COMMAND,
+            source_phase_label: PHYSICAL_M1_PROTECTED_USERNAME_HTTP_LABEL,
+            state: protected_username_claim_state_label(error),
+            username: None,
+            handle: None,
+            profile_crab_url: None,
+            backend_confirmed: false,
+            redacted: true,
+            wallet_or_ledger_mutated: false,
+        }),
+    }
+}
+
+fn protected_username_claim_state_label(
+    error: DesktopProtectedUsernameClaimHttpError,
+) -> &'static str {
+    match error {
+        DesktopProtectedUsernameClaimHttpError::InvalidUsername => "username_invalid",
+
+        DesktopProtectedUsernameClaimHttpError::UsernameUnavailable => "username_unavailable",
+
+        DesktopProtectedUsernameClaimHttpError::ClaimConflict => "username_claim_conflict",
+
+        DesktopProtectedUsernameClaimHttpError::RequestReplayRejected => "request_replay_rejected",
+
+        DesktopProtectedUsernameClaimHttpError::ServiceUnavailable
+        | DesktopProtectedUsernameClaimHttpError::RequestFailed
+        | DesktopProtectedUsernameClaimHttpError::ResponseReadFailed => {
+            "username_claim_service_unavailable"
+        }
+
+        _ => "username_claim_rejected",
+    }
+}
+
 pub const PASSPORT_DEVICE_POSSESSION_DTO_SCHEMA_V1: &str =
     "crablink.native-passport.device-possession-command.v1";
 

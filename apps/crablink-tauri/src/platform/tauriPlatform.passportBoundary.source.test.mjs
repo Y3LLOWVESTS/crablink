@@ -22,6 +22,8 @@ const PASSPORT_COMMANDS = Object.freeze([
   'passport_unlock_root',
   'passport_authorize_device',
   'passport_verify_device_possession',
+  'passport_issue_username_capability',
+  'passport_claim_username',
   'passport_clear',
 ]);
 
@@ -92,7 +94,7 @@ test('phase15ah passport adapter command map matches admitted command names', ()
   assert.doesNotMatch(adapter, /callTauri\s*\(\s*commandName\s*,\s*\{/);
 });
 
-test('phase15ah admission does not add export, capability, username, wallet, or ledger authority', () => {
+test('phase15ah admission does not add caller-owned identity, export, wallet, or ledger authority', () => {
   const combined = `${stripComments(readRequired(PLATFORM))}\n${stripComments(readRequired(ADAPTER))}`;
   const allowed = bracketBlock(combined, 'ALLOWED_TAURI_COMMANDS');
 
@@ -134,7 +136,7 @@ test('phase15ah admission does not add export, capability, username, wallet, or 
   }
 });
 
-test('phase15ah only changes boundary admission; adapter remains fixed no-args dispatch', () => {
+test('phase15ah legacy Passport actions remain fixed no-args dispatch while protected claim is purpose-specific', () => {
   const adapter = stripComments(readRequired(ADAPTER));
 
   for (const required of [

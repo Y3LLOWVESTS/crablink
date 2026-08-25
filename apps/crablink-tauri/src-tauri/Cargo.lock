@@ -700,11 +700,13 @@ dependencies = [
 name = "crablink-tauri"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "blake3",
  "crablink-native-core",
  "getrandom 0.3.4",
  "reqwest 0.12.28",
  "ron-auth",
+ "ron-policy",
  "ron-proto",
  "secret-service",
  "security-framework",

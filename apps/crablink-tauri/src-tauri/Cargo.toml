@@ -25,9 +25,11 @@ tokio-util = { version = "0.7", features = ["io"] }
 urlencoding = "2"
 blake3 = "1"
 getrandom = "0.3"
+base64 = "0.22"
 crablink-native-core = { path = "../../../crates/crablink-native-core" }
 ron-auth = { path = "../../../../RustyOnions/crates/ron-auth" }
 ron-proto = { path = "../../../../RustyOnions/crates/ron-proto" }
+ron-policy = { path = "../../../../RustyOnions/crates/ron-policy" }
 svc-passport = { path = "../../../../RustyOnions/crates/svc-passport", default-features = false, features = ["native-passport"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]

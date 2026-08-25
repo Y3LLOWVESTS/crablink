@@ -76,29 +76,46 @@ test('phase15ac drawer imports only the safe Passport adapter for native command
   assert.match(readRequired(ADAPTER), /export async function readNativePassportStatus/);
 });
 
-test('phase15ac drawer exposes native runtime status and fixed command actions', () => {
+test('phase15ac drawer exposes native runtime state and reviewed fixed command actions', () => {
   const source = readRequired(DRAWER);
 
   for (const required of [
-    'Native Passport runtime',
-    'Local Native Passport',
-    'Refresh native status',
-    'Create local Passport',
-    'Unlock operational',
-    'Lock',
-    'Confirm root action',
-    'Clear local Passport',
     'nativePassportState',
     'nativePassportCommand',
     'nativePassportAvailable',
     'refreshNativePassportStatus',
     'runNativePassportCommand',
+    'readNativePassportStatus',
+    'createNativePassport',
+    'unlockNativePassportOperational',
+    'lockNativePassport',
+    'confirmNativePassportRoot',
+    'clearNativePassport',
+    'authorizeNativePassportDevice',
+    'verifyNativePassportDevicePossession',
+    'issueNativePassportUsernameCapability',
+    'Prepare username claim',
   ]) {
-    assert.match(source, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(
+      source,
+      new RegExp(
+        required.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          '\\$&',
+        ),
+      ),
+    );
   }
 
-  assert.match(source, /nativePassportAvailable\s*=\s*isTauriRuntime\(\)/);
-  assert.match(source, /disabled=\{!nativePassportAvailable \|\| nativePassportBusy\}/);
+  assert.match(
+    source,
+    /nativePassportAvailable\s*=\s*isTauriRuntime\(\)/,
+  );
+
+  assert.match(
+    source,
+    /disabled=\{!nativePassportAvailable \|\| nativePassportBusy\}/,
+  );
 });
 
 test('phase15ac drawer command handlers call adapter functions without arguments', () => {
@@ -135,8 +152,9 @@ test('phase15ac drawer command handlers call adapter functions without arguments
   }
 });
 
-test('phase15ac drawer does not claim root, capability, username, wallet, or ledger authority', () => {
-  const source = stripJsComments(readRequired(DRAWER));
+test('phase15ac drawer retains redacted authority boundaries after purpose-specific capability intent', () => {
+  const source =
+    stripJsComments(readRequired(DRAWER));
 
   for (const forbidden of [
     'pinReceivedFromWebview: true',
@@ -145,16 +163,96 @@ test('phase15ac drawer does not claim root, capability, username, wallet, or led
     'walletOrLedgerMutated: true',
     'rootVmkUnlocked: true',
     'rootFactorUnsealed: true',
-    'issueCapability',
+    'privateKey',
+    'seedPhrase',
+    'recoveryWords',
+    'rawCapability',
+    'capabilityId',
+    'proofSignature',
+    'serviceSignature',
     'mutateUsername',
     'directWallet',
     'directLedger',
     'solana',
     'rox',
   ]) {
-    assert.doesNotMatch(source, new RegExp(forbidden, 'i'));
+    assert.doesNotMatch(
+      source,
+      new RegExp(forbidden, 'i'),
+    );
   }
 
-  assert.match(source, /Root confirmation remains redacted/);
-  assert.match(source, /No PIN or\s+recovery material is accepted by this React drawer/);
+  const statusRows = functionBody(
+    source,
+    'nativePassportStatusRowsFromDto',
+  );
+
+  const safeDisplay = functionBody(
+    source,
+    'safeNativePassportDisplayValue',
+  );
+
+  assert.match(
+    statusRows,
+    /safeNativePassportDisplayValue\(status\.capabilityMaterial\)/,
+    'capability status may be inspected only through the redacted display helper',
+  );
+
+  assert.match(
+    safeDisplay,
+    /normalized === ['"]ABSENT['"]/,
+  );
+
+  assert.match(
+    safeDisplay,
+    /normalized === ['"]REDACTED['"]/,
+  );
+
+  assert.match(
+    safeDisplay,
+    /return ['"]REDACTED['"]/,
+  );
+
+  assert.doesNotMatch(
+    source,
+    /setNativePassportState\([^)]*capabilityMaterial/i,
+    'capability material must never become React state authority',
+  );
+
+  assert.doesNotMatch(
+    source,
+    /\bcapabilityMaterial\s*:/i,
+    'drawer must not construct capability-bearing objects',
+  );
+
+  assert.match(
+    source,
+    /issueNativePassportUsernameCapability/,
+  );
+
+  assert.match(
+    source,
+    /runNativePassportCommand\(\s*issueNativePassportUsernameCapability,\s*['"]issue username capability['"]/,
+  );
+
+  assert.doesNotMatch(
+    source,
+    /['"]passport_issue_username_capability['"]/,
+    'raw native command name must remain outside the drawer',
+  );
+
+  assert.doesNotMatch(
+    source,
+    /\binvoke\s*\(/,
+  );
+
+  assert.doesNotMatch(
+    source,
+    /\bcallTauri\s*\(/,
+  );
+
+  assert.doesNotMatch(
+    source,
+    /@tauri-apps\/api\/core/,
+  );
 });

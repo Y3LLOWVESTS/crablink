@@ -13,6 +13,40 @@ fn repo_file(relative: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(relative)
 }
 
+/// Return exactly one Rust method beginning at `signature`.
+///
+/// These boundary tests inspect small, known synchronous methods. Brace
+/// matching prevents unrelated later methods/comments from entering the
+/// security scan when another helper is inserted into the same impl block.
+fn exact_method_source<'a>(source: &'a str, signature: &str) -> &'a str {
+    let start = source.find(signature).expect("method signature");
+
+    let opening_offset = source[start..].find('{').expect("method opening brace");
+
+    let opening = start + opening_offset;
+    let mut depth = 0_usize;
+
+    for (offset, character) in source[opening..].char_indices() {
+        match character {
+            '{' => depth += 1,
+
+            '}' => {
+                depth = depth.checked_sub(1).expect("balanced method braces");
+
+                if depth == 0 {
+                    let end = opening + offset + character.len_utf8();
+
+                    return &source[start..end];
+                }
+            }
+
+            _ => {}
+        }
+    }
+
+    panic!("method closing brace");
+}
+
 #[test]
 fn device_session_vmk_borrow_is_crate_private_synchronous_and_non_exporting() {
     let source = fs::read_to_string(repo_file("src/passport_operational_unlock_runtime.rs"))
@@ -22,16 +56,10 @@ fn device_session_vmk_borrow_is_crate_private_synchronous_and_non_exporting() {
 
     assert!(!source.contains("pub fn with_operational_vmk_for_device_session_signing"));
 
-    let start = source
-        .find("pub(crate) fn with_operational_vmk_for_device_session_signing")
-        .expect("device-session borrow start");
-
-    let end = source[start..]
-        .find("    pub fn lock(")
-        .map(|offset| start + offset)
-        .expect("device-session borrow end");
-
-    let bridge = &source[start..end];
+    let bridge = exact_method_source(
+        &source,
+        "pub(crate) fn with_operational_vmk_for_device_session_signing",
+    );
 
     for forbidden in [
         ".to_vec()",

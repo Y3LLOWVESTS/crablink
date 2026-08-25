@@ -2,7 +2,7 @@
  * RO:WHAT — Central typed Tauri invoke adapter for CrabLink.
  * RO:WHY — React and product clients must not call raw native privilege directly.
  * RO:INTERACTS — @tauri-apps/api/core, shared/api/*, Tauri Rust command allowlist.
- * RO:INVARIANTS — allowlisted commands only; no shell/eval/raw/native/QuickChain/verifier/committee/attestation/quorum/finality/passport-registry/validator-capability authority commands; no validator lifecycle, downtime, equivocation, replay-challenge, governance-parameter, bond, dispute, challenge-window, appeal, freeze, slash, staking-market, or liquidity-pool authority commands.
+ * RO:INVARIANTS — allowlisted commands only; no shell/eval/raw/native/QuickChain/verifier/committee/attestation/quorum/finality/caller-owned passport-registry/validator-capability authority commands; no validator lifecycle, downtime, equivocation, replay-challenge, governance-parameter, bond, dispute, challenge-window, appeal, freeze, slash, staking-market, or liquidity-pool authority commands.
  * RO:SECURITY — command names are validated before invoke; thrown errors are redacted before display.
  * RO:TEST — npm run check:quickchain-boundary.
  */
@@ -67,6 +67,8 @@ export const ALLOWED_TAURI_COMMANDS = Object.freeze([
   'passport_unlock_root',
   'passport_authorize_device',
   'passport_verify_device_possession',
+  'passport_issue_username_capability',
+  'passport_claim_username',
   'passport_recovery_ceremony',
   'passport_clear',
 
@@ -74,6 +76,11 @@ export const ALLOWED_TAURI_COMMANDS = Object.freeze([
   'local_following_feed_cache_write',]);
 
 const ALLOWED_TAURI_COMMAND_SET = new Set(ALLOWED_TAURI_COMMANDS);
+
+const REVIEWED_FORBIDDEN_PATTERN_EXCEPTIONS =
+  new Set([
+    'passport_issue_username_capability',
+  ]);
 
 const FORBIDDEN_COMMAND_PATTERNS = Object.freeze([
   /^raw[_-]/i,
@@ -111,7 +118,17 @@ export function isAllowedTauriCommand(command) {
     return false;
   }
 
-  if (FORBIDDEN_COMMAND_PATTERNS.some((pattern) => pattern.test(normalized))) {
+  if (
+    REVIEWED_FORBIDDEN_PATTERN_EXCEPTIONS.has(normalized)
+  ) {
+    return ALLOWED_TAURI_COMMAND_SET.has(normalized);
+  }
+
+  if (
+    FORBIDDEN_COMMAND_PATTERNS.some(
+      (pattern) => pattern.test(normalized),
+    )
+  ) {
     return false;
   }
 

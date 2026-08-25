@@ -1,12 +1,12 @@
 /**
- * RO:WHAT — Gateway/passport truth panel for crab://profile.
- * RO:WHY — Lets CrabLink claim/read backend-confirmed public @username profiles through svc-gateway only.
- * RO:INTERACTS — ProfilePage, identityClient, app settings, shell gateway/passport/wallet state, publicProfileCache.
- * RO:INVARIANTS — gateway-only truth; no fake balance; no fake profile publication; no fake username claim; no fake rep/mod scores.
- * RO:METRICS — identity calls inherit gateway x-correlation-id behavior.
- * RO:CONFIG — gateway URL, passport subject, wallet account labels from app settings.
- * RO:SECURITY — no keys, no seed phrases, no direct wallet/ledger/storage/index/omnigate/svc-passport calls.
- * RO:TEST — manual crab://profile route smoke; gateway profile claim/read smoke; passport drawer profile-cache smoke.
+ * RO:WHAT — Public profile truth panel for crab://profile with gateway reads and the protected native username/profile claim path.
+ * RO:WHY — Backend username ownership must be claimed with native Passport/device/capability authority while React supplies only public profile intent.
+ * RO:INTERACTS — ProfilePage, passportAdapter protected claim, identityClient read path, app settings, and publicProfileCache.
+ * RO:INVARIANTS — reads remain gateway-derived; mutation uses only claimNativePassportUsername; React never supplies Passport subject, Device ID, capability, request proof, signature, nonce, or trusted time.
+ * RO:METRICS — profile reads inherit gateway correlation behavior; protected claim exposes only redacted command state and backend-confirmed public identifiers.
+ * RO:CONFIG — public profile form fields plus configured gateway read surface.
+ * RO:SECURITY — no keys, seeds, PINs, capability material, proofs, signatures, direct internal service calls, wallet mutation, or ledger mutation.
+ * RO:TEST — ProfileGateway.physicalM1ProtectedClaim.source.test.mjs plus existing profile route acceptance.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -24,6 +24,9 @@ import {
   normalizeProfileUsername,
   normalizePublicProfileResponse,
 } from '../../shared/api/identityClient.js';
+import {
+  claimNativePassportUsername,
+} from '../../adapters/passportAdapter.js';
 import {
   getRocTruth,
   getUsernameTruth,
@@ -183,13 +186,14 @@ export default function ProfileGateway({ app, route, draftState }) {
       return;
     }
 
-    if (!identityClient?.claimPassportProfile) {
-      setProfileState(errorState('claim', 'Gateway identity client is unavailable.', 'missing_identity_client'));
-      return;
-    }
-
     if (!lookupUsername) {
-      setProfileState(errorState('claim', 'Enter an @username before claiming backend profile truth.', 'missing_username'));
+      setProfileState(
+        errorState(
+          'claim',
+          'Enter an @username before claiming backend profile truth.',
+          'missing_username',
+        ),
+      );
       return;
     }
 
@@ -200,38 +204,85 @@ export default function ProfileGateway({ app, route, draftState }) {
     });
 
     try {
-      const response = await identityClient.claimPassportProfile(
-        {
-          passport_subject: passportSubject,
-          wallet_account: walletAccount,
-          requested_username: normalizeHandle(lookupUsername),
-          display_name: displayName,
+      const response =
+        await claimNativePassportUsername({
+          requestedUsername:
+            lookupUsername,
+          displayName,
           bio,
-          avatar_image: avatarImage,
-        },
+          avatarImage,
+        });
+
+      const claimState =
+        String(
+          response?.state || '',
+        ).trim();
+
+      if (
+        claimState !==
+          'username_claimed' ||
+        response?.backendConfirmed !==
+          true
+      ) {
+        const reason =
+          claimState ||
+          'username_claim_rejected';
+
+        setProfileState(
+          errorState(
+            'claim',
+            profileErrorMessage({
+              reason,
+            }),
+            reason,
+          ),
+        );
+
+        return;
+      }
+
+      const profile =
+        normalizePublicProfileResponse({
+          username:
+            response.username,
+          handle:
+            response.handle,
+          username_status:
+            'confirmed',
+          profile_crab_url:
+            response.profileCrabUrl,
+        });
+
+      writePublicProfileCache(
+        profile,
         {
-          confirmed: true,
+          action: 'claim',
+          source:
+            'native protected profile claim via svc-gateway',
+          route:
+            '/identity/passport/profile/claim',
+          correlationId: '',
         },
       );
-      const profile = normalizePublicProfileResponse(response?.data || response?.body || response);
-
-      writePublicProfileCache(profile, {
-        action: 'claim',
-        source: 'svc-gateway public profile route',
-        route: response?.route || '/identity/passport/profile/claim',
-        correlationId: response?.correlationId || response?.response?.correlationId || '',
-      });
 
       setProfileState({
         status: 'success',
-        checkedAt: new Date().toISOString(),
+        checkedAt:
+          new Date().toISOString(),
         action: 'claim',
         profile,
         response,
         error: null,
       });
     } catch (error) {
-      setProfileState(errorState('claim', profileErrorMessage(error), reasonFromError(error), error));
+      setProfileState(
+        errorState(
+          'claim',
+          profileErrorMessage(error),
+          reasonFromError(error),
+          error,
+        ),
+      );
     }
   }
 
@@ -336,7 +387,9 @@ export default function ProfileGateway({ app, route, draftState }) {
           {busy && profileState.action === 'read' ? 'Reading…' : 'Read Existing @username'}
         </Button>
         <Button variant="primary" onClick={claimProfile} disabled={busy || !lookupUsername}>
-          {busy && profileState.action === 'claim' ? 'Claiming…' : 'Claim / Confirm @username'}
+          {busy && profileState.action === 'claim'
+            ? 'Claiming through native Passport…'
+            : 'Claim / Confirm @username'}
         </Button>
         {profileState.status !== 'idle' && (
           <Button variant="secondary" onClick={clearProfileState} disabled={busy}>
@@ -399,9 +452,11 @@ export default function ProfileGateway({ app, route, draftState }) {
       </div>
 
       <p className="profile-panel-note">
-        This panel calls only the configured svc-gateway profile routes. It does not call svc-passport,
-        omnigate, svc-wallet, ron-ledger, svc-storage, or svc-index directly. Cached or local profile
-        fields are display hints only; backend confirmation requires username_status="confirmed".
+        Profile reads use the configured svc-gateway route. Username/profile mutation crosses the
+        reviewed native Passport command, which binds the active capability and DeviceKey proof to
+        the exact request before using svc-gateway. React never receives or supplies that authority.
+        Cached or local profile fields remain display hints; backend confirmation still requires a
+        successful protected claim or username_status="confirmed" from a backend read.
       </p>
 
       {profileState.status !== 'idle' && (
@@ -461,6 +516,26 @@ function profileErrorMessage(error) {
     return 'That username is already taken. Try another one.';
   }
 
+  if (reason === 'username_invalid') {
+    return 'That username is not valid. Check the spelling and try again.';
+  }
+
+  if (reason === 'username_claim_conflict') {
+    return 'The username claim conflicts with existing backend identity state.';
+  }
+
+  if (reason === 'request_replay_rejected') {
+    return 'The protected request was rejected as a replay. Retry the claim to create a fresh native proof.';
+  }
+
+  if (reason === 'username_claim_service_unavailable') {
+    return 'The protected username service is unavailable. Check the CrabNode stack and retry.';
+  }
+
+  if (reason === 'username_claim_rejected') {
+    return 'The protected username claim was rejected. Confirm the Passport is unlocked and use Prepare username claim in the Passport drawer before retrying.';
+  }
+
   if (reason === 'profile_not_found') {
     return 'No public profile found for this username yet.';
   }
@@ -478,6 +553,16 @@ function errorHint(reason) {
       return 'Reserved handles include protocol names like site, wallet, image, profile, post, comment, and b3.';
     case 'username_unavailable':
       return 'The backend rejected the claim because another passport already owns that username.';
+    case 'username_invalid':
+      return 'Use the canonical username syntax without spaces or unsupported characters.';
+    case 'username_claim_conflict':
+      return 'Backend identity state did not permit this claim.';
+    case 'request_replay_rejected':
+      return 'Retry once; the native runtime generates a new request nonce and proof for each attempt.';
+    case 'username_claim_service_unavailable':
+      return 'Check svc-passport, Omnigate, and svc-gateway readiness, then retry through the protected native path.';
+    case 'username_claim_rejected':
+      return 'Unlock the Passport and prepare the username capability in the Passport drawer before retrying.';
     case 'profile_not_found':
       return 'You can claim this username if it belongs to the current main passport.';
     case 'upstream_unavailable':

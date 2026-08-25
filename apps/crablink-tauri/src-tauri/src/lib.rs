@@ -12,6 +12,12 @@ mod media;
 #[cfg(all(test, desktop))]
 mod onboarding_phase11b_command_path_tests;
 #[cfg(desktop)]
+pub mod passport_capability_http_runtime;
+#[cfg(desktop)]
+pub mod passport_capability_session;
+#[cfg(desktop)]
+pub mod passport_capability_trust;
+#[cfg(desktop)]
 pub mod passport_clear_command_runtime;
 #[cfg(desktop)]
 pub mod passport_create_command_runtime;
@@ -66,9 +72,13 @@ pub mod passport_register_root_intent;
 #[cfg(desktop)]
 pub mod passport_register_root_trust;
 #[cfg(desktop)]
+pub mod passport_request_proof_signing_runtime;
+#[cfg(desktop)]
 pub mod passport_root_confirmation_command_runtime;
 #[cfg(desktop)]
 pub mod passport_status_runtime;
+#[cfg(desktop)]
+pub mod passport_username_claim_http_runtime;
 #[cfg(desktop)]
 pub mod passport_vault_create_runtime;
 #[cfg(desktop)]
@@ -236,6 +246,8 @@ pub fn run() {
             commands::passport::passport_unlock_root,
             commands::passport::passport_authorize_device,
             commands::passport::passport_verify_device_possession,
+            commands::passport::passport_issue_username_capability,
+            commands::passport::passport_claim_username,
             commands::passport::passport_recovery_ceremony,
             commands::wallet::wallet_balance_gateway,
             commands::gateway::gateway_request,
