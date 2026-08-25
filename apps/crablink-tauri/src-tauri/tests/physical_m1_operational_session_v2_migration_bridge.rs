@@ -388,11 +388,30 @@ fn physical_m1_session_bridge_is_crate_private_and_non_serializing() {
         .find("pub(crate) fn with_operational_vmk_for_vault_migration")
         .expect("bridge method start");
 
-    let bridge_end = session_source[bridge_start..]
-        .find("    pub fn lock(")
+    let bridge_open = session_source[bridge_start..]
+        .find('{')
         .map(|offset| bridge_start + offset)
-        .expect("bridge method end");
+        .expect("bridge method opening brace");
 
+    let mut bridge_depth = 0usize;
+    let mut bridge_end = None;
+
+    for (offset, byte) in session_source.as_bytes()[bridge_open..].iter().enumerate() {
+        match byte {
+            b'{' => bridge_depth += 1,
+            b'}' => {
+                bridge_depth = bridge_depth.checked_sub(1).expect("bridge brace depth");
+
+                if bridge_depth == 0 {
+                    bridge_end = Some(bridge_open + offset + 1);
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let bridge_end = bridge_end.expect("bridge method closing brace");
     let bridge_source = &session_source[bridge_start..bridge_end];
 
     for forbidden in [

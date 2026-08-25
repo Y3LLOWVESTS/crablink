@@ -1,7 +1,7 @@
 //! RO:WHAT — Implements redacted desktop Native Passport status, lock, operational unlock, device authorization, DeviceKey possession, bounded username-capability issuance, protected username/profile claim, and local clear commands.
 //! RO:WHY — Tauri mediates native Passport privilege while React supplies only public user intent and never receives custody or signed authority material.
-//! RO:INTERACTS — operational/root/device-authorization/device-session/capability/protected-username runtimes, AppState, svc-passport status contracts, local authorization storage, and the Tauri handler registry.
-//! RO:INVARIANTS — DeviceAuthorization is strictly reverified; possession/capability commands accept no caller authority; username claim accepts public profile intent only while Passport/device/capability/proof authority remains native; lock and clear drop native capability authority before continuing.
+//! RO:INTERACTS — operational/root/device-authorization/device-session/capability/protected-username runtimes, V1-to-V2 vault migration, AppState, svc-passport status contracts, local authorization storage, and the Tauri handler registry.
+//! RO:INVARIANTS — DeviceAuthorization is strictly reverified; successful operational unlock ensures an authenticated V2 vault before DeviceKey consumers run; migration failure drops native session/capability authority; protected username authority remains native; lock and clear drop native capability authority before continuing.
 //! RO:SECURITY — PIN, VMK, platform factor, vault bytes, root/device secrets, DeviceAuthorization, proof signatures, capability IDs/material, Passport ownership authority, and raw capabilities never serialize to React.
 //! RO:TEST — focused Passport command, DeviceAuthorization/DeviceSession/protected-username boundaries, clear lifecycle, and operational-unlock integration tests.
 
@@ -13,6 +13,10 @@ use crate::passport_device_session_http_runtime::{
 use crate::passport_username_claim_http_runtime::{
     claim_physical_m1_protected_username, DesktopProtectedUsernameClaimHttpError,
     DesktopProtectedUsernameClaimIntentV1, PHYSICAL_M1_PROTECTED_USERNAME_HTTP_LABEL,
+};
+use crate::passport_vault_v2_migration_runtime::{
+    migrate_desktop_native_passport_session_v1_to_v2, DesktopSessionV1ToV2MigrationError,
+    DesktopV1ToV2MigrationError, DesktopV1ToV2MigrationOutcome,
 };
 use crate::{
     passport_clear_command_runtime::{
@@ -656,11 +660,29 @@ pub fn passport_lock(
     })
 }
 
+/// Return whether a failed migration may already have replaced the vault.
+///
+/// Pre-write failures and `WriteFailedOriginalV1Preserved` do not claim a
+/// mutation. Post-write failures are conservatively reported as mutated
+/// because the command cannot truthfully claim the original bytes remain.
+const fn migration_error_may_have_mutated_vault(error: DesktopSessionV1ToV2MigrationError) -> bool {
+    matches!(
+        error,
+        DesktopSessionV1ToV2MigrationError::Migration(
+            DesktopV1ToV2MigrationError::PostWriteReadbackFailed
+                | DesktopV1ToV2MigrationError::PostWriteVerificationFailed
+                | DesktopV1ToV2MigrationError::PostWriteStateAmbiguous
+        )
+    )
+}
+
 /// Trigger operational unlock through the native secret-surface owner.
 ///
-/// This command intentionally accepts no PIN or secret argument. Production
-/// returns `unavailable` until a reviewed platform-native PIN prompt replaces
-/// the truthful unavailable adapter owned by AppState.
+/// This command accepts no PIN or secret argument. Once native operational
+/// custody is established, the production lifecycle idempotently ensures the
+/// stored Passport is V2 before DeviceKey consumers are allowed to proceed.
+/// Migration failure drops capability/session authority and reports only a
+/// redacted unavailable result.
 #[tauri::command]
 pub fn passport_unlock_operational(
     state: State<'_, AppState>,
@@ -673,6 +695,69 @@ pub fn passport_unlock_operational(
             state.passport_secret_surface.as_ref(),
             &state.passport_pending_operational_session,
         );
+
+    let session_changed = matches!(
+        outcome.state,
+        DesktopOperationalUnlockCommandState::OperationalUnlocked
+    );
+
+    let mut encrypted_vault_mutated = false;
+
+    if matches!(
+        outcome.state,
+        DesktopOperationalUnlockCommandState::OperationalUnlocked
+            | DesktopOperationalUnlockCommandState::AlreadyUnlocked
+    ) {
+        let migration_ready = match migrate_desktop_native_passport_session_v1_to_v2(
+            &state.passport_vault_store,
+            &state.passport_operational_session,
+        ) {
+            Ok(DesktopV1ToV2MigrationOutcome::Migrated) => {
+                encrypted_vault_mutated = true;
+                true
+            }
+            Ok(DesktopV1ToV2MigrationOutcome::AlreadyV2) => true,
+            Ok(DesktopV1ToV2MigrationOutcome::V2ObservedAfterWriteError) => {
+                encrypted_vault_mutated = true;
+                false
+            }
+            Err(error) => {
+                encrypted_vault_mutated = migration_error_may_have_mutated_vault(error);
+                false
+            }
+        };
+
+        if !migration_ready {
+            // Attempt both revocations even if one fails. Returning a normal
+            // operational result while either authority remains would be an
+            // unsafe success claim.
+            let capability_clear = state.passport_capability_session.clear();
+
+            let session_lock =
+                lock_desktop_native_passport_operational(&state.passport_operational_session);
+
+            let rollback_session_changed = match (capability_clear, session_lock) {
+                (Ok(()), Ok(lock_outcome)) => lock_outcome.session_dropped,
+                _ => return Err(unavailable_problem()),
+            };
+
+            return Ok(PassportOperationalCommandDtoV1 {
+                schema: PASSPORT_UNLOCK_OPERATIONAL_DTO_SCHEMA_V1,
+                command_name: PASSPORT_UNLOCK_OPERATIONAL_COMMAND,
+                source_phase_label: NATIVE_PASSPORT_PHASE15T_LABEL,
+                state: "unavailable",
+                redacted: true,
+                native_secure_input_requested: outcome.native_secure_input_requested,
+                pin_received_from_webview: false,
+                secret_material_returned: false,
+                session_changed: session_changed || rollback_session_changed,
+                encrypted_vault_mutated,
+                platform_material_mutated: false,
+                recovery_root_unsealed: false,
+                wallet_or_ledger_mutated: false,
+            });
+        }
+    }
 
     let state_label = match outcome.state {
         DesktopOperationalUnlockCommandState::NoPassport => "no_passport",
@@ -692,11 +777,8 @@ pub fn passport_unlock_operational(
         native_secure_input_requested: outcome.native_secure_input_requested,
         pin_received_from_webview: false,
         secret_material_returned: false,
-        session_changed: matches!(
-            outcome.state,
-            DesktopOperationalUnlockCommandState::OperationalUnlocked
-        ),
-        encrypted_vault_mutated: false,
+        session_changed,
+        encrypted_vault_mutated,
         platform_material_mutated: false,
         recovery_root_unsealed: false,
         wallet_or_ledger_mutated: false,
