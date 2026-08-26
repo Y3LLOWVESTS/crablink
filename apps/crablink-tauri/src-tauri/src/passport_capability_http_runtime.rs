@@ -1,7 +1,7 @@
 //! RO:WHAT — Executes CrabLink's native fixed IssueCapability challenge → service verification → DeviceKey proof → capability validation → memory-only session flow through gateway port 8090.
 //! RO:WHY — CN-4 must obtain real bounded username-claim authority without exposing DeviceKey material, capability material, or authority inputs to React.
 //! RO:INTERACTS — AppState HTTP/settings, public Passport descriptor, authenticated V2 device identity, persisted DeviceAuthorization, pinned capability challenge trust, canonical DeviceSession proof transcript, native DeviceKey signer, ron-policy version, and memory-only capability session.
-//! RO:INVARIANTS — exact canonical scopes are identity.read + identity.username.claim; local DeviceAuthorization is verified before network I/O; gateway exactly 8090; challenge trust before signing; proof time uses the shared bounded authenticated challenge-window normalization before signing; response capability must match the signed challenge and current authorization; no lock crosses await; capability is stored only after every check passes.
+//! RO:INVARIANTS — exact canonical scopes are identity.read + identity.username.claim; local DeviceAuthorization is verified before network I/O; gateway exactly 8090; challenge trust before signing; proof and returned server capability timestamps use the reviewed bounded cross-host clock-skew policy; response capability must match the signed challenge and current authorization; no lock crosses await; capability is stored only after every check passes.
 //! RO:METRICS — none; errors remain stable/redacted classes.
 //! RO:CONFIG — controlled beta gateway http://127.0.0.1:8090, request timeout at most 30 seconds, server challenge TTL 60 seconds, reviewed 5-second cross-host challenge clock-skew policy, accepted capability lifetime at most one hour.
 //! RO:SECURITY — no RecoveryRoot, root PIN, VMK/seed export, generic signing command, direct 9090/5307 access, WebView authority fields, durable capability persistence, username mutation, wallet mutation, or ledger mutation.
@@ -40,6 +40,7 @@ use crate::{
     passport_device_authorization_store::DesktopDeviceAuthorizationVerificationContextV1,
     passport_device_session_http_runtime::normalize_device_session_proof_created_at_ms,
     passport_device_session_signing_runtime::sign_desktop_native_passport_device_session_proof,
+    passport_register_root_trust::PHYSICAL_M1_REGISTER_ROOT_MAX_CLOCK_SKEW_MS,
     passport_vault_v2_migration_runtime::read_desktop_native_passport_session_device_public_identity,
     state::AppState,
 };
@@ -371,6 +372,14 @@ pub async fn issue_physical_m1_username_capability(
     })
 }
 
+fn capability_issue_precedes_proof_beyond_clock_skew(
+    capability_issued_at_ms: u64,
+    proof_created_at_ms: u64,
+) -> bool {
+    capability_issued_at_ms.saturating_add(PHYSICAL_M1_REGISTER_ROOT_MAX_CLOCK_SKEW_MS)
+        < proof_created_at_ms
+}
+
 fn validate_issued_capability(
     capability: &NativePassportDeviceBoundCapabilityV1,
     challenge: &PassportChallengeV1,
@@ -399,7 +408,10 @@ fn validate_issued_capability(
         || capability.scopes != challenge.requested_scopes
         || capability.policy_version != NATIVE_PASSPORT_PRIVATE_BETA_DEVICE_POLICY_VERSION
         || capability.root_key_epoch != Some(authorization.root_key_epoch)
-        || capability.issued_at_ms < proof_created_at_ms
+        || capability_issue_precedes_proof_beyond_clock_skew(
+            capability.issued_at_ms,
+            proof_created_at_ms,
+        )
         || capability.expires_at_ms <= now_ms
     {
         return Err(DesktopCapabilityHttpError::CapabilityBindingRejected);
@@ -450,4 +462,40 @@ fn current_unix_time_ms() -> Result<u64, DesktopCapabilityHttpError> {
     }
 
     Ok(millis)
+}
+
+#[cfg(test)]
+mod capability_response_time_tests {
+    use super::capability_issue_precedes_proof_beyond_clock_skew;
+
+    const SERVER_ISSUED_AT_MS: u64 = 1_000_000;
+
+    #[test]
+    fn server_issue_time_after_client_proof_is_accepted() {
+        assert!(!capability_issue_precedes_proof_beyond_clock_skew(
+            SERVER_ISSUED_AT_MS,
+            SERVER_ISSUED_AT_MS - 1_000,
+        ));
+    }
+
+    #[test]
+    fn bounded_cross_host_capability_issue_time_is_accepted() {
+        assert!(!capability_issue_precedes_proof_beyond_clock_skew(
+            SERVER_ISSUED_AT_MS,
+            SERVER_ISSUED_AT_MS + 4_999,
+        ));
+
+        assert!(!capability_issue_precedes_proof_beyond_clock_skew(
+            SERVER_ISSUED_AT_MS,
+            SERVER_ISSUED_AT_MS + 5_000,
+        ));
+    }
+
+    #[test]
+    fn capability_issue_time_beyond_clock_skew_fails_closed() {
+        assert!(capability_issue_precedes_proof_beyond_clock_skew(
+            SERVER_ISSUED_AT_MS,
+            SERVER_ISSUED_AT_MS + 5_001,
+        ));
+    }
 }

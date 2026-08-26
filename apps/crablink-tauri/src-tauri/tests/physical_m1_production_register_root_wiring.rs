@@ -8,50 +8,39 @@
 use std::{fs, path::PathBuf};
 
 fn source(relative: &str) -> String {
-    fs::read_to_string(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join(relative),
-    )
-    .unwrap_or_else(|error| {
-        panic!("failed to read {relative}: {error}")
-    })
-    .replace("\r\n", "\n")
+    fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(relative))
+        .unwrap_or_else(|error| panic!("failed to read {relative}: {error}"))
+        .replace("\r\n", "\n")
 }
 
 #[test]
 fn cn4_register_root_runtime_uses_only_public_8090_and_exact_routes() {
-    let runtime =
-        source("src/passport_register_root_http_runtime.rs");
+    let runtime = source("src/passport_register_root_http_runtime.rs");
 
-    assert!(runtime.contains(
-        r#"pub const PHYSICAL_M1_REGISTER_ROOT_GATEWAY_URL: &str =
-    "http://127.0.0.1:8090";"#,
-    ));
+    let normalized_runtime = runtime.split_whitespace().collect::<Vec<_>>().join(" ");
 
-    assert!(runtime.contains(
-        r#""/identity/passport/register/challenge""#,
-    ));
+    assert!(
+        normalized_runtime.contains(
+            r#"pub const PHYSICAL_M1_REGISTER_ROOT_GATEWAY_URL: &str = "http://127.0.0.1:8090";"#
+        ),
+        "RegisterRoot gateway constant must remain exactly loopback 8090 regardless of rustfmt line wrapping",
+    );
 
-    assert!(runtime.contains(
-        r#""/identity/passport/register/proof""#,
-    ));
+    assert!(runtime.contains(r#""/identity/passport/register/challenge""#,));
+
+    assert!(runtime.contains(r#""/identity/passport/register/proof""#,));
 
     assert!(!runtime.contains("http://127.0.0.1:9090"));
     assert!(!runtime.contains("http://127.0.0.1:5307"));
 
-    assert!(runtime.contains(
-        "REGISTER_ROOT_MAX_RESPONSE_BODY_BYTES: usize = 16 * 1024",
-    ));
+    assert!(runtime.contains("REGISTER_ROOT_MAX_RESPONSE_BODY_BYTES: usize = 16 * 1024",));
 
-    assert!(runtime.contains(
-        "REGISTER_ROOT_MAX_REQUEST_TIMEOUT_MS: u64 = 30_000",
-    ));
+    assert!(runtime.contains("REGISTER_ROOT_MAX_REQUEST_TIMEOUT_MS: u64 = 30_000",));
 }
 
 #[test]
 fn cn4_register_root_verifies_service_before_recovery_root_access() {
-    let runtime =
-        source("src/passport_register_root_http_runtime.rs");
+    let runtime = source("src/passport_register_root_http_runtime.rs");
 
     let start = runtime
         .find("pub async fn register_physical_m1_root")
@@ -80,9 +69,7 @@ fn cn4_register_root_verifies_service_before_recovery_root_access() {
         .find("sign_native_recovery_root_registration_proof_v1(")
         .expect("canonical RecoveryRoot signer");
 
-    let drop_pin = function
-        .find("drop(root_pin);")
-        .expect("root PIN drop");
+    let drop_pin = function.find("drop(root_pin);").expect("root PIN drop");
 
     let drop_recovery = function
         .find("drop(recovery_factor);")
@@ -108,18 +95,14 @@ fn cn4_register_root_command_is_zero_user_argument_and_redacted() {
         .expect("RegisterRoot Tauri command");
 
     let end = commands[start..]
-        .find(
-            "\n/// Begin the native-only Passport recovery ceremony.",
-        )
+        .find("\n/// Begin the native-only Passport recovery ceremony.")
         .map(|offset| start + offset)
         .expect("RegisterRoot command end");
 
     let command = &commands[start..end];
 
     assert!(command.contains("state: State<'_, AppState>"));
-    assert!(command.contains(
-        "register_physical_m1_root(state.inner()).await",
-    ));
+    assert!(command.contains("register_physical_m1_root(state.inner()).await",));
 
     for forbidden in [
         "intent:",
@@ -148,26 +131,35 @@ fn cn4_register_root_command_is_zero_user_argument_and_redacted() {
 fn cn4_server_register_root_remains_separate_from_local_root_finalization() {
     let commands = source("src/commands/passport.rs");
 
-    assert!(commands.contains(
-        "pub fn passport_unlock_root(",
-    ));
+    assert!(commands.contains("pub fn passport_unlock_root(",));
 
-    assert!(commands.contains(
-        "pub async fn passport_register_root(",
-    ));
+    assert!(commands.contains("pub async fn passport_register_root(",));
 
-    let runtime =
-        source("src/passport_register_root_http_runtime.rs");
+    let runtime = source("src/passport_register_root_http_runtime.rs");
 
-    assert!(!runtime.contains(
-        "passport_device_authorization_store",
-    ));
+    assert!(!runtime.contains("passport_device_authorization_store",));
 
-    assert!(!runtime.contains(
-        "issue_physical_m1_username_capability",
-    ));
+    assert!(!runtime.contains("issue_physical_m1_username_capability",));
 
-    assert!(!runtime.contains(
-        "claim_physical_m1_protected_username",
-    ));
+    assert!(!runtime.contains("claim_physical_m1_protected_username",));
+}
+
+#[test]
+fn cn4_register_root_reuses_shared_bounded_proof_time() {
+    let runtime = source("src/passport_register_root_http_runtime.rs");
+
+    assert!(
+        runtime.contains("normalize_device_session_proof_created_at_ms("),
+        "RegisterRoot must reuse the reviewed bounded proof-time normalizer",
+    );
+
+    assert!(
+        !runtime.contains("proof_created_at_ms < challenge.issued_at_ms"),
+        "RegisterRoot must not restore the raw zero-skew lower-bound check",
+    );
+
+    assert!(
+        !runtime.contains("proof_created_at_ms > challenge.expires_at_ms"),
+        "RegisterRoot must not restore the raw zero-skew upper-bound check",
+    );
 }

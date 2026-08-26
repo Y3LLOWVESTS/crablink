@@ -1,9 +1,9 @@
 //! RO:WHAT — Registers the locally owned Native Passport RecoveryRoot through the fixed CrabNode RegisterRoot challenge/proof flow.
 //! RO:WHY — Physical desktop enrollment must make the locally finalized Passport root durable in svc-passport before a root-authorized device can become active network authority.
-//! RO:INTERACTS — AppState gateway/settings, public Passport descriptor, operational session, native root-confirmation surface, platform RecoveryRoot compartment, RegisterRoot intent/trust verification, ron-auth proof transcript, svc-passport RecoveryRoot signer, and public 8090 RegisterRoot routes.
-//! RO:INVARIANTS — operational unlock and immutable public identity precede network I/O; gateway is exactly loopback 8090; the service challenge verifies before RecoveryRoot access; root PIN and RecoveryRoot are dropped before proof submission; no AppState mutex, VMK, PIN, or RecoveryRoot borrow crosses an await.
+//! RO:INTERACTS — AppState gateway/settings, public Passport descriptor, operational session, native root-confirmation surface, platform RecoveryRoot compartment, RegisterRoot intent/trust verification, shared bounded cross-host proof-time normalization, ron-auth proof transcript, svc-passport RecoveryRoot signer, and public 8090 RegisterRoot routes.
+//! RO:INVARIANTS — operational unlock and immutable public identity precede network I/O; gateway is exactly loopback 8090; the service challenge verifies before RecoveryRoot access; proof time may normalize only inside the reviewed cross-host skew and authenticated challenge window; root PIN and RecoveryRoot are dropped before proof submission; no AppState mutex, VMK, PIN, or RecoveryRoot borrow crosses an await.
 //! RO:METRICS — none; failures project only to stable redacted classes.
-//! RO:CONFIG — controlled beta uses http://127.0.0.1:8090, identity.read only, root epoch zero, a 16 KiB response cap, and the existing request timeout bounded to 30 seconds.
+//! RO:CONFIG — controlled beta uses http://127.0.0.1:8090, identity.read only, root epoch zero, a 16 KiB response cap, the existing request timeout bounded to 30 seconds, and the reviewed 5-second cross-host challenge clock-skew policy.
 //! RO:SECURITY — no PIN, RecoveryRoot, VMK, root secret, signature, proof payload, Passport authority object, capability, username authority, wallet authority, or ledger authority is returned to React; no direct 9090/5307 client path exists.
 //! RO:TEST — physical_m1_production_register_root_wiring.rs plus later physical Windows RegisterRoot acceptance.
 
@@ -27,9 +27,8 @@ use svc_passport::native::{
 };
 
 use crate::{
-    passport_operational_command_runtime::{
-        DesktopNativeSecretSurfaceOutcome,
-    },
+    passport_device_session_http_runtime::normalize_device_session_proof_created_at_ms,
+    passport_operational_command_runtime::DesktopNativeSecretSurfaceOutcome,
     passport_operational_unlock_runtime::DesktopOperationalVaultSessionState,
     passport_register_root_intent::{
         physical_m1_register_root_operation_hash, PHYSICAL_M1_REGISTER_ROOT_KEY_EPOCH,
@@ -38,20 +37,15 @@ use crate::{
     state::AppState,
 };
 
-pub const PHYSICAL_M1_REGISTER_ROOT_HTTP_LABEL: &str =
-    "PHYSICAL_M1_NATIVE_REGISTER_ROOT_HTTP_V1";
+pub const PHYSICAL_M1_REGISTER_ROOT_HTTP_LABEL: &str = "PHYSICAL_M1_NATIVE_REGISTER_ROOT_HTTP_V1";
 
-pub const PHYSICAL_M1_REGISTER_ROOT_GATEWAY_URL: &str =
-    "http://127.0.0.1:8090";
+pub const PHYSICAL_M1_REGISTER_ROOT_GATEWAY_URL: &str = "http://127.0.0.1:8090";
 
-const REGISTER_ROOT_CHALLENGE_PATH: &str =
-    "/identity/passport/register/challenge";
+const REGISTER_ROOT_CHALLENGE_PATH: &str = "/identity/passport/register/challenge";
 
-const REGISTER_ROOT_PROOF_PATH: &str =
-    "/identity/passport/register/proof";
+const REGISTER_ROOT_PROOF_PATH: &str = "/identity/passport/register/proof";
 
-const REGISTER_ROOT_RESULT_SCHEMA: &str =
-    "svc-passport.native-register-root-proof-result.v1";
+const REGISTER_ROOT_RESULT_SCHEMA: &str = "svc-passport.native-register-root-proof-result.v1";
 
 const REGISTER_ROOT_MAX_RESPONSE_BODY_BYTES: usize = 16 * 1024;
 const REGISTER_ROOT_MAX_REQUEST_TIMEOUT_MS: u64 = 30_000;
@@ -124,9 +118,7 @@ impl DesktopRegisterRootHttpError {
             | Self::ProofClockUnavailable
             | Self::ProofRequestFailed
             | Self::ProofResponseTooLarge
-            | Self::ProofResponseReadFailed => {
-                "root_registration_service_unavailable"
-            }
+            | Self::ProofResponseReadFailed => "root_registration_service_unavailable",
 
             Self::NativeSecretSurfaceUnavailable
             | Self::PublicDescriptorLoadFailed
@@ -261,21 +253,15 @@ pub async fn register_physical_m1_root(
     let passport_id = PassportIdV1::parse(descriptor.passport_id.as_str())
         .map_err(|_| DesktopRegisterRootHttpError::ProtocolIdentityConversionFailed)?;
 
-    let proto_root_public_key =
-        Ed25519PublicKeyHex::parse(descriptor.root_public_key.as_str())
-            .map_err(|_| DesktopRegisterRootHttpError::ProtocolIdentityConversionFailed)?;
+    let proto_root_public_key = Ed25519PublicKeyHex::parse(descriptor.root_public_key.as_str())
+        .map_err(|_| DesktopRegisterRootHttpError::ProtocolIdentityConversionFailed)?;
 
-    let requested_scopes = vec![
-        NativePassportScopeV1::parse("identity.read")
-            .map_err(|_| DesktopRegisterRootHttpError::ProtocolIdentityConversionFailed)?,
-    ];
+    let requested_scopes = vec![NativePassportScopeV1::parse("identity.read")
+        .map_err(|_| DesktopRegisterRootHttpError::ProtocolIdentityConversionFailed)?];
 
     let operation_body_hash =
-        physical_m1_register_root_operation_hash(
-            &passport_id,
-            descriptor.root_public_key.as_str(),
-        )
-        .map_err(|_| DesktopRegisterRootHttpError::OperationHashFailed)?;
+        physical_m1_register_root_operation_hash(&passport_id, descriptor.root_public_key.as_str())
+            .map_err(|_| DesktopRegisterRootHttpError::OperationHashFailed)?;
 
     let (gateway_url, timeout_ms) = {
         let settings = state
@@ -309,9 +295,7 @@ pub async fn register_physical_m1_root(
     };
 
     let challenge_response = client
-        .post(format!(
-            "{gateway_url}{REGISTER_ROOT_CHALLENGE_PATH}"
-        ))
+        .post(format!("{gateway_url}{REGISTER_ROOT_CHALLENGE_PATH}"))
         .timeout(timeout)
         .json(&challenge_request)
         .send()
@@ -319,9 +303,7 @@ pub async fn register_physical_m1_root(
         .map_err(|_| DesktopRegisterRootHttpError::ChallengeRequestFailed)?;
 
     if !challenge_response.status().is_success() {
-        return Err(
-            DesktopRegisterRootHttpError::ChallengeResponseRejected,
-        );
+        return Err(DesktopRegisterRootHttpError::ChallengeResponseRejected);
     }
 
     let challenge_bytes = read_bounded_response_body(
@@ -331,14 +313,11 @@ pub async fn register_physical_m1_root(
     )
     .await?;
 
-    let challenge: PassportChallengeV1 =
-        serde_json::from_slice(&challenge_bytes)
-            .map_err(|_| DesktopRegisterRootHttpError::ChallengeDecodeFailed)?;
+    let challenge: PassportChallengeV1 = serde_json::from_slice(&challenge_bytes)
+        .map_err(|_| DesktopRegisterRootHttpError::ChallengeDecodeFailed)?;
 
     let challenge_verify_now_ms =
-        current_unix_time_ms(
-            DesktopRegisterRootHttpError::ChallengeClockUnavailable,
-        )?;
+        current_unix_time_ms(DesktopRegisterRootHttpError::ChallengeClockUnavailable)?;
 
     verify_physical_m1_register_root_challenge(
         &challenge,
@@ -349,40 +328,31 @@ pub async fn register_physical_m1_root(
     )
     .map_err(|_| DesktopRegisterRootHttpError::ChallengeTrustRejected)?;
 
-    let root_pin =
-        match state
-            .passport_secret_surface
-            .request_root_confirmation_pin()
-        {
-            Ok(DesktopNativeSecretSurfaceOutcome::Secret(pin)) => pin,
+    let root_pin = match state
+        .passport_secret_surface
+        .request_root_confirmation_pin()
+    {
+        Ok(DesktopNativeSecretSurfaceOutcome::Secret(pin)) => pin,
 
-            Ok(DesktopNativeSecretSurfaceOutcome::Rejected) => {
-                return Err(
-                    DesktopRegisterRootHttpError::RootConfirmationRejected,
-                );
-            }
+        Ok(DesktopNativeSecretSurfaceOutcome::Rejected) => {
+            return Err(DesktopRegisterRootHttpError::RootConfirmationRejected);
+        }
 
-            Ok(DesktopNativeSecretSurfaceOutcome::Cancelled) => {
-                return Err(
-                    DesktopRegisterRootHttpError::RootConfirmationCancelled,
-                );
-            }
+        Ok(DesktopNativeSecretSurfaceOutcome::Cancelled) => {
+            return Err(DesktopRegisterRootHttpError::RootConfirmationCancelled);
+        }
 
-            Ok(DesktopNativeSecretSurfaceOutcome::Unavailable) | Err(_) => {
-                return Err(
-                    DesktopRegisterRootHttpError::NativeSecretSurfaceUnavailable,
-                );
-            }
-        };
+        Ok(DesktopNativeSecretSurfaceOutcome::Unavailable) | Err(_) => {
+            return Err(DesktopRegisterRootHttpError::NativeSecretSurfaceUnavailable);
+        }
+    };
 
-    let encrypted_vault =
-        load_native_encrypted_vault(&state.passport_vault_store)
-            .map_err(|_| DesktopRegisterRootHttpError::VaultLoadFailed)?
-            .ok_or(DesktopRegisterRootHttpError::NoStoredVault)?;
+    let encrypted_vault = load_native_encrypted_vault(&state.passport_vault_store)
+        .map_err(|_| DesktopRegisterRootHttpError::VaultLoadFailed)?
+        .ok_or(DesktopRegisterRootHttpError::NoStoredVault)?;
 
-    let versioned_vault =
-        decode_native_platform_bound_vault_versioned(&encrypted_vault)
-            .map_err(|_| DesktopRegisterRootHttpError::VaultDecodeFailed)?;
+    let versioned_vault = decode_native_platform_bound_vault_versioned(&encrypted_vault)
+        .map_err(|_| DesktopRegisterRootHttpError::VaultDecodeFailed)?;
 
     let platform_bound_vault = versioned_vault.base_v1();
 
@@ -403,43 +373,28 @@ pub async fn register_physical_m1_root(
 
     drop(root_pin);
 
-    let derived_root =
-        derive_native_recovery_public_identity_v1(&recovery_factor)
-            .map_err(|_| {
-                DesktopRegisterRootHttpError::RootIdentityDerivationFailed
-            })?;
+    let derived_root = derive_native_recovery_public_identity_v1(&recovery_factor)
+        .map_err(|_| DesktopRegisterRootHttpError::RootIdentityDerivationFailed)?;
 
     if derived_root.passport_id.as_str() != descriptor.passport_id.as_str()
-        || derived_root.root_public_key.as_str()
-            != descriptor.root_public_key.as_str()
+        || derived_root.root_public_key.as_str() != descriptor.root_public_key.as_str()
     {
         return Err(DesktopRegisterRootHttpError::RootIdentityMismatch);
     }
 
-    let challenge_hash_text =
-        passport_challenge_v1_transcript_b3_hex(
-            &challenge.signing_payload(),
-        )
+    let challenge_hash_text = passport_challenge_v1_transcript_b3_hex(&challenge.signing_payload())
         .map_err(|_| DesktopRegisterRootHttpError::ChallengeHashFailed)?;
 
-    let challenge_transcript_hash = B3DigestHex::parse(
-        "challenge_transcript_hash",
-        challenge_hash_text,
+    let challenge_transcript_hash =
+        B3DigestHex::parse("challenge_transcript_hash", challenge_hash_text)
+            .map_err(|_| DesktopRegisterRootHttpError::ChallengeHashFailed)?;
+
+    let proof_created_at_ms = normalize_device_session_proof_created_at_ms(
+        challenge.issued_at_ms,
+        challenge.expires_at_ms,
+        current_unix_time_ms(DesktopRegisterRootHttpError::ProofClockUnavailable)?,
     )
-    .map_err(|_| DesktopRegisterRootHttpError::ChallengeHashFailed)?;
-
-    let proof_created_at_ms =
-        current_unix_time_ms(
-            DesktopRegisterRootHttpError::ProofClockUnavailable,
-        )?;
-
-    if proof_created_at_ms < challenge.issued_at_ms
-        || proof_created_at_ms > challenge.expires_at_ms
-    {
-        return Err(
-            DesktopRegisterRootHttpError::ProofTimeOutsideChallenge,
-        );
-    }
+    .map_err(|_| DesktopRegisterRootHttpError::ProofTimeOutsideChallenge)?;
 
     let scope_refs = challenge
         .requested_scopes
@@ -448,17 +403,13 @@ pub async fn register_physical_m1_root(
         .collect::<Vec<_>>();
 
     let transcript = RootRegistrationProofTranscriptV1 {
-        challenge_contract_domain:
-            PHASE8A_PROOF_CHALLENGE_CONTRACT_DOMAIN,
+        challenge_contract_domain: PHASE8A_PROOF_CHALLENGE_CONTRACT_DOMAIN,
 
-        challenge_contract_version:
-            PHASE8A_PROOF_CHALLENGE_CONTRACT_VERSION,
+        challenge_contract_version: PHASE8A_PROOF_CHALLENGE_CONTRACT_VERSION,
 
-        proof_contract_domain:
-            PHASE8B_PROOF_CONTRACT_DOMAIN,
+        proof_contract_domain: PHASE8B_PROOF_CONTRACT_DOMAIN,
 
-        proof_contract_version:
-            PHASE8B_PROOF_CONTRACT_VERSION,
+        proof_contract_version: PHASE8B_PROOF_CONTRACT_VERSION,
 
         challenge_id: &challenge.challenge_id,
 
@@ -471,9 +422,7 @@ pub async fn register_physical_m1_root(
         passport_id: challenge
             .passport_id
             .as_ref()
-            .ok_or(
-                DesktopRegisterRootHttpError::ChallengeTrustRejected,
-            )?,
+            .ok_or(DesktopRegisterRootHttpError::ChallengeTrustRejected)?,
 
         root_public_key: &proto_root_public_key,
 
@@ -484,9 +433,7 @@ pub async fn register_physical_m1_root(
         operation_body_hash: challenge
             .operation_body_hash
             .as_ref()
-            .ok_or(
-                DesktopRegisterRootHttpError::ChallengeTrustRejected,
-            )?,
+            .ok_or(DesktopRegisterRootHttpError::ChallengeTrustRejected)?,
 
         challenge_transcript_hash: &challenge_transcript_hash,
 
@@ -499,23 +446,16 @@ pub async fn register_physical_m1_root(
         proof_created_at_ms,
     };
 
-    let signed =
-        sign_native_recovery_root_registration_proof_v1(
-            &recovery_factor,
-            &transcript,
-        )
+    let signed = sign_native_recovery_root_registration_proof_v1(&recovery_factor, &transcript)
         .map_err(|_| DesktopRegisterRootHttpError::RootSigningFailed)?;
 
-    if signed.root_identity.passport_id.as_str()
-        != descriptor.passport_id.as_str()
-        || signed.root_identity.root_public_key.as_str()
-            != descriptor.root_public_key.as_str()
+    if signed.root_identity.passport_id.as_str() != descriptor.passport_id.as_str()
+        || signed.root_identity.root_public_key.as_str() != descriptor.root_public_key.as_str()
     {
         return Err(DesktopRegisterRootHttpError::RootIdentityMismatch);
     }
 
-    let proof_signed_payload_hex =
-        signed.signed_payload_hex.as_str().to_owned();
+    let proof_signed_payload_hex = signed.signed_payload_hex.as_str().to_owned();
 
     drop(signed);
     drop(recovery_factor);
@@ -536,9 +476,7 @@ pub async fn register_physical_m1_root(
         .map_err(|_| DesktopRegisterRootHttpError::ProofRequestFailed)?;
 
     if !proof_response.status().is_success() {
-        return Err(
-            DesktopRegisterRootHttpError::ProofResponseRejected,
-        );
+        return Err(DesktopRegisterRootHttpError::ProofResponseRejected);
     }
 
     let proof_bytes = read_bounded_response_body(
@@ -548,9 +486,8 @@ pub async fn register_physical_m1_root(
     )
     .await?;
 
-    let result: RegisterRootProofResultV1 =
-        serde_json::from_slice(&proof_bytes)
-            .map_err(|_| DesktopRegisterRootHttpError::ProofDecodeFailed)?;
+    let result: RegisterRootProofResultV1 = serde_json::from_slice(&proof_bytes)
+        .map_err(|_| DesktopRegisterRootHttpError::ProofDecodeFailed)?;
 
     if result.schema != REGISTER_ROOT_RESULT_SCHEMA {
         return Err(DesktopRegisterRootHttpError::ProofResultRejected);
@@ -560,9 +497,7 @@ pub async fn register_physical_m1_root(
         "registered" => true,
         "already_registered" => false,
         _ => {
-            return Err(
-                DesktopRegisterRootHttpError::ProofResultRejected,
-            );
+            return Err(DesktopRegisterRootHttpError::ProofResultRejected);
         }
     };
 
@@ -582,11 +517,8 @@ async fn read_bounded_response_body(
 ) -> Result<Vec<u8>, DesktopRegisterRootHttpError> {
     let mut output = Vec::new();
 
-    while let Some(chunk) =
-        response.chunk().await.map_err(|_| read_error)?
-    {
-        let next_len =
-            output.len().checked_add(chunk.len()).ok_or(size_error)?;
+    while let Some(chunk) = response.chunk().await.map_err(|_| read_error)? {
+        let next_len = output.len().checked_add(chunk.len()).ok_or(size_error)?;
 
         if next_len > REGISTER_ROOT_MAX_RESPONSE_BODY_BYTES {
             return Err(size_error);
@@ -601,13 +533,11 @@ async fn read_bounded_response_body(
 fn current_unix_time_ms(
     error: DesktopRegisterRootHttpError,
 ) -> Result<u64, DesktopRegisterRootHttpError> {
-    let elapsed =
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|_| error)?;
+    let elapsed = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| error)?;
 
-    let millis =
-        u64::try_from(elapsed.as_millis()).map_err(|_| error)?;
+    let millis = u64::try_from(elapsed.as_millis()).map_err(|_| error)?;
 
     if millis == 0 {
         return Err(error);
