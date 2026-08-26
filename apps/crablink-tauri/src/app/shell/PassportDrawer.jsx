@@ -1,12 +1,12 @@
 /**
  * RO:WHAT — Compact Passport drawer for the CrabLink React shell.
  * RO:WHY — Keeps identity/wallet controls accessible without turning the passport dropdown into a debug dashboard.
- * RO:INTERACTS — appContext, identityClient, walletClient, PassportSummary, PassportActions, passportAdapter, Native Passport device/capability commands, publicProfileCache, recentReceipts, localCatalog.
+ * RO:INTERACTS — appContext, identityClient, walletClient, PassportSummary, PassportActions, passportAdapter, Native Passport RegisterRoot/device/capability commands, publicProfileCache, recentReceipts, localCatalog.
  * RO:INVARIANTS — no fake identity, balance, receipt, CID, catalogue, capability, or permission truth; native authority inputs remain outside React; gateway-only product networking; no direct wallet/ledger calls.
  * RO:METRICS — identity/wallet/bootstrap/profile calls inherit gateway x-correlation-id behavior.
  * RO:CONFIG — gatewayUrl, passportSubject, walletAccount, local storage backend, optional dev session URL/hash params.
- * RO:SECURITY — no private keys, seed phrases, DeviceKey material, proof signatures, capability IDs/material, private alt mappings, or spend authority are requested/rendered.
- * RO:TEST — focused Physical M1 device/capability source-boundary tests, production Vite build, and physical desktop acceptance.
+ * RO:SECURITY — no private keys, seed phrases, RecoveryRoot material, DeviceKey material, RegisterRoot proofs/signatures, capability IDs/material, private alt mappings, or spend authority are requested/rendered.
+ * RO:TEST — focused Physical M1 RegisterRoot/device/capability source-boundary tests, production Vite build, and physical desktop acceptance.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -41,6 +41,7 @@ import {
   confirmNativePassportRoot,
   createNativePassport,
   issueNativePassportUsernameCapability,
+  registerNativePassportRoot,
   lockNativePassport,
   readNativePassportStatus,
   unlockNativePassportOperational,
@@ -821,6 +822,21 @@ export default function PassportDrawer({ id, navigation, onClose }) {
           summary="Diagnostics, root confirmation, removal, and acceptance evidence"
         >
           <div className="cl-passport-actions">
+            <button
+              type="button"
+              onClick={() =>
+                runNativePassportCommand(
+                  registerNativePassportRoot,
+                  'register root',
+                )
+              }
+              disabled={!nativePassportAvailable || nativePassportBusy}
+              title="Registers the finalized local Passport root through the public local CrabNode gateway. Root PIN, RecoveryRoot, service challenge, proof, and signature remain native-owned and are not returned to React."
+            >
+              {nativePassportCommand === 'register root'
+                ? 'Registering Passport root…'
+                : 'Register Passport root'}
+            </button>
             <button
               type="button"
               onClick={() =>

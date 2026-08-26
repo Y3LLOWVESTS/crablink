@@ -71279,3 +71279,2332 @@ This is a strong handoff point: **the difficult server-side authorization design
 
 
 ### END NOTE - AUGUST 24 2026 - 19:10 CST
+
+
+
+### BEGIN NOTE - AUGUST 25 2026 - 18:45 CST
+
+# Carry-Over Notes — CN-4 Windows Physical Acceptance / RegisterRoot Product Integration
+
+**Session date:** August 25, 2026
+**Active implementation authority:** `CRABNODE_BUILDPLAN.md`
+**Umbrella beta authority:** `FINAL_BETA.md`
+**Active phase:** **CN-4 — physical Mac/Windows identity acceptance**
+**Primary implementation repo at session end:** `/Users/mymac/Desktop/crablink`
+**RustyOnions repo:** `/Users/mymac/Desktop/RustyOnions`
+**CN-4 status:** **NOT COMPLETE**
+**CN-5 status:** **NOT STARTED**
+
+The important strategic position remains unchanged: CN-0 through CN-4 are the immediate M1 path that unblocks the physical CrabLink/CrabNode beta demonstration. The buildplan defines M1 as getting one real standalone CrabNode working for Mac and Windows CrabLink with durable username/profile state; we are still finishing that gate and must not jump ahead to CN-5.
+
+---
+
+## 1. Executive handoff
+
+This was a productive integration session. We closed the Windows V1 Passport compatibility problem completely, proved real Windows native DeviceAuthorization persistence, discovered a real missing product-lifecycle link at DeviceKey possession, diagnosed it rather than bypassing it, and implemented the first half of the missing server-enrollment lifecycle in CrabLink: **production RegisterRoot orchestration from the actual desktop UI through Tauri and the real public CrabNode gateway**.
+
+The session ended with that entire new RegisterRoot client slice passing its focused Rust/JS boundary tests and production Vite build. The latest gate is fully green:
+
+```text
+CN4_REGISTERROOT_UI_GATE=GREEN
+REGISTERROOT_UI_BOUNDARY=GREEN
+DEVICE_AUTHORIZATION_REGRESSION=GREEN
+DEVICE_POSSESSION_REGRESSION=GREEN
+USERNAME_CAPABILITY_REGRESSION=GREEN
+NATIVE_COMMAND_ACCEPTANCE=GREEN
+PRODUCTION_VITE_BUILD=GREEN
+RAW_TAURI_COMMAND_IN_REACT=NO
+ROOT_AUTHORITY_REMAINS_NATIVE=YES
+DEVICE_AUTHORIZATION_CHANGED=NO
+CAPABILITY_CHANGED=NO
+USERNAME_MUTATION_CHANGED=NO
+WALLET_LEDGER_CHANGED=NO
+NEXT=REGISTERROOT_SLICE_PRECOMMIT_CLOSEOUT
+```
+
+
+
+The immediate next session should **not begin with another implementation patch**. First perform the RegisterRoot slice pre-commit closeout, verify the exact worktree, commit/push when the user is ready, then return to Windows and physically prove that the independent Windows Passport root can register through the real `8090 → 9090 → 5307` chain.
+
+After that, the remaining missing link is **server registration of the already-local DeviceAuthorization**. Only once that is wired and physically accepted should we retry DeviceKey possession, capability issuance, and `@testpc`.
+
+---
+
+# 2. Starting state inherited into this session
+
+At the beginning of this session, the Mac side of CN-4 was already substantially green.
+
+The physical Mac `@testmac` chain had proven:
+
+```text
+real Passport
+real DeviceAuthorization
+real DeviceKey possession
+real bounded capability
+real protected username/profile mutation
+real svc-gateway :8090 ingress
+real Omnigate :9090 mediation
+real svc-passport :5307 ownership
+CrabNode restart persistence
+@testmac backend read after restart
+no dev bypass
+```
+
+The CN-4 acceptance doctrine remains:
+
+```text
+Mac physical possession GREEN
+Mac bounded capability GREEN
+@testmac mutation GREEN
+restart persistence GREEN
+
+Windows physical possession GREEN
+@testpc mutation GREEN
+
+no dev bypass
+no WebView secret custody
+no fake authority
+real 8090 → 9090 → 5307 path
+
+ONLY THEN CN-5
+```
+
+
+
+The Windows PC had previously been prepared with:
+
+```text
+Windows 11 Pro
+Git
+Rust stable-msvc
+VS Build Tools
+native CrabLink build
+DPAPI-backed Passport custody
+Windows-native PIN/recovery surfaces
+independent Windows Passport
+```
+
+The Windows Passport was still using a V1 vault, which was the known blocker to accessing the authenticated V2 DeviceKey identity.
+
+---
+
+# 3. Git / repository update performed first
+
+The user pushed the prior V1→V2 integration update to GitHub.
+
+Windows started at:
+
+```text
+cadb0e1 add Windows native Passport secret surface
+```
+
+and fetched:
+
+```text
+03e8823 fix compat issues on windows build
+```
+
+The update fast-forwarded cleanly.
+
+Three files came down in that commit:
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/passport.rs
+
+apps/crablink-tauri/src-tauri/tests/
+physical_m1_operational_session_v2_migration_bridge.rs
+
+apps/crablink-tauri/src-tauri/tests/
+physical_m1_production_unlock_v2_migration_wiring.rs
+```
+
+The existing Windows-local modification remained:
+
+```text
+M apps/crablink-tauri/src-tauri/Cargo.toml
+```
+
+That local modification was intentionally preserved.
+
+### Important future rule
+
+On Windows, **do not discard or overwrite that `Cargo.toml` modification blindly**. It is part of the Windows-local dependency/build configuration and must be inspected before any future pull if Git complains.
+
+---
+
+# 4. Windows V1→V2 production build gate — GREEN
+
+On Windows, the newly pulled source was subjected to the focused migration gates.
+
+### Production migration wiring
+
+```text
+physical_m1_production_unlock_v2_migration_wiring
+
+4 passed
+0 failed
+
+PRODUCTION_MIGRATION_WIRING_TEST=GREEN
+```
+
+### Windows native secret surface
+
+```text
+phase15u_windows_native_secret_surface
+
+1 passed
+0 failed
+
+WINDOWS_NATIVE_SECRET_SURFACE=GREEN
+```
+
+### Production Rust compile
+
+```text
+cargo check
+CARGO_CHECK=GREEN
+```
+
+### Tauri production package
+
+The full Windows Tauri production build succeeded.
+
+Artifacts:
+
+```text
+CrabLink_0.1.0_x64_en-US.msi
+
+CrabLink_0.1.0_x64-setup.exe
+```
+
+Installer evidence:
+
+```text
+INSTALLER_SIZE=4975374
+
+INSTALLER_SHA256=
+D7DFD7616F34275FF235003AE360D0B12B829F3F8CB4D9C301F097DA0CE55F13
+
+CN4_WINDOWS_V2_BUILD=GREEN
+HEAD=03e8823
+EXISTING_PASSPORT_CLEARED=NO
+```
+
+
+
+### Important
+
+That installer is now **historical evidence only**.
+
+It contains the V1→V2 migration fix but **does not contain the RegisterRoot UI/runtime work added later in this session**.
+
+Do **not** reuse hash:
+
+```text
+D7DFD761...
+```
+
+for the next physical RegisterRoot test.
+
+The next Windows build must produce a **new installer timestamp/hash** from the forthcoming RegisterRoot commit.
+
+---
+
+# 5. Physical Windows V1→V2 migration — GREEN
+
+The existing Windows Passport was deliberately preserved.
+
+Previously established state:
+
+```text
+VAULT_MAGIC=RONPBF01
+VAULT_VERSION=1
+```
+
+After installing/running the new build and unlocking the existing Passport:
+
+```text
+VAULT_MAGIC=RONPBF01
+VAULT_VERSION_AFTER=2
+
+CN4_WINDOWS_V1_TO_V2_PHYSICAL=GREEN
+EXISTING_PASSPORT_MIGRATED_IN_PLACE=YES
+```
+
+This is one of the most important results of the session.
+
+We proved that an already-existing Windows Passport can migrate in place through the production operational-unlock lifecycle:
+
+```text
+existing V1 encrypted Passport
+        ↓
+production Unlock Passport
+        ↓
+existing migration runtime
+        ↓
+authenticated V2 vault
+        ↓
+same Passport retained
+```
+
+No reset/recreation was used.
+
+No fake migration was used.
+
+No WebView access to vault authority was introduced.
+
+### Do not reopen this layer
+
+The Windows V1→V2 problem is now physically solved.
+
+Do not change the migration code again unless future evidence directly implicates it.
+
+---
+
+# 6. Windows DeviceAuthorization — physically GREEN locally
+
+After V2 migration, the user ran:
+
+```text
+Authorize this device
+```
+
+and the application reported success.
+
+The durable local sidecar was verified:
+
+```text
+DEVICE_AUTHORIZATION=PRESENT
+AUTH_SIZE=1071
+AUTH_MODIFIED=08/25/2026 14:24:11
+```
+
+Therefore:
+
+```text
+WINDOWS_V2_DEVICE_IDENTITY=GREEN
+LOCAL_DEVICE_AUTHORIZATION_SIGNING=GREEN
+LOCAL_DEVICE_AUTHORIZATION_PERSISTENCE=GREEN
+```
+
+This also proves that the earlier `device_identity_unavailable`/`unavailable` problem was caused by the V1 vault limitation and is now resolved.
+
+---
+
+# 7. Device possession then failed — this uncovered the next real integration gap
+
+Immediately after local DeviceAuthorization succeeded, the physical Windows:
+
+```text
+Verify device possession
+```
+
+returned:
+
+```text
+rejected
+```
+
+This was **not bypassed**.
+
+That rejection became the key discovery of the session.
+
+We investigated the live CrabLink source and found:
+
+```text
+passport_authorize_device
+```
+
+currently performs local authorization creation/reuse and explicitly returns:
+
+```rust
+server_registry_mutated: false
+```
+
+The local persistence runtime itself also intentionally performs no HTTP/server mutation.
+
+At the same time, the production CrabLink source had HTTP runtimes for:
+
+```text
+passport_device_session_http_runtime.rs
+passport_capability_http_runtime.rs
+passport_username_claim_http_runtime.rs
+```
+
+but **no production RegisterRoot HTTP runtime** and **no DeviceAuthorization server-registration HTTP runtime**.
+
+The source inspection confirmed that the local DeviceAuthorization signing bridge deliberately contains:
+
+```text
+no HTTP
+no server registry mutation
+```
+
+while the backend already exposes the canonical server route:
+
+```text
+POST /v1/passport/device/authorize
+```
+
+through the Native Passport router.
+
+---
+
+# 8. Root cause of the possession rejection
+
+The Windows client is an **independent Passport**, unlike the Mac Passport.
+
+The likely actual lifecycle at that point was:
+
+```text
+Windows local Passport created                 ✅
+Windows public root descriptor finalized       ✅
+Windows vault migrated to V2                   ✅
+Windows local DeviceAuthorization signed       ✅
+Windows local DeviceAuthorization persisted    ✅
+
+Windows Passport root registered in CrabNode   ❌
+Windows device registered in CrabNode           ❌
+
+ProveSession request                            →
+server has no active registered device          →
+possession rejected
+```
+
+The key distinction discovered was:
+
+```text
+Confirm root action
+```
+
+had finalized the **local public descriptor**.
+
+It had **not** registered the Windows Passport root with the remote CrabNode.
+
+Likewise:
+
+```text
+Authorize this device
+```
+
+had created/persisted the signed local DeviceAuthorization.
+
+It had **not** submitted it to svc-passport.
+
+That means the possession rejection was correct server behavior, not a ProveSession defect.
+
+---
+
+# 9. Backend RegisterRoot implementation was already real — no RustyOnions rewrite needed
+
+The session then inspected the RustyOnions backend.
+
+The backend Native Passport router already mounts:
+
+```text
+/v1/passport/register/trust-anchor
+/v1/passport/register/challenge
+/v1/passport/register/proof
+/v1/passport/device/authorize
+/v1/passport/challenge
+/v1/passport/prove
+```
+
+and the RegisterRoot challenge/proof handlers already enforce durable, purpose-specific server behavior.
+
+Therefore:
+
+```text
+RUSTYONIONS_REGISTERROOT_BACKEND_CHANGED=NO
+RUSTYONIONS_DEVICE_AUTHORIZE_BACKEND_CHANGED=NO
+```
+
+The missing work was **CrabLink production composition**, not a new server architecture.
+
+This is important for the next session: continue to treat the backend route/crypto implementation as green unless new physical evidence contradicts it.
+
+---
+
+# 10. Existing live Mac RegisterRoot test was reused as canonical design evidence
+
+The source contains existing physical Mac tests that already prove the intended RegisterRoot sequence:
+
+```text
+public descriptor
+↓
+operation commitment
+↓
+POST :8090 RegisterRoot challenge
+↓
+strict pinned service-challenge verification
+↓
+native root confirmation
+↓
+RecoveryRoot factor unseal
+↓
+root identity match against descriptor
+↓
+canonical ron-auth root proof transcript
+↓
+RecoveryRoot signature
+↓
+POST :8090 RegisterRoot proof
+↓
+durable registration
+↓
+replay rejection
+```
+
+That test code gave us the exact implementation template.
+
+We intentionally reused:
+
+```text
+ron-auth canonical transcript
+svc-passport RecoveryRoot signer
+existing RegisterRoot intent hash
+existing RegisterRoot trust-anchor verifier
+existing public 8090 routes
+```
+
+rather than creating new proof types or client crypto.
+
+---
+
+# 11. New production RegisterRoot HTTP runtime added to CrabLink
+
+A new file was created:
+
+```text
+apps/crablink-tauri/src-tauri/src/
+passport_register_root_http_runtime.rs
+```
+
+Purpose:
+
+```text
+real desktop product RegisterRoot orchestration
+```
+
+### Core production path
+
+```text
+AppState
+↓
+require operationally unlocked Passport
+↓
+load durable native public Passport descriptor
+↓
+parse canonical Passport ID + root public key
+↓
+fixed requested scope: identity.read
+↓
+compute existing canonical RegisterRoot operation hash
+↓
+require gateway exactly http://127.0.0.1:8090
+↓
+POST /identity/passport/register/challenge
+↓
+bounded response read
+↓
+strict PassportChallengeV1 decode
+↓
+verify pinned service challenge
+↓
+ONLY NOW request native root confirmation PIN
+↓
+load encrypted vault
+↓
+unseal RecoveryRoot native compartment
+↓
+verify root PIN
+↓
+drop PIN
+↓
+derive RecoveryRoot public identity
+↓
+match immutable public descriptor
+↓
+construct canonical ron-auth root registration transcript
+↓
+sign using existing svc-passport RecoveryRoot signer
+↓
+copy only proof payload required for HTTP
+↓
+drop signed authority object
+↓
+drop RecoveryRoot factor
+↓
+POST /identity/passport/register/proof
+↓
+bounded result decode
+↓
+accept only registered / already_registered
+↓
+return redacted native outcome
+```
+
+---
+
+# 12. RegisterRoot security boundaries implemented
+
+The new runtime intentionally enforces:
+
+```text
+PUBLIC_GATEWAY_ONLY=8090
+```
+
+It will reject a runtime gateway that is not:
+
+```text
+http://127.0.0.1:8090
+```
+
+There is no product path to:
+
+```text
+9090 directly
+5307 directly
+```
+
+### Challenge-before-root invariant
+
+The service challenge is authenticated **before** root confirmation and before RecoveryRoot unseal.
+
+This prevents a malicious/untrusted service response from causing root signing.
+
+### Authority lifetime
+
+The implementation explicitly drops:
+
+```text
+root PIN
+RecoveryRoot factor
+signed root authority object
+```
+
+before the proof network `await`.
+
+This is important for both secret lifetime and the no-lock/no-authority-across-async doctrine.
+
+### Bounds
+
+Implemented:
+
+```text
+RegisterRoot response cap = 16 KiB
+maximum HTTP timeout = 30 seconds
+```
+
+### No caller authority
+
+The product path does not accept from React:
+
+```text
+Passport ID
+root public key
+scope
+root epoch
+PIN
+challenge
+proof
+signature
+RecoveryRoot
+VMK
+```
+
+---
+
+# 13. New RegisterRoot Tauri command
+
+Added in:
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/passport.rs
+```
+
+Command:
+
+```text
+passport_register_root
+```
+
+It is:
+
+```rust
+pub async fn passport_register_root(
+    state: State<'_, AppState>,
+)
+```
+
+It takes **zero user authority arguments**.
+
+The only argument is native Tauri `AppState`.
+
+Possible redacted success states include:
+
+```text
+root_registered
+root_already_registered
+```
+
+Error states remain redacted, for example:
+
+```text
+operational_unlock_required
+confirmation_rejected
+cancelled
+root_registration_service_unavailable
+root_registration_rejected
+unavailable
+```
+
+The WebView receives no proof/signature/root object.
+
+---
+
+# 14. RegisterRoot native-runtime tests — GREEN
+
+Created:
+
+```text
+apps/crablink-tauri/src-tauri/tests/
+physical_m1_production_register_root_wiring.rs
+```
+
+Focused results:
+
+```text
+4 passed
+0 failed
+```
+
+The tests prove:
+
+```text
+public 8090 only
+correct challenge/proof routes
+no direct 9090
+no direct 5307
+bounded response size
+bounded timeout
+
+service challenge verification precedes root prompt
+root prompt precedes RecoveryRoot unseal
+RecoveryRoot unseal precedes signing
+PIN dropped before proof request
+RecoveryRoot factor dropped before proof request
+
+Tauri command zero-authority arguments
+redacted output
+
+server RegisterRoot remains separate from
+local root finalization
+```
+
+Production Rust compile also passed.
+
+---
+
+# 15. RegisterRoot command was then exposed through the real Tauri boundary
+
+After the native runtime passed, the command was deliberately exposed in a separate low-risk wiring slice.
+
+Changed:
+
+```text
+apps/crablink-tauri/src-tauri/src/lib.rs
+```
+
+to register:
+
+```text
+commands::passport::passport_register_root
+```
+
+Changed:
+
+```text
+apps/crablink-tauri/src/platform/tauriPlatform.js
+```
+
+to admit:
+
+```text
+passport_register_root
+```
+
+through the central allowlist.
+
+Crucially:
+
+```text
+FORBIDDEN_PATTERN_EXCEPTION_ADDED=NO
+```
+
+The command passed the **normal runtime admission predicate**.
+
+We did not weaken the Tauri security policy just to admit it.
+
+---
+
+# 16. Fixed adapter action added
+
+Changed:
+
+```text
+apps/crablink-tauri/src/adapters/passportAdapter.js
+```
+
+Added command mapping:
+
+```text
+registerRoot: 'passport_register_root'
+```
+
+and fixed adapter function:
+
+```text
+registerNativePassportRoot()
+```
+
+which simply dispatches the reviewed command with zero user arguments.
+
+React cannot supply authority-bearing fields.
+
+---
+
+# 17. New RegisterRoot JS boundary test
+
+Created:
+
+```text
+apps/crablink-tauri/src/adapters/
+passportRegisterRoot.source.test.mjs
+```
+
+The initial command-exposure gate proved:
+
+```text
+RegisterRoot exact command allowlisted once
+handler registered once
+fixed adapter mapping once
+no forbidden-pattern exception
+zero-argument adapter
+Rust command accepts AppState only
+redacted DTO safety
+```
+
+Results:
+
+```text
+4 passed
+0 failed
+```
+
+Existing Passport Tauri boundary regression also remained:
+
+```text
+4 passed
+0 failed
+```
+
+Rust wiring regression:
+
+```text
+4 passed
+0 failed
+```
+
+Production `cargo check`:
+
+```text
+GREEN
+```
+
+---
+
+# 18. Controlled Passport drawer action added
+
+After inspecting the live `PassportDrawer.jsx`, we found the correct integration point in:
+
+```text
+DeveloperDisclosure:
+Advanced Passport controls
+```
+
+The new import is:
+
+```text
+registerNativePassportRoot
+```
+
+The new button is:
+
+```text
+Register Passport root
+```
+
+The busy label is:
+
+```text
+Registering Passport root…
+```
+
+It invokes only:
+
+```text
+runNativePassportCommand(
+    registerNativePassportRoot,
+    'register root',
+)
+```
+
+It reuses the existing native Passport command state machine.
+
+No second React authority/state system was created. The drawer already centralized the sensitive native operations, so RegisterRoot was added to that reviewed structure.
+
+---
+
+# 19. React RegisterRoot security posture
+
+The latest source gate confirms:
+
+```text
+RAW_TAURI_COMMAND_IN_REACT=NO
+
+CALLER_PASSPORT_ID=NO
+CALLER_ROOT_PUBLIC_KEY=NO
+CALLER_PIN=NO
+CALLER_CHALLENGE=NO
+CALLER_PROOF=NO
+CALLER_SIGNATURE=NO
+
+NATIVE_BUSY_GATE=PRESERVED
+```
+
+React expresses only:
+
+```text
+user intent:
+"Register Passport root"
+```
+
+Native Rust owns:
+
+```text
+identity
+gateway
+challenge
+trust validation
+root confirmation
+root custody
+proof creation
+signature
+proof submission
+```
+
+This preserves the project authority split:
+
+```text
+React = display / user intent
+Tauri = native privilege
+svc-passport = durable network identity truth
+```
+
+---
+
+# 20. Latest RegisterRoot UI regression gate — fully GREEN
+
+The final terminal output of the session proves:
+
+### RegisterRoot focused UI boundary
+
+```text
+4/4 GREEN
+```
+
+### Existing DeviceAuthorization drawer regression
+
+```text
+3/3 GREEN
+```
+
+### Existing Device possession drawer regression
+
+```text
+4/4 GREEN
+```
+
+### Existing username-capability drawer regression
+
+```text
+4/4 GREEN
+```
+
+### Native Passport command acceptance
+
+```text
+5/5 GREEN
+```
+
+### Production Vite build
+
+```text
+404 modules transformed
+built successfully
+
+PRODUCTION_VITE_BUILD=GREEN
+```
+
+### Diff validation
+
+```text
+git diff --check
+GREEN
+```
+
+
+
+This means the RegisterRoot client implementation is now at a clean milestone suitable for pre-commit review.
+
+---
+
+# 21. Exact CrabLink worktree at session end
+
+The current changes are **not yet committed/pushed**.
+
+Current worktree:
+
+```text
+M apps/crablink-tauri/src-tauri/src/commands/passport.rs
+
+M apps/crablink-tauri/src-tauri/src/lib.rs
+
+M apps/crablink-tauri/src/adapters/passportAdapter.js
+
+M apps/crablink-tauri/src/app/shell/PassportDrawer.jsx
+
+M apps/crablink-tauri/src/platform/tauriPlatform.js
+
+M apps/crablink-tauri/src/platform/
+  tauriPlatform.passportBoundary.source.test.mjs
+
+?? apps/crablink-tauri/src-tauri/src/
+   passport_register_root_http_runtime.rs
+
+?? apps/crablink-tauri/src-tauri/tests/
+   physical_m1_production_register_root_wiring.rs
+
+?? apps/crablink-tauri/src/adapters/
+   passportRegisterRoot.source.test.mjs
+```
+
+Exactly:
+
+```text
+9 changed/untracked files
+```
+
+No RustyOnions source was modified during the RegisterRoot slice.
+
+```text
+RUSTYONIONS_CHANGED=NO
+```
+
+---
+
+# 22. Git state
+
+Last pushed/common commit before the current uncommitted slice:
+
+```text
+03e8823 fix compat issues on windows build
+```
+
+That commit is already:
+
+```text
+Mac main
+origin/main
+Windows main
+```
+
+The current RegisterRoot work sits **on top of 03e8823** and has not yet been committed.
+
+Therefore the next session must not assume GitHub or Windows already contains RegisterRoot.
+
+---
+
+# 23. Exact next action — pre-commit closeout
+
+The first action next session should be:
+
+```text
+REGISTERROOT_SLICE_PRECOMMIT_CLOSEOUT
+```
+
+Do not begin DeviceAuthorization HTTP work first.
+
+The closeout should verify:
+
+```text
+git status --short
+
+git diff --check
+
+git diff --stat
+
+git diff --name-only
+
+exact expected 9-file set
+
+new production runtime present
+
+new Rust test present
+
+new JS test present
+
+raw passport_register_root absent from PassportDrawer
+
+no direct 9090/5307 in production RegisterRoot runtime
+
+no new wallet/ledger/capability/username mutation
+
+current HEAD still 03e8823
+```
+
+No need to rerun every test again if nothing changed after the final green gate.
+
+We already have:
+
+```text
+Rust focused test GREEN
+cargo check GREEN
+JS boundary regressions GREEN
+Vite production build GREEN
+git diff --check GREEN
+```
+
+A concise exact-diff precommit check is sufficient unless review discovers something suspicious.
+
+---
+
+# 24. After precommit closeout
+
+Once the exact slice is confirmed, the user can commit/push.
+
+Suggested conceptual commit:
+
+```text
+wire desktop Passport RegisterRoot through CrabNode
+```
+
+Do not run Git mutation commands unless explicitly requested by the user.
+
+After push:
+
+```text
+switch to Windows
+```
+
+---
+
+# 25. Windows pull precautions
+
+Before pulling, inspect:
+
+```text
+git status --short
+git diff -- apps/crablink-tauri/src-tauri/Cargo.toml
+```
+
+The Windows repo has the existing local modification:
+
+```text
+M apps/crablink-tauri/src-tauri/Cargo.toml
+```
+
+Preserve it.
+
+Use a fast-forward-only update if safe.
+
+Do not automatically:
+
+```text
+git reset --hard
+git checkout -- Cargo.toml
+git stash
+```
+
+unless there is an actual conflict and we inspect it first.
+
+---
+
+# 26. Windows build after RegisterRoot push
+
+After Windows receives the new RegisterRoot commit, run only focused relevant gates:
+
+```text
+passport RegisterRoot source/boundary tests as applicable
+physical_m1_production_register_root_wiring
+cargo check
+npm tauri:build
+```
+
+No strict Clippy needed.
+
+No broad test storm needed.
+
+Record the **new** installer:
+
+```text
+path
+size
+timestamp
+SHA256
+HEAD
+```
+
+Again, the old installer hash:
+
+```text
+D7DFD761...
+```
+
+is not the RegisterRoot build.
+
+---
+
+# 27. Windows physical RegisterRoot acceptance sequence
+
+Do not recreate the Passport.
+
+Current Windows Passport state is valuable:
+
+```text
+existing independent Passport
+vault V2
+public descriptor persisted
+local DeviceAuthorization persisted
+```
+
+The intended physical sequence is:
+
+```text
+install fresh RegisterRoot build
+↓
+launch CrabLink
+↓
+Unlock Passport
+↓
+Advanced Passport controls
+↓
+Register Passport root
+↓
+native root confirmation dialog
+↓
+enter existing Passport PIN
+↓
+real :8090 challenge
+↓
+strict service challenge verification
+↓
+native RecoveryRoot proof
+↓
+real :8090 proof submission
+↓
+svc-passport durable registration
+```
+
+Desired UI outcome:
+
+```text
+root_registered
+```
+
+or, on safe idempotent repeat:
+
+```text
+root_already_registered
+```
+
+---
+
+# 28. SSH tunnel / network prerequisite
+
+Previously the Windows PC reached the Mac CrabNode via SSH local forwarding:
+
+```text
+Windows 127.0.0.1:8090
+        ↓ SSH
+Mac 127.0.0.1:8090
+        ↓
+svc-gateway
+        ↓
+Omnigate
+        ↓
+svc-passport
+```
+
+Typical Windows tunnel:
+
+```powershell
+ssh `
+  -o ExitOnForwardFailure=yes `
+  -o PubkeyAuthentication=no `
+  -o PreferredAuthentications=keyboard-interactive,password `
+  -N `
+  -L 127.0.0.1:8090:127.0.0.1:8090 `
+  mymac@192.168.0.9
+```
+
+Do not assume it remains alive across sessions/restarts.
+
+Before the physical RegisterRoot click, verify the tunnel and Mac CrabNode readiness.
+
+Admin remains loopback-only.
+
+Do not expose admin/User Node surfaces to LAN just for Windows connectivity.
+
+---
+
+# 29. Expected Windows RegisterRoot network evidence
+
+Once the fresh build is running, the RegisterRoot product path should traverse:
+
+```text
+CrabLink Windows
+↓
+127.0.0.1:8090 tunnel
+↓
+Mac svc-gateway
+↓
+Omnigate :9090
+↓
+svc-passport :5307
+```
+
+Expected requests:
+
+```text
+POST /identity/passport/register/challenge
+
+POST /identity/passport/register/proof
+```
+
+Do not use:
+
+```text
+curl/manual proof
+direct :9090 mutation
+direct :5307 mutation
+dev bypass
+```
+
+as final acceptance.
+
+The entire purpose of this slice is proving the actual desktop product lifecycle.
+
+---
+
+# 30. Do not immediately retry Device possession after root registration
+
+There is still another known missing integration link:
+
+```text
+local DeviceAuthorization
+        ↓
+SERVER DEVICE REGISTRATION
+```
+
+Current Windows local DeviceAuthorization exists, but it has not yet been submitted through:
+
+```text
+POST /identity/passport/device/authorize
+```
+
+Therefore after Windows root registration is green, the next implementation slice should be **DeviceAuthorization server-registration wiring**.
+
+Do not expect possession to become green merely because RegisterRoot succeeded.
+
+---
+
+# 31. Next implementation slice after physical RegisterRoot
+
+The next high-risk slice should remain isolated.
+
+Goal:
+
+```text
+reuse the already-persisted, strictly reverified
+DeviceAuthorizationV1
+
+↓ native-only HTTP runtime
+
+POST http://127.0.0.1:8090/
+identity/passport/device/authorize
+
+↓ gateway / Omnigate
+
+POST /v1/passport/device/authorize
+
+↓ svc-passport
+
+durably registered active device
+```
+
+Before implementing, inspect the exact:
+
+```text
+native_device_authorize.rs handler
+request DTO
+response DTO
+idempotent semantics
+error mappings
+gateway route behavior
+Omnigate route behavior
+```
+
+We did not finish that handler inspection this session; one grep landed on the router rather than the actual handler file.
+
+### Important
+
+Reuse the existing persisted DeviceAuthorization.
+
+Do not create a second signer.
+
+Do not create another authorization format.
+
+Do not re-prompt for root unless existing authorization verification or backend policy genuinely requires it.
+
+---
+
+# 32. Desired future DeviceAuthorization product behavior
+
+The eventual native product chain should become:
+
+```text
+local persisted DeviceAuthorization
+↓
+strict local re-verification
+↓
+public :8090 submission
+↓
+backend durable acceptance
+↓
+only then report server registration success
+```
+
+One design decision remains for next session:
+
+Should:
+
+```text
+Authorize this device
+```
+
+be changed so that its successful product-level state means:
+
+```text
+signed locally + persisted locally + accepted server-side
+```
+
+or should there be a distinct:
+
+```text
+Register authorized device
+```
+
+step?
+
+Given product UX and lifecycle semantics, composing server admission into **Authorize this device** is probably cleaner, but this should be decided from exact existing handler/idempotency behavior rather than assumed.
+
+---
+
+# 33. Device possession comes after durable server registration
+
+Once root and device registration are green:
+
+```text
+Verify device possession
+```
+
+should exercise:
+
+```text
+POST /identity/passport/challenge
+purpose = ProveSession
+
+↓ strict challenge verification
+
+DeviceKey signature
+
+↓
+POST /identity/passport/prove
+
+↓
+server verifies:
+Passport registered
+DeviceAuthorization current
+device active
+DeviceKey matches
+challenge fresh/one-time
+```
+
+The possession result itself must remain:
+
+```text
+proof of DeviceKey control
+```
+
+not capability issuance.
+
+The buildplan explicitly distinguishes authorization from possession and requires the real Windows DeviceKey chain before CN-4 can close.
+
+---
+
+# 34. After possession: capability
+
+Only after:
+
+```text
+WINDOWS_DEVICE_POSSESSION=GREEN
+```
+
+run:
+
+```text
+Prepare username claim
+```
+
+The existing client/backend capability machinery is already substantially implemented and was not modified this session.
+
+Desired:
+
+```text
+capability_issued
+```
+
+Capability must remain:
+
+```text
+server-issued
+device-bound
+short-lived
+scope-bounded
+native-only
+replay-resistant
+```
+
+React never receives raw capability authority.
+
+---
+
+# 35. After capability: `@testpc`
+
+Then perform the real protected username/profile claim:
+
+```text
+@testpc
+```
+
+through:
+
+```text
+CrabLink native command
+↓
+exact-byte PassportRequestProof
+↓
+127.0.0.1:8090
+↓
+svc-gateway
+↓
+Omnigate
+↓
+svc-passport
+```
+
+No:
+
+```text
+dev bypass
+direct :9090
+direct :5307
+caller-owned Passport ID
+caller-owned capability
+caller-owned signature
+```
+
+Desired acceptance:
+
+```text
+@testpc claimed
+backend_confirmed=YES
+gateway read confirms @testpc
+```
+
+---
+
+# 36. CN-4 completion criteria from here
+
+Remaining Windows chain:
+
+```text
+Windows RegisterRoot physical                  ⏳
+Windows server DeviceAuthorization registration ⏳
+Windows DeviceKey possession                   ⏳
+Windows bounded capability                     ⏳
+@testpc protected username/profile             ⏳
+backend confirmation                           ⏳
+```
+
+Mac chain remains green.
+
+Only once Windows joins the same real authority chain should CN-4 close.
+
+The prior handoff explicitly states that CN-4 must not be called complete until Windows possession and `@testpc` mutation are green, with no dev bypass and the real public ingress path.
+
+---
+
+# 37. Current truth table at session end
+
+```text
+ACTIVE_PLAN=CRABNODE_BUILDPLAN
+ACTIVE_PHASE=CN4
+
+CN4_COMPLETE=NO
+CN5_STARTED=NO
+
+MAC_TESTMAC_REAL_PROTECTED_CLAIM=GREEN
+MAC_TESTMAC_BACKEND_CONFIRMED=GREEN
+MAC_TESTMAC_RESTART_PERSISTENCE=GREEN
+
+WINDOWS_CRABLINK_NATIVE_BUILD=GREEN
+WINDOWS_NATIVE_SECRET_SURFACE=GREEN
+
+WINDOWS_EXISTING_V1_PASSPORT_MIGRATION=GREEN
+WINDOWS_VAULT_VERSION=2
+WINDOWS_PASSPORT_RECREATED=NO
+
+WINDOWS_LOCAL_DEVICE_AUTHORIZATION=GREEN
+WINDOWS_DEVICE_AUTHORIZATION_PERSISTED=YES
+
+WINDOWS_DEVICE_POSSESSION=REJECTED
+REJECTION_DIAGNOSED=YES
+
+ROOT_CAUSE_CLASS=
+MISSING_PRODUCT_SERVER_ENROLLMENT_LIFECYCLE
+
+RUSTYONIONS_REGISTERROOT_BACKEND=ALREADY_PRESENT
+RUSTYONIONS_DEVICE_AUTHORIZE_BACKEND=ALREADY_PRESENT
+
+CRABLINK_REGISTERROOT_NATIVE_RUNTIME=ADDED
+CRABLINK_REGISTERROOT_TAURI_COMMAND=ADDED
+CRABLINK_REGISTERROOT_ALLOWLIST=ADDED
+CRABLINK_REGISTERROOT_ADAPTER=ADDED
+CRABLINK_REGISTERROOT_UI_TRIGGER=ADDED
+
+REGISTERROOT_PUBLIC_GATEWAY_ONLY=YES
+DIRECT_9090_CLIENT_PATH=NO
+DIRECT_5307_CLIENT_PATH=NO
+
+REGISTERROOT_SERVICE_CHALLENGE_BEFORE_ROOT=YES
+REGISTERROOT_ROOT_PIN_NATIVE_ONLY=YES
+REGISTERROOT_RECOVERY_ROOT_NATIVE_ONLY=YES
+REGISTERROOT_AUTHORITY_RETURNED_TO_REACT=NO
+
+REGISTERROOT_RUST_FOCUSED_TEST=GREEN
+REGISTERROOT_JS_BOUNDARY=GREEN
+PASSPORT_BOUNDARY_REGRESSION=GREEN
+DEVICE_AUTHORIZATION_DRAWER_REGRESSION=GREEN
+DEVICE_POSSESSION_DRAWER_REGRESSION=GREEN
+USERNAME_CAPABILITY_DRAWER_REGRESSION=GREEN
+NATIVE_COMMAND_ACCEPTANCE=GREEN
+PRODUCTION_CARGO_CHECK=GREEN
+PRODUCTION_VITE_BUILD=GREEN
+GIT_DIFF_CHECK=GREEN
+
+CURRENT_REGISTERROOT_SLICE_COMMITTED=NO
+CURRENT_REGISTERROOT_SLICE_PUSHED=NO
+
+NEXT=REGISTERROOT_SLICE_PRECOMMIT_CLOSEOUT
+```
+
+The final UI gate and Vite build are directly confirmed by the last terminal output.
+
+---
+
+# 38. Files changed in the current uncommitted slice
+
+### Production Rust
+
+```text
+apps/crablink-tauri/src-tauri/src/commands/passport.rs
+
+apps/crablink-tauri/src-tauri/src/lib.rs
+
+apps/crablink-tauri/src-tauri/src/
+passport_register_root_http_runtime.rs
+```
+
+### Rust test
+
+```text
+apps/crablink-tauri/src-tauri/tests/
+physical_m1_production_register_root_wiring.rs
+```
+
+### JS/Tauri boundary
+
+```text
+apps/crablink-tauri/src/platform/tauriPlatform.js
+
+apps/crablink-tauri/src/platform/
+tauriPlatform.passportBoundary.source.test.mjs
+```
+
+### Adapter
+
+```text
+apps/crablink-tauri/src/adapters/passportAdapter.js
+
+apps/crablink-tauri/src/adapters/
+passportRegisterRoot.source.test.mjs
+```
+
+### UI
+
+```text
+apps/crablink-tauri/src/app/shell/PassportDrawer.jsx
+```
+
+No RustyOnions files should appear in this current diff.
+
+---
+
+# 39. New production runtime details worth preserving
+
+The next session should remember these design choices rather than rediscover them.
+
+### Runtime
+
+```text
+passport_register_root_http_runtime.rs
+```
+
+### Label
+
+```text
+PHYSICAL_M1_NATIVE_REGISTER_ROOT_HTTP_V1
+```
+
+### Gateway
+
+```text
+http://127.0.0.1:8090
+```
+
+### Challenge route
+
+```text
+/identity/passport/register/challenge
+```
+
+### Proof route
+
+```text
+/identity/passport/register/proof
+```
+
+### Response bound
+
+```text
+16 KiB
+```
+
+### Maximum request timeout
+
+```text
+30 seconds
+```
+
+### Requested scope
+
+```text
+identity.read
+```
+
+### Root epoch
+
+Existing reviewed constant:
+
+```text
+PHYSICAL_M1_REGISTER_ROOT_KEY_EPOCH
+```
+
+No caller chooses any of these.
+
+---
+
+# 40. Error/security semantics worth preserving
+
+The runtime deliberately distinguishes broadly:
+
+```text
+operational_unlock_required
+confirmation_rejected
+cancelled
+root_registration_service_unavailable
+root_registration_rejected
+unavailable
+```
+
+Internal crypto/network detail is intentionally not surfaced as a rich oracle to React.
+
+Do not expand WebView errors to leak:
+
+```text
+root proof details
+signature bytes
+challenge contents
+RecoveryRoot handling
+backend durable internals
+```
+
+during future debugging.
+
+Use terminal/backend diagnostics instead.
+
+---
+
+# 41. Windows V1/V2 migration behavior must remain untouched
+
+The migration integration from the prior slice now has physical acceptance.
+
+Production operational unlock behavior:
+
+```text
+OperationalUnlocked / AlreadyUnlocked
+↓
+migrate existing V1→V2 if needed
+↓
+Migrated / AlreadyV2 = continue
+↓
+ambiguous post-write/error = fail closed
+↓
+drop capability/session authority
+```
+
+This is now successful in the real Windows app.
+
+Do not couple RegisterRoot or DeviceAuthorization server admission into the migration routine.
+
+Migration owns vault-version readiness only.
+
+---
+
+# 42. PowerShell interactive `else` issue
+
+Several Windows checks produced errors like:
+
+```text
+else : The term 'else' is not recognized...
+```
+
+This was caused by pasting the `if` block and `else` as separate interactive PowerShell submissions.
+
+Those errors were harmless because the successful `if` branch had already run.
+
+For future Windows scripts, prefer:
+
+```powershell
+function Invoke-Whatever {
+    if (...) {
+        ...
+    }
+    else {
+        ...
+    }
+}
+
+Invoke-Whatever
+```
+
+so PowerShell parses the entire construct at once.
+
+Do not misdiagnose those interactive shell errors as application failures.
+
+---
+
+# 43. Known compile warnings — do not derail CN-4
+
+Windows showed known warnings including:
+
+```text
+ron-kms:
+unused root
+
+svc-passport:
+unused File imports
+unused root variables
+
+crablink-tauri:
+unused File imports
+```
+
+They did not block:
+
+```text
+tests
+cargo check
+release build
+packaging
+```
+
+Continue deferring these unless they hide a real defect.
+
+Do not enter a warning-cleanup detour.
+
+---
+
+# 44. Testing cadence confirmed again this session
+
+Keep using:
+
+```text
+inspect
+→ smallest real behavior
+→ focused test
+→ fix first real failure
+→ production cargo check
+→ grouped regression gate at milestone
+→ physical proof
+```
+
+Do not return to:
+
+```text
+tiny patch
+→ enormous test suite
+→ strict Clippy test targets
+→ unrelated dependency lint cleanup
+```
+
+The previous notes explicitly establish that `cargo test` is the correct compile/validation path for test changes, while strict Clippy belongs primarily at production/milestone closeout and unrelated `ron-kernel` lint debt should not hijack CN work.
+
+---
+
+# 45. Momentum improvements from this session
+
+The session demonstrated a useful division of work.
+
+### Batch low-risk boundary wiring
+
+Once a native behavior is already reviewed, it is efficient to group:
+
+```text
+handler registration
+central allowlist
+fixed adapter mapping
+drawer trigger
+source-boundary regression
+```
+
+These are mechanically coupled and do not independently own cryptographic authority.
+
+### Isolate authority-changing work
+
+Continue separating:
+
+```text
+RegisterRoot signing/network proof
+DeviceAuthorization server admission
+DeviceKey possession
+capability issuance
+username mutation
+wallet/ledger mutation
+```
+
+Each deserves its own focused physical evidence.
+
+### Do not reopen green layers
+
+Do not redo:
+
+```text
+Windows V1→V2 migration
+Windows native secret surface
+Mac @testmac protected claim
+Mac restart persistence
+RegisterRoot server challenge/proof implementation
+Omnigate RegisterRoot path
+svc-gateway RegisterRoot path
+existing ProveSession server behavior
+```
+
+without fresh evidence.
+
+---
+
+# 46. Major architectural invariants to carry forward
+
+Never weaken these:
+
+```text
+React = display + user intent
+
+Tauri/native Rust = native privilege
+
+svc-passport = Passport/device/identity durable truth
+
+svc-wallet = economic mutation ingress
+
+ron-ledger = ROC balance/receipt truth
+```
+
+Never send through React:
+
+```text
+PIN
+VMK
+operational factor
+RecoveryRoot
+DeviceKey seed
+root signature
+raw DeviceAuthorization
+raw DeviceKey proof signature
+raw capability
+```
+
+Public desktop identity traffic:
+
+```text
+8090 only
+```
+
+Not:
+
+```text
+9090 direct
+5307 direct
+```
+
+DeviceAuthorization is not possession.
+
+Possession is not capability.
+
+Capability is not username ownership.
+
+Each stage must prove the next.
+
+---
+
+# 47. No shortcuts for the Windows acceptance
+
+Do not solve the next failures by:
+
+```text
+manually POSTing DeviceAuthorization and calling it product acceptance
+editing backend durable state
+copying the Mac Passport to Windows
+reusing @testmac authority
+making Windows use a development Passport
+putting Passport ID/device ID in React
+sending raw DeviceAuthorization to React
+letting React submit the proof
+directly calling svc-passport
+```
+
+Manual requests can be used only as diagnostics if needed.
+
+The final proof must come from the actual packaged CrabLink product.
+
+---
+
+# 48. Do not clear the Windows Passport
+
+The current Windows Passport is especially valuable now because it has accumulated real lifecycle state:
+
+```text
+independent Windows Passport
+public descriptor
+V2 encrypted vault
+DPAPI custody
+DeviceKey
+local root-signed DeviceAuthorization
+```
+
+Clearing it would destroy the exact migration/enrollment path we need to prove.
+
+Do not use:
+
+```text
+Clear local Passport
+disposable onboarding reset
+AppData deletion
+vault replacement
+```
+
+unless a genuine unrecoverable corruption is proven.
+
+---
+
+# 49. RegisterRoot physical acceptance should be idempotent
+
+The server supports:
+
+```text
+registered
+already_registered
+```
+
+The product command maps those to:
+
+```text
+root_registered
+root_already_registered
+```
+
+Therefore if the first network attempt succeeds but the UI/process dies before displaying success, the next attempt should not require unsafe manual cleanup.
+
+It should safely become:
+
+```text
+root_already_registered
+```
+
+provided the backend behavior matches the existing handler semantics.
+
+Do not weaken replay protections to achieve idempotency.
+
+---
+
+# 50. DeviceAuthorization server registration must also preserve idempotency
+
+When implementing the next slice, inspect whether the backend returns:
+
+```text
+registered
+already_registered
+```
+
+or equivalent.
+
+The client should distinguish:
+
+```text
+safe same authorization already present
+```
+
+from:
+
+```text
+conflicting authorization
+invalid root
+revoked device
+malformed authorization
+```
+
+Do not overwrite a server-side conflicting device record silently.
+
+---
+
+# 51. Current FINAL_BETA relationship
+
+`FINAL_BETA` Phase 21 remains the integrated desktop/private-network demonstration, and later phases still cover security/moderation/privacy, UX/performance, packaging/recovery, operations, and final launch acceptance. Historical component evidence reduces duplication but does not eliminate the integrated acceptance run.
+
+The efficient posture remains:
+
+```text
+CRABNODE_BUILDPLAN
+= implementation authority
+
+FINAL_BETA
+= umbrella acceptance authority
+```
+
+Reuse truthful CN evidence to close FINAL_BETA gates instead of implementing the same feature twice.
+
+---
+
+# 52. What comes after CN-4
+
+Do not start yet, but preserve roadmap context.
+
+The CrabNode buildplan's immediate milestones remain:
+
+```text
+M1:
+CN-0 → CN-4
+standalone real backend / physical client unblock
+
+M2:
+CN-5 / CN-6
+complete coherent standalone CrabNode product + supervision
+
+M3:
+CN-7 → CN-12
+identity/overlay/DHT/remote fetch/replication/durable CAS
+
+M4:
+CN-13 / CN-14
+decentralized mutable state + moderation convergence
+
+M5:
+CN-15
+real service evidence → ROC path
+
+M6:
+CN-16
+physical multi-node private beta
+
+M7:
+CN-17 → CN-19
+WAN / packaging / chaos / security / soak
+```
+
+
+
+Do not let the remaining roadmap distract from finishing the current Windows identity chain.
+
+---
+
+# 53. Recommended first-session sequence next time
+
+The fastest safe continuation is:
+
+```text
+A. Mac
+   RegisterRoot slice precommit closeout.
+
+B. Confirm exact 9-file worktree.
+
+C. User commits/pushes RegisterRoot slice.
+
+D. Windows
+   inspect local Cargo.toml change.
+
+E. Windows
+   fast-forward pull.
+
+F. Windows
+   focused test + cargo check + fresh Tauri package.
+
+G. Record new installer SHA256.
+
+H. Install fresh build without clearing Passport.
+
+I. Verify Mac CrabNode ready + Windows SSH :8090 tunnel.
+
+J. Unlock existing Windows V2 Passport.
+
+K. Click Register Passport root.
+
+L. Expect root_registered / root_already_registered.
+
+M. Capture backend evidence if useful.
+
+N. Only then inspect/implement DeviceAuthorization server HTTP runtime.
+
+O. Package/pull Windows again if implementation required.
+
+P. Register existing DeviceAuthorization.
+
+Q. Verify device possession.
+
+R. Prepare username claim.
+
+S. Claim @testpc.
+
+T. Confirm @testpc from backend.
+
+U. Close CN-4 if all invariants remain green.
+```
+
+---
+
+# 54. Recommended first terminal action next session
+
+Do **not** run a broad repository inventory.
+
+The immediate task is already known.
+
+Start in:
+
+```text
+/Users/mymac/Desktop/crablink
+```
+
+and inspect:
+
+```text
+git status --short
+git log -1 --oneline
+git diff --check
+git diff --name-only
+git diff --stat
+```
+
+Confirm the expected nine files above.
+
+Then perform a targeted diff review of:
+
+```text
+passport_register_root_http_runtime.rs
+commands/passport.rs
+lib.rs
+tauriPlatform.js
+passportAdapter.js
+PassportDrawer.jsx
+three relevant tests
+```
+
+If that exact precommit closeout is clean, no additional implementation should be added to that commit.
+
+---
+
+# 55. Short next-session bootstrap prompt
+
+This can be pasted at the beginning of the next session:
+
+> We are continuing RustyOnions/CrabLink/CrabNode with `CRABNODE_BUILDPLAN.md` as the active implementation authority and `FINAL_BETA.md` as the umbrella beta plan. CN-4 remains active; do not start CN-5. In the last session Windows physically migrated its existing Passport V1→V2 in place, local DeviceAuthorization became green and persisted, but DeviceKey possession correctly returned rejected because the independent Windows root/device had never been registered with the CrabNode. We diagnosed that the backend RegisterRoot/DeviceAuthorize routes already exist and the missing work is CrabLink product enrollment composition. We added a production native `passport_register_root_http_runtime.rs`, zero-argument `passport_register_root` Tauri command, normal central allowlist admission, zero-argument adapter, and one controlled Advanced Passport drawer action. It uses only public `127.0.0.1:8090`, verifies the service challenge before RecoveryRoot access, drops PIN/RecoveryRoot before proof HTTP await, returns only redacted state, and never exposes authority to React. Focused Rust RegisterRoot tests are 4/4 green, JS command/UI boundary is green, existing DeviceAuthorization/possession/capability drawer regressions are green, native command acceptance is green, cargo check is green, Vite production build is green, and `git diff --check` is green. Current RegisterRoot slice is uncommitted and consists of exactly nine CrabLink files. FIRST ACTION: do the RegisterRoot precommit exact-file/diff closeout; do not add another patch. Then commit/push, pull/build a fresh Windows installer, preserve the existing Windows V2 Passport and local DeviceAuthorization, and physically run `Register Passport root` through the real SSH-tunneled :8090 CrabNode. After root registration is green, implement the isolated DeviceAuthorization server-registration path, then retry possession → capability → `@testpc`. Preserve the Windows-local `src-tauri/Cargo.toml` modification and do not clear the Passport, use direct 9090/5307 mutation, or weaken React/Tauri authority boundaries.
+
+---
+
+# 56. Final session assessment
+
+This session moved CN-4 forward in three important ways:
+
+```text
+1. Windows native custody is no longer theoretical.
+   Existing Passport V1→V2 migration is physically proven.
+
+2. Windows root/device signing is no longer blocked.
+   DeviceAuthorization is now genuinely created and persisted.
+
+3. The possession rejection exposed a real missing product composition,
+   and we responded by implementing the first missing enrollment stage
+   rather than bypassing backend authority.
+```
+
+The latest RegisterRoot implementation is at a strong stopping point: production code exists, command/allowlist/adapter/UI wiring exists, all focused regression gates are green, and the slice is still isolated and uncommitted.
+
+The next session should therefore be able to resume with **almost no rediscovery**:
+
+```text
+precommit closeout
+→ push
+→ Windows build
+→ physical RegisterRoot
+→ DeviceAuthorization server admission
+→ possession
+→ capability
+→ @testpc
+→ CN-4 close
+```
+
+That is the shortest safe path to restoring momentum and moving past the CN-4/M1 identity gate.
+
+
+### END NOTE - AUGUST 25 2026 - 18:45 CST

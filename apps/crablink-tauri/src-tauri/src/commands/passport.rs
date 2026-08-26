@@ -1,9 +1,9 @@
-//! RO:WHAT — Implements redacted desktop Native Passport status, lock, operational unlock, device authorization, DeviceKey possession, bounded username-capability issuance, protected username/profile claim, and local clear commands.
+//! RO:WHAT — Implements redacted desktop Native Passport status, lock, operational unlock, durable RegisterRoot enrollment, device authorization, DeviceKey possession, bounded username-capability issuance, protected username/profile claim, and local clear commands.
 //! RO:WHY — Tauri mediates native Passport privilege while React supplies only public user intent and never receives custody or signed authority material.
-//! RO:INTERACTS — operational/root/device-authorization/device-session/capability/protected-username runtimes, V1-to-V2 vault migration, AppState, svc-passport status contracts, local authorization storage, and the Tauri handler registry.
-//! RO:INVARIANTS — DeviceAuthorization is strictly reverified; successful operational unlock ensures an authenticated V2 vault before DeviceKey consumers run; migration failure drops native session/capability authority; protected username authority remains native; lock and clear drop native capability authority before continuing.
+//! RO:INTERACTS — operational/root/RegisterRoot/device-authorization/device-session/capability/protected-username runtimes, V1-to-V2 vault migration, AppState, svc-passport status contracts, local authorization storage, and the Tauri handler registry.
+//! RO:INVARIANTS — successful operational unlock ensures authenticated V2 custody; RegisterRoot accepts zero caller authority and verifies the service challenge before RecoveryRoot signing; DeviceAuthorization is strictly reverified; protected username authority remains native; lock and clear drop native capability authority before continuing.
 //! RO:SECURITY — PIN, VMK, platform factor, vault bytes, root/device secrets, DeviceAuthorization, proof signatures, capability IDs/material, Passport ownership authority, and raw capabilities never serialize to React.
-//! RO:TEST — focused Passport command, DeviceAuthorization/DeviceSession/protected-username boundaries, clear lifecycle, and operational-unlock integration tests.
+//! RO:TEST — focused Passport command, RegisterRoot, DeviceAuthorization/DeviceSession/protected-username boundaries, clear lifecycle, and operational-unlock integration tests.
 
 use crate::passport_device_authorization_command_bridge::PHYSICAL_M1_DEVICE_AUTHORIZATION_COMMAND_BRIDGE_LABEL;
 use crate::passport_device_authorization_persistence_runtime::authorize_or_reuse_persisted_physical_m1_device_authorization;
@@ -475,6 +475,73 @@ pub fn passport_unlock_root(
         recovery_root_unsealed: outcome.recovery_root_unsealed,
         wallet_or_ledger_mutated: false,
     })
+}
+
+/// Public redacted schema for durable RegisterRoot enrollment.
+pub const PASSPORT_REGISTER_ROOT_DTO_SCHEMA_V1: &str =
+    "crablink.native-passport.register-root.v1";
+
+/// Stable zero-user-argument Tauri command for durable Passport root
+/// registration through the controlled-beta CrabNode.
+pub const PASSPORT_REGISTER_ROOT_COMMAND: &str =
+    "passport_register_root";
+
+/// Register the already-finalized native Passport root through the public
+/// CrabNode ingress.
+///
+/// Passport identity, root public key, scope, gateway, challenge, PIN,
+/// RecoveryRoot, proof transcript, signature, and proof payload remain
+/// native-owned. The WebView receives only redacted result state.
+#[tauri::command]
+pub async fn passport_register_root(
+    state: State<'_, AppState>,
+) -> Result<PassportOperationalCommandDtoV1, PassportStatusProblemV1> {
+    match crate::passport_register_root_http_runtime::
+        register_physical_m1_root(state.inner()).await
+    {
+        Ok(outcome) => Ok(PassportOperationalCommandDtoV1 {
+            schema: PASSPORT_REGISTER_ROOT_DTO_SCHEMA_V1,
+            command_name: PASSPORT_REGISTER_ROOT_COMMAND,
+            source_phase_label:
+                crate::passport_register_root_http_runtime::
+                    PHYSICAL_M1_REGISTER_ROOT_HTTP_LABEL,
+            state: if outcome.newly_registered {
+                "root_registered"
+            } else {
+                "root_already_registered"
+            },
+            redacted: true,
+            native_secure_input_requested: true,
+            pin_received_from_webview: false,
+            secret_material_returned: false,
+            session_changed: false,
+            encrypted_vault_mutated: false,
+            platform_material_mutated: false,
+            recovery_root_unsealed:
+                outcome.recovery_root_unsealed,
+            wallet_or_ledger_mutated: false,
+        }),
+
+        Err(error) => Ok(PassportOperationalCommandDtoV1 {
+            schema: PASSPORT_REGISTER_ROOT_DTO_SCHEMA_V1,
+            command_name: PASSPORT_REGISTER_ROOT_COMMAND,
+            source_phase_label:
+                crate::passport_register_root_http_runtime::
+                    PHYSICAL_M1_REGISTER_ROOT_HTTP_LABEL,
+            state: error.state_label(),
+            redacted: true,
+            native_secure_input_requested:
+                error.native_secure_input_requested(),
+            pin_received_from_webview: false,
+            secret_material_returned: false,
+            session_changed: false,
+            encrypted_vault_mutated: false,
+            platform_material_mutated: false,
+            recovery_root_unsealed:
+                error.recovery_root_unsealed(),
+            wallet_or_ledger_mutated: false,
+        }),
+    }
 }
 
 /// Begin the native-only Passport recovery ceremony.

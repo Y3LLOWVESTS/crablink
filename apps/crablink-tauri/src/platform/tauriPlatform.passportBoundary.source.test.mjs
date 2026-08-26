@@ -20,6 +20,7 @@ const PASSPORT_COMMANDS = Object.freeze([
   'passport_lock',
   'passport_unlock_operational',
   'passport_unlock_root',
+  'passport_register_root',
   'passport_authorize_device',
   'passport_verify_device_possession',
   'passport_issue_username_capability',

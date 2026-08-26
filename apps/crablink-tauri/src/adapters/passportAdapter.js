@@ -18,6 +18,7 @@ export const PASSPORT_COMMANDS = Object.freeze({
   lock: 'passport_lock',
   unlockOperational: 'passport_unlock_operational',
   unlockRoot: 'passport_unlock_root',
+  registerRoot: 'passport_register_root',
   authorizeDevice: 'passport_authorize_device',
   verifyDevicePossession:
     'passport_verify_device_possession',
@@ -337,6 +338,10 @@ export async function unlockNativePassportOperational() {
 
 export async function confirmNativePassportRoot() {
   return runPassportCommand(PASSPORT_COMMANDS.unlockRoot);
+}
+
+export async function registerNativePassportRoot() {
+  return runPassportCommand(PASSPORT_COMMANDS.registerRoot);
 }
 
 export async function authorizeNativePassportDevice() {

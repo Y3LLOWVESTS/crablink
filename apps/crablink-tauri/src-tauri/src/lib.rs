@@ -68,6 +68,8 @@ pub mod passport_recovery_acknowledgement_store;
 pub mod passport_recovery_ceremony_runtime;
 pub mod passport_recovery_phrase_runtime;
 #[cfg(desktop)]
+pub mod passport_register_root_http_runtime;
+#[cfg(desktop)]
 pub mod passport_register_root_intent;
 #[cfg(desktop)]
 pub mod passport_register_root_trust;
@@ -244,6 +246,7 @@ pub fn run() {
             commands::passport::passport_lock,
             commands::passport::passport_unlock_operational,
             commands::passport::passport_unlock_root,
+            commands::passport::passport_register_root,
             commands::passport::passport_authorize_device,
             commands::passport::passport_verify_device_possession,
             commands::passport::passport_issue_username_capability,
