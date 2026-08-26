@@ -115,7 +115,7 @@ fn physical_m1_controlled_beta_anchor_is_exact_and_typed() {
 
     assert_eq!(trust.trusted_initial_root_key_epoch, 0,);
 
-    assert_eq!(PHYSICAL_M1_REGISTER_ROOT_MAX_CLOCK_SKEW_MS, 0,);
+    assert_eq!(PHYSICAL_M1_REGISTER_ROOT_MAX_CLOCK_SKEW_MS, 5_000,);
 
     assert_eq!(PHYSICAL_M1_REGISTER_ROOT_ROOT_KEY_EPOCH, 0,);
 }
@@ -279,4 +279,55 @@ fn trust_module_has_no_network_secret_or_signing_authority() {
             "trust module gained forbidden authority {forbidden}",
         );
     }
+}
+
+
+#[test]
+fn bounded_cross_host_clock_skew_reaches_crypto_verification() {
+    let challenge = unsigned_matching_challenge();
+
+    let now_ms = ISSUED_AT_MS.saturating_sub(
+        PHYSICAL_M1_REGISTER_ROOT_MAX_CLOCK_SKEW_MS.saturating_sub(1),
+    );
+
+    let error = verify_physical_m1_register_root_challenge(
+        &challenge,
+        &passport(PASSPORT_A),
+        &expected_scopes(),
+        &operation_hash(OPERATION_HASH_A),
+        now_ms,
+    )
+    .expect_err("bounded clock skew must pass time validation and reach crypto verification");
+
+    assert_eq!(
+        error,
+        PhysicalM1RegisterRootChallengeVerificationError::ChallengeVerification(
+            PassportChallengeVerificationError::InvalidServiceSignature,
+        ),
+    );
+}
+
+#[test]
+fn clock_skew_beyond_bound_rejects_before_crypto_verification() {
+    let challenge = unsigned_matching_challenge();
+
+    let now_ms = ISSUED_AT_MS.saturating_sub(
+        PHYSICAL_M1_REGISTER_ROOT_MAX_CLOCK_SKEW_MS.saturating_add(1),
+    );
+
+    let error = verify_physical_m1_register_root_challenge(
+        &challenge,
+        &passport(PASSPORT_A),
+        &expected_scopes(),
+        &operation_hash(OPERATION_HASH_A),
+        now_ms,
+    )
+    .expect_err("clock skew beyond the local bound must fail closed");
+
+    assert_eq!(
+        error,
+        PhysicalM1RegisterRootChallengeVerificationError::ChallengeVerification(
+            PassportChallengeVerificationError::NotYetValid,
+        ),
+    );
 }

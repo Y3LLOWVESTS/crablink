@@ -3,7 +3,7 @@
 //! RO:INTERACTS — ron-auth strict PassportChallengeV1 verifier, ron-proto typed challenge fields, and the later native RegisterRoot network/signing orchestrator.
 //! RO:INVARIANTS — trust comes only from this locally provisioned beta anchor; challenge purpose, Passport ID, scopes, operation hash, device absence, and TTL must exactly match native intent before signing is permitted.
 //! RO:METRICS — none; this pure verifier emits no logging.
-//! RO:CONFIG — controlled beta pins one durable CrabNode svc-passport KID/public key plus rustyonions-devnet/private-beta/svc-passport context; key rotation requires explicit reprovisioning.
+//! RO:CONFIG — controlled beta pins one durable CrabNode svc-passport KID/public key plus rustyonions-devnet/private-beta/svc-passport context; a bounded 5-second verifier skew tolerates ordinary cross-host clock drift; key rotation requires explicit reprovisioning.
 //! RO:SECURITY — public verification material only; no HTTP, Tauri command, vault access, RecoveryRoot unseal, PIN handling, signing, capability issuance, username mutation, wallet mutation, or ledger mutation.
 //! RO:TEST — tests/physical_m1_register_root_trust_anchor.rs.
 
@@ -39,7 +39,10 @@ pub const PHYSICAL_M1_REGISTER_ROOT_CHALLENGE_TTL_MS: u64 = 60_000;
 
 pub const PHYSICAL_M1_REGISTER_ROOT_ROOT_KEY_EPOCH: u64 = 0;
 
-pub const PHYSICAL_M1_REGISTER_ROOT_MAX_CLOCK_SKEW_MS: u64 = 0;
+// Cross-host desktop verification must tolerate small ordinary system-clock
+// drift without weakening the exact 60-second challenge lifetime or the
+// protocol-wide 30-second skew ceiling.
+pub const PHYSICAL_M1_REGISTER_ROOT_MAX_CLOCK_SKEW_MS: u64 = 5_000;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PhysicalM1RegisterRootTrustAnchorV1 {
