@@ -1,9 +1,9 @@
 //! RO:WHAT — Runs the Physical M1 native ProveSession challenge → trust verification → DeviceKey signing → proof submission flow through the canonical local CrabNode gateway.
 //! RO:WHY — CN-4 must prove real possession of the already-authorized persisted DeviceKey through 8090 without exposing device secrets or moving identity authority into React.
 //! RO:INTERACTS — AppState HTTP/settings, public Passport descriptor, authenticated V2 device identity, strictly verified DeviceAuthorization sidecar, pinned svc-passport challenge trust, ron-auth challenge hashing/DeviceSession transcript, and native DeviceKey signing custody.
-//! RO:INVARIANTS — local DeviceAuthorization is strictly reverified before network I/O; gateway is exactly loopback 8090; challenge is strictly authenticated before signing; only identity.read is requested; no AppState mutex or VMK lock crosses an await; proof result must be exact.
+//! RO:INVARIANTS — local DeviceAuthorization is strictly reverified before network I/O; gateway is exactly loopback 8090; challenge is strictly authenticated before signing; proof time may normalize only within the existing bounded cross-host skew and never outside the authenticated challenge window; only identity.read is requested; no AppState mutex or VMK lock crosses an await; proof result must be exact.
 //! RO:METRICS — none; errors remain redacted by stable classes.
-//! RO:CONFIG — Physical M1 controlled beta uses http://127.0.0.1:8090 and the existing AppSettings request timeout bounded to 30 seconds.
+//! RO:CONFIG — Physical M1 controlled beta uses http://127.0.0.1:8090, the existing AppSettings request timeout bounded to 30 seconds, and the reviewed 5-second cross-host challenge clock-skew policy.
 //! RO:SECURITY — no RecoveryRoot, root PIN, VMK/seed export, generic signer, direct 9090/5307 access, WebView authority, capability issuance, username mutation, wallet mutation, or ledger mutation.
 //! RO:TEST — physical_m1_device_session_http_boundary.rs plus subsequent physical managed-CrabNode acceptance.
 
@@ -32,6 +32,7 @@ use crate::{
     passport_device_authorization_store::DesktopDeviceAuthorizationVerificationContextV1,
     passport_device_session_signing_runtime::sign_desktop_native_passport_device_session_proof,
     passport_device_session_trust::verify_physical_m1_device_session_challenge,
+    passport_register_root_trust::PHYSICAL_M1_REGISTER_ROOT_MAX_CLOCK_SKEW_MS,
     passport_vault_v2_migration_runtime::read_desktop_native_passport_session_device_public_identity,
     state::AppState,
 };
@@ -249,12 +250,11 @@ pub async fn prove_physical_m1_device_session(
         B3DigestHex::parse("challenge_transcript_hash", challenge_hash_text)
             .map_err(|_| DesktopDeviceSessionHttpError::ChallengeHashFailed)?;
 
-    let proof_created_at_ms = current_unix_time_ms()?;
-
-    if proof_created_at_ms < challenge.issued_at_ms || proof_created_at_ms > challenge.expires_at_ms
-    {
-        return Err(DesktopDeviceSessionHttpError::ProofTimeOutsideChallenge);
-    }
+    let proof_created_at_ms = normalize_device_session_proof_created_at_ms(
+        challenge.issued_at_ms,
+        challenge.expires_at_ms,
+        current_unix_time_ms()?,
+    )?;
 
     let proof_signature = {
         let transcript = DeviceSessionProofTranscriptV1 {
@@ -341,6 +341,130 @@ async fn read_bounded_response_body(
     }
 
     Ok(output)
+}
+
+/// Normalize local proof creation time into one already-authenticated service
+/// challenge window while preserving the reviewed cross-host skew ceiling.
+///
+/// The signed challenge has already passed strict service-key/context/time
+/// verification before this function is called. A client clock slightly
+/// behind or ahead may therefore use the nearest signed challenge boundary,
+/// but only while that local clock remains inside the same bounded skew policy.
+/// Larger disagreement fails closed rather than fabricating a proof time.
+fn normalize_device_session_proof_created_at_ms(
+    challenge_issued_at_ms: u64,
+    challenge_expires_at_ms: u64,
+    local_now_ms: u64,
+) -> Result<u64, DesktopDeviceSessionHttpError> {
+    if challenge_issued_at_ms == 0 || challenge_expires_at_ms <= challenge_issued_at_ms {
+        return Err(DesktopDeviceSessionHttpError::ProofTimeOutsideChallenge);
+    }
+
+    let earliest_acceptable_local_ms =
+        challenge_issued_at_ms.saturating_sub(PHYSICAL_M1_REGISTER_ROOT_MAX_CLOCK_SKEW_MS);
+
+    let latest_acceptable_local_ms =
+        challenge_expires_at_ms.saturating_add(PHYSICAL_M1_REGISTER_ROOT_MAX_CLOCK_SKEW_MS);
+
+    if local_now_ms < earliest_acceptable_local_ms || local_now_ms > latest_acceptable_local_ms {
+        return Err(DesktopDeviceSessionHttpError::ProofTimeOutsideChallenge);
+    }
+
+    Ok(local_now_ms.clamp(challenge_issued_at_ms, challenge_expires_at_ms))
+}
+
+#[cfg(test)]
+mod proof_time_tests {
+    use super::{normalize_device_session_proof_created_at_ms, DesktopDeviceSessionHttpError};
+
+    const ISSUED_AT_MS: u64 = 1_000_000;
+    const EXPIRES_AT_MS: u64 = 1_060_000;
+
+    #[test]
+    fn local_time_inside_challenge_is_preserved() {
+        assert_eq!(
+            normalize_device_session_proof_created_at_ms(
+                ISSUED_AT_MS,
+                EXPIRES_AT_MS,
+                ISSUED_AT_MS + 10_000,
+            ),
+            Ok(ISSUED_AT_MS + 10_000),
+        );
+    }
+
+    #[test]
+    fn bounded_behind_clock_normalizes_to_signed_issue_time() {
+        assert_eq!(
+            normalize_device_session_proof_created_at_ms(
+                ISSUED_AT_MS,
+                EXPIRES_AT_MS,
+                ISSUED_AT_MS - 4_999,
+            ),
+            Ok(ISSUED_AT_MS),
+        );
+
+        assert_eq!(
+            normalize_device_session_proof_created_at_ms(
+                ISSUED_AT_MS,
+                EXPIRES_AT_MS,
+                ISSUED_AT_MS - 5_000,
+            ),
+            Ok(ISSUED_AT_MS),
+        );
+    }
+
+    #[test]
+    fn behind_clock_beyond_reviewed_skew_fails_closed() {
+        assert_eq!(
+            normalize_device_session_proof_created_at_ms(
+                ISSUED_AT_MS,
+                EXPIRES_AT_MS,
+                ISSUED_AT_MS - 5_001,
+            ),
+            Err(DesktopDeviceSessionHttpError::ProofTimeOutsideChallenge),
+        );
+    }
+
+    #[test]
+    fn bounded_ahead_clock_normalizes_to_signed_expiry_time() {
+        assert_eq!(
+            normalize_device_session_proof_created_at_ms(
+                ISSUED_AT_MS,
+                EXPIRES_AT_MS,
+                EXPIRES_AT_MS + 4_999,
+            ),
+            Ok(EXPIRES_AT_MS),
+        );
+
+        assert_eq!(
+            normalize_device_session_proof_created_at_ms(
+                ISSUED_AT_MS,
+                EXPIRES_AT_MS,
+                EXPIRES_AT_MS + 5_000,
+            ),
+            Ok(EXPIRES_AT_MS),
+        );
+    }
+
+    #[test]
+    fn ahead_clock_beyond_reviewed_skew_fails_closed() {
+        assert_eq!(
+            normalize_device_session_proof_created_at_ms(
+                ISSUED_AT_MS,
+                EXPIRES_AT_MS,
+                EXPIRES_AT_MS + 5_001,
+            ),
+            Err(DesktopDeviceSessionHttpError::ProofTimeOutsideChallenge),
+        );
+    }
+
+    #[test]
+    fn invalid_challenge_window_fails_closed() {
+        assert_eq!(
+            normalize_device_session_proof_created_at_ms(ISSUED_AT_MS, ISSUED_AT_MS, ISSUED_AT_MS,),
+            Err(DesktopDeviceSessionHttpError::ProofTimeOutsideChallenge),
+        );
+    }
 }
 
 fn current_unix_time_ms() -> Result<u64, DesktopDeviceSessionHttpError> {
