@@ -2,13 +2,13 @@
 //!
 //! RO:WHY — The app must not request repeat root signatures after restart, persist unverified authority, or leave local device authority behind after Passport clear.
 //!
-//! RO:INTERACTS — persistence runtime, AppState, Passport Tauri commands, immutable DeviceAuthorization store, and the existing canonical custody-clear wrapper.
+//! RO:INTERACTS — persistence runtime, AppState, Passport Tauri commands, immutable DeviceAuthorization store, server-registration handoff, and the existing canonical custody-clear wrapper.
 //!
-//! RO:INVARIANTS — verified-load precedes signing; signing precedes persistence; AppState uses the Passport root; clear removes authorization metadata before descriptor/custody cleanup; WebView remains redacted.
+//! RO:INVARIANTS — verified-load precedes signing; signing precedes persistence; local authorization completes before server registration; AppState uses the Passport root; clear removes authorization metadata before descriptor/custody cleanup; WebView remains redacted.
 //!
 //! RO:CONFIG — source/composition regression for the Physical M1 private-beta desktop profile.
 //!
-//! RO:SECURITY — no physical Passport, PIN, RecoveryRoot, device seed, server registry, capability, username, wallet, or ledger mutation.
+//! RO:SECURITY — source/composition regression only; no physical Passport, PIN, RecoveryRoot, device seed, live server registry, capability, username, wallet, or ledger mutation is executed.
 //!
 //! RO:TEST — cargo test --test physical_m1_device_authorization_persistence_lifecycle.
 
@@ -63,27 +63,59 @@ fn physical_m1_appstate_owns_authorization_store_on_the_canonical_passport_root(
 #[test]
 fn physical_m1_public_authorize_command_reports_persistence_without_exposing_authority() {
     let function = COMMANDS
-        .split("pub fn passport_authorize_device")
+        .split("pub async fn passport_authorize_device")
         .nth(1)
-        .expect("authorize command")
-        .split("pub fn passport_clear")
+        .expect("async authorize command")
+        .split("/// Public redacted DeviceKey-possession command schema.")
         .next()
         .expect("bounded authorize command");
 
+    let local_authorization = function
+        .find("authorize_or_reuse_persisted_physical_m1_device_authorization")
+        .expect("local authorization persistence");
+
+    let server_registration = function
+        .find("register_physical_m1_device_authorization")
+        .expect("server authorization registration");
+
+    assert!(
+        local_authorization < server_registration,
+        "local authorization must complete before server registration",
+    );
+
     for required in [
-        "authorize_or_reuse_persisted_physical_m1_device_authorization",
         "state.inner()",
-        "authorization_persisted: outcome.authorization_persisted",
-        "native_secure_input_requested: outcome.native_secure_input_requested",
+        "authorization_persisted",
+        "outcome.authorization_persisted",
+        "native_secure_input_requested",
+        "outcome.native_secure_input_requested",
         "authorization_returned_to_webview: false",
         "signature_returned_to_webview: false",
-        "server_registry_mutated: false",
+        "server_outcome.newly_registered",
         "capability_issued: false",
         "username_mutated: false",
     ] {
         assert!(
             function.contains(required),
             "authorize command missing {required}",
+        );
+    }
+
+    let signature = function
+        .split("->")
+        .next()
+        .expect("authorize command signature");
+
+    for forbidden in [
+        "passport_id:",
+        "device_id:",
+        "public_key:",
+        "pin:",
+        "authorization:",
+    ] {
+        assert!(
+            !signature.contains(forbidden),
+            "WebView command gained forbidden authority input {forbidden}",
         );
     }
 }

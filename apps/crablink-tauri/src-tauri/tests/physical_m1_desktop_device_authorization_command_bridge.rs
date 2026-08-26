@@ -100,7 +100,7 @@ fn physical_m1_public_command_accepts_only_app_state_and_returns_redacted_metada
         .expect("passport commands source");
 
     let signature = commands
-        .split("pub fn passport_authorize_device")
+        .split("pub async fn passport_authorize_device")
         .nth(1)
         .expect("passport_authorize_device command")
         .split("->")
@@ -125,7 +125,7 @@ fn physical_m1_public_command_accepts_only_app_state_and_returns_redacted_metada
     }
 
     let body = commands
-        .split("pub fn passport_authorize_device")
+        .split("pub async fn passport_authorize_device")
         .nth(1)
         .expect("command body");
 
@@ -133,8 +133,10 @@ fn physical_m1_public_command_accepts_only_app_state_and_returns_redacted_metada
         "authorize_or_reuse_persisted_physical_m1_device_authorization",
         "authorization_returned_to_webview: false",
         "signature_returned_to_webview: false",
-        "authorization_persisted: outcome.authorization_persisted",
-        "server_registry_mutated: false",
+        "authorization_persisted:",
+        "register_physical_m1_device_authorization",
+        "server_registry_mutated:",
+        "server_outcome.newly_registered",
         "capability_issued: false",
         "username_mutated: false",
         "state.inner()",

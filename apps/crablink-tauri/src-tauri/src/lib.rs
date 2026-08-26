@@ -25,6 +25,7 @@ pub mod passport_create_command_runtime;
 pub mod passport_device_authorization_command_bridge;
 #[cfg(desktop)]
 pub mod passport_device_authorization_command_runtime;
+pub mod passport_device_authorization_http_runtime;
 #[cfg(desktop)]
 pub mod passport_device_authorization_persistence_runtime;
 #[cfg(desktop)]

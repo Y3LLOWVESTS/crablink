@@ -1,11 +1,14 @@
 //! RO:WHAT — Implements redacted desktop Native Passport status, lock, operational unlock, durable RegisterRoot enrollment, device authorization, DeviceKey possession, bounded username-capability issuance, protected username/profile claim, and local clear commands.
 //! RO:WHY — Tauri mediates native Passport privilege while React supplies only public user intent and never receives custody or signed authority material.
-//! RO:INTERACTS — operational/root/RegisterRoot/device-authorization/device-session/capability/protected-username runtimes, V1-to-V2 vault migration, AppState, svc-passport status contracts, local authorization storage, and the Tauri handler registry.
-//! RO:INVARIANTS — successful operational unlock ensures authenticated V2 custody; RegisterRoot accepts zero caller authority and verifies the service challenge before RecoveryRoot signing; DeviceAuthorization is strictly reverified; protected username authority remains native; lock and clear drop native capability authority before continuing.
+//! RO:INTERACTS — operational/root/RegisterRoot/device-authorization/device-authorization-http/device-session/capability/protected-username runtimes, V1-to-V2 vault migration, AppState, svc-passport status contracts, local authorization storage, and the Tauri handler registry.
+//! RO:INVARIANTS — successful operational unlock ensures authenticated V2 custody; RegisterRoot accepts zero caller authority and verifies the service challenge before RecoveryRoot signing; DeviceAuthorization is strictly reverified locally and must be accepted through public 8090 before command success; protected username authority remains native; lock and clear drop native capability authority before continuing.
 //! RO:SECURITY — PIN, VMK, platform factor, vault bytes, root/device secrets, DeviceAuthorization, proof signatures, capability IDs/material, Passport ownership authority, and raw capabilities never serialize to React.
 //! RO:TEST — focused Passport command, RegisterRoot, DeviceAuthorization/DeviceSession/protected-username boundaries, clear lifecycle, and operational-unlock integration tests.
 
 use crate::passport_device_authorization_command_bridge::PHYSICAL_M1_DEVICE_AUTHORIZATION_COMMAND_BRIDGE_LABEL;
+use crate::passport_device_authorization_http_runtime::{
+    register_physical_m1_device_authorization, PHYSICAL_M1_DEVICE_AUTHORIZATION_HTTP_LABEL,
+};
 use crate::passport_device_authorization_persistence_runtime::authorize_or_reuse_persisted_physical_m1_device_authorization;
 use crate::passport_device_session_http_runtime::{
     prove_physical_m1_device_session, PHYSICAL_M1_DEVICE_SESSION_HTTP_LABEL,
@@ -478,13 +481,11 @@ pub fn passport_unlock_root(
 }
 
 /// Public redacted schema for durable RegisterRoot enrollment.
-pub const PASSPORT_REGISTER_ROOT_DTO_SCHEMA_V1: &str =
-    "crablink.native-passport.register-root.v1";
+pub const PASSPORT_REGISTER_ROOT_DTO_SCHEMA_V1: &str = "crablink.native-passport.register-root.v1";
 
 /// Stable zero-user-argument Tauri command for durable Passport root
 /// registration through the controlled-beta CrabNode.
-pub const PASSPORT_REGISTER_ROOT_COMMAND: &str =
-    "passport_register_root";
+pub const PASSPORT_REGISTER_ROOT_COMMAND: &str = "passport_register_root";
 
 /// Register the already-finalized native Passport root through the public
 /// CrabNode ingress.
@@ -496,15 +497,13 @@ pub const PASSPORT_REGISTER_ROOT_COMMAND: &str =
 pub async fn passport_register_root(
     state: State<'_, AppState>,
 ) -> Result<PassportOperationalCommandDtoV1, PassportStatusProblemV1> {
-    match crate::passport_register_root_http_runtime::
-        register_physical_m1_root(state.inner()).await
+    match crate::passport_register_root_http_runtime::register_physical_m1_root(state.inner()).await
     {
         Ok(outcome) => Ok(PassportOperationalCommandDtoV1 {
             schema: PASSPORT_REGISTER_ROOT_DTO_SCHEMA_V1,
             command_name: PASSPORT_REGISTER_ROOT_COMMAND,
             source_phase_label:
-                crate::passport_register_root_http_runtime::
-                    PHYSICAL_M1_REGISTER_ROOT_HTTP_LABEL,
+                crate::passport_register_root_http_runtime::PHYSICAL_M1_REGISTER_ROOT_HTTP_LABEL,
             state: if outcome.newly_registered {
                 "root_registered"
             } else {
@@ -517,8 +516,7 @@ pub async fn passport_register_root(
             session_changed: false,
             encrypted_vault_mutated: false,
             platform_material_mutated: false,
-            recovery_root_unsealed:
-                outcome.recovery_root_unsealed,
+            recovery_root_unsealed: outcome.recovery_root_unsealed,
             wallet_or_ledger_mutated: false,
         }),
 
@@ -526,19 +524,16 @@ pub async fn passport_register_root(
             schema: PASSPORT_REGISTER_ROOT_DTO_SCHEMA_V1,
             command_name: PASSPORT_REGISTER_ROOT_COMMAND,
             source_phase_label:
-                crate::passport_register_root_http_runtime::
-                    PHYSICAL_M1_REGISTER_ROOT_HTTP_LABEL,
+                crate::passport_register_root_http_runtime::PHYSICAL_M1_REGISTER_ROOT_HTTP_LABEL,
             state: error.state_label(),
             redacted: true,
-            native_secure_input_requested:
-                error.native_secure_input_requested(),
+            native_secure_input_requested: error.native_secure_input_requested(),
             pin_received_from_webview: false,
             secret_material_returned: false,
             session_changed: false,
             encrypted_vault_mutated: false,
             platform_material_mutated: false,
-            recovery_root_unsealed:
-                error.recovery_root_unsealed(),
+            recovery_root_unsealed: error.recovery_root_unsealed(),
             wallet_or_ledger_mutated: false,
         }),
     }
@@ -884,57 +879,26 @@ pub struct PassportDeviceAuthorizationCommandDtoV1 {
     pub username_mutated: bool,
 }
 
-/// Create one fresh Physical M1 DeviceAuthorization using only native-owned
-/// Passport/device state and native secure input.
+/// Authorize the current native desktop device and make that public signed
+/// authorization durable in authoritative svc-passport state.
 ///
 /// The command accepts no Passport, device, PIN, network, environment, class,
-/// scope, nonce, timing, expiry, or root-key material from the WebView.
+/// scope, nonce, timing, expiry, authorization object, or root-key material
+/// from the WebView. Local authorization creation/reuse completes before HTTP
+/// begins, so no native state lock is held across the network await.
 #[tauri::command]
-pub fn passport_authorize_device(
+pub async fn passport_authorize_device(
     state: State<'_, AppState>,
-) -> PassportDeviceAuthorizationCommandDtoV1 {
-    match authorize_or_reuse_persisted_physical_m1_device_authorization(state.inner()) {
-        Ok(outcome) => {
-            let authorization = &outcome.authorization;
-            let device_class = Some(authorization.device_class.as_str());
-
-            let root_key_epoch = Some(authorization.root_key_epoch);
-
-            let scope_count = Some(authorization.authorized_scope_ceiling.as_slice().len());
-
-            let issued_at_ms = Some(authorization.issued_at_ms);
-
-            let expires_at_ms = authorization.expires_at_ms;
-
-            PassportDeviceAuthorizationCommandDtoV1 {
-                schema: PASSPORT_DEVICE_AUTHORIZATION_DTO_SCHEMA_V1,
-                command_name: PASSPORT_AUTHORIZE_DEVICE_COMMAND,
-                source_phase_label: PHYSICAL_M1_DEVICE_AUTHORIZATION_COMMAND_BRIDGE_LABEL,
-                state: "authorized",
-                redacted: true,
-                native_secure_input_requested: outcome.native_secure_input_requested,
-                pin_received_from_webview: false,
-                secret_material_returned: false,
-                authorization_returned_to_webview: false,
-                signature_returned_to_webview: false,
-                device_class,
-                root_key_epoch,
-                scope_count,
-                issued_at_ms,
-                expires_at_ms,
-                authorization_persisted: outcome.authorization_persisted,
-                server_registry_mutated: false,
-                capability_issued: false,
-                username_mutated: false,
-            }
-        }
+) -> Result<PassportDeviceAuthorizationCommandDtoV1, PassportStatusProblemV1> {
+    let outcome = match authorize_or_reuse_persisted_physical_m1_device_authorization(state.inner())
+    {
+        Ok(outcome) => outcome,
 
         Err(error) => {
             let state_label = error.state_label();
-
             let native_secure_input_requested = error.native_secure_input_requested();
 
-            PassportDeviceAuthorizationCommandDtoV1 {
+            return Ok(PassportDeviceAuthorizationCommandDtoV1 {
                 schema: PASSPORT_DEVICE_AUTHORIZATION_DTO_SCHEMA_V1,
                 command_name: PASSPORT_AUTHORIZE_DEVICE_COMMAND,
                 source_phase_label: PHYSICAL_M1_DEVICE_AUTHORIZATION_COMMAND_BRIDGE_LABEL,
@@ -954,9 +918,68 @@ pub fn passport_authorize_device(
                 server_registry_mutated: false,
                 capability_issued: false,
                 username_mutated: false,
-            }
+            });
         }
-    }
+    };
+
+    let authorization = &outcome.authorization;
+    let device_class = Some(authorization.device_class.as_str());
+    let root_key_epoch = Some(authorization.root_key_epoch);
+    let scope_count = Some(authorization.authorized_scope_ceiling.as_slice().len());
+    let issued_at_ms = Some(authorization.issued_at_ms);
+    let expires_at_ms = authorization.expires_at_ms;
+
+    Ok(
+        match register_physical_m1_device_authorization(state.inner(), authorization).await {
+            Ok(server_outcome) => {
+                let _server_durable_generation = server_outcome.durable_generation;
+
+                PassportDeviceAuthorizationCommandDtoV1 {
+                    schema: PASSPORT_DEVICE_AUTHORIZATION_DTO_SCHEMA_V1,
+                    command_name: PASSPORT_AUTHORIZE_DEVICE_COMMAND,
+                    source_phase_label: PHYSICAL_M1_DEVICE_AUTHORIZATION_HTTP_LABEL,
+                    state: "authorized",
+                    redacted: true,
+                    native_secure_input_requested: outcome.native_secure_input_requested,
+                    pin_received_from_webview: false,
+                    secret_material_returned: false,
+                    authorization_returned_to_webview: false,
+                    signature_returned_to_webview: false,
+                    device_class,
+                    root_key_epoch,
+                    scope_count,
+                    issued_at_ms,
+                    expires_at_ms,
+                    authorization_persisted: outcome.authorization_persisted,
+                    server_registry_mutated: server_outcome.newly_registered,
+                    capability_issued: false,
+                    username_mutated: false,
+                }
+            }
+
+            Err(error) => PassportDeviceAuthorizationCommandDtoV1 {
+                schema: PASSPORT_DEVICE_AUTHORIZATION_DTO_SCHEMA_V1,
+                command_name: PASSPORT_AUTHORIZE_DEVICE_COMMAND,
+                source_phase_label: PHYSICAL_M1_DEVICE_AUTHORIZATION_HTTP_LABEL,
+                state: error.state_label(),
+                redacted: true,
+                native_secure_input_requested: outcome.native_secure_input_requested,
+                pin_received_from_webview: false,
+                secret_material_returned: false,
+                authorization_returned_to_webview: false,
+                signature_returned_to_webview: false,
+                device_class,
+                root_key_epoch,
+                scope_count,
+                issued_at_ms,
+                expires_at_ms,
+                authorization_persisted: outcome.authorization_persisted,
+                server_registry_mutated: false,
+                capability_issued: false,
+                username_mutated: false,
+            },
+        },
+    )
 }
 
 /// Public redacted DeviceKey-possession command schema.
