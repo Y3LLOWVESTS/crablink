@@ -1,9 +1,9 @@
 //! RO:WHAT — Executes CrabLink's native fixed IssueCapability challenge → service verification → DeviceKey proof → capability validation → memory-only session flow through gateway port 8090.
 //! RO:WHY — CN-4 must obtain real bounded username-claim authority without exposing DeviceKey material, capability material, or authority inputs to React.
 //! RO:INTERACTS — AppState HTTP/settings, public Passport descriptor, authenticated V2 device identity, persisted DeviceAuthorization, pinned capability challenge trust, canonical DeviceSession proof transcript, native DeviceKey signer, ron-policy version, and memory-only capability session.
-//! RO:INVARIANTS — exact canonical scopes are identity.read + identity.username.claim; local DeviceAuthorization is verified before network I/O; gateway exactly 8090; challenge trust before signing; response capability must match the signed challenge and current authorization; no lock crosses await; capability is stored only after every check passes.
+//! RO:INVARIANTS — exact canonical scopes are identity.read + identity.username.claim; local DeviceAuthorization is verified before network I/O; gateway exactly 8090; challenge trust before signing; proof time uses the shared bounded authenticated challenge-window normalization before signing; response capability must match the signed challenge and current authorization; no lock crosses await; capability is stored only after every check passes.
 //! RO:METRICS — none; errors remain stable/redacted classes.
-//! RO:CONFIG — controlled beta gateway http://127.0.0.1:8090, request timeout at most 30 seconds, server challenge TTL 60 seconds, accepted capability lifetime at most one hour.
+//! RO:CONFIG — controlled beta gateway http://127.0.0.1:8090, request timeout at most 30 seconds, server challenge TTL 60 seconds, reviewed 5-second cross-host challenge clock-skew policy, accepted capability lifetime at most one hour.
 //! RO:SECURITY — no RecoveryRoot, root PIN, VMK/seed export, generic signing command, direct 9090/5307 access, WebView authority fields, durable capability persistence, username mutation, wallet mutation, or ledger mutation.
 //! RO:TEST — `physical_m1_capability_http_boundary.rs`, session-store unit tests, then physical signed-app acceptance.
 
@@ -38,6 +38,7 @@ use crate::{
         PHYSICAL_M1_PRIVATE_BETA_ROOT_KEY_EPOCH,
     },
     passport_device_authorization_store::DesktopDeviceAuthorizationVerificationContextV1,
+    passport_device_session_http_runtime::normalize_device_session_proof_created_at_ms,
     passport_device_session_signing_runtime::sign_desktop_native_passport_device_session_proof,
     passport_vault_v2_migration_runtime::read_desktop_native_passport_session_device_public_identity,
     state::AppState,
@@ -275,12 +276,12 @@ pub async fn issue_physical_m1_username_capability(
         B3DigestHex::parse("challenge_transcript_hash", challenge_hash_text)
             .map_err(|_| DesktopCapabilityHttpError::ChallengeHashFailed)?;
 
-    let proof_created_at_ms = current_unix_time_ms()?;
-
-    if proof_created_at_ms < challenge.issued_at_ms || proof_created_at_ms > challenge.expires_at_ms
-    {
-        return Err(DesktopCapabilityHttpError::ProofTimeOutsideChallenge);
-    }
+    let proof_created_at_ms = normalize_device_session_proof_created_at_ms(
+        challenge.issued_at_ms,
+        challenge.expires_at_ms,
+        current_unix_time_ms()?,
+    )
+    .map_err(|_| DesktopCapabilityHttpError::ProofTimeOutsideChallenge)?;
 
     let proof_signature = {
         let transcript = DeviceSessionProofTranscriptV1 {

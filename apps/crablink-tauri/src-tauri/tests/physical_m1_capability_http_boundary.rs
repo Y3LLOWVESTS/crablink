@@ -214,3 +214,27 @@ fn native_capability_runtime_preserves_authority_and_transport_ordering() {
         );
     }
 }
+
+#[test]
+fn capability_proof_time_reuses_shared_bounded_normalization() {
+    let runtime = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("src/passport_capability_http_runtime.rs"),
+    )
+    .expect("read capability HTTP runtime");
+
+    assert!(
+        runtime.contains("normalize_device_session_proof_created_at_ms("),
+        "capability issuance must reuse the reviewed bounded proof-time normalization",
+    );
+
+    assert!(
+        !runtime.contains("proof_created_at_ms < challenge.issued_at_ms"),
+        "capability issuance must not restore the raw zero-skew lower-bound check",
+    );
+
+    assert!(
+        !runtime.contains("proof_created_at_ms > challenge.expires_at_ms"),
+        "capability issuance must not restore the raw zero-skew upper-bound check",
+    );
+}

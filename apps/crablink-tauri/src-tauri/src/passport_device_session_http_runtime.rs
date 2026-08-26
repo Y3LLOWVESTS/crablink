@@ -351,7 +351,7 @@ async fn read_bounded_response_body(
 /// behind or ahead may therefore use the nearest signed challenge boundary,
 /// but only while that local clock remains inside the same bounded skew policy.
 /// Larger disagreement fails closed rather than fabricating a proof time.
-fn normalize_device_session_proof_created_at_ms(
+pub(crate) fn normalize_device_session_proof_created_at_ms(
     challenge_issued_at_ms: u64,
     challenge_expires_at_ms: u64,
     local_now_ms: u64,
