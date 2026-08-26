@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   ALLOWED_TAURI_COMMANDS,
@@ -20,8 +21,8 @@ import {
 } from '../platform/tauriPlatform.js';
 
 const ROOT =
-  path.resolve(
-    new URL('../../../..', import.meta.url).pathname,
+  fileURLToPath(
+    new URL('../../../..', import.meta.url),
   );
 
 const PLATFORM =

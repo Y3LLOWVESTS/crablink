@@ -15,6 +15,7 @@ fn source(relative: &str) -> String {
     .unwrap_or_else(|error| {
         panic!("failed to read {relative}: {error}")
     })
+    .replace("\r\n", "\n")
 }
 
 #[test]
